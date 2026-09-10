@@ -77,16 +77,27 @@ Wishlist_personal/
 
 Ініціалізація займає 2–3 хвилини.
 
-Далі **Project Settings → API**, звідти знадобляться:
+### Де взяти значення
+
+**Project ref** — просто в адресному рядку, коли відкритий проєкт:
+```
+https://supabase.com/dashboard/project/abcdefghijklmnop
+                                       └──── project ref ────┘
+```
+З нього виводиться **Project URL**: `https://<project-ref>.supabase.co`.
+
+**Ключі** — кнопка **Connect** угорі дашборду (віддає URL і ключ готовим блоком для `.env`), або **Settings → API Keys**. URL окремо також лежить у **Integrations → Data API**.
 
 | Значення | Куди | Секретність |
 |---|---|---|
+| Project ref | для `supabase link` | публічне |
 | Project URL | `VITE_SUPABASE_URL` | публічне |
-| `anon` `public` key | `VITE_SUPABASE_ANON_KEY` | **публічне, це нормально** |
-| `service_role` key | нікуди | **ніколи не в код і не в браузер** |
-| Project ref (у URL) | для `link` | публічне |
+| Publishable key `sb_publishable_…` | `VITE_SUPABASE_PUBLISHABLE_KEY` | **публічне, це нормально** |
+| Secret key `sb_secret_…` | нікуди в цьому проєкті | **ніколи не в код і не в браузер** |
 
-`anon`-ключ безпечно віддавати в браузер саме тому, що вся авторизація в RLS: з ним не можна прочитати чужі дані. `service_role` обходить RLS повністю — якщо він потрапить у фронтенд, уся модель безпеки проєкту зникає.
+Якщо проєкт створено на старих ключах і ти бачиш кнопку **Create new API keys** — натисни її. Це безпечно: нові ключі додаються поряд зі старими, `anon` і `service_role` продовжують працювати (ADR-013).
+
+Publishable-ключ безпечно віддавати в браузер саме тому, що вся авторизація в RLS: без входу він дає роль `anon`, після входу — `authenticated`, і політики з `0002_rls.sql` застосовуються як є. Secret-ключ має атрибут `BYPASSRLS` і обходить політики повністю — якщо він потрапить у фронтенд, уся модель безпеки проєкту зникає.
 
 ---
 
@@ -202,7 +213,7 @@ rollback;
 ```bash
 cp .env.example app/.env.local     # папку app/ створимо на етапі 2
 ```
-Заповнити `VITE_SUPABASE_URL` і `VITE_SUPABASE_ANON_KEY`. Файл уже в `.gitignore` — перевір `git status`, його не має бути серед відстежуваних.
+Заповнити `VITE_SUPABASE_URL` і `VITE_SUPABASE_PUBLISHABLE_KEY`. Файл уже в `.gitignore` — перевір `git status`, його не має бути серед відстежуваних.
 
 ---
 

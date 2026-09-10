@@ -10,4 +10,8 @@
 - Міграція `0002_rls.sql`: RLS на всіх таблицях, повне відкликання прав у `anon`, ізоляція `reservations` від власника.
 - Міграція `0003_rpc.sql`: `create_share`, `get_shared_list`, `register_share_view`, `reserve_item`, `unreserve_item`, `list_items_page`, `list_totals`.
 - ADR-001 … ADR-012.
+### Змінено — 2026-09-10
+- `.env.example`, `docs/SETUP.md`: перехід на publishable-ключ Supabase (`VITE_SUPABASE_PUBLISHABLE_KEY`) замість `anon`; уточнено, де в дашборді брати project ref, URL і ключі. ADR-013.
+
+### Додано — 2026-09-09 (продовження)
 - `docs/SETUP.md`: покрокове розгортання, налаштування Auth, шість SQL-перевірок інваріантів RLS, чекліст готовності до етапу 2.
