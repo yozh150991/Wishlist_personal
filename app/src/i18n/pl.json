@@ -1,0 +1,71 @@
+{
+  "app": { "name": "Wishlist", "tagline": "Lista życzeń, którą pokazujesz po kawałku." },
+  "nav": { "lists": "Listy", "shares": "Linki", "settings": "Ustawienia", "signOut": "Wyloguj" },
+  "auth": {
+    "aside": {
+      "headline": "Twoja lista zostaje twoja.",
+      "body": "Dodawaj wszystko, co chcesz. Bliscy zobaczą tylko te pozycje, które sam wybierzesz i wyślesz."
+    },
+    "email": "E-mail",
+    "password": "Hasło",
+    "passwordAgain": "Hasło ponownie",
+    "passwordHint": "Minimum 8 znaków",
+    "login": {
+      "title": "Logowanie",
+      "submit": "Zaloguj się",
+      "toRegister": "Nie masz konta?",
+      "toRegisterCta": "Załóż konto",
+      "forgot": "Nie pamiętam hasła"
+    },
+    "register": {
+      "title": "Rejestracja",
+      "submit": "Załóż konto",
+      "toLogin": "Masz już konto?",
+      "toLoginCta": "Zaloguj się",
+      "checkEmail": "Wysłaliśmy e-mail na {email}. Otwórz link, żeby dokończyć rejestrację."
+    },
+    "reset": {
+      "title": "Reset hasła",
+      "body": "Wyślemy link, pod którym ustawisz nowe hasło.",
+      "submit": "Wyślij link",
+      "sent": "Jeśli konto {email} istnieje, link jest już w skrzynce.",
+      "back": "Wróć do logowania"
+    },
+    "update": {
+      "title": "Nowe hasło",
+      "submit": "Zapisz hasło",
+      "done": "Hasło zmienione.",
+      "expired": "Link wygasł albo został już użyty. Poproś o nowy."
+    }
+  },
+  "lists": {
+    "title": "Listy",
+    "emptyTitle": "Na razie pusto",
+    "emptyBody": "Utwórz pierwszą listę — na przykład „Urodziny” albo „Do domu”.",
+    "create": "Utwórz listę",
+    "soon": "Listy pojawią się w następnym kroku."
+  },
+  "settings": {
+    "title": "Ustawienia",
+    "theme": "Motyw",
+    "themeLight": "Jasny",
+    "themeDark": "Ciemny",
+    "themeSystem": "Jak w systemie",
+    "language": "Język",
+    "account": "Konto",
+    "signedInAs": "Zalogowany jako {email}"
+  },
+  "errors": {
+    "invalidCredentials": "E-mail albo hasło się nie zgadzają.",
+    "emailNotConfirmed": "Najpierw potwierdź e-mail — sprawdź skrzynkę.",
+    "emailTaken": "Konto z tym adresem już istnieje.",
+    "weakPassword": "Hasło za krótkie albo zbyt proste.",
+    "rateLimited": "Za dużo prób. Spróbuj za kilka minut.",
+    "validation": "Sprawdź wprowadzone dane.",
+    "passwordsDiffer": "Hasła się różnią.",
+    "passwordShort": "Potrzeba co najmniej 8 znaków.",
+    "emailRequired": "Podaj e-mail.",
+    "unknown": "Coś poszło nie tak. Spróbuj jeszcze raz."
+  },
+  "common": { "loading": "Ładowanie", "notFound": "Nie ma takiej strony", "backHome": "Na start" }
+}

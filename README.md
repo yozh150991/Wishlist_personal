@@ -8,7 +8,7 @@
 
 | Шар | Технологія |
 |---|---|
-| Фронтенд | React 18 + Vite + TypeScript, PWA (offline-first) |
+| Фронтенд | React 18 + Vite + TypeScript, власний CSS без фреймворку, PWA (offline-first) |
 | Бекенд даних | Supabase (Postgres + Auth + RLS) |
 | Парсер посилань | FastAPI (Python), окремий сервіс |
 | Хостинг фронту | Vercel |
@@ -50,4 +50,4 @@ npx supabase db push
 
 ## Статус
 
-Етап 1 з 6 — документація і схема БД. Див. [docs/ROADMAP.md](./docs/ROADMAP.md).
+Етап 2 з 6 — автентифікація і каркас фронтенду. Див. [docs/ROADMAP.md](./docs/ROADMAP.md).

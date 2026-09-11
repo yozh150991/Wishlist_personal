@@ -1,0 +1,119 @@
+<#
+.SYNOPSIS
+  Moves downloaded project files into the repository folder structure.
+
+.DESCRIPTION
+  Files arrive from chat as a flat list. This script matches each one by
+  name, creates the target folders and moves it there. Duplicates such as
+  "styles (1).css" are recognised as "styles.css". Files not listed in the
+  mapping table are left untouched.
+
+.NOTES
+  ASCII only on purpose: Windows PowerShell 5.1 reads .ps1 files in the
+  system code page, so non-ASCII text without a UTF-8 BOM breaks parsing.
+  Works on Windows PowerShell 5.1 and PowerShell 7.
+
+  The file comes from the internet, so unblock it first:
+      Unblock-File .\scripts\place-files.ps1
+
+.EXAMPLE
+  .\scripts\place-files.ps1 -From "$HOME\Downloads" -WhatIf
+  .\scripts\place-files.ps1 -From "$HOME\Downloads"
+#>
+
+[CmdletBinding(SupportsShouldProcess)]
+param(
+  [string]$From = "$HOME\Downloads",
+  [string]$To
+)
+
+if (-not $To) {
+  if ($PSScriptRoot) { $To = Split-Path $PSScriptRoot -Parent }
+  else               { $To = (Get-Location).Path }
+}
+
+$map = @{
+  # repository root
+  'README.md' = '.'; 'CLAUDE.md' = '.'; 'CHANGELOG.md' = '.'
+  '.env.example' = '.'; '.gitignore' = '.'
+
+  # documentation
+  'API.md' = 'docs'; 'ARCHITECTURE.md' = 'docs'; 'DATA_MODEL.md' = 'docs'
+  'DECISIONS.md' = 'docs'; 'ROADMAP.md' = 'docs'; 'SETUP.md' = 'docs'
+  'TESTING.md' = 'docs'
+
+  # database migrations
+  '20260910120000_init.sql'   = 'supabase\migrations'
+  '20260910120100_rls.sql'    = 'supabase\migrations'
+  '20260910120200_rpc.sql'    = 'supabase\migrations'
+  '20260910120300_grants.sql' = 'supabase\migrations'
+
+  # frontend root
+  'index.html' = 'app'; 'package.json' = 'app'; 'tsconfig.json' = 'app'
+  'vite.config.ts' = 'app'; 'playwright.config.ts' = 'app'
+
+  # frontend source
+  'main.tsx' = 'app\src'; 'App.tsx' = 'app\src'
+  'styles.css' = 'app\src'; 'vite-env.d.ts' = 'app\src'
+
+  'supabase.ts' = 'app\src\lib'; 'auth.tsx' = 'app\src\lib'
+  'theme.tsx' = 'app\src\lib'; 'i18n.tsx' = 'app\src\lib'
+  'authErrors.ts' = 'app\src\lib'
+
+  'uk.json' = 'app\src\i18n'; 'pl.json' = 'app\src\i18n'; 'en.json' = 'app\src\i18n'
+
+  'RequireAuth.tsx' = 'app\src\components'; 'AppShell.tsx' = 'app\src\components'
+  'AuthLayout.tsx'  = 'app\src\components'; 'ui.tsx'       = 'app\src\components'
+
+  'Login.tsx' = 'app\src\routes'; 'Register.tsx' = 'app\src\routes'
+  'ResetPassword.tsx' = 'app\src\routes'; 'UpdatePassword.tsx' = 'app\src\routes'
+  'Lists.tsx' = 'app\src\routes'; 'Settings.tsx' = 'app\src\routes'
+  'NotFound.tsx' = 'app\src\routes'
+
+  'database.ts' = 'app\src\types'
+  'auth.spec.ts' = 'app\tests\e2e'
+}
+
+if (-not (Test-Path $From)) {
+  throw "Source folder not found: $From"
+}
+
+Write-Host "From: $From"
+Write-Host "To:   $To"
+Write-Host ""
+
+$moved = 0
+
+Get-ChildItem -Path $From -File | ForEach-Object {
+  # "styles (1).css" -> "styles.css"
+  $name = $_.Name -replace '\s\(\d+\)(?=\.[^.]+$)', ''
+
+  if ($map.ContainsKey($name)) {
+    $destDir = Join-Path $To $map[$name]
+    if (-not (Test-Path $destDir)) {
+      New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+    }
+    $dest = Join-Path $destDir $name
+    if ($PSCmdlet.ShouldProcess($dest, 'Move')) {
+      Move-Item -LiteralPath $_.FullName -Destination $dest -Force
+    }
+    Write-Host ("  {0,-28} -> {1}" -f $name, $map[$name])
+    $moved++
+  }
+}
+
+Write-Host ""
+Write-Host "Matched: $moved" -ForegroundColor Green
+
+$missing = @()
+foreach ($key in $map.Keys) {
+  $full = Join-Path $To (Join-Path $map[$key] $key)
+  if (-not (Test-Path $full)) { $missing += $key }
+}
+
+if ($missing.Count -gt 0) {
+  Write-Host "Still missing in the repo:" -ForegroundColor Yellow
+  $missing | Sort-Object | ForEach-Object { Write-Host "  $_" }
+} else {
+  Write-Host "All expected files are in place." -ForegroundColor Green
+}

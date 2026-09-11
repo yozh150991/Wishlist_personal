@@ -1,0 +1,71 @@
+{
+  "app": { "name": "Wishlist", "tagline": "A wish list you reveal piece by piece." },
+  "nav": { "lists": "Lists", "shares": "Links", "settings": "Settings", "signOut": "Sign out" },
+  "auth": {
+    "aside": {
+      "headline": "Your list stays yours.",
+      "body": "Add anything you like. Family sees only the items you pick and send."
+    },
+    "email": "Email",
+    "password": "Password",
+    "passwordAgain": "Password again",
+    "passwordHint": "At least 8 characters",
+    "login": {
+      "title": "Sign in",
+      "submit": "Sign in",
+      "toRegister": "No account yet?",
+      "toRegisterCta": "Create one",
+      "forgot": "Forgot password"
+    },
+    "register": {
+      "title": "Create account",
+      "submit": "Create account",
+      "toLogin": "Already have an account?",
+      "toLoginCta": "Sign in",
+      "checkEmail": "We sent a confirmation email to {email}. Open the link to finish signing up."
+    },
+    "reset": {
+      "title": "Reset password",
+      "body": "We'll send a link for setting a new password.",
+      "submit": "Send link",
+      "sent": "If an account for {email} exists, the link is in the inbox.",
+      "back": "Back to sign in"
+    },
+    "update": {
+      "title": "New password",
+      "submit": "Save password",
+      "done": "Password changed.",
+      "expired": "This link expired or was already used. Request a new one."
+    }
+  },
+  "lists": {
+    "title": "Lists",
+    "emptyTitle": "Nothing here yet",
+    "emptyBody": "Create your first list — say, \"Birthday\" or \"For the flat\".",
+    "create": "Create list",
+    "soon": "Lists arrive in the next step."
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "Match system",
+    "language": "Language",
+    "account": "Account",
+    "signedInAs": "Signed in as {email}"
+  },
+  "errors": {
+    "invalidCredentials": "That email and password don't match.",
+    "emailNotConfirmed": "Confirm your email first — check the inbox.",
+    "emailTaken": "An account with this email already exists.",
+    "weakPassword": "Password is too short or too simple.",
+    "rateLimited": "Too many attempts. Try again in a few minutes.",
+    "validation": "Check the details you entered.",
+    "passwordsDiffer": "Passwords don't match.",
+    "passwordShort": "Use at least 8 characters.",
+    "emailRequired": "Enter your email.",
+    "unknown": "Something went wrong. Try again."
+  },
+  "common": { "loading": "Loading", "notFound": "No such page", "backHome": "Go home" }
+}

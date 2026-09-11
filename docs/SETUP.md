@@ -50,20 +50,49 @@ git branch -M main
 git push -u origin main
 ```
 
+Файли з чату приходять пласким списком, без папок. Розкласти їх можна скриптом:
+
+```powershell
+Unblock-File .\scripts\place-files.ps1                      # зняти позначку «з інтернету»
+.\scripts\place-files.ps1 -From "$HOME\Downloads" -WhatIf   # показати, нічого не робити
+.\scripts\place-files.ps1 -From "$HOME\Downloads"           # перенести
+```
+
+Якщо політика виконання `AllSigned`, `Unblock-File` не допоможе — запусти разово в обхід, не змінюючи налаштувань системи:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\place-files.ps1 -From "$HOME\Downloads"
+```
+
+Скрипт зіставляє файли за іменем, створює потрібні папки, розпізнає дублікати виду `styles (1).css` і в кінці перелічує те, чого бракує. Файли, яких немає в його таблиці, не чіпає.
+
+Повідомлення в ньому англійські навмисно. Windows PowerShell 5.1 читає `.ps1` у системному кодуванні, а не в UTF-8, тому кирилиця без BOM перетворюється на нечитабельне і ламає розбір рядків. Це стосується будь-яких скриптів у проєкті: або тільки ASCII, або зберігати з BOM.
+
 Структура після цього:
 ```
 Wishlist_personal/
-├── README.md
-├── CLAUDE.md
-├── CHANGELOG.md
-├── .env.example
-├── .gitignore
-├── docs/
-└── supabase/migrations/
-    ├── 0001_init.sql
-    ├── 0002_rls.sql
-    └── 0003_rpc.sql
+├── README.md  CLAUDE.md  CHANGELOG.md  .env.example  .gitignore
+├── docs/                     # уся документація
+├── scripts/place-files.ps1   # розкладає завантажені файли по папках
+├── supabase/
+│   ├── config.toml           # створює supabase init
+│   └── migrations/           # <timestamp>_name.sql
+└── app/                      # фронтенд
+    ├── index.html  package.json  tsconfig.json
+    ├── vite.config.ts  playwright.config.ts
+    ├── .env.local            # твій, у git не потрапляє
+    ├── src/
+    │   ├── main.tsx  App.tsx  styles.css  vite-env.d.ts
+    │   ├── lib/          supabase.ts  auth.tsx  theme.tsx  i18n.tsx  authErrors.ts
+    │   ├── i18n/         uk.json  pl.json  en.json
+    │   ├── components/   RequireAuth.tsx  AppShell.tsx  AuthLayout.tsx  ui.tsx
+    │   ├── routes/       Login.tsx  Register.tsx  ResetPassword.tsx
+    │   │                 UpdatePassword.tsx  Lists.tsx  Settings.tsx  NotFound.tsx
+    │   └── types/        database.ts
+    └── tests/e2e/        auth.spec.ts
 ```
+
+`src/lib/i18n.tsx` — код провайдера, `src/i18n/` — папка зі словниками. Різні речі з однаковою назвою.
 
 ---
 
@@ -107,12 +136,26 @@ Publishable-ключ безпечно віддавати в браузер са�
 npm init -y                     # якщо package.json ще нема
 npm install --save-dev supabase
 
+npx supabase init               # створить supabase/config.toml
 npx supabase login              # відкриє браузер
 npx supabase link --project-ref <твій-project-ref>
+
+npx supabase migration list     # ПЕРЕВІРКА: три рядки в колонці Local
 npx supabase db push
 ```
 
-`db push` застосує 0001 → 0002 → 0003 по порядку і запамʼятає їх у таблиці міграцій. Повторний запуск нічого не зламає — вже застосовані пропускаються.
+**`migration list` — не формальність.** Якщо колонка Local порожня, `db push` напише
+`Remote database is up to date` і **нічого не зробить**: він не бачить файлів, а не
+«все вже застосовано». Порожня Local означає одне з трьох:
+
+- команду запущено не з кореня репозиторію (`pwd` має показувати папку з `README.md`);
+- немає `supabase/config.toml` — не виконано `npx supabase init`;
+- файли лежать не в `supabase/migrations/` або названі не за конвенцією
+  `<14 цифр>_name.sql` — такі CLI ігнорує без попередження.
+
+Перевірити вміст папки: `ls supabase` має показати `config.toml` і `migrations`.
+
+`db push` застосує міграції в порядку зростання timestamp у назві і запамʼятає їх у таблиці міграцій. Повторний запуск нічого не зламає — вже застосовані пропускаються.
 
 Очікуваний вивід — три рядки `Applying migration ...` без помилок.
 
@@ -131,6 +174,8 @@ npx supabase db push
 **Authentication → URL Configuration**
 - Site URL: `http://localhost:5173` (на час розробки; після Vercel — бойовий домен)
 - Redirect URLs: `http://localhost:5173/**`
+
+Шаблон `/**` покриває і `/lists` (куди веде лист підтвердження реєстрації), і `/update-password` (куди веде лист скидання пароля). Без цього обидва посилання приведуть на помилку.
 
 Без цього листи підтвердження вестимуть у нікуди.
 
@@ -216,6 +261,23 @@ cp .env.example app/.env.local     # папку app/ створимо на ет�
 Заповнити `VITE_SUPABASE_URL` і `VITE_SUPABASE_PUBLISHABLE_KEY`. Файл уже в `.gitignore` — перевір `git status`, його не має бути серед відстежуваних.
 
 ---
+
+## 7б. 💻 Запустити фронтенд
+
+```bash
+cd app
+npm install
+npm run dev          # http://localhost:5173
+```
+
+Перевірка: `/lists` без входу має перекинути на `/login?next=%2Flists`. Зареєструйся справжньою адресою, відкрий лист підтвердження — після нього маєш опинитись на порожній сторінці списків.
+
+```bash
+npm run typecheck    # tsc без помилок
+npm run build        # продакшн-збірка
+npx playwright install --with-deps   # один раз
+npm run test:e2e
+```
 
 ## 8. 💻 Локальна база (опційно, знадобиться на етапі 3)
 
