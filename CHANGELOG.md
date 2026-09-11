@@ -10,6 +10,15 @@
 - Міграція `0002_rls.sql`: RLS на всіх таблицях, повне відкликання прав у `anon`, ізоляція `reservations` від власника.
 - Міграція `0003_rpc.sql`: `create_share`, `get_shared_list`, `register_share_view`, `reserve_item`, `unreserve_item`, `list_items_page`, `list_totals`.
 - ADR-001 … ADR-012.
+### Безпека — 2026-09-10
+- Міграція `20260910120300_grants.sql`: відкликано неявний `EXECUTE` ролі `PUBLIC` на всі RPC. Функції власника (`create_share`, `list_items_page`, `list_totals`) тепер доступні лише ролі `authenticated`, `gen_share_token` — нікому ззовні, гостьові функції — явно `anon, authenticated`.
+
+### Виправлено — 2026-09-10
+- `gen_share_token()` більше не залежить від pgcrypto: джерело випадковості — `gen_random_uuid()` з ядра Postgres. Раніше міграція падала з `function gen_random_bytes(integer) does not exist`, бо в Supabase pgcrypto лежить у схемі `extensions`. ADR-014.
+- Міграції перейменовано у формат Supabase CLI `<timestamp>_name.sql`: `20260910120000_init`, `20260910120100_rls`, `20260910120200_rpc`. Попередні імена `0001_*` CLI ігнорував без повідомлення, через що `db push` рапортував `Remote database is up to date` на порожній базі.
+- `docs/SETUP.md`: додано пропущений крок `supabase init` і обовʼязкову перевірку `migration list` перед `db push`.
+- `CLAUDE.md`: уточнено конвенцію іменування міграцій.
+
 ### Змінено — 2026-09-10
 - `.env.example`, `docs/SETUP.md`: перехід на publishable-ключ Supabase (`VITE_SUPABASE_PUBLISHABLE_KEY`) замість `anon`; уточнено, де в дашборді брати project ref, URL і ключі. ADR-013.
 

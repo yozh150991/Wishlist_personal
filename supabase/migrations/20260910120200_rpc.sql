@@ -4,12 +4,19 @@
 -- Генерація токена шеру (22 символи base64url)
 -- ─────────────────────────────────────────────
 
+-- 16 випадкових байтів з gen_random_uuid() (ядро Postgres 14+, CSPRNG),
+-- перекодованих у base64url без padding -> рівно 22 символи.
+-- Не залежить від pgcrypto: у Supabase воно живе у схемі extensions і
+-- не резолвиться під час компіляції функції (ADR-014).
 create or replace function public.gen_share_token()
 returns text
 language sql
 volatile
+set search_path = public
 as $$
-  select translate(encode(gen_random_bytes(16), 'base64'), '+/=', '-_');
+  select translate(
+           encode(decode(replace(gen_random_uuid()::text, '-', ''), 'hex'), 'base64'),
+           '+/=', '-_');
 $$;
 
 -- ─────────────────────────────────────────────

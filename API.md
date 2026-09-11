@@ -83,6 +83,16 @@ const { data } = await supabase.rpc('list_totals', { p_list_id: listId });
 //     total_price, active_price, items_no_price }
 ```
 
+### Права на виклик
+
+| Функція | Ролі |
+|---|---|
+| `create_share`, `list_items_page`, `list_totals` | `authenticated` |
+| `get_shared_list`, `register_share_view`, `reserve_item`, `unreserve_item` | `anon`, `authenticated` |
+| `gen_share_token` | внутрішня, ззовні недоступна |
+
+Неявний `EXECUTE` ролі `PUBLIC` відкликано міграцією `20260910120300_grants.sql`. Кожна нова RPC-функція має отримувати гранти явно — інакше вона автоматично стане анонімним ендпоінтом PostgREST.
+
 ## Звичайні запити (через RLS)
 
 CRUD списків і позицій — прямо через PostgREST, RLS усе відсіює:
