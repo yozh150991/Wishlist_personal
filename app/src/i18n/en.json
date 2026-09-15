@@ -1,6 +1,14 @@
 {
-  "app": { "name": "Wishlist", "tagline": "A wish list you reveal piece by piece." },
-  "nav": { "lists": "Lists", "shares": "Links", "settings": "Settings", "signOut": "Sign out" },
+  "app": {
+    "name": "Wishlist",
+    "tagline": "A wish list you reveal piece by piece."
+  },
+  "nav": {
+    "lists": "Lists",
+    "shares": "Links",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  },
   "auth": {
     "aside": {
       "headline": "Your list stays yours.",
@@ -43,7 +51,19 @@
     "emptyTitle": "Nothing here yet",
     "emptyBody": "Create your first list — say, \"Birthday\" or \"For the flat\".",
     "create": "Create list",
-    "soon": "Lists arrive in the next step."
+    "soon": "Lists arrive in the next step.",
+    "edit": "Edit list",
+    "confirmDelete": "Delete the list “{title}” with all its items?",
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "currency": "Currency",
+      "eventDate": "Event date",
+      "eventDateHint": "Optional. After it we'll offer to wrap things up."
+    },
+    "errors": {
+      "titleRequired": "Enter a list title."
+    }
   },
   "settings": {
     "title": "Settings",
@@ -67,5 +87,99 @@
     "emailRequired": "Enter your email.",
     "unknown": "Something went wrong. Try again."
   },
-  "common": { "loading": "Loading", "notFound": "No such page", "backHome": "Go home" }
+  "common": {
+    "loading": "Loading",
+    "notFound": "No such page",
+    "backHome": "Go home",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "item": {
+    "add": "Add item",
+    "edit": "Edit item",
+    "noPrice": "No price",
+    "loadMore": "Show more",
+    "end": "That's every item",
+    "emptyTitle": "No items yet",
+    "emptyBody": "Paste a product link or type a name. Link and price are both optional.",
+    "confirmDelete": "Delete “{title}”?",
+    "fields": {
+      "url": "Link",
+      "urlHint": "Auto-fill arrives in the next step",
+      "title": "Title",
+      "price": "Price",
+      "priceHint": "Can be left empty",
+      "quantity": "Quantity",
+      "priority": "Priority",
+      "status": "Status",
+      "imageUrl": "Image link",
+      "note": "Note"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "status": {
+      "active": "Active",
+      "purchased": "Purchased",
+      "gifted": "Gifted"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "statusLabel": "Status of “{title}”"
+    },
+    "errors": {
+      "titleRequired": "Enter an item title.",
+      "badUrl": "Link must start with http:// or https://",
+      "badPrice": "Price must be a number of zero or more.",
+      "badQuantity": "Quantity must be a whole number from 1 to 999.",
+      "priceTooBig": "That price is too large."
+    },
+    "priorityLabel": "Priority: {value}"
+  },
+  "toolbar": {
+    "search": "Search by title",
+    "sort": "Sort",
+    "pageSize": "Per page",
+    "price": "Price",
+    "from": "from",
+    "to": "to",
+    "asc": "Ascending",
+    "desc": "Descending",
+    "sortBy": {
+      "created_at": "By date",
+      "title": "By title",
+      "price": "By price",
+      "priority": "By priority"
+    }
+  },
+  "totals": {
+    "active": "across {n} active items",
+    "noPrice": "{n} without a price",
+    "gifted": "{n} gifted"
+  },
+  "parser": {
+    "fill": "Fill in",
+    "partial": "Some fields came back empty — fill the rest in yourself.",
+    "gotCurrency": "Price found in {currency}. Check it against the list currency.",
+    "errors": {
+      "notConfigured": "Parser isn't configured: set VITE_PARSER_URL.",
+      "notSignedIn": "Your session expired. Sign in again.",
+      "unreachable": "Parser is unreachable. Fill the fields in yourself.",
+      "invalidUrl": "That doesn't look like a link.",
+      "blockedHost": "That address is blocked for safety reasons.",
+      "tooLarge": "The page is too large.",
+      "unsupported": "That link isn't an HTML page.",
+      "rateLimited": "Too many requests. Wait a minute.",
+      "timeout": "The shop didn't answer in time.",
+      "upstream": "The shop returned an error.",
+      "unknown": "Couldn't read that page. Fill the fields in yourself.",
+      "authUnavailable": "The parser couldn't verify your sign-in. Check its configuration or fill the fields in yourself.",
+      "misconfigured": "The parser is misconfigured: its Supabase URL is missing.",
+      "blockedByShop": "This shop blocks automated requests. Copy the name and price in yourself — the link will still be saved."
+    }
+  }
 }

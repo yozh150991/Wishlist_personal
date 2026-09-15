@@ -1,6 +1,14 @@
 {
-  "app": { "name": "Wishlist", "tagline": "Lista życzeń, którą pokazujesz po kawałku." },
-  "nav": { "lists": "Listy", "shares": "Linki", "settings": "Ustawienia", "signOut": "Wyloguj" },
+  "app": {
+    "name": "Wishlist",
+    "tagline": "Lista życzeń, którą pokazujesz po kawałku."
+  },
+  "nav": {
+    "lists": "Listy",
+    "shares": "Linki",
+    "settings": "Ustawienia",
+    "signOut": "Wyloguj"
+  },
   "auth": {
     "aside": {
       "headline": "Twoja lista zostaje twoja.",
@@ -43,7 +51,19 @@
     "emptyTitle": "Na razie pusto",
     "emptyBody": "Utwórz pierwszą listę — na przykład „Urodziny” albo „Do domu”.",
     "create": "Utwórz listę",
-    "soon": "Listy pojawią się w następnym kroku."
+    "soon": "Listy pojawią się w następnym kroku.",
+    "edit": "Edytuj listę",
+    "confirmDelete": "Usunąć listę „{title}” razem ze wszystkimi pozycjami?",
+    "fields": {
+      "title": "Nazwa",
+      "description": "Opis",
+      "currency": "Waluta",
+      "eventDate": "Data wydarzenia",
+      "eventDateHint": "Opcjonalnie. Po niej zaproponujemy podsumowanie."
+    },
+    "errors": {
+      "titleRequired": "Podaj nazwę listy."
+    }
   },
   "settings": {
     "title": "Ustawienia",
@@ -67,5 +87,99 @@
     "emailRequired": "Podaj e-mail.",
     "unknown": "Coś poszło nie tak. Spróbuj jeszcze raz."
   },
-  "common": { "loading": "Ładowanie", "notFound": "Nie ma takiej strony", "backHome": "Na start" }
+  "common": {
+    "loading": "Ładowanie",
+    "notFound": "Nie ma takiej strony",
+    "backHome": "Na start",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń"
+  },
+  "item": {
+    "add": "Dodaj pozycję",
+    "edit": "Edytuj pozycję",
+    "noPrice": "Brak ceny",
+    "loadMore": "Pokaż więcej",
+    "end": "To wszystkie pozycje",
+    "emptyTitle": "Brak pozycji",
+    "emptyBody": "Wklej link do produktu albo wpisz nazwę ręcznie. Link i cena są opcjonalne.",
+    "confirmDelete": "Usunąć „{title}”?",
+    "fields": {
+      "url": "Link",
+      "urlHint": "Autouzupełnianie pojawi się w następnym kroku",
+      "title": "Nazwa",
+      "price": "Cena",
+      "priceHint": "Można zostawić puste",
+      "quantity": "Ilość",
+      "priority": "Priorytet",
+      "status": "Status",
+      "imageUrl": "Link do zdjęcia",
+      "note": "Notatka"
+    },
+    "priority": {
+      "low": "Niski",
+      "medium": "Średni",
+      "high": "Wysoki"
+    },
+    "status": {
+      "active": "Aktualne",
+      "purchased": "Kupione",
+      "gifted": "Podarowane"
+    },
+    "actions": {
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "statusLabel": "Status pozycji „{title}”"
+    },
+    "errors": {
+      "titleRequired": "Podaj nazwę pozycji.",
+      "badUrl": "Link musi zaczynać się od http:// lub https://",
+      "badPrice": "Cena musi być liczbą nie mniejszą od zera.",
+      "badQuantity": "Ilość to liczba całkowita od 1 do 999.",
+      "priceTooBig": "Cena jest za duża."
+    },
+    "priorityLabel": "Priorytet: {value}"
+  },
+  "toolbar": {
+    "search": "Szukaj po nazwie",
+    "sort": "Sortuj",
+    "pageSize": "Na stronie",
+    "price": "Cena",
+    "from": "od",
+    "to": "do",
+    "asc": "Rosnąco",
+    "desc": "Malejąco",
+    "sortBy": {
+      "created_at": "Wg daty",
+      "title": "Wg nazwy",
+      "price": "Wg ceny",
+      "priority": "Wg priorytetu"
+    }
+  },
+  "totals": {
+    "active": "w {n} aktualnych pozycjach",
+    "noPrice": "{n} bez ceny",
+    "gifted": "{n} podarowanych"
+  },
+  "parser": {
+    "fill": "Wypełnij",
+    "partial": "Nie wszystko się udało — resztę uzupełnij ręcznie.",
+    "gotCurrency": "Cena znaleziona w walucie {currency}. Sprawdź walutę listy.",
+    "errors": {
+      "notConfigured": "Parser nie jest skonfigurowany: dodaj VITE_PARSER_URL.",
+      "notSignedIn": "Sesja wygasła. Zaloguj się ponownie.",
+      "unreachable": "Parser niedostępny. Uzupełnij pola ręcznie.",
+      "invalidUrl": "To nie wygląda na link.",
+      "blockedHost": "Ten adres jest zablokowany ze względów bezpieczeństwa.",
+      "tooLarge": "Strona jest za duża.",
+      "unsupported": "Pod linkiem nie ma strony HTML.",
+      "rateLimited": "Za dużo zapytań. Poczekaj minutę.",
+      "timeout": "Sklep nie odpowiedział na czas.",
+      "upstream": "Sklep zwrócił błąd.",
+      "unknown": "Nie udało się odczytać strony. Uzupełnij pola ręcznie.",
+      "authUnavailable": "Parser nie mógł zweryfikować logowania. Sprawdź jego konfigurację albo uzupełnij pola ręcznie.",
+      "misconfigured": "Parser jest źle skonfigurowany: nie ma adresu Supabase.",
+      "blockedByShop": "Sklep blokuje automatyczne zapytania. Skopiuj nazwę i cenę ręcznie — link zostanie zapisany."
+    }
+  }
 }

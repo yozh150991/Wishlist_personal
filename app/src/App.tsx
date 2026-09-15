@@ -9,6 +9,7 @@ import Register from './routes/Register';
 import ResetPassword from './routes/ResetPassword';
 import UpdatePassword from './routes/UpdatePassword';
 import Lists from './routes/Lists';
+import ListDetail from './routes/ListDetail';
 import Settings from './routes/Settings';
 import NotFound from './routes/NotFound';
 
@@ -16,7 +17,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <I18nProvider>
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <Routes>
               {/* Публічні */}
@@ -34,6 +35,7 @@ export default function App() {
                 }
               >
                 <Route path="/lists" element={<Lists />} />
+                <Route path="/lists/:id" element={<ListDetail />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
 

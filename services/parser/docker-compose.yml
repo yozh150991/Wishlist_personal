@@ -1,0 +1,18 @@
+services:
+  parser:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      # Порт на хості налаштовується: 8080 у Windows часто зарезервований
+      # Hyper-V, і Docker не може до нього привʼязатись.
+      # Прив'язка саме до 127.0.0.1 — назовні лише через nginx з TLS.
+      - "127.0.0.1:${PARSER_HOST_PORT:-8787}:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]

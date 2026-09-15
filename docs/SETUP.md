@@ -279,6 +279,58 @@ npx playwright install --with-deps   # один раз
 npm run test:e2e
 ```
 
+## 7в. 💻 Парсер посилань (етап 4)
+
+Потрібен Docker.
+
+```bash
+cd services/parser
+cp ../../.env.example .env     # лишити тільки блок парсера
+docker compose up --build
+curl.exe http://localhost:8787/health
+```
+
+Відповідь має містити `"supabase_configured": true`. Якщо там `false` — у `.env` сервісу лишився шаблон `https://<project-ref>.supabase.co` з `.env.example`, і `/parse` відповідатиме `503`. Файл містить блоки і для фронтенду, і для парсера; правити треба обидва.
+
+```powershell
+docker compose exec parser env | Select-String SUPABASE
+docker compose logs --tail 30 parser
+```
+
+У PowerShell `curl` — це псевдонім `Invoke-WebRequest` з іншим синтаксисом, який ще й кидає виняток на будь-якій відповіді, крім 2xx. Для перевірки API потрібен саме **`curl.exe`**.
+
+**Якщо Docker каже «access a socket in a way forbidden by its access permissions»** — порт на хості зайнятий або зарезервований системою. У Windows діапазони під себе забирає Hyper-V:
+
+```powershell
+netsh interface ipv4 show excludedportrange protocol=tcp
+Get-NetTCPConnection -LocalPort 8787 -ErrorAction SilentlyContinue
+```
+
+Якщо потрібний порт у виключеному діапазоні — не воюй із ним, постав інший у `PARSER_HOST_PORT` і синхронно виправ `VITE_PARSER_URL`. Усередині контейнера сервіс завжди слухає 8080, змінюється лише зовнішній порт.
+
+У `app/.env.local` додати `VITE_PARSER_URL=http://localhost:8787` і **перезапустити** `npm run dev` — Vite читає оточення лише при старті. Без цієї змінної кнопка «Заповнити» неактивна, а поля заповнюються вручну; це штатна поведінка, не помилка.
+
+Тести:
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+### Деплой на GCP VM
+
+1. Відкрити 80 і 443, **не** 8080: `docker-compose.yml` привʼязує порт до `127.0.0.1`, назовні сервіс має дивитись лише через nginx.
+2. nginx як зворотний проксі з сертифікатом від Let's Encrypt на `parser.<домен>`.
+3. У `.env` сервісу вписати бойовий `PARSER_ALLOWED_ORIGINS` — без нього браузер заблокує запити з фронтенду.
+4. У `app/.env.local` (і в змінних Vercel) — `VITE_PARSER_URL=https://parser.<домен>`.
+
+Перевірити після деплою, що SSRF-фільтр живий:
+```bash
+curl -X POST https://parser.<домен>/parse \
+  -H "authorization: Bearer <токен>" -H "content-type: application/json" \
+  -d '{"url":"http://169.254.169.254/computeMetadata/v1/"}'
+```
+Має повернутись `403 blocked_host`. Якщо повернеться щось інше — **зупини сервіс**: на GCP за цією адресою лежать токени сервісного акаунта.
+
 ## 8. 💻 Локальна база (опційно, знадобиться на етапі 3)
 
 Потрібен запущений Docker.

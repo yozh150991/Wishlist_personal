@@ -47,9 +47,11 @@ $map = @{
   '20260910120100_rls.sql'    = 'supabase\migrations'
   '20260910120200_rpc.sql'    = 'supabase\migrations'
   '20260910120300_grants.sql' = 'supabase\migrations'
+  '20260911100000_items_page_fix.sql' = 'supabase\migrations'
 
   # frontend root
   'index.html' = 'app'; 'package.json' = 'app'; 'tsconfig.json' = 'app'
+  'tsconfig.test.json' = 'app'
   'vite.config.ts' = 'app'; 'playwright.config.ts' = 'app'
 
   # frontend source
@@ -58,20 +60,41 @@ $map = @{
 
   'supabase.ts' = 'app\src\lib'; 'auth.tsx' = 'app\src\lib'
   'theme.tsx' = 'app\src\lib'; 'i18n.tsx' = 'app\src\lib'
-  'authErrors.ts' = 'app\src\lib'
+  'authErrors.ts' = 'app\src\lib'; 'db.ts' = 'app\src\lib'
+  'types.ts' = 'app\src\lib'; 'format.ts' = 'app\src\lib'
+  'useItems.ts' = 'app\src\lib'
 
   'uk.json' = 'app\src\i18n'; 'pl.json' = 'app\src\i18n'; 'en.json' = 'app\src\i18n'
 
   'RequireAuth.tsx' = 'app\src\components'; 'AppShell.tsx' = 'app\src\components'
   'AuthLayout.tsx'  = 'app\src\components'; 'ui.tsx'       = 'app\src\components'
+  'Dialog.tsx' = 'app\src\components'; 'ItemCard.tsx' = 'app\src\components'
+  'ItemDialog.tsx' = 'app\src\components'; 'ListDialog.tsx' = 'app\src\components'
+  'Toolbar.tsx' = 'app\src\components'
 
   'Login.tsx' = 'app\src\routes'; 'Register.tsx' = 'app\src\routes'
   'ResetPassword.tsx' = 'app\src\routes'; 'UpdatePassword.tsx' = 'app\src\routes'
   'Lists.tsx' = 'app\src\routes'; 'Settings.tsx' = 'app\src\routes'
-  'NotFound.tsx' = 'app\src\routes'
+  'NotFound.tsx' = 'app\src\routes'; 'ListDetail.tsx' = 'app\src\routes'
 
   'database.ts' = 'app\src\types'
-  'auth.spec.ts' = 'app\tests\e2e'
+  'auth.spec.ts' = 'app\tests\e2e'; 'items.spec.ts' = 'app\tests\e2e'
+  'parser.ts' = 'app\src\lib'
+
+  # parser service
+  'requirements.txt' = 'services\parser'; 'requirements-dev.txt' = 'services\parser'
+  'Dockerfile' = 'services\parser'; 'docker-compose.yml' = 'services\parser'
+  'pytest.ini' = 'services\parser'
+  '__init__.py' = 'services\parser\app'; 'config.py' = 'services\parser\app'
+  'models.py' = 'services\parser\app';  'auth.py' = 'services\parser\app'
+  'fetcher.py' = 'services\parser\app';  'extract.py' = 'services\parser\app'
+  'cache.py' = 'services\parser\app';    'ratelimit.py' = 'services\parser\app'
+  'main.py' = 'services\parser\app'
+  'test_extract.py' = 'services\parser\tests'; 'test_ssrf.py' = 'services\parser\tests'
+  'jsonld.html' = 'services\parser\tests\fixtures'; 'og.html' = 'services\parser\tests\fixtures'
+  'microdata.html' = 'services\parser\tests\fixtures'; 'bare.html' = 'services\parser\tests\fixtures'
+  'price_in_text.html' = 'services\parser\tests\fixtures'
+  'ikea_like.html' = 'services\parser\tests\fixtures'
 }
 
 if (-not (Test-Path $From)) {
