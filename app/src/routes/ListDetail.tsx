@@ -11,6 +11,7 @@ import { Toolbar } from '../components/Toolbar';
 import { ItemCard } from '../components/ItemCard';
 import { ItemDialog } from '../components/ItemDialog';
 import { ListDialog } from '../components/ListDialog';
+import { ShareDialog } from '../components/ShareDialog';
 import { Note } from '../components/ui';
 
 export default function ListDetail() {
@@ -25,6 +26,9 @@ export default function ListDetail() {
     item: null,
   });
   const [listDialog, setListDialog] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [shareDialog, setShareDialog] = useState(false);
 
   // Пошук відкладається, решта фільтрів застосовується одразу.
   const search = useDebounced(draft.search, 300);
@@ -54,6 +58,23 @@ export default function ListDetail() {
   }, [loadMore, done]);
 
   const patch = useCallback((p: Partial<ItemQuery>) => setDraft((q) => ({ ...q, ...p })), []);
+
+  function toggleSelect(item: Item) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(item.id)) next.delete(item.id);
+      else next.add(item.id);
+      return next;
+    });
+  }
+
+  function exitSelection() {
+    setSelecting(false);
+    setSelected(new Set());
+  }
+
+  /** Подароване й куплене гостям не показується, тож вибирати його нема сенсу. */
+  const selectableItems = items.filter((i) => i.status === 'active');
 
   async function saveItem(input: ItemInput) {
     if (itemDialog.item) await updateItem(itemDialog.item.id, input);
@@ -92,12 +113,27 @@ export default function ListDetail() {
           {list?.description && <p className="lede">{list.description}</p>}
         </div>
         <div className="page__actions">
-          <button className="btn btn--quiet" onClick={() => setListDialog(true)} disabled={!list}>
-            {t('lists.edit')}
-          </button>
-          <button className="btn" onClick={() => setItemDialog({ open: true, item: null })}>
-            {t('item.add')}
-          </button>
+          {selecting ? (
+            <button className="btn btn--quiet" onClick={exitSelection}>
+              {t('common.cancel')}
+            </button>
+          ) : (
+            <>
+              <button
+                className="btn btn--quiet"
+                onClick={() => setSelecting(true)}
+                disabled={selectableItems.length === 0}
+              >
+                {t('share.start')}
+              </button>
+              <button className="btn btn--quiet" onClick={() => setListDialog(true)} disabled={!list}>
+                {t('lists.edit')}
+              </button>
+              <button className="btn" onClick={() => setItemDialog({ open: true, item: null })}>
+                {t('item.add')}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -135,6 +171,9 @@ export default function ListDetail() {
                 onEdit={(i) => setItemDialog({ open: true, item: i })}
                 onDelete={(i) => void removeItem(i)}
                 onSetStatus={(i, s) => void setStatus(i, s)}
+                selectable={selecting && item.status === 'active'}
+                selected={selected.has(item.id)}
+                onToggleSelect={toggleSelect}
               />
             ))}
           </div>
@@ -150,6 +189,41 @@ export default function ListDetail() {
           {done && items.length > 0 && <p className="small center">{t('item.end')}</p>}
         </>
       )}
+
+      {/* Панель вибору притиснута донизу екрана: вибір іде згори вниз,
+          а дія має лишатись під рукою на будь-якій довжині списку. */}
+      {selecting && (
+        <div className="selectbar" role="region" aria-label={t('share.start')}>
+          <span>{t('share.selected', { n: selected.size })}</span>
+          <div className="selectbar__actions">
+            <button
+              className="btn btn--quiet"
+              onClick={() => setSelected(new Set(selectableItems.map((i) => i.id)))}
+            >
+              {t('share.selectAll')}
+            </button>
+            <button
+              className="btn"
+              disabled={selected.size === 0}
+              onClick={() => setShareDialog(true)}
+            >
+              {t('share.create')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <ShareDialog
+        open={shareDialog}
+        listId={id}
+        itemIds={[...selected]}
+        defaultTitle={list?.title ?? ''}
+        onClose={() => {
+          setShareDialog(false);
+          exitSelection();
+        }}
+        onCreated={() => undefined}
+      />
 
       <ItemDialog
         open={itemDialog.open}

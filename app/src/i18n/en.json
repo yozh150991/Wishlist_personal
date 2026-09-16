@@ -93,7 +93,8 @@
     "backHome": "Go home",
     "save": "Save",
     "cancel": "Cancel",
-    "delete": "Delete"
+    "delete": "Delete",
+    "close": "Close"
   },
   "item": {
     "add": "Add item",
@@ -181,5 +182,61 @@
       "misconfigured": "The parser is misconfigured: its Supabase URL is missing.",
       "blockedByShop": "This shop blocks automated requests. Copy the name and price in yourself — the link will still be saved."
     }
+  },
+  "share": {
+    "title": "My links",
+    "subtitle": "Each one shows only the items you picked. The main list stays private.",
+    "start": "Share",
+    "create": "Create link",
+    "selected": "Selected: {n}",
+    "selectAll": "Select all",
+    "selectItem": "Select “{title}”",
+    "intro": "{n} items will go into this link. The rest of the list stays hidden.",
+    "ready": "Link is ready. Send it to whoever you like.",
+    "link": "Link",
+    "linkHint": "Anyone with this link sees the selected items. No sign-up needed.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "revoke": "Revoke",
+    "itemCount": "items: {n}",
+    "views": "views: {n}",
+    "until": "valid until {date}",
+    "emptyTitle": "No links yet",
+    "emptyBody": "Open a list, hit “Share”, tick the items you want.",
+    "confirmRevoke": "Revoke the link “{title}”? It will stop opening.",
+    "confirmDelete": "Delete the link “{title}” along with its stats?",
+    "state": {
+      "revoked": "Revoked",
+      "expired": "Expired"
+    },
+    "fields": {
+      "title": "Heading for guests",
+      "message": "Message",
+      "messageHint": "Optional. Everyone who opens the link will see it.",
+      "allowReservations": "Allow reservations",
+      "allowReservationsHint": "Guests can mark what they're taking. You won't see it — so the surprise holds.",
+      "hidePrices": "Hide prices",
+      "expiresAt": "Valid until",
+      "expiresAtHint": "Optional. Empty means “until you revoke it”."
+    },
+    "errors": {
+      "titleRequired": "Enter a heading.",
+      "nothingSelected": "Pick at least one item first."
+    }
+  },
+  "guest": {
+    "goneTitle": "This link isn't available",
+    "goneBody": "It may have been revoked or expired. Ask whoever sent it for a new one.",
+    "ownerBanner": "This is your own link. Reservations are hidden on purpose — so the gift stays a surprise.",
+    "hint": "Mark what you're taking and others will see it's spoken for. The list owner can't see this.",
+    "take": "I'll take this",
+    "yours": "You're taking this",
+    "cancel": "Changed my mind",
+    "reserved": "Already taken",
+    "taken": "Someone just took that one.",
+    "error": "That didn't work. Try again.",
+    "emptyTitle": "Nothing here yet",
+    "emptyBody": "Every item from this link is already unavailable.",
+    "footer": "This list is private. You only see what was shared with you."
   }
 }

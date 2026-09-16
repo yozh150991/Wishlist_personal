@@ -9,20 +9,42 @@ export function ItemCard({
   onEdit,
   onDelete,
   onSetStatus,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
 }: {
   item: Item;
   currency: Currency;
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
   onSetStatus: (item: Item, status: ItemStatus) => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (item: Item) => void;
 }) {
   const { t, locale } = useI18n();
   const price = money(item.price, currency, locale);
   const host = hostOf(item.url);
 
   return (
-    <article className="card" data-status={item.status} data-prio={item.priority}>
+    <article
+      className="card"
+      data-status={item.status}
+      data-prio={item.priority}
+      data-selected={selectable && selected}
+    >
       <span className="card__prio" aria-hidden="true" />
+
+      {selectable && (
+        <label className="card__select">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(item)}
+            aria-label={t('share.selectItem', { title: item.title })}
+          />
+        </label>
+      )}
 
       {/* Блок картинки з'являється лише за наявності картинки: інакше
           порожній прямокутник 4:3 займає більшу частину картки. */}

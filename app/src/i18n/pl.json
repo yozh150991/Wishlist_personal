@@ -93,7 +93,8 @@
     "backHome": "Na start",
     "save": "Zapisz",
     "cancel": "Anuluj",
-    "delete": "Usuń"
+    "delete": "Usuń",
+    "close": "Zamknij"
   },
   "item": {
     "add": "Dodaj pozycję",
@@ -181,5 +182,61 @@
       "misconfigured": "Parser jest źle skonfigurowany: nie ma adresu Supabase.",
       "blockedByShop": "Sklep blokuje automatyczne zapytania. Skopiuj nazwę i cenę ręcznie — link zostanie zapisany."
     }
+  },
+  "share": {
+    "title": "Moje linki",
+    "subtitle": "Każdy pokazuje tylko wybrane pozycje. Główna lista zostaje prywatna.",
+    "start": "Udostępnij",
+    "create": "Utwórz link",
+    "selected": "Wybrano: {n}",
+    "selectAll": "Zaznacz wszystkie",
+    "selectItem": "Zaznacz „{title}”",
+    "intro": "Do linku trafi {n} pozycji. Reszta listy pozostanie ukryta.",
+    "ready": "Link gotowy. Wyślij go komu chcesz.",
+    "link": "Link",
+    "linkHint": "Kto ma ten link, widzi wybrane pozycje. Rejestracja niepotrzebna.",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano",
+    "revoke": "Unieważnij",
+    "itemCount": "pozycji: {n}",
+    "views": "wyświetleń: {n}",
+    "until": "ważny do {date}",
+    "emptyTitle": "Nie ma jeszcze linków",
+    "emptyBody": "Otwórz listę, kliknij „Udostępnij”, zaznacz pozycje.",
+    "confirmRevoke": "Unieważnić link „{title}”? Przestanie się otwierać.",
+    "confirmDelete": "Usunąć link „{title}” razem ze statystykami?",
+    "state": {
+      "revoked": "Unieważniony",
+      "expired": "Wygasł"
+    },
+    "fields": {
+      "title": "Nagłówek dla gości",
+      "message": "Wiadomość",
+      "messageHint": "Opcjonalnie. Zobaczy każdy, kto otworzy link.",
+      "allowReservations": "Pozwól rezerwować",
+      "allowReservationsHint": "Goście będą mogli zaznaczyć, że biorą prezent. Ty tego nie zobaczysz — żeby została niespodzianka.",
+      "hidePrices": "Ukryj ceny",
+      "expiresAt": "Ważny do",
+      "expiresAtHint": "Opcjonalnie. Puste znaczy „dopóki nie unieważnisz”."
+    },
+    "errors": {
+      "titleRequired": "Podaj nagłówek.",
+      "nothingSelected": "Najpierw zaznacz choć jedną pozycję."
+    }
+  },
+  "guest": {
+    "goneTitle": "Link niedostępny",
+    "goneBody": "Mógł zostać unieważniony albo wygasł. Poproś o nowy osobę, która go wysłała.",
+    "ownerBanner": "To twój link. Rezerwacje są ukryte celowo — żeby prezent został niespodzianką.",
+    "hint": "Zaznacz, co bierzesz — inni zobaczą, że to zajęte. Właściciel listy tego nie widzi.",
+    "take": "Biorę to",
+    "yours": "Bierzesz",
+    "cancel": "Rezygnuję",
+    "reserved": "Już zajęte",
+    "taken": "Tę pozycję ktoś właśnie wziął.",
+    "error": "Nie udało się. Spróbuj jeszcze raz.",
+    "emptyTitle": "Na razie pusto",
+    "emptyBody": "Wszystkie pozycje z tego linku są już niedostępne.",
+    "footer": "Lista jest prywatna. Widzisz tylko to, czym się z tobą podzielono."
   }
 }

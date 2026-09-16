@@ -70,16 +70,19 @@ $map = @{
   'AuthLayout.tsx'  = 'app\src\components'; 'ui.tsx'       = 'app\src\components'
   'Dialog.tsx' = 'app\src\components'; 'ItemCard.tsx' = 'app\src\components'
   'ItemDialog.tsx' = 'app\src\components'; 'ListDialog.tsx' = 'app\src\components'
-  'Toolbar.tsx' = 'app\src\components'
+  'Toolbar.tsx' = 'app\src\components'; 'ShareDialog.tsx' = 'app\src\components'
 
   'Login.tsx' = 'app\src\routes'; 'Register.tsx' = 'app\src\routes'
   'ResetPassword.tsx' = 'app\src\routes'; 'UpdatePassword.tsx' = 'app\src\routes'
   'Lists.tsx' = 'app\src\routes'; 'Settings.tsx' = 'app\src\routes'
   'NotFound.tsx' = 'app\src\routes'; 'ListDetail.tsx' = 'app\src\routes'
+  'Shares.tsx' = 'app\src\routes'; 'SharedList.tsx' = 'app\src\routes'
 
   'database.ts' = 'app\src\types'
   'auth.spec.ts' = 'app\tests\e2e'; 'items.spec.ts' = 'app\tests\e2e'
-  'parser.ts' = 'app\src\lib'
+  'sharing.spec.ts' = 'app\tests\e2e'
+  'parser.ts' = 'app\src\lib'; 'guest.ts' = 'app\src\lib'
+  'shares.ts' = 'app\src\lib'
 
   # parser service
   'requirements.txt' = 'services\parser'; 'requirements-dev.txt' = 'services\parser'

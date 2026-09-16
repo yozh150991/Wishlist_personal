@@ -14,6 +14,7 @@ export function AppShell() {
         </Link>
         <nav className="shell__nav">
           <NavLink to="/lists">{t('nav.lists')}</NavLink>
+          <NavLink to="/shares">{t('nav.shares')}</NavLink>
           <NavLink to="/settings">{t('nav.settings')}</NavLink>
         </nav>
         <button className="btn btn--bare" onClick={() => void signOut()}>

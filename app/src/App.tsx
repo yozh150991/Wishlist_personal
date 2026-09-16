@@ -10,6 +10,8 @@ import ResetPassword from './routes/ResetPassword';
 import UpdatePassword from './routes/UpdatePassword';
 import Lists from './routes/Lists';
 import ListDetail from './routes/ListDetail';
+import Shares from './routes/Shares';
+import SharedList from './routes/SharedList';
 import Settings from './routes/Settings';
 import NotFound from './routes/NotFound';
 
@@ -25,6 +27,8 @@ export default function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/reset" element={<ResetPassword />} />
               <Route path="/update-password" element={<UpdatePassword />} />
+              {/* Гостьовий перегляд: без каркаса застосунку і без входу. */}
+              <Route path="/s/:token" element={<SharedList />} />
 
               {/* Захищені */}
               <Route
@@ -36,6 +40,7 @@ export default function App() {
               >
                 <Route path="/lists" element={<Lists />} />
                 <Route path="/lists/:id" element={<ListDetail />} />
+                <Route path="/shares" element={<Shares />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
 
