@@ -328,6 +328,12 @@ npx supabase db reset  # накатує міграції + seed.sql з нуля
 ```
 Дає власний Postgres на `localhost:54322` і Studio на `localhost:54323`. Потрібно для pgTAP-тестів і щоб експериментувати зі схемою, не чіпаючи хмару.
 
+```bash
+npx supabase test db   # pgTAP-тести з supabase/tests/database/
+```
+
+Попередження `seed.sql not found` при `db reset` поки очікуване: сіду ще немає.
+
 `supabase stop` зупиняє контейнери.
 
 ---

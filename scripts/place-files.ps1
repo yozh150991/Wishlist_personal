@@ -48,6 +48,12 @@ $map = @{
   '20260910120200_rpc.sql'    = 'supabase\migrations'
   '20260910120300_grants.sql' = 'supabase\migrations'
   '20260911100000_items_page_fix.sql' = 'supabase\migrations'
+  '20260916220000_revoke_default_function_grants.sql' = 'supabase\migrations'
+
+  # database tests (pgTAP)
+  '01_schema_guards.test.sql' = 'supabase\tests\database'
+  '02_owner_isolation.test.sql' = 'supabase\tests\database'
+  '03_sharing_and_reservations.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'

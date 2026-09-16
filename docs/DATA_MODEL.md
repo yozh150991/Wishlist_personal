@@ -9,6 +9,7 @@
 | `20260910120200_rpc.sql` | гостьові й службові RPC |
 | `20260910120300_grants.sql` | явні гранти на RPC, відкликання `EXECUTE` у `PUBLIC` |
 | `20260911100000_items_page_fix.sql` | новий `list_items_page` і індекси під нього (ADR-017) |
+| `20260916220000_revoke_default_function_grants.sql` | відкликання `EXECUTE` у `anon` на функції власника — `revoke from public` виявився недостатнім |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 

@@ -89,9 +89,9 @@ const { data } = await supabase.rpc('list_totals', { p_list_id: listId });
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `reserve_item`, `unreserve_item` | `anon`, `authenticated` |
-| `gen_share_token` | внутрішня, ззовні недоступна |
+| `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
-Неявний `EXECUTE` ролі `PUBLIC` відкликано міграцією `20260910120300_grants.sql`. Кожна нова RPC-функція має отримувати гранти явно — інакше вона автоматично стане анонімним ендпоінтом PostgREST.
+Права задано міграціями `20260910120300_grants.sql` і `20260916220000_revoke_default_function_grants.sql`. Перша відкликала лише `PUBLIC`, і функції власника лишались доступними `anon` через явні гранти Supabase за замовчуванням; друга це закрила. Кожна нова RPC-функція отримує гранти явно й відкликає їх у конкретних ролей (CLAUDE.md §3.4). Таблицю вище перевіряє `supabase/tests/database/01_schema_guards.test.sql`.
 
 ## Звичайні запити (через RLS)
 
