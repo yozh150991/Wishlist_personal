@@ -2,6 +2,16 @@
 
 Джерело істини — `supabase/migrations/*.sql`. Цей файл пояснює *чому*.
 
+| Міграція | Що робить |
+|---|---|
+| `20260910120000_init.sql` | таблиці, типи, тригери |
+| `20260910120100_rls.sql` | RLS, відкликання прав `anon`, ізоляція `reservations` |
+| `20260910120200_rpc.sql` | гостьові й службові RPC |
+| `20260910120300_grants.sql` | явні гранти на RPC, відкликання `EXECUTE` у `PUBLIC` |
+| `20260911100000_items_page_fix.sql` | новий `list_items_page` і індекси під нього (ADR-017) |
+
+База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
+
 ## Схема
 
 ```
@@ -9,7 +19,7 @@ auth.users
     │
     ├──1:1── profiles          (locale, theme, default_currency)
     │
-    └──1:N── lists             (title, currency, event_date, is_archived)
+    └──1:N── lists             (title, description, currency, event_date, is_archived)
                  │
                  ├──1:N── items       (title, url?, price?, quantity,
                  │           │         priority, note, image_url, status)
@@ -41,7 +51,7 @@ auth.users
 Позиції зі статусом `purchased`/`gifted` **не показуються в спільних посиланнях** — щоб гість не купив те, що вже є.
 
 ### `shares`
-`token` — 16 випадкових байтів у base64url (22 символи, ~128 біт). Перебір нереальний, тому окремого пароля не треба.
+`token` — 16 байтів із `gen_random_uuid()` у base64url, 22 символи і 122 біти випадковості (ADR-014: шість бітів UUIDv4 зайнято під версію і варіант). Перебір нереальний, тому окремого пароля не треба.
 
 Посилання **живе**: `get_shared_list` щоразу читає актуальні `items`. Видалив позицію в себе — вона зникла й у гостей (через `ON DELETE CASCADE` на `share_items.item_id`).
 
@@ -69,7 +79,11 @@ auth.users
 | Індекс | Для чого |
 |---|---|
 | `items_list_created_idx (list_id, created_at desc, id desc)` | сортування за замовчуванням |
-| `items_list_price_idx`, `items_list_title_idx` | альтернативні сортування |
+| `items_list_title_idx (list_id, title, id)` | сортування за назвою |
+| `items_list_price_key_idx (list_id, coalesce(price, -1), id)` | сортування за ціною; позиції без ціни не випадають із курсора (ADR-017) |
+| `items_list_priority_idx (list_id, priority, id)` | сортування за пріоритетом |
+| `items_list_price_idx (list_id, price, id)` | з першої міграції; сортування за ціною після ADR-017 іде за індексом вище, цей лишається корисним хіба що для фільтру діапазону ціни |
+| `items_owner_idx (owner_id)` | RLS-політика `owner_id = auth.uid()` |
 | `items_list_status_idx` | фільтр по статусу |
 | `items_title_trgm_idx` (GIN trgm) | пошук `ILIKE '%...%'` без seq scan |
 | `shares.token` (unique) | пошук за токеном |

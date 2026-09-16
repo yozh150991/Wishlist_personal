@@ -21,7 +21,7 @@
            │ HTTPS + Supabase JWT
            │
 ┌──────────┴───────────────────┐
-│  parser-service (FastAPI)    │   Google Cloud VM
+│  parser-service (FastAPI)    │   Google Cloud Run
 │  POST /parse                 │
 │  OpenGraph / schema.org      │
 │  SSRF-guard, кеш, таймаути   │
@@ -34,13 +34,27 @@
 2. **Anon-роль не має `SELECT` на таблицях.** Гість бачить дані винятково через `SECURITY DEFINER` RPC, які самі перевіряють токен, термін дії та відкликання.
 3. **Парсер — окремий процес** із власним мережевим периметром. Він ходить у зовнішній інтернет, тому не має доступу до БД взагалі: повертає JSON клієнту, клієнт зберігає дані через Supabase під своїм JWT.
 
+## Хостинг
+
+| Частина | Де | Особливості |
+|---|---|---|
+| Фронтенд | Vercel, збірка з теки `app` | `vercel.json`: перезапис шляхів на `index.html`, `noindex` для `/s/*`, заголовки безпеки |
+| Парсер | Cloud Run, `europe-central2` (ADR-021) | масштабування до нуля, `--max-instances 2` |
+| Supabase | Frankfurt, тариф Free | проєкт засинає після тижня бездіяльності |
+| Пошта | Brevo SMTP (ADR-022) | відправник — підтверджена адреса, не домен |
+
+Кеш відповідей, кеш токенів і обмеження частоти в парсері живуть у пам'яті процесу. На Cloud Run це означає: після простою інстанс зупиняється, і кеші зникають; при двох одночасних інстансах кожен рахує ліміт окремо, тож фактична межа — до 40 запитів на хвилину замість 20. Для особистого застосунку це прийнятно.
+
 ## Потоки
 
 ### Додавання позиції з посилання
 ```
 Користувач вставляє URL
   → фронт: POST /parse {url}   (Authorization: Bearer <supabase JWT>)
-  → парсер: HEAD-перевірка → GET (ліміт 2 МБ, таймаут 8 с)
+  → парсер: перевірка форми токена → GET /auth/v1/user у Supabase (кеш 5 хв)
+  → прибирання рекламних параметрів → кеш відповідей (15 хв)
+  → GET потоком (понад 5 МБ обрізається, таймаут 8 с, до 5 редиректів,
+    кожна адреса й кожен редирект проходять SSRF-перевірку)
   → витяг og:title / og:image / product:price / schema.org Offer
   → {title, price, currency, image_url, site_name} або часткові дані
   → фронт заповнює форму, користувач редагує і зберігає
@@ -65,7 +79,9 @@ GET /s/:token
 ```
 `guest_key` — випадковий UUID у `localStorage` гостя. Потрібен лише щоб гість міг зняти власну бронь. Не ідентифікує особу.
 
-## Офлайн-режим (PWA)
+## Офлайн-режим (PWA) — план етапу 6
+
+Нічого з цього розділу ще не реалізовано: зараз застосунок працює лише з мережею. Розділ фіксує задуманий устрій, щоб етап 6 не довелося проєктувати заново.
 
 - Service Worker: app shell — cache-first; API — network-first із fallback на кеш.
 - IndexedDB зберігає останній стан списків для читання офлайн.
@@ -76,22 +92,42 @@ GET /s/:token
 
 ```
 app/
+├── index.html  vercel.json  vite.config.ts  playwright.config.ts
+├── tsconfig.json         # src/, без типів Node
+├── tsconfig.test.json    # tests/ і playwright.config.ts
 ├── src/
-│   ├── main.tsx
-│   ├── routes/
-│   │   ├── auth/          # /login, /register, /reset
-│   │   ├── lists/         # /lists, /lists/:id
-│   │   ├── shares/        # /shares — «Мої посилання»
-│   │   └── public/        # /s/:token — гостьовий перегляд
+│   ├── main.tsx  App.tsx  styles.css  vite-env.d.ts
+│   ├── routes/           # по файлу на сторінку
+│   │   ├── Login.tsx  Register.tsx  ResetPassword.tsx  UpdatePassword.tsx
+│   │   ├── Lists.tsx  ListDetail.tsx  Shares.tsx  Settings.tsx
+│   │   ├── SharedList.tsx          # /s/:token — гостьовий перегляд
+│   │   └── NotFound.tsx
 │   ├── components/
-│   ├── features/
-│   │   ├── items/         # форма, картка, парсинг URL
-│   │   ├── sharing/       # вибір, діалог шеру
-│   │   └── ie/            # експорт/імпорт CSV+JSON
-│   ├── lib/               # supabase client, guards, i18n, currency
+│   │   ├── AppShell.tsx  AuthLayout.tsx  RequireAuth.tsx  ui.tsx
+│   │   ├── Dialog.tsx  ItemDialog.tsx  ListDialog.tsx  ShareDialog.tsx
+│   │   └── ItemCard.tsx  Toolbar.tsx
+│   ├── lib/
+│   │   ├── supabase.ts  auth.tsx  theme.tsx  i18n.tsx  authErrors.ts
+│   │   ├── db.ts  useItems.ts  shares.ts  guest.ts   # дані
+│   │   ├── parser.ts                                 # клієнт парсера
+│   │   └── format.ts  types.ts  safeNext.ts
 │   ├── i18n/{uk,pl,en}.json
-│   └── types/database.ts  # згенеровано, не редагувати
-└── tests/e2e/             # Playwright
+│   └── types/database.ts # згенеровано, не редагувати
+└── tests/e2e/            # Playwright
+```
+
+Сторінки лежать пласко в `routes/`, спільні елементи — у `components/`, робота з даними — у `lib/`. Окремої теки `features/` немає: при такому обсязі вона лише додала б рівень вкладеності.
+
+```
+services/parser/
+├── Dockerfile  docker-compose.yml  requirements*.txt  pytest.ini
+├── app/
+│   ├── main.py       # роути, CORS
+│   ├── auth.py       # перевірка токена (ADR-018, ADR-023)
+│   ├── fetcher.py    # SSRF-фільтр, редиректи, ліміти
+│   ├── extract.py    # JSON-LD → microdata → OG → Twitter → title → евристика
+│   └── cache.py  ratelimit.py  config.py  models.py
+└── tests/            # pytest + HTML-фікстури
 ```
 
 ## Стан на клієнті
@@ -105,7 +141,7 @@ ThemeProvider        тема; застосовується скриптом в 
         └── AuthProvider   сесія Supabase; усередині роутера, бо потребує навігації
 ```
 
-Зовнішніх бібліотек стану немає — контексту достатньо. Дані списків на етапі 3 підуть у власний хук над supabase-js, без React Query: офлайн-черга з етапу 6 усе одно вимагатиме власного шару.
+Зовнішніх бібліотек стану немає — контексту достатньо. Дані позицій живуть у власному хуку `useItems` над supabase-js, без React Query: офлайн-черга з етапу 6 усе одно вимагатиме власного шару.
 
 ## Стилі
 

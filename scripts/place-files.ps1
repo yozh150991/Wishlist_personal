@@ -82,7 +82,8 @@ $map = @{
   'auth.spec.ts' = 'app\tests\e2e'; 'items.spec.ts' = 'app\tests\e2e'
   'sharing.spec.ts' = 'app\tests\e2e'
   'parser.ts' = 'app\src\lib'; 'guest.ts' = 'app\src\lib'
-  'shares.ts' = 'app\src\lib'
+  'shares.ts' = 'app\src\lib'; 'safeNext.ts' = 'app\src\lib'
+  'safe-next.spec.ts' = 'app\tests\e2e'
 
   # parser service
   'requirements.txt' = 'services\parser'; 'requirements-dev.txt' = 'services\parser'
@@ -94,6 +95,7 @@ $map = @{
   'cache.py' = 'services\parser\app';    'ratelimit.py' = 'services\parser\app'
   'main.py' = 'services\parser\app'
   'test_extract.py' = 'services\parser\tests'; 'test_ssrf.py' = 'services\parser\tests'
+  'test_auth.py' = 'services\parser\tests'
   'jsonld.html' = 'services\parser\tests\fixtures'; 'og.html' = 'services\parser\tests\fixtures'
   'microdata.html' = 'services\parser\tests\fixtures'; 'bare.html' = 'services\parser\tests\fixtures'
   'price_in_text.html' = 'services\parser\tests\fixtures'

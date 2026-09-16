@@ -12,8 +12,8 @@
 |---|---|---|
 | Код і документація | локальна папка + GitHub `yozh150991/Wishlist_personal` | зараз |
 | База, авторизація | Supabase Cloud (регіон Frankfurt) | зараз |
-| Фронтенд | локально `app/`, потім Vercel | етап 2 |
-| Парсер | локально `services/parser/`, потім GCP VM | етап 4 |
+| Фронтенд | локально `app/`, бойовий — Vercel | етап 2 |
+| Парсер | локально `services/parser/`, бойовий — Cloud Run | етап 4 |
 
 Один репозиторій на все (монорепо). Фронт і парсер — окремі папки в ньому.
 
@@ -77,19 +77,17 @@ Wishlist_personal/
 ├── supabase/
 │   ├── config.toml           # створює supabase init
 │   └── migrations/           # <timestamp>_name.sql
-└── app/                      # фронтенд
-    ├── index.html  package.json  tsconfig.json
-    ├── vite.config.ts  playwright.config.ts
-    ├── .env.local            # твій, у git не потрапляє
-    ├── src/
-    │   ├── main.tsx  App.tsx  styles.css  vite-env.d.ts
-    │   ├── lib/          supabase.ts  auth.tsx  theme.tsx  i18n.tsx  authErrors.ts
-    │   ├── i18n/         uk.json  pl.json  en.json
-    │   ├── components/   RequireAuth.tsx  AppShell.tsx  AuthLayout.tsx  ui.tsx
-    │   ├── routes/       Login.tsx  Register.tsx  ResetPassword.tsx
-    │   │                 UpdatePassword.tsx  Lists.tsx  Settings.tsx  NotFound.tsx
-    │   └── types/        database.ts
-    └── tests/e2e/        auth.spec.ts
+├── app/                      # фронтенд, повна структура — ARCHITECTURE.md
+│   ├── index.html  package.json  vercel.json  vite.config.ts
+│   ├── tsconfig.json  tsconfig.test.json  playwright.config.ts
+│   ├── .env.local            # твій, у git не потрапляє
+│   ├── src/  {routes, components, lib, i18n, types}
+│   └── tests/e2e/
+└── services/parser/          # FastAPI
+    ├── Dockerfile  docker-compose.yml  requirements*.txt
+    ├── .env                  # твій, у git не потрапляє
+    ├── app/
+    └── tests/
 ```
 
 `src/lib/i18n.tsx` — код провайдера, `src/i18n/` — папка зі словниками. Різні речі з однаковою назвою.
@@ -179,7 +177,7 @@ npx supabase db push
 
 Без цього листи підтвердження вестимуть у нікуди.
 
-**Authentication → Emails** — шаблони поки англійські. Українські й польські версії робимо на етапі 2, коли зʼявляться i18n-ключі. Безкоштовний тариф шле ~3 листи на годину — для розробки достатньо, для релізу треба свій SMTP (Resend, Postmark).
+**Authentication → Emails** — шаблони поки англійські. Вбудований відправник шле ~3 листи на годину — для розробки достатньо. Бойовий проєкт уже налаштовано на SMTP через Brevo: див. `DEPLOY.md`, розділ 5, і ADR-022.
 
 ---
 
@@ -256,7 +254,7 @@ rollback;
 ## 7. 💻 Локальні змінні оточення
 
 ```bash
-cp .env.example app/.env.local     # папку app/ створимо на етапі 2
+cp .env.example app/.env.local     # потім лишити тільки блок фронтенду
 ```
 Заповнити `VITE_SUPABASE_URL` і `VITE_SUPABASE_PUBLISHABLE_KEY`. Файл уже в `.gitignore` — перевір `git status`, його не має бути серед відстежуваних.
 
@@ -318,17 +316,7 @@ pytest
 
 ### Деплой
 
-Покроково — в [DEPLOY.md](./DEPLOY.md). Робиться разом із фронтендом. Причина: сторінка на HTTPS не може звертатись до парсера по HTTP, браузер блокує це як змішаний вміст. Поки і фронт, і парсер на `localhost`, TLS не потрібен.
-
-Коли дійде черга, варіант із власною VM за nginx — не єдиний і не найпростіший. Готовий Dockerfile дозволяє розгорнути сервіс там, де HTTPS дається одразу.
-
-Перевірити після деплою, що SSRF-фільтр живий:
-```bash
-curl -X POST https://parser.<домен>/parse \
-  -H "authorization: Bearer <токен>" -H "content-type: application/json" \
-  -d '{"url":"http://169.254.169.254/computeMetadata/v1/"}'
-```
-Має повернутись `403 blocked_host`. Якщо повернеться щось інше — **зупини сервіс**: на GCP за цією адресою лежать токени сервісного акаунта.
+Покроково — у [DEPLOY.md](./DEPLOY.md): Cloud Run (ADR-021), перевірка SSRF на бойовому сервісі з дійсним токеном. Поки і фронт, і парсер на `localhost`, TLS не потрібен; на бойовому HTTPS-фронтенді парсер теж мусить бути на HTTPS, інакше браузер заблокує запити як змішаний вміст.
 
 ## 8. 💻 Локальна база (опційно, знадобиться на етапі 3)
 
