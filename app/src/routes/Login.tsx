@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { authErrorKey } from '../lib/authErrors';
+import { safeNext } from '../lib/safeNext';
 import { AuthLayout } from '../components/AuthLayout';
 import { Field, Note } from '../components/ui';
 
@@ -16,7 +17,8 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const next = params.get('next') ?? '/lists';
+  // Only same-origin paths; anything else falls back to /lists.
+  const next = safeNext(params.get('next'));
   if (!loading && session) return <Navigate to={next} replace />;
 
   async function onSubmit() {

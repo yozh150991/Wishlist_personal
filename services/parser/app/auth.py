@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 
 import httpx
@@ -11,12 +12,30 @@ log = logging.getLogger("parser.auth")
 # token -> (user_id, коли протухне в кеші)
 _cache: dict[str, tuple[str, float]] = {}
 
+# Токен доступу Supabase — це JWT: три частини base64url через крапку.
+# Перевіряємо лише форму, не вміст і не підпис (це робить Supabase, ADR-018).
+# Форма потрібна з двох причин:
+#   1. HTTP-заголовки мають бути ASCII. Кирилиця чи інше сміття в токені
+#      валило httpx з UnicodeEncodeError ще до запиту, і клієнт отримував
+#      голий 500 замість 401.
+#   2. Явно фальшивий токен не варто везти в Supabase: це зайвий мережевий
+#      запит на кожну спробу.
+_JWT_RE = re.compile(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
+
+# Звичайний токен Supabase — близько 1 КБ. Запас на великі app_metadata.
+_MAX_TOKEN_LEN = 8192
+
 
 def _bearer(request: Request) -> str:
-    header = request.headers.get("authorization", "")
+    header = request.headers.get("authorization", "").strip()
     scheme, _, token = header.partition(" ")
+    token = token.strip()
     if scheme.lower() != "bearer" or not token:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing_token")
+    if len(token) > _MAX_TOKEN_LEN or not _JWT_RE.fullmatch(token):
+        # Сам токен у лог не пишемо ніколи — лише факт і довжину.
+        log.warning("токен неправильної форми відхилено без запиту до Supabase (довжина %d)", len(token))
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid_token")
     return token
 
 
@@ -26,8 +45,9 @@ async def require_user(request: Request) -> str:
 
     Не розбираємо і не звіряємо підпис самі: проєкт може підписувати
     токени як асиметрично, так і спільним секретом HS256, і сервіс не
-    повинен про це знати. Відповіді кешуються на кілька хвилин, щоб не
-    ходити в Supabase на кожен запит.
+    повинен про це знати. Локально перевіряється лише форма токена —
+    див. коментар до _JWT_RE. Відповіді кешуються на кілька хвилин,
+    щоб не ходити в Supabase на кожен запит.
     """
     cfg = settings()
     token = _bearer(request)

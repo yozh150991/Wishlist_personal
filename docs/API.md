@@ -106,7 +106,7 @@ await supabase.from('shares').update({ revoked_at: new Date().toISOString() }).e
 
 ## Parser service (FastAPI)
 
-Base URL: `VITE_PARSER_URL` (env). Автентифікація: `Authorization: Bearer <supabase access token>` — сервіс перевіряє токен запитом `GET /auth/v1/user` до Supabase і кешує результат на 5 хвилин (ADR-018). Жодних секретів у сервісі немає.
+Base URL: `VITE_PARSER_URL` (env). Автентифікація: `Authorization: Bearer <supabase access token>` — сервіс перевіряє токен запитом `GET /auth/v1/user` до Supabase і кешує результат на 5 хвилин (ADR-018). Жодних секретів у сервісі немає. Перед запитом локально перевіряється лише форма токена (JWT: три частини base64url, до 8 КБ); токен іншої форми відхиляється одразу, без звернення до Supabase.
 
 ### `POST /parse`
 ```json
@@ -130,6 +130,8 @@ Base URL: `VITE_PARSER_URL` (env). Автентифікація: `Authorization:
 **Помилки**
 | Код | Коли |
 |---|---|
+| `401 missing_token` | немає заголовка `Authorization` або схема не `Bearer` |
+| `401 invalid_token` | токен неправильної форми або Supabase його не прийняв |
 | `400 invalid_url` | не http/https, некоректний URL |
 | `403 blocked_host` | приватна мережа, localhost, метадані хмари |
 | `422 unsupported_content` | не HTML |
