@@ -40,7 +40,7 @@ $map = @{
   # documentation
   'API.md' = 'docs'; 'ARCHITECTURE.md' = 'docs'; 'DATA_MODEL.md' = 'docs'
   'DECISIONS.md' = 'docs'; 'ROADMAP.md' = 'docs'; 'SETUP.md' = 'docs'
-  'TESTING.md' = 'docs'
+  'TESTING.md' = 'docs'; 'DEPLOY.md' = 'docs'
 
   # database migrations
   '20260910120000_init.sql'   = 'supabase\migrations'
@@ -51,7 +51,7 @@ $map = @{
 
   # frontend root
   'index.html' = 'app'; 'package.json' = 'app'; 'tsconfig.json' = 'app'
-  'tsconfig.test.json' = 'app'
+  'tsconfig.test.json' = 'app'; 'vercel.json' = 'app'
   'vite.config.ts' = 'app'; 'playwright.config.ts' = 'app'
 
   # frontend source

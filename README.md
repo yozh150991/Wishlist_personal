@@ -12,7 +12,7 @@
 | Бекенд даних | Supabase (Postgres + Auth + RLS) |
 | Парсер посилань | FastAPI (Python), окремий сервіс |
 | Хостинг фронту | Vercel |
-| Хостинг парсера | Google Cloud VM (Docker + nginx) |
+| Хостинг парсера | Google Cloud Run (Docker, масштабування до нуля) |
 | Тести | Playwright + TypeScript |
 
 ## Ключові рішення
@@ -28,7 +28,8 @@
 | Файл | Про що |
 |---|---|
 | [CLAUDE.md](./CLAUDE.md) | Правила роботи для AI-агентів. Читати першим. |
-| [docs/SETUP.md](./docs/SETUP.md) | Розгортання з нуля: репозиторій, Supabase, перевірка RLS |
+| [docs/SETUP.md](./docs/SETUP.md) | Локальне розгортання: репозиторій, Supabase, перевірка RLS |
+| [docs/DEPLOY.md](./docs/DEPLOY.md) | Публікація: Vercel, Cloud Run, пошта, перевірка |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Компоненти, потоки даних, межі довіри |
 | [docs/DATA_MODEL.md](./docs/DATA_MODEL.md) | Таблиці, зв'язки, RLS, індекси |
 | [docs/API.md](./docs/API.md) | RPC-функції Supabase та REST парсера |
