@@ -1,0 +1,128 @@
+{{- $l := printf "%v" .Data.locale -}}
+{{- $known := or (eq $l "uk") (eq $l "pl") (eq $l "en") -}}
+<!doctype html>
+<html lang="{{ if $known }}{{ $l }}{{ else }}uk{{ end }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Wishlist</title>
+</head>
+<body style="margin:0;padding:0;background:#f2f3f2;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">{{ if or (eq $l "uk") (not $known) }}Тебе запросили у Wishlist. {{ end }}{{ if or (eq $l "pl") (not $known) }}Zaproszenie do Wishlist. {{ end }}{{ if or (eq $l "en") (not $known) }}You've been invited to Wishlist. {{ end }}</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f2f3f2" style="background:#f2f3f2;">
+    <tr>
+      <td align="center" style="padding:32px 12px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;">
+          <tr>
+            <td style="padding:0 4px 14px 4px;font-family:Georgia, 'Times New Roman', serif;font-size:20px;color:#4a2e6b;">Wishlist</td>
+          </tr>
+          <tr>
+            <td bgcolor="#ffffff" style="background:#ffffff;border-radius:16px;padding:32px 28px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+{{ if or (eq $l "uk") (not $known) }}
+                {{ if not $known }}<tr>
+                  <td style="padding:0 0 6px 0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#646c69;">Українською</td>
+                </tr>{{ end }}
+                <tr>
+                  <td style="padding:0 0 12px 0;font-family:Georgia, 'Times New Roman', serif;font-size:26px;line-height:1.25;color:#1b1f1e;">Запрошення у Wishlist</td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 22px 0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#1b1f1e;">Для адреси <strong>{{ .Email }}</strong> створено акаунт у Wishlist — застосунку для приватних списків бажань. Натисни кнопку, щоб прийняти запрошення.</td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 18px 0;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td bgcolor="#4a2e6b" style="border-radius:10px;background:#4a2e6b;">
+                          <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:13px 26px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:10px;">Прийняти запрошення</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.5;color:#646c69;">Пароля в акаунта ще немає. Щоб входити й надалі, на сторінці входу натисни «Забув пароль» і задай свій.</td>
+                </tr>
+{{ end }}
+{{ if not $known }}
+                <tr>
+                  <td style="padding:28px 0;"><div style="height:1px;line-height:1px;font-size:1px;background:#ede8f3;">&nbsp;</div></td>
+                </tr>
+{{ end }}
+{{ if or (eq $l "pl") (not $known) }}
+                {{ if not $known }}<tr>
+                  <td style="padding:0 0 6px 0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#646c69;">Po polsku</td>
+                </tr>{{ end }}
+                <tr>
+                  <td style="padding:0 0 12px 0;font-family:Georgia, 'Times New Roman', serif;font-size:26px;line-height:1.25;color:#1b1f1e;">Zaproszenie do Wishlist</td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 22px 0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#1b1f1e;">Dla adresu <strong>{{ .Email }}</strong> utworzono konto w Wishlist — aplikacji do prywatnych list życzeń. Kliknij przycisk, żeby przyjąć zaproszenie.</td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 18px 0;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td bgcolor="#4a2e6b" style="border-radius:10px;background:#4a2e6b;">
+                          <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:13px 26px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:10px;">Przyjmij zaproszenie</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.5;color:#646c69;">Konto nie ma jeszcze hasła. Żeby logować się w przyszłości, na stronie logowania kliknij „Nie pamiętam hasła” i ustaw własne.</td>
+                </tr>
+{{ end }}
+{{ if not $known }}
+                <tr>
+                  <td style="padding:28px 0;"><div style="height:1px;line-height:1px;font-size:1px;background:#ede8f3;">&nbsp;</div></td>
+                </tr>
+{{ end }}
+{{ if or (eq $l "en") (not $known) }}
+                {{ if not $known }}<tr>
+                  <td style="padding:0 0 6px 0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#646c69;">In English</td>
+                </tr>{{ end }}
+                <tr>
+                  <td style="padding:0 0 12px 0;font-family:Georgia, 'Times New Roman', serif;font-size:26px;line-height:1.25;color:#1b1f1e;">Invitation to Wishlist</td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 22px 0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#1b1f1e;">An account in Wishlist — an app for private wish lists — has been created for <strong>{{ .Email }}</strong>. Tap the button to accept the invitation.</td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 18px 0;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td bgcolor="#4a2e6b" style="border-radius:10px;background:#4a2e6b;">
+                          <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:13px 26px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:10px;">Accept invitation</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.5;color:#646c69;">The account has no password yet. To keep signing in later, tap “Forgot password” on the sign-in page and set your own.</td>
+                </tr>
+{{ end }}
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 4px 0 4px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.55;color:#646c69;">
+              {{ if or (eq $l "uk") (not $known) }}Кнопка не працює? Скопіюй адресу в браузер.<br>{{ end }}{{ if or (eq $l "pl") (not $known) }}Przycisk nie działa? Skopiuj adres do przeglądarki.<br>{{ end }}{{ if or (eq $l "en") (not $known) }}Button not working? Copy the address into your browser.<br>{{ end }}
+              <a href="{{ .ConfirmationURL }}" target="_blank" style="color:#4a2e6b;word-break:break-all;">{{ .ConfirmationURL }}</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 4px 0 4px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.55;color:#646c69;">
+              {{ if or (eq $l "uk") (not $known) }}Не чекаєш запрошення? Просто проігноруй лист.<br>{{ end }}{{ if or (eq $l "pl") (not $known) }}Nie spodziewasz się zaproszenia? Po prostu zignoruj tę wiadomość.<br>{{ end }}{{ if or (eq $l "en") (not $known) }}Weren't expecting an invitation? Just ignore this email.<br>{{ end }}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

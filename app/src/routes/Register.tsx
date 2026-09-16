@@ -7,7 +7,7 @@ import { AuthLayout } from '../components/AuthLayout';
 import { Field, Note } from '../components/ui';
 
 export default function Register() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [again, setAgain] = useState('');
@@ -24,7 +24,11 @@ export default function Register() {
     const { error: err } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${publicOrigin}/lists` },
+      options: {
+        emailRedirectTo: `${publicOrigin}/lists`,
+        // Мова листа підтвердження: шаблон читає її з user_metadata (ADR-024).
+        data: { locale },
+      },
     });
     if (err) setError(t(authErrorKey(err)));
     else setSent(true);

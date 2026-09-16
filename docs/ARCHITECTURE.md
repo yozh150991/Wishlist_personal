@@ -105,7 +105,7 @@ app/
 │   ├── components/
 │   │   ├── AppShell.tsx  AuthLayout.tsx  RequireAuth.tsx  ui.tsx
 │   │   ├── Dialog.tsx  ItemDialog.tsx  ListDialog.tsx  ShareDialog.tsx
-│   │   └── ItemCard.tsx  Toolbar.tsx
+│   │   └── ItemCard.tsx  Toolbar.tsx  LocaleSync.tsx
 │   ├── lib/
 │   │   ├── supabase.ts  auth.tsx  theme.tsx  i18n.tsx  authErrors.ts
 │   │   ├── db.ts  useItems.ts  shares.ts  guest.ts   # дані
@@ -139,6 +139,7 @@ ThemeProvider        тема; застосовується скриптом в 
 └── I18nProvider     мова; визначається з localStorage → navigator.languages → uk
     └── BrowserRouter
         └── AuthProvider   сесія Supabase; усередині роутера, бо потребує навігації
+            └── LocaleSync мову інтерфейсу → user_metadata.locale, для листів (ADR-024)
 ```
 
 Зовнішніх бібліотек стану немає — контексту достатньо. Дані позицій живуть у власному хуку `useItems` над supabase-js, без React Query: офлайн-черга з етапу 6 усе одно вимагатиме власного шару.

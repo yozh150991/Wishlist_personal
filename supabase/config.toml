@@ -242,16 +242,24 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Шаблони з вибором мови за user_metadata.locale (ADR-024). Діють лише на локальну базу:
+# бойовий проєкт бере шаблони з дашборду, див. docs/DEPLOY.md.
+[auth.email.template.confirmation]
+subject = "Підтверди пошту · Potwierdź e-mail · Confirm your email — Wishlist"
+content_path = "./supabase/templates/confirmation.html"
 
-# Uncomment to customize notification email template
-# [auth.email.notification.password_changed]
-# enabled = true
-# subject = "Your password has been changed"
-# content_path = "./supabase/templates/password_changed_notification.html"
+[auth.email.template.recovery]
+subject = "Новий пароль · Nowe hasło · New password — Wishlist"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.invite]
+subject = "Запрошення · Zaproszenie · Invitation — Wishlist"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.notification.password_changed]
+enabled = true
+subject = "Пароль змінено · Hasło zmienione · Password changed — Wishlist"
+content_path = "./supabase/templates/password_changed.html"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.

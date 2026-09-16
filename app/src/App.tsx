@@ -4,6 +4,7 @@ import { I18nProvider } from './lib/i18n';
 import { ThemeProvider } from './lib/theme';
 import { RequireAuth } from './components/RequireAuth';
 import { AppShell } from './components/AppShell';
+import { LocaleSync } from './components/LocaleSync';
 import Login from './routes/Login';
 import Register from './routes/Register';
 import ResetPassword from './routes/ResetPassword';
@@ -21,6 +22,7 @@ export default function App() {
       <I18nProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
+            <LocaleSync />
             <Routes>
               {/* Публічні */}
               <Route path="/login" element={<Login />} />

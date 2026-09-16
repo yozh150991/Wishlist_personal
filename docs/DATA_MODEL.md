@@ -31,6 +31,12 @@ auth.users
                  └──1:N── shares      (token, hide_prices, expires_at, revoked_at)
 ```
 
+## Мова користувача
+
+`auth.users.raw_user_meta_data.locale` — `uk`, `pl` або `en`. Пише застосунок (`LocaleSync`, реєстрація), читають шаблони листів Supabase як `.Data.locale` (ADR-024). Це єдине джерело мови, яке бачать листи: колонка `profiles.locale` шаблонам недоступна і застосунком поки не використовується.
+
+`user_metadata` користувач може змінити сам через API, тож на це поле не спирається жодна перевірка доступу — лише вибір мови листа.
+
 ## Таблиці
 
 ### `lists`

@@ -49,6 +49,10 @@ $map = @{
   '20260910120300_grants.sql' = 'supabase\migrations'
   '20260911100000_items_page_fix.sql' = 'supabase\migrations'
 
+  # auth email templates (uk + pl)
+  'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
+  'invite.html' = 'supabase\templates'; 'password_changed.html' = 'supabase\templates'
+
   # frontend root
   'index.html' = 'app'; 'package.json' = 'app'; 'tsconfig.json' = 'app'
   'tsconfig.test.json' = 'app'; 'vercel.json' = 'app'
@@ -71,6 +75,7 @@ $map = @{
   'Dialog.tsx' = 'app\src\components'; 'ItemCard.tsx' = 'app\src\components'
   'ItemDialog.tsx' = 'app\src\components'; 'ListDialog.tsx' = 'app\src\components'
   'Toolbar.tsx' = 'app\src\components'; 'ShareDialog.tsx' = 'app\src\components'
+  'LocaleSync.tsx' = 'app\src\components'
 
   'Login.tsx' = 'app\src\routes'; 'Register.tsx' = 'app\src\routes'
   'ResetPassword.tsx' = 'app\src\routes'; 'UpdatePassword.tsx' = 'app\src\routes'
