@@ -75,7 +75,7 @@ $map = @{
   'Dialog.tsx' = 'app\src\components'; 'ItemCard.tsx' = 'app\src\components'
   'ItemDialog.tsx' = 'app\src\components'; 'ListDialog.tsx' = 'app\src\components'
   'Toolbar.tsx' = 'app\src\components'; 'ShareDialog.tsx' = 'app\src\components'
-  'LocaleSync.tsx' = 'app\src\components'
+  'LocaleSync.tsx' = 'app\src\components'; 'LanguagePicker.tsx' = 'app\src\components'
 
   'Login.tsx' = 'app\src\routes'; 'Register.tsx' = 'app\src\routes'
   'ResetPassword.tsx' = 'app\src\routes'; 'UpdatePassword.tsx' = 'app\src\routes'

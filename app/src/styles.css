@@ -189,10 +189,13 @@ a { color: var(--accent); text-underline-offset: 3px; }
 
 .auth__form-wrap {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   padding: var(--sp-5);
 }
+/* Перемикач мови — угорі праворуч, форма центрується в решті висоти. */
+.auth__lang { align-self: flex-end; }
+.auth__form-wrap > .auth__form { margin-block: auto; }
 .auth__form {
   width: 100%;
   max-width: 25rem;

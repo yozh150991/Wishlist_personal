@@ -8,15 +8,14 @@ import {
 } from '../lib/shares';
 import type { SharedItem, SharedList as Shared } from '../lib/shares';
 import { forgetReservation, guestKey, myReservations, rememberReservation } from '../lib/guest';
-import { useI18n, LOCALES } from '../lib/i18n';
+import { useI18n } from '../lib/i18n';
 import { hostOf, money } from '../lib/format';
 import { Note } from '../components/ui';
-
-const LOCALE_LABEL: Record<string, string> = { uk: 'UA', pl: 'PL', en: 'EN' };
+import { LanguagePicker } from '../components/LanguagePicker';
 
 export default function SharedList() {
   const { token = '' } = useParams();
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale } = useI18n();
 
   const [data, setData] = useState<Shared | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,13 +93,7 @@ export default function SharedList() {
           <h1 className="display">{data.title}</h1>
           {data.message && <p className="lede">{data.message}</p>}
         </div>
-        <div className="picker">
-          {LOCALES.map((l) => (
-            <button key={l} aria-pressed={locale === l} onClick={() => setLocale(l)}>
-              {LOCALE_LABEL[l]}
-            </button>
-          ))}
-        </div>
+        <LanguagePicker />
       </header>
 
       {data.viewer_is_owner && <Note>{t('guest.ownerBanner')}</Note>}

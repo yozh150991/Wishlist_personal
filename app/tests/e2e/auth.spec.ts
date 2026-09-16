@@ -46,3 +46,18 @@ test('невідома адреса дає сторінку 404', async ({ page 
   await page.goto('/такої-сторінки-немає');
   await expect(page.getByText(/сторінки немає|nie ma takiej|no such page/i)).toBeVisible();
 });
+
+test('мову можна перемкнути до входу, і вибір запамʼятовується', async ({ page }) => {
+  await page.goto('/register');
+  const picker = page.getByRole('group', { name: /мова|język|language/i });
+
+  await picker.getByRole('button', { name: 'Polski' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Rejestracja' })).toBeVisible();
+  await expect(picker.getByRole('button', { name: 'Polski' })).toHaveAttribute('aria-pressed', 'true');
+
+  // Вибір переживає перехід на іншу сторінку і перезавантаження.
+  await page.goto('/login');
+  await expect(page.getByRole('heading', { level: 1, name: 'Logowanie' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'Logowanie' })).toBeVisible();
+});

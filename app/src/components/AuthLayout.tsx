@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useI18n } from '../lib/i18n';
+import { LanguagePicker } from './LanguagePicker';
 
 /**
  * Ліва панель показує суть продукту без слів-обіцянок:
@@ -33,7 +34,10 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         </div>
         <PrivacyDemo />
       </aside>
-      <div className="auth__form-wrap">{children}</div>
+      <div className="auth__form-wrap">
+        <LanguagePicker className="auth__lang" />
+        {children}
+      </div>
     </div>
   );
 }

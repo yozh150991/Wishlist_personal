@@ -105,7 +105,7 @@ app/
 │   ├── components/
 │   │   ├── AppShell.tsx  AuthLayout.tsx  RequireAuth.tsx  ui.tsx
 │   │   ├── Dialog.tsx  ItemDialog.tsx  ListDialog.tsx  ShareDialog.tsx
-│   │   └── ItemCard.tsx  Toolbar.tsx  LocaleSync.tsx
+│   │   └── ItemCard.tsx  Toolbar.tsx  LocaleSync.tsx  LanguagePicker.tsx
 │   ├── lib/
 │   │   ├── supabase.ts  auth.tsx  theme.tsx  i18n.tsx  authErrors.ts
 │   │   ├── db.ts  useItems.ts  shares.ts  guest.ts   # дані
