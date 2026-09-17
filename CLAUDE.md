@@ -51,7 +51,7 @@
 
 Якщо задача вимагає порушити інваріант — зупинись і спитай користувача, а не обходь.
 
-Інваріанти перевіряються pgTAP-тестами в `supabase/tests/database/` (TESTING.md). Міграція, після якої `npx supabase test db` червоний, не пушиться. CI (`.github/workflows/ci.yml`) проганяє pgTAP, pytest і Playwright на кожен push — червоний CI в `main` лагодиться першим, до нової роботи.
+Інваріанти перевіряються pgTAP-тестами в `supabase/tests/database/` (TESTING.md). Міграція, після якої `npx supabase test db` червоний, не пушиться. CI (`.github/workflows/ci.yml`) проганяє pgTAP, pytest і Playwright на кожен push і pull request. `main` захищено: зміни лише через PR із зеленим CI (DEPLOY.md, розділ 8). Робота йде в гілках; назва гілки — `feat/…`, `fix/…`, `docs/…`, `test/…`.
 
 ## 4. Стиль коду
 

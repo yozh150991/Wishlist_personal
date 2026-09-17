@@ -294,6 +294,62 @@ gcloud run services logs read wishlist-parser --region europe-central2 --limit 3
 
 ---
 
+## 8. Захист гілки `main`
+
+Мета: у бойову версію потрапляє лише те, що пройшло CI. Vercel збирає `main`, тож досить заборонити в `main` усе, крім pull request із зеленими перевірками.
+
+**Спершу** CI має хоча б раз успішно пройти на GitHub: GitHub пропонує в налаштуваннях лише ті перевірки, які вже бачив.
+
+**Обмеження безкоштовного тарифу.** Правила працюють для публічного репозиторію. Якщо зробити його приватним на тарифі Free, правило лишиться в налаштуваннях, але GitHub перестане його застосовувати — і захист мовчки зникне.
+
+### Налаштування
+
+GitHub → репозиторій → **Settings → Rules → Rulesets → New ruleset → New branch ruleset**:
+
+| Поле | Значення |
+|---|---|
+| Ruleset name | `protect-main` |
+| Enforcement status | **Active** |
+| Bypass list | порожній — інакше правило не діє на власника |
+| Target branches → Add target | **Include default branch** |
+| Restrict deletions | ✓ |
+| Block force pushes | ✓ |
+| Require a pull request before merging | ✓, **Required approvals: 0** — схвалювати свій PR нікому |
+| Require status checks to pass | ✓, додати три перевірки нижче |
+
+Перевірки (**Add checks**, пошук за назвою):
+- `Frontend · typecheck і build`
+- `Parser · pytest`
+- `Database · pgTAP і Playwright`
+
+«Require branches to be up to date before merging» для одного розробника не потрібне — лише додає зайвий перезапуск CI.
+
+**Create.**
+
+### Як тепер працювати
+
+```powershell
+git switch -c fix/short-name          # нова гілка від main
+# ...зміни...
+git add -A
+git commit -m "fix: ..."
+git push -u origin fix/short-name
+```
+
+GitHub покаже посилання **Compare & pull request** — створити PR. Коли три перевірки зелені, **Merge pull request** → **Delete branch**. Потім локально:
+
+```powershell
+git switch main
+git pull
+git branch -d fix/short-name
+```
+
+Vercel збирає кожну гілку на окремій адресі — PR можна перевірити в браузері ще до злиття. Щоб на такій адресі працював вхід, у Supabase → Authentication → URL Configuration → Redirect URLs має бути `https://*.vercel.app/**` (розділ 7).
+
+Якщо спробувати `git push` прямо в `main`, GitHub відмовить із `GH013: Repository rule violations`. Це правило працює, а не зламалось.
+
+---
+
 ## Скільки це коштує
 
 | Що | Тариф | Реально |
