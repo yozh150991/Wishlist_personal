@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog } from './Dialog';
 import { Field, Note } from './ui';
 import { useI18n } from '../lib/i18n';
+import { errorText } from '../lib/errors';
 import { createShare, shareUrl } from '../lib/shares';
 
 export function ShareDialog({
@@ -64,7 +65,7 @@ export function ShareDialog({
       setLink(shareUrl(share.token));
       onCreated();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }

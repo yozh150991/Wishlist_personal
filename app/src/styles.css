@@ -779,3 +779,25 @@ a { color: var(--accent); text-underline-offset: 3px; }
   padding-top: var(--sp-3);
 }
 .chip--mine { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+
+/* ── Нова версія застосунку ───────────────── */
+/* Угорі, а не внизу: низ екрана зайнятий панеллю вибору. */
+.update-banner {
+  position: fixed;
+  top: var(--sp-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  width: min(36rem, calc(100% - 2 * var(--sp-3)));
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-card);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+.update-banner > span { flex: 1 1 12rem; }
+.update-banner__actions { display: flex; gap: var(--sp-2); }

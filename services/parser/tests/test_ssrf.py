@@ -20,6 +20,10 @@ from app.fetcher import BlockedHost, assert_public_url
         "http://172.16.0.9/",
         "http://[::1]/",
         "http://0.0.0.0/",
+        "http://100.64.1.1/",          # CGNAT: там живуть VPC-конектори хмар
+        "http://224.0.0.1/",           # multicast
+        "http://239.255.255.250/",     # SSDP
+        "http://[ff02::1]/",
     ],
 )
 def test_private_targets_blocked(url):

@@ -5,6 +5,7 @@ import { ThemeProvider } from './lib/theme';
 import { RequireAuth } from './components/RequireAuth';
 import { AppShell } from './components/AppShell';
 import { LocaleSync } from './components/LocaleSync';
+import { UpdatePrompt } from './components/UpdatePrompt';
 import Login from './routes/Login';
 import Register from './routes/Register';
 import ResetPassword from './routes/ResetPassword';
@@ -20,6 +21,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <I18nProvider>
+        <UpdatePrompt />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <LocaleSync />

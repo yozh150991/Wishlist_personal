@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { deleteShare, fetchShares, revokeShare, shareUrl } from '../lib/shares';
 import type { ShareWithCount } from '../lib/shares';
 import { useI18n } from '../lib/i18n';
+import { errorText } from '../lib/errors';
 import { formatDate } from '../lib/format';
 import { Note } from '../components/ui';
 
@@ -24,7 +25,7 @@ export default function Shares() {
       setShares(await fetchShares());
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorText(e, t));
     } finally {
       setLoading(false);
     }
@@ -63,7 +64,7 @@ export default function Shares() {
 
       {loading ? (
         <p className="small">{t('common.loading')}…</p>
-      ) : shares.length === 0 ? (
+      ) : shares.length === 0 && !error ? (
         <div className="empty">
           <h2>{t('share.emptyTitle')}</h2>
           <p className="lede">{t('share.emptyBody')}</p>

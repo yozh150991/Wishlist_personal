@@ -12,6 +12,7 @@ import {
 import type { ItemInput, ListInput } from '../lib/db';
 import { useDebounced, useItems } from '../lib/useItems';
 import { useI18n } from '../lib/i18n';
+import { errorText } from '../lib/errors';
 import { money } from '../lib/format';
 import { DEFAULT_QUERY, STATUSES } from '../lib/types';
 import type { Item, ItemQuery, ItemStatus, List } from '../lib/types';
@@ -49,7 +50,7 @@ export default function ListDetail() {
   useEffect(() => {
     fetchList(id)
       .then(setList)
-      .catch((e: unknown) => setListError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => setListError(errorText(e, t)));
   }, [id]);
 
   // Нескінченний скрол: маячок унизу сітки.
@@ -110,7 +111,7 @@ export default function ListDetail() {
       await reload();
       exitSelection();
     } catch (e) {
-      setBulkError(e instanceof Error ? e.message : String(e));
+      setBulkError(errorText(e, t));
     } finally {
       setBulkBusy(false);
     }
@@ -204,7 +205,7 @@ export default function ListDetail() {
 
       {loading ? (
         <p className="small">{t('common.loading')}…</p>
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && !error ? (
         <div className="empty">
           <h2>{t('item.emptyTitle')}</h2>
           <p className="lede">{t('item.emptyBody')}</p>

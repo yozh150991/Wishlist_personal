@@ -53,7 +53,8 @@
   → фронт: POST /parse {url}   (Authorization: Bearer <supabase JWT>)
   → парсер: перевірка форми токена → GET /auth/v1/user у Supabase (кеш 5 хв)
   → прибирання рекламних параметрів → кеш відповідей (15 хв)
-  → GET потоком (понад 5 МБ обрізається, таймаут 8 с, до 5 редиректів,
+  → GET потоком на перевірену IP, з Host і SNI справжнього домену
+    (понад 5 МБ обрізається, таймаут 8 с, до 5 редиректів,
     кожна адреса й кожен редирект проходять SSRF-перевірку)
   → витяг og:title / og:image / product:price / schema.org Offer
   → {title, price, currency, image_url, site_name} або часткові дані

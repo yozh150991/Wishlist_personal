@@ -11,6 +11,14 @@ function apply(theme: Theme) {
     theme === 'dark' ||
     (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+
+  // Системні панелі (адресний рядок, смуга статусу встановленого застосунку)
+  // мають збігатися з фоном сторінки, а не з темою системи, якщо тему обрано вручну.
+  // Значення — --surface зі styles.css: цей колір має верхня панель застосунку.
+  const color = dark ? '#161b1a' : '#ffffff';
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+    m.setAttribute('content', color);
+  });
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

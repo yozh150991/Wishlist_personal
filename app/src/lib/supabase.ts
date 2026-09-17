@@ -10,7 +10,29 @@ if (!url || !key) {
   );
 }
 
+/**
+ * Запити до даних без мережі падають одразу.
+ *
+ * Клієнт PostgREST повторює GET-запит тричі з паузами 1, 2 і 4 с, якщо fetch
+ * відхилено. У звичайній мережі це рятує від короткого збою, але коли пристрій
+ * явно офлайн (встановлений застосунок у метро), людина 7 секунд дивиться на
+ * «Завантаження…» заради гарантовано марних спроб. Помилка з імʼям AbortError
+ * клієнтом не повторюється, а errorText показує для неї «Немає зʼєднання».
+ *
+ * Лише для /rest/v1/. Запити автентифікації йдуть як завжди: невдале оновлення
+ * токена з неочікуваною помилкою клієнт Auth може сприйняти як привід завершити
+ * сесію, а вилогінювати людину через відсутність мережі не можна.
+ */
+const offlineAwareFetch: typeof fetch = (input, init) => {
+  const target = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  if (navigator.onLine === false && target.includes('/rest/v1/')) {
+    return Promise.reject(new DOMException('Offline', 'AbortError'));
+  }
+  return fetch(input, init);
+};
+
 export const supabase = createClient(url, key, {
+  global: { fetch: offlineAwareFetch },
   auth: {
     persistSession: true,
     autoRefreshToken: true,
