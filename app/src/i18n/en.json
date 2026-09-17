@@ -85,7 +85,8 @@
     "passwordsDiffer": "Passwords don't match.",
     "passwordShort": "Use at least 8 characters.",
     "emailRequired": "Enter your email.",
-    "unknown": "Something went wrong. Try again."
+    "unknown": "Something went wrong. Try again.",
+    "offline": "No internet connection. Your data will appear once you're back online."
   },
   "common": {
     "loading": "Loading",
@@ -245,5 +246,16 @@
     "emptyTitle": "Nothing here yet",
     "emptyBody": "Every item from this link is already unavailable.",
     "footer": "This list is private. You only see what was shared with you."
+  },
+  "pwa": {
+    "updateReady": "A new version of Wishlist is available.",
+    "update": "Update",
+    "later": "Later",
+    "installTitle": "App on your phone",
+    "installed": "Wishlist is already installed on this device.",
+    "installHint": "Install Wishlist on your home screen — it will open as a separate app, without the browser bar.",
+    "installButton": "Install",
+    "installIos": "On iPhone or iPad, open the site in Safari, tap “Share”, then “Add to Home Screen”.",
+    "installManual": "Open the browser menu and choose “Install app” or “Add to Home screen”."
   }
 }

@@ -8,6 +8,7 @@
     "dev:local": "vite --mode localdb",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "check:pwa": "node scripts/check-pwa.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test:e2e": "playwright test",
     "gen:types": "supabase gen types typescript --linked > src/types/database.ts"
@@ -27,6 +28,8 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
     "typescript": "^5.6.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "vite-plugin-pwa": "^1.3.0",
+    "workbox-window": "^7.4.1"
   }
 }

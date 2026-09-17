@@ -4,6 +4,7 @@ import { createList, deleteList, fetchLists } from '../lib/db';
 import type { ListInput } from '../lib/db';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
+import { errorText } from '../lib/errors';
 import { formatDate } from '../lib/format';
 import { ListDialog } from '../components/ListDialog';
 import { Note } from '../components/ui';
@@ -23,7 +24,7 @@ export default function Lists() {
       setLists(await fetchLists());
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorText(e, t));
     } finally {
       setLoading(false);
     }
@@ -59,7 +60,7 @@ export default function Lists() {
 
       {loading ? (
         <p className="small">{t('common.loading')}…</p>
-      ) : lists.length === 0 ? (
+      ) : lists.length === 0 && !error ? (
         <div className="empty">
           <h2>{t('lists.emptyTitle')}</h2>
           <p className="lede">{t('lists.emptyBody')}</p>

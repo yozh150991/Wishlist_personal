@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog } from './Dialog';
 import { Field, Note } from './ui';
 import { useI18n } from '../lib/i18n';
+import { errorText } from '../lib/errors';
 import { CURRENCIES } from '../lib/types';
 import type { Currency, List } from '../lib/types';
 import type { ListInput } from '../lib/db';
@@ -48,7 +49,7 @@ export function ListDialog({
       });
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }

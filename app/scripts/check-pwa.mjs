@@ -1,0 +1,47 @@
+// Перевірка зібраного PWA: запускається після `vite build` (у CI — задача frontend).
+//   node scripts/check-pwa.mjs
+// Падає з кодом 1, якщо маніфест, іконки або Service Worker не такі, як треба
+// для встановлення й для приватності гостьових посилань.
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const dist = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
+const failures = [];
+const check = (ok, message) => { if (!ok) failures.push(message); };
+
+const manifest = JSON.parse(await readFile(join(dist, 'manifest.webmanifest'), 'utf8'));
+check(manifest.name && manifest.short_name, 'маніфест: немає name або short_name');
+check(manifest.display === 'standalone', 'маніфест: display має бути standalone');
+check(manifest.start_url === '/lists', 'маніфест: start_url має бути /lists');
+
+async function pngSize(path) {
+  const b = await readFile(join(dist, path));
+  const signature = b.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
+  return signature ? [b.readUInt32BE(16), b.readUInt32BE(20)] : null;
+}
+for (const [size, purpose] of [['192x192', 'any'], ['512x512', 'any'], ['512x512', 'maskable']]) {
+  const icon = (manifest.icons ?? []).find((i) => i.sizes === size && (i.purpose ?? 'any') === purpose);
+  check(icon, `маніфест: немає іконки ${size} (${purpose})`);
+  if (icon) {
+    const real = await pngSize(icon.src.replace(/^\//, '')).catch(() => null);
+    check(real && `${real[0]}x${real[1]}` === size, `іконка ${icon.src}: фактичний розмір ${real?.join('x') ?? 'не PNG'}, очікувано ${size}`);
+  }
+}
+check(await pngSize('icons/apple-touch-icon.png').then((s) => s?.join('x') === '180x180').catch(() => false),
+  'icons/apple-touch-icon.png: немає або не 180×180');
+
+const html = await readFile(join(dist, 'index.html'), 'utf8');
+check(html.includes('rel="manifest"'), 'index.html: немає посилання на маніфест');
+check(html.includes('rel="apple-touch-icon"'), 'index.html: немає apple-touch-icon');
+
+const sw = await readFile(join(dist, 'sw.js'), 'utf8');
+check(sw.includes('createHandlerBoundToURL("/index.html")'), 'sw.js: немає запасної навігації на index.html');
+check(/denylist:\[[^\]]*\\\/s\\\//.test(sw), 'sw.js: гостьові сторінки /s/ не виключені з навігації — токени лягли б у кеш пристрою');
+check(!/\.map"/.test(sw), 'sw.js: у кеш потрапили карти коду (.map)');
+
+if (failures.length) {
+  console.error('PWA: знайдено проблеми:\n- ' + failures.join('\n- '));
+  process.exit(1);
+}
+console.log('PWA: маніфест, іконки й Service Worker у порядку.');

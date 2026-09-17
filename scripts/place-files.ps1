@@ -109,7 +109,7 @@ $map = @{
   'cache.py' = 'services\parser\app';    'ratelimit.py' = 'services\parser\app'
   'main.py' = 'services\parser\app'
   'test_extract.py' = 'services\parser\tests'; 'test_ssrf.py' = 'services\parser\tests'
-  'test_auth.py' = 'services\parser\tests'
+  'test_auth.py' = 'services\parser\tests'; 'test_fetch_pinning.py' = 'services\parser\tests'
   'jsonld.html' = 'services\parser\tests\fixtures'; 'og.html' = 'services\parser\tests\fixtures'
   'microdata.html' = 'services\parser\tests\fixtures'; 'bare.html' = 'services\parser\tests\fixtures'
   'price_in_text.html' = 'services\parser\tests\fixtures'

@@ -3,6 +3,7 @@ import { Dialog } from './Dialog';
 import { ParseError, parseUrl, parserConfigured } from '../lib/parser';
 import { Field, Note } from './ui';
 import { useI18n } from '../lib/i18n';
+import { errorText } from '../lib/errors';
 import { PRIORITIES, STATUSES } from '../lib/types';
 import type { Item, ItemPriority, ItemStatus } from '../lib/types';
 import type { ItemInput } from '../lib/db';
@@ -127,7 +128,7 @@ export function ItemDialog({
       });
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }

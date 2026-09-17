@@ -85,7 +85,8 @@
     "passwordsDiffer": "Hasła się różnią.",
     "passwordShort": "Potrzeba co najmniej 8 znaków.",
     "emailRequired": "Podaj e-mail.",
-    "unknown": "Coś poszło nie tak. Spróbuj jeszcze raz."
+    "unknown": "Coś poszło nie tak. Spróbuj jeszcze raz.",
+    "offline": "Brak połączenia z internetem. Dane pojawią się, gdy sieć wróci."
   },
   "common": {
     "loading": "Ładowanie",
@@ -245,5 +246,16 @@
     "emptyTitle": "Na razie pusto",
     "emptyBody": "Wszystkie pozycje z tego linku są już niedostępne.",
     "footer": "Lista jest prywatna. Widzisz tylko to, czym się z tobą podzielono."
+  },
+  "pwa": {
+    "updateReady": "Jest nowa wersja Wishlist.",
+    "update": "Aktualizuj",
+    "later": "Później",
+    "installTitle": "Aplikacja na telefonie",
+    "installed": "Wishlist jest już zainstalowany na tym urządzeniu.",
+    "installHint": "Zainstaluj Wishlist na ekranie głównym — będzie się otwierać jak osobna aplikacja, bez paska przeglądarki.",
+    "installButton": "Zainstaluj",
+    "installIos": "Na iPhonie lub iPadzie otwórz stronę w Safari, stuknij „Udostępnij”, a potem „Do ekranu początkowego”.",
+    "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”."
   }
 }

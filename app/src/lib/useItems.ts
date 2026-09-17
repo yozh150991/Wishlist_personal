@@ -2,12 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { cursorFrom, fetchItemsPage, fetchTotals } from './db';
 import type { Cursor } from './db';
 import type { Item, ItemQuery, Totals } from './types';
+import { useI18n } from './i18n';
+import { errorText } from './errors';
 
 /**
  * Керує сторінкою позицій: keyset-курсор, довантаження, підсумки.
  * Будь-яка зміна запиту скидає курсор — інакше сторінки перемішаються.
  */
 export function useItems(listId: string, query: ItemQuery) {
+  const { t } = useI18n();
+  // Через ref: зміна мови не має перезавантажувати позиції.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [items, setItems] = useState<Item[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,18 +31,18 @@ export function useItems(listId: string, query: ItemQuery) {
     setError(null);
     cursor.current = null;
     try {
-      const [page, t] = await Promise.all([
+      const [page, pageTotals] = await Promise.all([
         fetchItemsPage(listId, query, null),
         fetchTotals(listId),
       ]);
       if (id !== runId.current) return;
       setItems(page);
-      setTotals(t);
+      setTotals(pageTotals);
       setDone(page.length < query.pageSize);
       const last = page[page.length - 1];
       cursor.current = last ? cursorFrom(last, query.sort) : null;
     } catch (e) {
-      if (id === runId.current) setError(e instanceof Error ? e.message : String(e));
+      if (id === runId.current) setError(errorText(e, tRef.current));
     } finally {
       if (id === runId.current) setLoading(false);
     }
@@ -54,7 +60,7 @@ export function useItems(listId: string, query: ItemQuery) {
       const last = page[page.length - 1];
       if (last) cursor.current = cursorFrom(last, query.sort);
     } catch (e) {
-      if (id === runId.current) setError(e instanceof Error ? e.message : String(e));
+      if (id === runId.current) setError(errorText(e, tRef.current));
     } finally {
       if (id === runId.current) setLoadingMore(false);
     }

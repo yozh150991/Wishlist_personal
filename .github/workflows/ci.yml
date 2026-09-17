@@ -48,6 +48,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npx vite build
+      # Маніфест, іконки й виключення гостьових сторінок із кешу Service Worker.
+      - run: npm run check:pwa
 
   parser:
     name: Parser · pytest
