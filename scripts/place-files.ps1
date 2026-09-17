@@ -84,6 +84,11 @@ $map = @{
   'ItemDialog.tsx' = 'app\src\components'; 'ListDialog.tsx' = 'app\src\components'
   'Toolbar.tsx' = 'app\src\components'; 'ShareDialog.tsx' = 'app\src\components'
   'LocaleSync.tsx' = 'app\src\components'; 'LanguagePicker.tsx' = 'app\src\components'
+  'UpdatePrompt.tsx' = 'app\src\components'; 'install.ts' = 'app\src\lib'; 'errors.ts' = 'app\src\lib'
+  'check-pwa.mjs' = 'app\scripts'; 'generate-icons.mjs' = 'app\scripts'
+  'icon.svg' = 'app\public\icons'; 'maskable.svg' = 'app\public\icons'
+  'icon-192.png' = 'app\public\icons'; 'icon-512.png' = 'app\public\icons'
+  'maskable-512.png' = 'app\public\icons'; 'apple-touch-icon.png' = 'app\public\icons'
 
   'Login.tsx' = 'app\src\routes'; 'Register.tsx' = 'app\src\routes'
   'ResetPassword.tsx' = 'app\src\routes'; 'UpdatePassword.tsx' = 'app\src\routes'
