@@ -15,7 +15,8 @@ export default defineConfig({
     { name: 'mobile',   use: { ...devices['Pixel 7'] } },
   ],
   webServer: {
-    command: 'npm run dev',
+    // E2E_LOCALDB=1 — фронтенд проти локальної бази з сідом, а не бойової (TESTING.md).
+    command: process.env.E2E_LOCALDB ? 'npm run dev:local' : 'npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
   },

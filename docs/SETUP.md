@@ -318,23 +318,62 @@ pytest
 
 Покроково — у [DEPLOY.md](./DEPLOY.md): Cloud Run (ADR-021), перевірка SSRF на бойовому сервісі з дійсним токеном. Поки і фронт, і парсер на `localhost`, TLS не потрібен; на бойовому HTTPS-фронтенді парсер теж мусить бути на HTTPS, інакше браузер заблокує запити як змішаний вміст.
 
-## 8. 💻 Локальна база (опційно, знадобиться на етапі 3)
+## 8. 💻 Локальна база
 
-Потрібен запущений Docker.
+Потрібен запущений Docker Desktop. Локальна база — окремий Postgres і Auth на твоєму компʼютері: там можна ламати схему, запускати pgTAP і E2E, не чіпаючи бойові дані.
 
 ```bash
 npx supabase start     # перший запуск тягне образи, 5–10 хв
-npx supabase db reset  # накатує міграції + seed.sql з нуля
+npx supabase db reset  # міграції з нуля + supabase/seed.sql
+npx supabase test db   # pgTAP-тести з supabase/tests/database/
+npx supabase status    # адреси й ключі локального стеку
 ```
-Дає власний Postgres на `localhost:54322` і Studio на `localhost:54323`. Потрібно для pgTAP-тестів і щоб експериментувати зі схемою, не чіпаючи хмару.
+
+| Що | Адреса |
+|---|---|
+| API (для фронтенду) | `http://127.0.0.1:54321` |
+| Postgres | `localhost:54322` |
+| Studio | `http://127.0.0.1:54323` |
+| Пошта, яку «надіслав» Auth | `http://127.0.0.1:54324` |
+
+`db reset` стирає локальну базу і накочує все заново — дані з сіду повертаються в початковий стан. На бойову базу не впливає ні `db reset`, ні сід: туди йде лише `db push`.
+
+### Тестові дані з сіду
+
+| Користувач | Пароль | Що є |
+|---|---|---|
+| `anna@wishlist.test` (мова uk) | `password123` | «Великий список» на 60 позицій; «День народження» з минулою подією; «Для дому» в UAH; чотири посилання |
+| `bohdan@wishlist.test` (мова pl) | `password123` | власний список — перевірити, що Анна його не бачить |
+
+Посилання Анни, відкривати за `http://localhost:5173/s/<токен>`:
+
+| Токен | Стан |
+|---|---|
+| `seed-active-share-token` | активне; навушники заброньовано повністю, келихів — 2 з 6 |
+| `seed-revoked-share-token` | відкликане |
+| `seed-expired-share-token` | прострочене |
+| `seed-no-prices-share-token` | ціни приховано, бронювання вимкнене |
+
+### Фронтенд проти локальної бази
+
+Створи `app/.env.localdb.local` (у git не потрапляє):
+
+```
+VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_PUBLISHABLE_KEY=<Publishable key або anon key з npx supabase status>
+VITE_PARSER_URL=
+```
 
 ```bash
-npx supabase test db   # pgTAP-тести з supabase/tests/database/
+cd app
+npm run dev:local      # http://localhost:5173, режим localdb
 ```
 
-Попередження `seed.sql not found` при `db reset` поки очікуване: сіду ще немає.
+Режим `localdb` перекриває `.env.local`, тож бойові значення в ньому лишаються як є, а звичайний `npm run dev` і далі працює з бойовою базою. `VITE_PARSER_URL` порожній навмисно: бойовий парсер перевіряє токени в бойовому Supabase і локальний токен не прийме.
 
-`supabase stop` зупиняє контейнери.
+Локально підтвердження пошти вимкнене (`enable_confirmations = false` у `config.toml`), тож нова реєстрація входить одразу. Листи скидання пароля не йдуть назовні — вони зʼявляються на `http://127.0.0.1:54324`. Після зміни `config.toml` потрібні `npx supabase stop` і `start`.
+
+`npx supabase stop` зупиняє контейнери.
 
 ---
 

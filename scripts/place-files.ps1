@@ -50,6 +50,8 @@ $map = @{
   '20260911100000_items_page_fix.sql' = 'supabase\migrations'
   '20260916220000_revoke_default_function_grants.sql' = 'supabase\migrations'
 
+  'seed.sql' = 'supabase'
+
   # database tests (pgTAP)
   '01_schema_guards.test.sql' = 'supabase\tests\database'
   '02_owner_isolation.test.sql' = 'supabase\tests\database'
@@ -94,7 +96,7 @@ $map = @{
   'sharing.spec.ts' = 'app\tests\e2e'
   'parser.ts' = 'app\src\lib'; 'guest.ts' = 'app\src\lib'
   'shares.ts' = 'app\src\lib'; 'safeNext.ts' = 'app\src\lib'
-  'safe-next.spec.ts' = 'app\tests\e2e'
+  'safe-next.spec.ts' = 'app\tests\e2e'; 'helpers.ts' = 'app\tests\e2e'
 
   # parser service
   'requirements.txt' = 'services\parser'; 'requirements-dev.txt' = 'services\parser'
