@@ -3,6 +3,7 @@
 // Падає з кодом 1, якщо маніфест, іконки або Service Worker не такі, як треба
 // для встановлення й для приватності гостьових посилань.
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -34,6 +35,27 @@ check(await pngSize('icons/apple-touch-icon.png').then((s) => s?.join('x') === '
 const html = await readFile(join(dist, 'index.html'), 'utf8');
 check(html.includes('rel="manifest"'), 'index.html: немає посилання на маніфест');
 check(html.includes('rel="apple-touch-icon"'), 'index.html: немає apple-touch-icon');
+
+// CSP живе у vercel.json і містить хеш єдиного інлайнового скрипта в index.html
+// (застосування теми до першого рендера). Якщо скрипт змінити й забути оновити хеш,
+// у бою тема почне блимати, а в консолі зʼявиться помилка CSP — тож звіряємо тут.
+const vercel = JSON.parse(await readFile(join(dist, '..', 'vercel.json'), 'utf8'));
+const csp = vercel.headers
+  ?.flatMap((h) => h.headers ?? [])
+  .find((h) => h.key === 'Content-Security-Policy')?.value;
+check(csp, 'vercel.json: немає заголовка Content-Security-Policy');
+if (csp) {
+  for (const directive of ['default-src', 'script-src', 'connect-src', 'frame-ancestors', 'object-src']) {
+    check(csp.includes(directive), `CSP: немає директиви ${directive}`);
+  }
+  check(!/script-src[^;]*'unsafe-inline'/.test(csp), "CSP: script-src містить 'unsafe-inline' — це знімає захист від XSS");
+  const inline = html.match(/<script>([\s\S]*?)<\/script>/);
+  check(inline, 'index.html: інлайновий скрипт теми зник — перевір CSP');
+  if (inline) {
+    const hash = 'sha256-' + createHash('sha256').update(inline[1]).digest('base64');
+    check(csp.includes(hash), `CSP: хеш інлайнового скрипта застарів, має бути '${hash}'`);
+  }
+}
 
 const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 check(sw.includes('createHandlerBoundToURL("/index.html")'), 'sw.js: немає запасної навігації на index.html');
