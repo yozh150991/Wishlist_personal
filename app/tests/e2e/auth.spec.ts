@@ -61,3 +61,37 @@ test('мову можна перемкнути до входу, і вибір з
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'Logowanie' })).toBeVisible();
 });
+
+test('форми входу й реєстрації впізнає менеджер паролів', async ({ page }) => {
+  // Менеджер паролів шукає <form> із полями username і current-password
+  // (або new-password) та кнопкою submit. Без цього він не пропонує зберегти пароль.
+  await page.goto('/login');
+  const login = page.locator('form').filter({ has: page.locator('input[autocomplete="current-password"]') });
+  await expect(login).toHaveCount(1);
+  await expect(login.locator('input[autocomplete="username"]')).toHaveCount(1);
+  await expect(login.locator('button[type="submit"]')).toHaveCount(1);
+
+  await page.goto('/register');
+  const register = page.locator('form').filter({ has: page.locator('input[autocomplete="new-password"]') });
+  await expect(register).toHaveCount(1);
+  await expect(register.locator('input[autocomplete="username"]')).toHaveCount(1);
+  await expect(register.locator('input[autocomplete="new-password"]')).toHaveCount(2);
+  await expect(register.locator('button[type="submit"]')).toHaveCount(1);
+});
+
+test('Enter у будь-якому полі реєстрації відправляє форму', async ({ page }) => {
+  // Раніше Enter спрацьовував лише в полі «Пароль ще раз».
+  await page.goto('/register');
+  await page.getByLabel(/пошта|e-mail|email/i).fill('test@example.com');
+  const password = page.getByLabel(/^пароль$|^hasło$|^password$/i);
+  await password.fill('123');
+  await password.press('Enter');
+  // Шукаємо саме помилку (role=alert): підказка про 8 символів видна під полем і без відправки.
+  await expect(page.getByRole('alert')).toContainText(/щонайменше 8|co najmniej 8|at least 8/i);
+});
+
+test('Enter у формі скидання пароля відправляє форму', async ({ page }) => {
+  await page.goto('/reset');
+  await page.getByLabel(/пошта|e-mail|email/i).press('Enter');
+  await expect(page.getByRole('alert')).toBeVisible();
+});

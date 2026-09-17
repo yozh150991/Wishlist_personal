@@ -30,7 +30,14 @@ export default function UpdatePassword() {
 
   return (
     <AuthLayout>
-      <div className="auth__form">
+      <form
+        className="auth__form"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onSubmit();
+        }}
+      >
         <h1>{t('auth.update.title')}</h1>
 
         {/* Посилання зі листа створює сесію. Немає сесії — посилання вже недійсне. */}
@@ -44,6 +51,19 @@ export default function UpdatePassword() {
         ) : (
           <>
             {error && <Note tone="error">{error}</Note>}
+            {/*
+              Приховане поле з поштою: без нього менеджер паролів не знає,
+              до якого акаунта належить новий пароль, і пропонує зберегти
+              його як окремий запис без логіна.
+            */}
+            <input
+              type="email"
+              name="username"
+              autoComplete="username"
+              value={session?.user.email ?? ''}
+              readOnly
+              hidden
+            />
             <Field
               label={t('auth.password')}
               name="password"
@@ -60,14 +80,13 @@ export default function UpdatePassword() {
               autoComplete="new-password"
               value={again}
               onChange={(e) => setAgain(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void onSubmit()}
             />
-            <button className="btn btn--wide" disabled={busy} onClick={() => void onSubmit()}>
+            <button type="submit" className="btn btn--wide" disabled={busy}>
               {t('auth.update.submit')}
             </button>
           </>
         )}
-      </div>
+      </form>
     </AuthLayout>
   );
 }

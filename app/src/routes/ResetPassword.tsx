@@ -27,7 +27,14 @@ export default function ResetPassword() {
 
   return (
     <AuthLayout>
-      <div className="auth__form">
+      <form
+        className="auth__form"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onSubmit();
+        }}
+      >
         <h1>{t('auth.reset.title')}</h1>
         {sent ? (
           <Note tone="success">{t('auth.reset.sent', { email })}</Note>
@@ -39,12 +46,11 @@ export default function ResetPassword() {
               label={t('auth.email')}
               name="email"
               type="email"
-              autoComplete="email"
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void onSubmit()}
             />
-            <button className="btn btn--wide" disabled={busy} onClick={() => void onSubmit()}>
+            <button type="submit" className="btn btn--wide" disabled={busy}>
               {t('auth.reset.submit')}
             </button>
           </>
@@ -52,7 +58,7 @@ export default function ResetPassword() {
         <p className="auth__switch">
           <Link to="/login">{t('auth.reset.back')}</Link>
         </p>
-      </div>
+      </form>
     </AuthLayout>
   );
 }

@@ -51,7 +51,15 @@ export default function Register() {
 
   return (
     <AuthLayout>
-      <div className="auth__form">
+      {/* <form>: менеджер паролів запропонує згенерувати й зберегти пароль (див. Login). */}
+      <form
+        className="auth__form"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onSubmit();
+        }}
+      >
         <h1>{t('auth.register.title')}</h1>
         {error && <Note tone="error">{error}</Note>}
 
@@ -59,7 +67,7 @@ export default function Register() {
           label={t('auth.email')}
           name="email"
           type="email"
-          autoComplete="email"
+          autoComplete="username"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -79,17 +87,16 @@ export default function Register() {
           autoComplete="new-password"
           value={again}
           onChange={(e) => setAgain(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void onSubmit()}
         />
 
-        <button className="btn btn--wide" disabled={busy} onClick={() => void onSubmit()}>
+        <button type="submit" className="btn btn--wide" disabled={busy}>
           {t('auth.register.submit')}
         </button>
 
         <p className="auth__switch">
           {t('auth.register.toLogin')} <Link to="/login">{t('auth.register.toLoginCta')}</Link>
         </p>
-      </div>
+      </form>
     </AuthLayout>
   );
 }

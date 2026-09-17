@@ -19,5 +19,10 @@ export default defineConfig({
     command: process.env.E2E_LOCALDB ? 'npm run dev:local' : 'npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
+    // Вивід Vite у консоль тестів з префіксом [WebServer]. Без цього, коли сторінки
+    // не завантажуються, не видно, чи сервер перебудовує залежності, перезапускається
+    // чи падає.
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
 });

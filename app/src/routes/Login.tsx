@@ -31,7 +31,20 @@ export default function Login() {
 
   return (
     <AuthLayout>
-      <div className="auth__form">
+      {/*
+        Справжня <form> потрібна менеджерам паролів: вони пропонують зберегти
+        й підставити пароль саме для форми з полями username / current-password
+        і кнопкою submit. Enter відправляє форму сам, без обробників на полях.
+        noValidate — повідомлення про помилки наші й перекладені, а не браузерні.
+      */}
+      <form
+        className="auth__form"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onSubmit();
+        }}
+      >
         <h1>{t('auth.login.title')}</h1>
         {error && <Note tone="error">{error}</Note>}
 
@@ -39,10 +52,9 @@ export default function Login() {
           label={t('auth.email')}
           name="email"
           type="email"
-          autoComplete="email"
+          autoComplete="username"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void onSubmit()}
         />
         <Field
           label={t('auth.password')}
@@ -51,10 +63,9 @@ export default function Login() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void onSubmit()}
         />
 
-        <button className="btn btn--wide" disabled={busy} onClick={() => void onSubmit()}>
+        <button type="submit" className="btn btn--wide" disabled={busy}>
           {t('auth.login.submit')}
         </button>
 
@@ -63,7 +74,7 @@ export default function Login() {
           {' · '}
           <Link to="/reset">{t('auth.login.forgot')}</Link>
         </p>
-      </div>
+      </form>
     </AuthLayout>
   );
 }
