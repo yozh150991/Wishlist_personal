@@ -97,6 +97,7 @@ export function ItemDialog({
   // Межі повторюють check-обмеження в таблиці items: краще сказати одразу,
   // ніж отримати 400 від бази.
   async function submit() {
+    if (busy) return;
     if (!form.title.trim()) return setError(t('item.errors.titleRequired'));
     if (form.url && !/^https?:\/\//i.test(form.url)) return setError(t('item.errors.badUrl'));
 
@@ -134,7 +135,15 @@ export function ItemDialog({
 
   return (
     <Dialog open={open} onClose={onClose} title={item ? t('item.edit') : t('item.add')}>
-      <div className="form-grid">
+      {/* <form>: Enter у текстовому полі зберігає (CLAUDE.md §4). */}
+      <form
+        className="form-grid"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
         <div ref={errorRef}>
           {error && <Note tone="error">{error}</Note>}
           {!error && notice && <Note>{notice}</Note>}
@@ -154,8 +163,25 @@ export function ItemDialog({
               aria-describedby="url-hint"
               value={form.url}
               onChange={(e) => set('url', e.target.value)}
+              onKeyDown={(e) => {
+                // Вставив посилання й натиснув Enter — людина чекає автозаповнення,
+                // а не помилку «вкажи назву». Тож поки назви немає і парсер
+                // доступний, Enter у цьому полі запускає «Заповнити».
+                // Коли назва вже є, Enter зберігає, як у будь-якому іншому полі.
+                if (
+                  e.key === 'Enter' &&
+                  !e.nativeEvent.isComposing &&
+                  !form.title.trim() &&
+                  form.url.trim() &&
+                  parserConfigured()
+                ) {
+                  e.preventDefault();
+                  if (!parsing) void fillFromUrl();
+                }
+              }}
             />
             <button
+              type="button"
               className="btn btn--quiet"
               disabled={parsing || !form.url.trim() || !parserConfigured()}
               onClick={() => void fillFromUrl()}
@@ -254,14 +280,14 @@ export function ItemDialog({
         </div>
 
         <div className="dialog__foot">
-          <button className="btn btn--quiet" onClick={onClose}>
+          <button type="button" className="btn btn--quiet" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button className="btn" disabled={busy} onClick={() => void submit()}>
+          <button type="submit" className="btn" disabled={busy}>
             {t('common.save')}
           </button>
         </div>
-      </div>
+      </form>
     </Dialog>
   );
 }

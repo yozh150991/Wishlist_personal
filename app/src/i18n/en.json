@@ -186,10 +186,7 @@
   "share": {
     "title": "My links",
     "subtitle": "Each one shows only the items you picked. The main list stays private.",
-    "start": "Share",
     "create": "Create link",
-    "selected": "Selected: {n}",
-    "selectAll": "Select all",
     "selectItem": "Select “{title}”",
     "intro": "{n} items will go into this link. The rest of the list stays hidden.",
     "ready": "Link is ready. Send it to whoever you like.",
@@ -223,6 +220,16 @@
       "titleRequired": "Enter a heading.",
       "nothingSelected": "Pick at least one item first."
     }
+  },
+  "select": {
+    "start": "Select",
+    "region": "Actions for selected items",
+    "selected": "Selected: {n}",
+    "selectAll": "Select all shown",
+    "statusLabel": "Change status of selected",
+    "statusPlaceholder": "Mark as…",
+    "confirmDelete": "Delete the selected items ({n})? This can’t be undone.",
+    "shareActiveOnly": "Only active items go into the link: {n}."
   },
   "guest": {
     "goneTitle": "This link isn't available",

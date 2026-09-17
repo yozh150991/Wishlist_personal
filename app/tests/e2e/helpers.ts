@@ -80,7 +80,7 @@ export async function addItem(page: Page, title: string) {
  * потребує дозволу браузера, якого в тестовому профілі немає.
  */
 export async function createShare(page: Page, pick: string[], title: string): Promise<string> {
-  await page.getByRole('button', { name: /^поділитися$|^udostępnij$|^share$/i }).click();
+  await page.getByRole('button', { name: /^вибрати$|^zaznacz$|^select$/i }).click();
   // Роль checkbox обовʼязкова: назва позиції є і в підписі чекбокса вибору,
   // і в підписі списку статусу тієї ж картки.
   for (const name of pick) {

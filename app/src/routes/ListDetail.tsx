@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { createItem, deleteItem, fetchList, updateItem, updateList } from '../lib/db';
+import {
+  createItem,
+  deleteItem,
+  deleteItems,
+  fetchList,
+  setItemsStatus,
+  updateItem,
+  updateList,
+} from '../lib/db';
 import type { ItemInput, ListInput } from '../lib/db';
 import { useDebounced, useItems } from '../lib/useItems';
 import { useI18n } from '../lib/i18n';
 import { money } from '../lib/format';
-import { DEFAULT_QUERY } from '../lib/types';
+import { DEFAULT_QUERY, STATUSES } from '../lib/types';
 import type { Item, ItemQuery, ItemStatus, List } from '../lib/types';
 import { Toolbar } from '../components/Toolbar';
 import { ItemCard } from '../components/ItemCard';
@@ -29,6 +37,8 @@ export default function ListDetail() {
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [shareDialog, setShareDialog] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   // Пошук відкладається, решта фільтрів застосовується одразу.
   const search = useDebounced(draft.search, 300);
@@ -71,10 +81,49 @@ export default function ListDetail() {
   function exitSelection() {
     setSelecting(false);
     setSelected(new Set());
+    setBulkError(null);
   }
 
-  /** Подароване й куплене гостям не показується, тож вибирати його нема сенсу. */
-  const selectableItems = items.filter((i) => i.status === 'active');
+  /*
+   * Вибір — лише серед показаних позицій. Коли пошук чи фільтр ховає вибрану
+   * позицію, вона випадає з вибору: масова дія не має зачепити те, чого людина
+   * зараз не бачить.
+   */
+  useEffect(() => {
+    setSelected((prev) => {
+      const visible = new Set(items.map((i) => i.id));
+      const next = new Set([...prev].filter((id) => visible.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [items]);
+
+  const selectedItems = items.filter((i) => selected.has(i.id));
+  /** Куплене й подароване гостям не показується, тож у посилання йде лише актуальне. */
+  const selectedActiveIds = selectedItems.filter((i) => i.status === 'active').map((i) => i.id);
+
+  async function bulk(action: () => Promise<void>) {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    setBulkError(null);
+    try {
+      await action();
+      await reload();
+      exitSelection();
+    } catch (e) {
+      setBulkError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  function bulkDelete() {
+    if (!window.confirm(t('select.confirmDelete', { n: selected.size }))) return;
+    void bulk(() => deleteItems([...selected]));
+  }
+
+  function bulkStatus(status: ItemStatus) {
+    void bulk(() => setItemsStatus([...selected], status));
+  }
 
   async function saveItem(input: ItemInput) {
     if (itemDialog.item) await updateItem(itemDialog.item.id, input);
@@ -122,9 +171,9 @@ export default function ListDetail() {
               <button
                 className="btn btn--quiet"
                 onClick={() => setSelecting(true)}
-                disabled={selectableItems.length === 0}
+                disabled={items.length === 0}
               >
-                {t('share.start')}
+                {t('select.start')}
               </button>
               <button className="btn btn--quiet" onClick={() => setListDialog(true)} disabled={!list}>
                 {t('lists.edit')}
@@ -171,7 +220,7 @@ export default function ListDetail() {
                 onEdit={(i) => setItemDialog({ open: true, item: i })}
                 onDelete={(i) => void removeItem(i)}
                 onSetStatus={(i, s) => void setStatus(i, s)}
-                selectable={selecting && item.status === 'active'}
+                selectable={selecting}
                 selected={selected.has(item.id)}
                 onToggleSelect={toggleSelect}
               />
@@ -193,18 +242,52 @@ export default function ListDetail() {
       {/* Панель вибору притиснута донизу екрана: вибір іде згори вниз,
           а дія має лишатись під рукою на будь-якій довжині списку. */}
       {selecting && (
-        <div className="selectbar" role="region" aria-label={t('share.start')}>
-          <span>{t('share.selected', { n: selected.size })}</span>
+        <div className="selectbar" role="region" aria-label={t('select.region')}>
+          <div className="selectbar__info">
+            <span>{t('select.selected', { n: selected.size })}</span>
+            {selectedActiveIds.length > 0 && selectedActiveIds.length < selected.size && (
+              <span className="small">{t('select.shareActiveOnly', { n: selectedActiveIds.length })}</span>
+            )}
+          </div>
+          {bulkError && <Note tone="error">{bulkError}</Note>}
           <div className="selectbar__actions">
             <button
               className="btn btn--quiet"
-              onClick={() => setSelected(new Set(selectableItems.map((i) => i.id)))}
+              disabled={bulkBusy}
+              onClick={() => setSelected(new Set(items.map((i) => i.id)))}
             >
-              {t('share.selectAll')}
+              {t('select.selectAll')}
+            </button>
+            {/* Статус застосовується одразу після вибору: дія оборотна, підтвердження зайве.
+                Порожній перший пункт потрібен, щоб вибір того самого статусу теж спрацьовував. */}
+            <select
+              className="selectbar__status"
+              aria-label={t('select.statusLabel')}
+              value=""
+              disabled={bulkBusy || selected.size === 0}
+              onChange={(e) => {
+                if (e.target.value) bulkStatus(e.target.value as ItemStatus);
+              }}
+            >
+              <option value="" disabled>
+                {t('select.statusPlaceholder')}
+              </option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {t(`item.status.${s}`)}
+                </option>
+              ))}
+            </select>
+            <button
+              className="btn btn--quiet btn--danger"
+              disabled={bulkBusy || selected.size === 0}
+              onClick={bulkDelete}
+            >
+              {t('common.delete')}
             </button>
             <button
               className="btn"
-              disabled={selected.size === 0}
+              disabled={bulkBusy || selectedActiveIds.length === 0}
               onClick={() => setShareDialog(true)}
             >
               {t('share.create')}
@@ -216,7 +299,7 @@ export default function ListDetail() {
       <ShareDialog
         open={shareDialog}
         listId={id}
-        itemIds={[...selected]}
+        itemIds={selectedActiveIds}
         defaultTitle={list?.title ?? ''}
         onClose={() => {
           setShareDialog(false);

@@ -97,7 +97,7 @@ $map = @{
   'parser.ts' = 'app\src\lib'; 'guest.ts' = 'app\src\lib'
   'shares.ts' = 'app\src\lib'; 'safeNext.ts' = 'app\src\lib'
   'safe-next.spec.ts' = 'app\tests\e2e'; 'helpers.ts' = 'app\tests\e2e'
-  'session.spec.ts' = 'app\tests\e2e'
+  'session.spec.ts' = 'app\tests\e2e'; 'global-setup.ts' = 'app\tests'
 
   # parser service
   'requirements.txt' = 'services\parser'; 'requirements-dev.txt' = 'services\parser'

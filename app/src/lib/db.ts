@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Item, ItemQuery, List, Totals } from './types';
+import type { Item, ItemQuery, ItemStatus, List, Totals } from './types';
 
 /* ── Списки ─────────────────────────────── */
 
@@ -66,6 +66,35 @@ export async function updateItem(id: string, patch: Partial<ItemInput>): Promise
 export async function deleteItem(id: string): Promise<void> {
   const { error } = await supabase.from('items').delete().eq('id', id);
   if (error) throw error;
+}
+
+/* ── Масові дії ─────────────────────────── */
+
+/**
+ * Ідентифікатори їдуть у рядку запиту (`id=in.(…)`), а довжина адреси має межу.
+ * Сто UUID — близько 3,7 КБ, з великим запасом до обмежень проксі.
+ */
+const BULK_CHUNK = 100;
+
+function chunks<T>(xs: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < xs.length; i += size) out.push(xs.slice(i, i + size));
+  return out;
+}
+
+/** Видаляє позиції за id. Чужі RLS мовчки відсіює — власник видаляє лише своє. */
+export async function deleteItems(ids: string[]): Promise<void> {
+  for (const part of chunks(ids, BULK_CHUNK)) {
+    const { error } = await supabase.from('items').delete().in('id', part);
+    if (error) throw error;
+  }
+}
+
+export async function setItemsStatus(ids: string[], status: ItemStatus): Promise<void> {
+  for (const part of chunks(ids, BULK_CHUNK)) {
+    const { error } = await supabase.from('items').update({ status }).in('id', part);
+    if (error) throw error;
+  }
 }
 
 /* ── Сторінка позицій (keyset) ──────────── */

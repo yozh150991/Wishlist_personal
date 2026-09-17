@@ -43,6 +43,8 @@ export function ShareDialog({
   }, [open, defaultTitle]);
 
   async function submit() {
+    // Подвійний Enter не має створити два посилання.
+    if (busy) return;
     if (!title.trim()) return setError(t('share.errors.titleRequired'));
     if (itemIds.length === 0) return setError(t('share.errors.nothingSelected'));
 
@@ -88,7 +90,7 @@ export function ShareDialog({
             <label htmlFor="shareLink">{t('share.link')}</label>
             <div className="url-row">
               <input id="shareLink" readOnly value={link} onFocus={(e) => e.target.select()} />
-              <button className="btn" onClick={() => void copy()}>
+              <button type="button" className="btn" onClick={() => void copy()}>
                 {copied ? t('share.copied') : t('share.copy')}
               </button>
             </div>
@@ -96,13 +98,21 @@ export function ShareDialog({
           </div>
 
           <div className="dialog__foot">
-            <button className="btn btn--quiet" onClick={onClose}>
+            <button type="button" className="btn btn--quiet" onClick={onClose}>
               {t('common.close')}
             </button>
           </div>
         </div>
       ) : (
-        <div className="form-grid">
+        // <form>: Enter у текстовому полі створює посилання (CLAUDE.md §4).
+        <form
+          className="form-grid"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
           {error && <Note tone="error">{error}</Note>}
           <p className="lede">{t('share.intro', { n: itemIds.length })}</p>
 
@@ -157,14 +167,14 @@ export function ShareDialog({
           />
 
           <div className="dialog__foot">
-            <button className="btn btn--quiet" onClick={onClose}>
+            <button type="button" className="btn btn--quiet" onClick={onClose}>
               {t('common.cancel')}
             </button>
-            <button className="btn" disabled={busy} onClick={() => void submit()}>
+            <button type="submit" className="btn" disabled={busy}>
               {t('share.create')}
             </button>
           </div>
-        </div>
+        </form>
       )}
     </Dialog>
   );

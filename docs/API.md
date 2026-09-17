@@ -102,6 +102,13 @@ await supabase.from('items').update({ status: 'gifted' }).eq('id', id);
 await supabase.from('shares').update({ revoked_at: new Date().toISOString() }).eq('id', shareId);
 ```
 
+Масові дії — ті самі запити з фільтром `in`. Ідентифікатори їдуть у рядку адреси, тож `lib/db.ts` ділить їх на частини по 100:
+```ts
+await supabase.from('items').update({ status: 'gifted' }).in('id', ids);
+await supabase.from('items').delete().in('id', ids);
+```
+Окремої RPC не потрібно: RLS так само відсіює чужі позиції, як і в одиночних запитах.
+
 ---
 
 ## Parser service (FastAPI)

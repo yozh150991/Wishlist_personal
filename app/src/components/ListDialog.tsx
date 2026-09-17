@@ -35,6 +35,7 @@ export function ListDialog({
   }, [open, list]);
 
   async function submit() {
+    if (busy) return;
     if (!title.trim()) return setError(t('lists.errors.titleRequired'));
     setBusy(true);
     setError(null);
@@ -55,7 +56,15 @@ export function ListDialog({
 
   return (
     <Dialog open={open} onClose={onClose} title={list ? t('lists.edit') : t('lists.create')}>
-      <div className="form-grid">
+      {/* <form>: Enter у текстовому полі зберігає (CLAUDE.md §4). */}
+      <form
+        className="form-grid"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
         {error && <Note tone="error">{error}</Note>}
 
         <Field
@@ -104,14 +113,14 @@ export function ListDialog({
         </div>
 
         <div className="dialog__foot">
-          <button className="btn btn--quiet" onClick={onClose}>
+          <button type="button" className="btn btn--quiet" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button className="btn" disabled={busy} onClick={() => void submit()}>
+          <button type="submit" className="btn" disabled={busy}>
             {t('common.save')}
           </button>
         </div>
-      </div>
+      </form>
     </Dialog>
   );
 }

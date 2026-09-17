@@ -663,7 +663,45 @@ a { color: var(--accent); text-underline-offset: 3px; }
   border-radius: var(--r-card);
   box-shadow: 0 -4px 16px rgb(0 0 0 / 0.08);
 }
-.selectbar__actions { display: flex; gap: var(--sp-2); }
+.selectbar__info { display: grid; gap: 2px; }
+.selectbar__actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.selectbar .note { flex-basis: 100%; margin: 0; }
+/* Список статусів у панелі виглядає як тиха кнопка поруч, а не як поле форми. */
+.selectbar__status {
+  width: auto;
+  min-width: 12.5rem;
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r-input);
+  cursor: pointer;
+}
+.selectbar__status:disabled { opacity: 0.5; cursor: default; }
+.btn--danger { color: var(--danger); }
+
+/* На телефоні чотири дії в рядок не вміщаються, і панель розросталася до третини
+   екрана, закриваючи картки, які саме треба вибирати. Сітка 2×2 і нижчі кнопки
+   тримають її в межах п'ятої частини. */
+@media (max-width: 40rem) {
+  .selectbar { gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); }
+  .selectbar__info { font-size: var(--t-sm); }
+  .selectbar__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+  .selectbar__actions .btn,
+  .selectbar__status {
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 var(--sp-2);
+    font-size: var(--t-sm);
+  }
+}
+.btn--danger:hover:not(:disabled) { border-color: var(--danger); }
 
 /* ── Список посилань ───────────────────────── */
 

@@ -186,10 +186,7 @@
   "share": {
     "title": "Moje linki",
     "subtitle": "Każdy pokazuje tylko wybrane pozycje. Główna lista zostaje prywatna.",
-    "start": "Udostępnij",
     "create": "Utwórz link",
-    "selected": "Wybrano: {n}",
-    "selectAll": "Zaznacz wszystkie",
     "selectItem": "Zaznacz „{title}”",
     "intro": "Do linku trafi {n} pozycji. Reszta listy pozostanie ukryta.",
     "ready": "Link gotowy. Wyślij go komu chcesz.",
@@ -223,6 +220,16 @@
       "titleRequired": "Podaj nagłówek.",
       "nothingSelected": "Najpierw zaznacz choć jedną pozycję."
     }
+  },
+  "select": {
+    "start": "Zaznacz",
+    "region": "Działania na zaznaczonych pozycjach",
+    "selected": "Zaznaczono: {n}",
+    "selectAll": "Zaznacz wszystkie widoczne",
+    "statusLabel": "Zmień status zaznaczonych",
+    "statusPlaceholder": "Oznacz jako…",
+    "confirmDelete": "Usunąć zaznaczone pozycje ({n})? Tego nie można cofnąć.",
+    "shareActiveOnly": "Do linku trafią tylko aktualne: {n}."
   },
   "guest": {
     "goneTitle": "Link niedostępny",
