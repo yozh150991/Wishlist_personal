@@ -1,5 +1,7 @@
 # Wishlist_personal
 
+[![CI](https://github.com/yozh150991/Wishlist_personal/actions/workflows/ci.yml/badge.svg)](https://github.com/yozh150991/Wishlist_personal/actions/workflows/ci.yml)
+
 Приватні списки бажань з можливістю поділитися вибраними позиціями за секретним посиланням.
 
 Головний список **завжди приватний**. Назовні потрапляє тільки те, що користувач свідомо вибрав і зашерив.

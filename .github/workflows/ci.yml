@@ -1,0 +1,136 @@
+# CI: кожен push у main і кожен pull request.
+#
+# Три незалежні задачі йдуть паралельно:
+#   frontend  — типи й збірка, найшвидший сигнал
+#   parser    — pytest сервісу парсера
+#   db-e2e    — локальний Supabase: pgTAP-тести приватності, потім Playwright
+#
+# Жодних секретів: база піднімається в контейнерах на раннері з міграцій і сіду,
+# бойовий Supabase CI не чіпає. Логін E2E — користувач із seed.sql.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**']
+  pull_request:
+    paths-ignore: ['**/*.md', 'docs/**']
+  workflow_dispatch:
+
+# Новий push у ту саму гілку скасовує ще не завершений прогін.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend · typecheck і build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vite build
+
+  parser:
+    name: Parser · pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/parser
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' # як у Dockerfile
+          cache: pip
+          cache-dependency-path: services/parser/requirements*.txt
+
+      - run: pip install -r requirements-dev.txt
+      - run: pytest
+
+  db-e2e:
+    name: Database · pgTAP і Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # Та сама версія CLI, що в package-lock.json у корені.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      # Лише те, що потрібно тестам: база, Auth, PostgREST, шлюз і поштова скринька.
+      # Решту сервісів не запускаємо — це хвилини завантаження образів.
+      - name: Start local Supabase
+        run: >-
+          supabase start
+          -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
+
+      - name: pgTAP · інваріанти приватності
+        run: supabase test db
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        working-directory: app
+        # Обидва профілі (Desktop Chrome і Pixel 7) працюють на Chromium.
+        run: npx playwright install --with-deps chromium
+
+      # Фронтенд у режимі localdb бере адресу й ключ локального стеку.
+      # VITE_PARSER_URL — будь-яка адреса: тест «Заповнити» підставляє відповідь парсера сам,
+      # а без адреси він пропускається.
+      - name: Point the app at local Supabase
+        run: |
+          status="$(supabase status -o json)"
+          url="$(echo "$status" | jq -r '.API_URL')"
+          key="$(echo "$status" | jq -r '.PUBLISHABLE_KEY // .ANON_KEY')"
+          if [ -z "$url" ] || [ "$url" = "null" ] || [ -z "$key" ] || [ "$key" = "null" ]; then
+            echo "::error::supabase status не повернув API_URL або ключ"
+            echo "$status"
+            exit 1
+          fi
+          printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_PUBLISHABLE_KEY=%s\nVITE_PARSER_URL=http://parser.invalid\n' \
+            "$url" "$key" > app/.env.localdb.local
+
+      - name: Playwright
+        working-directory: app
+        env:
+          E2E_LOCALDB: '1'
+          E2E_EMAIL: anna@wishlist.test
+          E2E_PASSWORD: password123
+        run: npx playwright test
+
+      - name: Upload Playwright results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: app/test-results/
+          retention-days: 7

@@ -13,6 +13,7 @@ from fastapi import HTTPException
 from starlette.requests import Request
 
 from app import auth
+from app.config import Settings
 
 # Схожий на справжній за формою, але вигаданий.
 VALID_SHAPE = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.c2lnbmF0dXJlLXNpZ25hdHVyZQ"
@@ -30,6 +31,14 @@ def no_network(monkeypatch):
             raise AssertionError("звернення до Supabase не мало відбутися")
 
     monkeypatch.setattr(auth.httpx, "AsyncClient", Forbidden)
+    # Налаштування не з .env: локально там справжня адреса Supabase, а в CI файлу
+    # немає, і без підміни токен правильної форми впирався б у supabase_not_configured
+    # замість того, щоб дійти до заглушки. Тест не має залежати від машини.
+    monkeypatch.setattr(
+        auth,
+        "settings",
+        lambda: Settings(supabase_url="https://example.supabase.co", _env_file=None),
+    )
     auth._cache.clear()
 
 
