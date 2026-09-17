@@ -80,20 +80,29 @@ GET /s/:token
 ```
 `guest_key` — випадковий UUID у `localStorage` гостя. Потрібен лише щоб гість міг зняти власну бронь. Не ідентифікує особу.
 
-## Офлайн-режим (PWA) — план етапу 6
+## PWA і офлайн-режим
 
-Нічого з цього розділу ще не реалізовано: зараз застосунок працює лише з мережею. Розділ фіксує задуманий устрій, щоб етап 6 не довелося проєктувати заново.
+### Зроблено (етап 6.1, ADR-025)
 
-- Service Worker: app shell — cache-first; API — network-first із fallback на кеш.
-- IndexedDB зберігає останній стан списків для читання офлайн.
-- Черга змін (`outbox`): створення/редагування позицій офлайн ставляться в чергу і відправляються при відновленні мережі. Конфлікти — last-write-wins за `updated_at`, з повідомленням користувачу.
-- Сторінки гостя (`/s/:token`) офлайн не кешуються — токени не мають лежати в кеші пристрою.
+- **Встановлення.** `vite-plugin-pwa` генерує `manifest.webmanifest` (`start_url: /lists`, `display: standalone`) та Service Worker. Іконки — `public/icons/`, PNG генеруються з SVG скриптом `scripts/generate-icons.mjs`. У налаштуваннях розділ «Застосунок на телефоні»: кнопка встановлення там, де браузер надсилає `beforeinstallprompt` (`lib/install.ts`), інструкція для iPhone і iPad, де такої події немає.
+- **Оболонка офлайн.** Service Worker заздалегідь кешує збірку: код, стилі, шрифти (кирилиця й латиниця; грецькі й вʼєтнамські підмножини виключено), іконки — близько 770 КБ. Будь-яка адреса застосунку відкривається з кешованого `index.html` і без мережі.
+- **Гостьові сторінки не кешуються.** `/s/*` виключено з навігації Service Worker: відповідь із токеном в адресі не лягає в кеш пристрою. Перевіряється після збірки `npm run check:pwa`, і в CI теж.
+- **Дані не кешуються.** Запити до Supabase і парсера завжди йдуть у мережу. Без мережі сторінки показують «Немає зʼєднання» (`lib/errors.ts`), а не порожній стан. Запити `/rest/v1/` при `navigator.onLine === false` відхиляються одразу, без трьох повторів клієнта PostgREST (`lib/supabase.ts`); запити автентифікації не чіпаються, щоб збій мережі не завершив сесію.
+- **Оновлення.** Нова збірка не підміняє відкриту сторінку сама: `UpdatePrompt` показує банер, оновлення — за кнопкою. Відкритий застосунок перевіряє оновлення щогодини. У режимі розробки Service Worker вимкнено.
+- **Колір системних панелей** (`theme-color`) збігається з верхньою панеллю застосунку і змінюється разом із темою.
+
+### Ще в плані
+
+- IndexedDB зберігає останній стан списків для читання офлайн (етап 6.4).
+- Черга змін (`outbox`): редагування офлайн відправляються при відновленні мережі, конфлікти — last-write-wins за `updated_at` (етап 6.5; спершу вирішити, чи це взагалі потрібно).
 
 ## Структура фронтенду
 
 ```
 app/
 ├── index.html  vercel.json  vite.config.ts  playwright.config.ts
+├── public/icons/         # іконки застосунку; PNG — з SVG через scripts/generate-icons.mjs
+├── scripts/              # generate-icons.mjs, check-pwa.mjs
 ├── tsconfig.json         # src/, без типів Node
 ├── tsconfig.test.json    # tests/ і playwright.config.ts
 ├── src/
@@ -106,12 +115,12 @@ app/
 │   ├── components/
 │   │   ├── AppShell.tsx  AuthLayout.tsx  RequireAuth.tsx  ui.tsx
 │   │   ├── Dialog.tsx  ItemDialog.tsx  ListDialog.tsx  ShareDialog.tsx
-│   │   └── ItemCard.tsx  Toolbar.tsx  LocaleSync.tsx  LanguagePicker.tsx
+│   │   └── ItemCard.tsx  Toolbar.tsx  LocaleSync.tsx  LanguagePicker.tsx  UpdatePrompt.tsx
 │   ├── lib/
 │   │   ├── supabase.ts  auth.tsx  theme.tsx  i18n.tsx  authErrors.ts
 │   │   ├── db.ts  useItems.ts  shares.ts  guest.ts   # дані
 │   │   ├── parser.ts                                 # клієнт парсера
-│   │   └── format.ts  types.ts  safeNext.ts
+│   │   └── format.ts  types.ts  safeNext.ts  errors.ts  install.ts
 │   ├── i18n/{uk,pl,en}.json
 │   └── types/database.ts # згенеровано, не редагувати
 └── tests/e2e/            # Playwright
