@@ -103,7 +103,11 @@ test('Enter у діалозі створює рівно одне посилан�
   const title = dialog.getByLabel(/^заголовок для гостей$|heading for guests|nagłówek/i);
   await title.fill(shareTitle);
   await title.press('Enter');
-  await title.press('Enter').catch(() => {}); // поле могло вже зникнути — це нормально
+  // Друге натискання — саме те, що перевіряє тест: воно не має створити друге
+  // посилання. Тайм-аут обовʼязковий: якщо діалог уже показав посилання, поля
+  // заголовка немає, а дія без обмеження чекала б на нього до кінця тесту —
+  // `catch` не спрацьовує, бо відхилення просто не настає (TESTING.md, правило 4).
+  await title.press('Enter', { timeout: 1000 }).catch(() => {});
 
   await expect(dialog.locator('#shareLink')).toHaveValue(/\/s\/[A-Za-z0-9_-]{22}$/);
 
