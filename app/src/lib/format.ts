@@ -26,6 +26,14 @@ export function formatDate(iso: string | null, locale: string): string | null {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso));
 }
 
+/** Дата з часом — для позначки «коли це збережено». */
+export function formatDateTime(iso: string | null, locale: string): string | null {
+  if (!iso) return null;
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(
+    new Date(iso),
+  );
+}
+
 /** Домен без www — показуємо на картці замість довгого URL. */
 export function hostOf(url: string | null): string | null {
   if (!url) return null;

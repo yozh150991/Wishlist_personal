@@ -23,6 +23,11 @@ function messageOf(e: unknown): string {
   return typeof e === 'string' ? e : '';
 }
 
+/** Чи це збій мережі, а не відмова сервера. Кеш показуємо лише в цьому разі. */
+export function isNetworkError(e: unknown): boolean {
+  return isNetworkFailure(messageOf(e));
+}
+
 function isNetworkFailure(message: string): boolean {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
   // Chrome, Firefox і Safari формулюють збій мережі у fetch по-різному.

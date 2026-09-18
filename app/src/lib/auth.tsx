@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { clearCache } from './cache';
 
 type AuthState = {
   session: Session | null;
@@ -32,7 +33,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(next);
       setLoading(false);
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);
-      if (event === 'SIGNED_OUT') setRecovery(false);
+      if (event === 'SIGNED_OUT') {
+        setRecovery(false);
+        // Офлайн-копії списків стираємо саме тут, а не в signOut: вийти можна
+        // і з іншої вкладки, і через протухлу сесію. На спільному компʼютері
+        // чужі списки не мають лишатися в IndexedDB (ADR-028).
+        void clearCache();
+      }
     });
 
     return () => {

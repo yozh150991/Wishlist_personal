@@ -12,7 +12,8 @@ import {
 import type { ItemInput, ListInput } from '../lib/db';
 import { useDebounced, useItems } from '../lib/useItems';
 import { useI18n } from '../lib/i18n';
-import { errorText } from '../lib/errors';
+import { useAuth } from '../lib/auth';
+import { errorText, isNetworkError } from '../lib/errors';
 import { money } from '../lib/format';
 import { DEFAULT_QUERY, STATUSES } from '../lib/types';
 import type { Item, ItemQuery, ItemStatus, List } from '../lib/types';
@@ -22,11 +23,15 @@ import { ItemDialog } from '../components/ItemDialog';
 import { ListDialog } from '../components/ListDialog';
 import { ShareDialog } from '../components/ShareDialog';
 import { EventSummary } from '../components/EventSummary';
+import { ExportDialog } from '../components/ExportDialog';
+import { StaleNotice } from '../components/StaleNotice';
+import { listKey, readSnapshot, saveSnapshot } from '../lib/cache';
 import { Note } from '../components/ui';
 
 export default function ListDetail() {
   const { id = '' } = useParams();
   const { t, locale } = useI18n();
+  const { session } = useAuth();
 
   const [list, setList] = useState<List | null>(null);
   const [listError, setListError] = useState<string | null>(null);
@@ -44,18 +49,40 @@ export default function ListDetail() {
   // Після натискання «Підбити підсумки» фільтр перемикається на актуальні,
   // а вибір треба поставити вже на перезавантажену вибірку.
   const [selectActiveOnLoad, setSelectActiveOnLoad] = useState(false);
+  const [exportDialog, setExportDialog] = useState(false);
 
   // Пошук відкладається, решта фільтрів застосовується одразу.
   const search = useDebounced(draft.search, 300);
   const query = useMemo<ItemQuery>(() => ({ ...draft, search }), [draft, search]);
 
-  const { items, totals, loading, loadingMore, done, error, reload, loadMore } = useItems(id, query);
+  const userId = session?.user.id;
+  const { items, totals, loading, loadingMore, done, error, staleAt, reload, loadMore } = useItems(
+    id,
+    query,
+    userId,
+  );
 
   useEffect(() => {
+    let alive = true;
     fetchList(id)
-      .then(setList)
-      .catch((e: unknown) => setListError(errorText(e, t)));
-  }, [id]);
+      .then((fresh) => {
+        if (!alive) return;
+        setList(fresh);
+        setListError(null);
+        if (fresh && userId) void saveSnapshot(listKey(id), userId, fresh);
+      })
+      .catch(async (e: unknown) => {
+        // Назва й валюта списку теж мають пережити відсутність мережі —
+        // інакше офлайн сторінка була б без заголовка й із цінами не в тій валюті.
+        const snapshot = isNetworkError(e) && userId ? await readSnapshot<List>(listKey(id), userId) : null;
+        if (!alive) return;
+        if (snapshot) setList(snapshot.data);
+        else setListError(errorText(e, t));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [id, userId]);
 
   // Нескінченний скрол: маячок унизу сітки.
   const sentinel = useRef<HTMLDivElement>(null);
@@ -196,6 +223,13 @@ export default function ListDetail() {
               <button className="btn btn--quiet" onClick={() => setListDialog(true)} disabled={!list}>
                 {t('lists.edit')}
               </button>
+              <button
+                className="btn btn--quiet"
+                onClick={() => setExportDialog(true)}
+                disabled={!list || items.length === 0}
+              >
+                {t('transfer.export.open')}
+              </button>
               <button className="btn" onClick={() => setItemDialog({ open: true, item: null })}>
                 {t('item.add')}
               </button>
@@ -206,6 +240,7 @@ export default function ListDetail() {
 
       {listError && <Note tone="error">{listError}</Note>}
       {error && <Note tone="error">{error}</Note>}
+      {staleAt && <StaleNotice savedAt={staleAt} />}
 
       {totals && (
         <p className="totals">
@@ -340,6 +375,7 @@ export default function ListDetail() {
         onClose={() => setListDialog(false)}
         onSave={saveList}
       />
+      <ExportDialog open={exportDialog} list={list} onClose={() => setExportDialog(false)} />
     </div>
   );
 }

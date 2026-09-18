@@ -63,6 +63,30 @@ export async function updateItem(id: string, patch: Partial<ItemInput>): Promise
   return data as Item;
 }
 
+/**
+ * Усі позиції списку — для експорту (ROADMAP 6.3).
+ *
+ * Сторінка списку тримає в памʼяті лише поточну партію, а вивантажити треба
+ * все. Ідемо діапазонами по 1000: стільки ж стоїть у `max_rows` PostgREST,
+ * тож одним запитом більшого все одно не взяти.
+ */
+export async function fetchAllItems(listId: string): Promise<Item[]> {
+  const PAGE = 1000;
+  const out: Item[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .eq('list_id', listId)
+      .order('created_at', { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as Item[];
+    out.push(...rows);
+    if (rows.length < PAGE) return out;
+  }
+}
+
 export async function deleteItem(id: string): Promise<void> {
   const { error } = await supabase.from('items').delete().eq('id', id);
   if (error) throw error;
@@ -95,6 +119,34 @@ export async function setItemsStatus(ids: string[], status: ItemStatus): Promise
     const { error } = await supabase.from('items').update({ status }).in('id', part);
     if (error) throw error;
   }
+}
+
+/**
+ * Створює список і наповнює його позиціями (імпорт, ROADMAP 6.3).
+ *
+ * PostgREST не дає транзакції на кілька запитів, тож цілісність доводиться
+ * тримати руками: якщо частина позицій не вставилась, щойно створений список
+ * видаляємо. Краще жодного списку, ніж половина списку, про яку людина
+ * дізнається лише згодом.
+ */
+export async function createListWithItems(
+  input: ListInput,
+  items: ItemInput[],
+  ownerId: string,
+): Promise<List> {
+  const list = await createList(input, ownerId);
+  try {
+    for (const part of chunks(items, BULK_CHUNK)) {
+      const { error } = await supabase
+        .from('items')
+        .insert(part.map((i) => ({ ...i, list_id: list.id })));
+      if (error) throw error;
+    }
+  } catch (e) {
+    await deleteList(list.id).catch(() => {});
+    throw e;
+  }
+  return list;
 }
 
 /* ── Сторінка позицій (keyset) ──────────── */

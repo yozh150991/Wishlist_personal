@@ -819,3 +819,66 @@ a { color: var(--accent); text-underline-offset: 3px; }
   .event-summary__actions { width: 100%; }
   .event-summary__actions .btn { flex: 1; }
 }
+
+/* ── Експорт та імпорт (етап 6.3) ────────── */
+
+.transfer__choice {
+  display: grid;
+  gap: var(--sp-1);
+  margin: var(--sp-3) 0;
+}
+
+/* Підказка йде одразу під своєю кнопкою, без порожнього рядка між ними. */
+.transfer__choice .hint {
+  font-size: var(--t-xs);
+  color: var(--muted);
+  margin: 0 0 var(--sp-2);
+}
+
+.transfer__preview {
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  padding: var(--sp-3);
+  background: var(--surface-2);
+}
+
+.transfer__rows {
+  list-style: none;
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+}
+
+.transfer__rows li {
+  padding: 2px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.transfer__rows li:last-child {
+  border-bottom: 0;
+}
+
+.transfer__issues {
+  margin-top: var(--sp-2);
+}
+
+.transfer__issues summary {
+  cursor: pointer;
+}
+
+.transfer__issues ul {
+  margin: var(--sp-1) 0 0;
+  padding-left: var(--sp-4);
+  font-size: var(--t-xs);
+}
+
+.transfer__issues li[data-tone='error'] {
+  color: var(--danger);
+}
+
+/* Збережена копія списків, коли мережі немає (етап 6.4).
+   Тло й рамку бере від .note; пунктир і приглушений текст кажуть «це не свіже»,
+   не піднімаючи тривоги, як це робить .note[data-tone='error']. */
+.note--stale {
+  border-style: dashed;
+  color: var(--muted);
+}
