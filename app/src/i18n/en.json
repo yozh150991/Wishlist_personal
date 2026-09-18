@@ -86,6 +86,7 @@
     "passwordShort": "Use at least 8 characters.",
     "emailRequired": "Enter your email.",
     "unknown": "Something went wrong. Try again.",
+    "noResponse": "The server is not responding. Please try again.",
     "offline": "No internet connection. Your data will appear once you're back online."
   },
   "common": {

@@ -86,6 +86,7 @@
     "passwordShort": "Potrzeba co najmniej 8 znaków.",
     "emailRequired": "Podaj e-mail.",
     "unknown": "Coś poszło nie tak. Spróbuj jeszcze raz.",
+    "noResponse": "Serwer nie odpowiada. Spróbuj ponownie.",
     "offline": "Brak połączenia z internetem. Dane pojawią się, gdy sieć wróci."
   },
   "common": {
