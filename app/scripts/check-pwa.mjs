@@ -62,6 +62,20 @@ if (csp) {
   }
 }
 
+// Гостьова сторінка — секрет у самій адресі. Кеш пристрою її не бачить
+// (нижче), а пошуковий індекс не має побачити й поготів: заборона в
+// robots.txt лише просить не сканувати, від індексації захищає заголовок.
+const guestHeaders = vercel.headers
+  ?.filter((h) => h.source?.includes('/s/'))
+  .flatMap((h) => h.headers ?? []);
+check(
+  guestHeaders?.some((h) => h.key === 'X-Robots-Tag' && /noindex/i.test(h.value)),
+  'vercel.json: для /s/* немає заголовка X-Robots-Tag: noindex — гостьові посилання можуть потрапити в пошук',
+);
+
+const robots = await readFile(join(dist, 'robots.txt'), 'utf8').catch(() => '');
+check(/^\s*Disallow:\s*\/s\//m.test(robots), 'robots.txt: немає рядка Disallow: /s/');
+
 const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 check(sw.includes('createHandlerBoundToURL("/index.html")'), 'sw.js: немає запасної навігації на index.html');
 check(/denylist:\[[^\]]*\\\/s\\\//.test(sw), 'sw.js: гостьові сторінки /s/ не виключені з навігації — токени лягли б у кеш пристрою');

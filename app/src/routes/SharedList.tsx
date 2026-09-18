@@ -77,17 +77,19 @@ export default function SharedList() {
 
   if (gone || !data) {
     return (
-      <div className="guest">
+      <main className="guest">
         <div className="empty">
           <h2>{t('guest.goneTitle')}</h2>
           <p className="lede">{t('guest.goneBody')}</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="guest">
+    // <main>: гостьову сторінку відкривають сторонні люди, і без орієнтира
+    // зчитувач екрана не має куди перейти до головного вмісту.
+    <main className="guest">
       <header className="guest__head">
         <div>
           <h1 className="display">{data.title}</h1>
@@ -177,6 +179,6 @@ export default function SharedList() {
       )}
 
       <footer className="guest__foot small">{t('guest.footer')}</footer>
-    </div>
+    </main>
   );
 }

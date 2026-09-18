@@ -23,7 +23,10 @@ export function LanguagePicker({ className = '' }: { className?: string }) {
           key={l}
           type="button"
           lang={l}
-          aria-label={FULL[l]}
+          // Доступна назва мусить містити видимий текст, інакше керування
+          // голосом («натисни UA») не працює, а зчитувач екрана називає кнопку
+          // інакше, ніж вона підписана (WCAG 2.5.3).
+          aria-label={`${FULL[l]} (${SHORT[l]})`}
           aria-pressed={locale === l}
           onClick={() => setLocale(l)}
         >

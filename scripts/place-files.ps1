@@ -91,6 +91,7 @@ $map = @{
   'cache.ts' = 'app\src\lib'; 'StaleNotice.tsx' = 'app\src\components'
   'idb.ts' = 'app\src\lib'; 'outbox.ts' = 'app\src\lib'; 'outboxOps.ts' = 'app\src\lib'
   'OutboxNotice.tsx' = 'app\src\components'; 'outbox.spec.ts' = 'app\tests\e2e'
+  'robots.txt' = 'app\public'
   'transfer.spec.ts' = 'app\tests\e2e'
   'check-pwa.mjs' = 'app\scripts'; 'generate-icons.mjs' = 'app\scripts'
   'icon.svg' = 'app\public\icons'; 'maskable.svg' = 'app\public\icons'
