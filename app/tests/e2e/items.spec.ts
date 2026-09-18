@@ -169,3 +169,63 @@ test('масова дія не зачіпає вибрані позиції, с�
   await page.getByRole('searchbox').fill('');
   await expect(page.getByText('Груша', { exact: true })).toBeVisible();
 });
+
+test('після дати події застосунок пропонує підбити підсумки', async ({ page }) => {
+  await signIn(page);
+
+  // Список із подією в минулому.
+  const title = unique('E2E summary');
+  await page.getByRole('button', { name: /створити список|utwórz listę|create list/i }).first().click();
+  let dialog = await settledDialog(page);
+  await dialog.getByLabel(/^назва$|^nazwa$|^title$/i).fill(title);
+  await dialog.getByLabel(/дата події|data wydarzenia|event date/i).fill('2020-05-01');
+  await dialog.getByRole('button', { name: /^зберегти$|^zapisz$|^save$/i }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('link', { name: title }).click();
+
+  const banner = page.getByRole('region', { name: /підсумки події|podsumowanie wydarzenia|event summary/i });
+  await expect(banner).toHaveCount(0); // порожній список нагадувати нема про що
+
+  for (const name of ['Подарунок А', 'Подарунок Б']) await addItem(page, name);
+  await expect(banner).toBeVisible();
+
+  // «Пізніше» ховає нагадування, і воно не повертається після перезавантаження.
+  await banner.getByRole('button', { name: /^пізніше$|^później$|^later$/i }).click();
+  await expect(banner).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText('Подарунок А', { exact: true })).toBeVisible();
+  await expect(banner).toHaveCount(0);
+
+  // Нова вкладка (інший стан памʼяті) нагадування знову покаже.
+  await page.evaluate(() => localStorage.removeItem('wl.summaryDismissed'));
+  await page.reload();
+  await expect(banner).toBeVisible();
+
+  // «Підбити підсумки» вибирає всі актуальні позиції; лишається позначити їх подарованими.
+  await banner.getByRole('button', { name: /підбити підсумки|podsumuj|wrap up/i }).click();
+  const region = page.getByRole('region', { name: /дії з вибраними|działania na zaznaczonych|actions for selected/i });
+  await expect(region.getByText(/^(вибрано|zaznaczono|selected): 2$/i)).toBeVisible();
+  await region.getByRole('combobox').selectOption('gifted');
+
+  // Нагадування зникло, натомість тихий рядок із підсумком.
+  await expect(banner).toHaveCount(0);
+  await expect(page.getByText(/подаровано 2 з 2|podarowano 2 z 2|2 of 2 gifted/i)).toBeVisible();
+});
+
+test('до дати події нагадування не показується', async ({ page }) => {
+  await signIn(page);
+
+  const title = unique('E2E future');
+  await page.getByRole('button', { name: /створити список|utwórz listę|create list/i }).first().click();
+  const dialog = await settledDialog(page);
+  await dialog.getByLabel(/^назва$|^nazwa$|^title$/i).fill(title);
+  await dialog.getByLabel(/дата події|data wydarzenia|event date/i).fill('2099-12-31');
+  await dialog.getByRole('button', { name: /^зберегти$|^zapisz$|^save$/i }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('link', { name: title }).click();
+
+  await addItem(page, 'Ще попереду');
+  await expect(
+    page.getByRole('region', { name: /підсумки події|podsumowanie wydarzenia|event summary/i }),
+  ).toHaveCount(0);
+});

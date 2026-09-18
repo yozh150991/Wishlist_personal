@@ -163,6 +163,13 @@
     "noPrice": "{n} without a price",
     "gifted": "{n} gifted"
   },
+  "summary": {
+    "region": "Event summary",
+    "banner": "The event was on {date} — mark what has already been gifted?",
+    "start": "Wrap up",
+    "later": "Later",
+    "done": "Event is over · {gifted} of {n} gifted"
+  },
   "parser": {
     "fill": "Fill in",
     "partial": "Some fields came back empty — fill the rest in yourself.",

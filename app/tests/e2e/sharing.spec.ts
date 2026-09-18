@@ -105,7 +105,7 @@ test('Enter у діалозі створює рівно одне посилан�
   await title.press('Enter');
   await title.press('Enter').catch(() => {}); // поле могло вже зникнути — це нормально
 
-  await expect(dialog.getByLabel(/^посилання$|^link$/i)).toHaveValue(/\/s\/[A-Za-z0-9_-]{22}$/);
+  await expect(dialog.locator('#shareLink')).toHaveValue(/\/s\/[A-Za-z0-9_-]{22}$/);
 
   await page.goto('/shares');
   await expect(page.getByRole('heading', { name: shareTitle })).toHaveCount(1);

@@ -801,3 +801,21 @@ a { color: var(--accent); text-underline-offset: 3px; }
 }
 .update-banner > span { flex: 1 1 12rem; }
 .update-banner__actions { display: flex; gap: var(--sp-2); }
+
+/* ── Нагадування підбити підсумки ─────────── */
+.event-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-panel);
+}
+.event-summary__actions { display: flex; gap: var(--sp-2); }
+@media (max-width: 40rem) {
+  .event-summary__actions { width: 100%; }
+  .event-summary__actions .btn { flex: 1; }
+}

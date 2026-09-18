@@ -80,6 +80,21 @@ GET /s/:token
 ```
 `guest_key` — випадковий UUID у `localStorage` гостя. Потрібен лише щоб гість міг зняти власну бронь. Не ідентифікує особу.
 
+### Підсумки після події (етап 6.2)
+```
+Сторінка списку, у списку є event_date
+  → дата минула (порівнюються календарні дні, не моменти) і active_count > 0
+  → EventSummary показує нагадування
+     ├── «Пізніше» → localStorage: {список: дата}; нагадування зникає до зміни дати
+     └── «Підбити підсумки» → фільтр statuses=['active'], режим вибору,
+                              усі показані позиції вибрано
+       → масова зміна статусу (gifted / purchased) — той самий шлях, що й вручну
+  → active_count = 0 → замість нагадування тихий рядок «Подія минула · подаровано N з M»
+```
+Окремих запитів і колонок режим не додає: рахує `list_totals`, статуси міняє наявна масова дія. Дата події лишається в `lists.event_date` — вона й раніше зберігалась саме для цього (DATA_MODEL).
+
+Відмова живе в `localStorage` разом із датою, а не прапорцем: подію перенесли на наступний рік — нагадування зʼявиться знову. Ключ — `wl.summaryDismissed`; у приватному режимі браузера запис може не вдатись, і тоді нагадування просто повернеться наступного разу.
+
 ## PWA і офлайн-режим
 
 ### Зроблено (етап 6.1, ADR-025)
@@ -115,7 +130,8 @@ app/
 │   ├── components/
 │   │   ├── AppShell.tsx  AuthLayout.tsx  RequireAuth.tsx  ui.tsx
 │   │   ├── Dialog.tsx  ItemDialog.tsx  ListDialog.tsx  ShareDialog.tsx
-│   │   └── ItemCard.tsx  Toolbar.tsx  LocaleSync.tsx  LanguagePicker.tsx  UpdatePrompt.tsx
+│   │   ├── ItemCard.tsx  Toolbar.tsx  LocaleSync.tsx  LanguagePicker.tsx  UpdatePrompt.tsx
+│   │   └── EventSummary.tsx        # нагадування підбити підсумки після події
 │   ├── lib/
 │   │   ├── supabase.ts  auth.tsx  theme.tsx  i18n.tsx  authErrors.ts
 │   │   ├── db.ts  useItems.ts  shares.ts  guest.ts   # дані

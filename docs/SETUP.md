@@ -336,6 +336,31 @@ npx supabase status    # адреси й ключі локального сте�
 | Studio | `http://127.0.0.1:54323` |
 | Пошта, яку «надіслав» Auth | `http://127.0.0.1:54324` |
 
+Якщо `supabase start` зупинився на `Waiting for health checks...` — подивись, який контейнер не піднявся:
+
+```powershell
+docker ps -a --filter label=com.supabase.cli.project=Wishlist_personal --format "{{.Names}}`t{{.Status}}"
+```
+
+`supabase_vector_…` у стані `Restarting` означає локальну аналітику: її збирач логів читає сокет Docker-демона, якого на Windows немає. У `supabase/config.toml` вона вже вимкнена (`[analytics] enabled = false`) саме тому. Якщо рядок звідти зник — поверни його або підіймай стек із `-x logflare,vector`.
+
+`supabase_db_…` у стані `unhealthy` після рядка «Starting database from backup...» означає несумісний том від попередньої версії CLI. Лікується `npx supabase stop --no-backup`, далі `start` і `db reset` — локальні дані й так із сіду.
+
+Якщо стек піднявся (`Started supabase local development setup`), а застосунок усе одно не достукається — або якщо `supabase start` висить, хоча всі контейнери `(healthy)`, — подивись, хто насправді слухає порт API:
+
+```powershell
+netstat -ano | findstr :54321
+```
+
+Рядок `0.0.0.0:54321` належить Docker. Якщо поряд є ще один, на `127.0.0.1:54321` з **іншим** PID — порт перехопив сторонній процес: Windows віддає зʼєднання сокету з конкретнішою адресою, тож до Docker не доходить нічого. Перевір, що це за процес, і прибери його:
+
+```powershell
+Get-Process -Id <PID> | Format-List Id, ProcessName, Path, StartTime
+Stop-Process -Id <PID> -Force
+```
+
+Симптом з боку застосунку оманливий: сторінка входу не показує помилки, а кнопка «Увійти» лишається вимкненою назавжди — запит до Auth не відхилено, він просто висить без відповіді.
+
 `db reset` стирає локальну базу і накочує все заново — дані з сіду повертаються в початковий стан. На бойову базу не впливає ні `db reset`, ні сід: туди йде лише `db push`.
 
 ### Тестові дані з сіду

@@ -52,7 +52,12 @@ if (csp) {
   const inline = html.match(/<script>([\s\S]*?)<\/script>/);
   check(inline, 'index.html: інлайновий скрипт теми зник — перевір CSP');
   if (inline) {
-    const hash = 'sha256-' + createHash('sha256').update(inline[1]).digest('base64');
+    // Перед хешуванням нормалізуємо кінці рядків до LF. Хеш має відповідати
+    // байтам, які віддасть Vercel, а він збирає на Linux із LF. На Windows
+    // git кладе на диск CRLF, vite переносить їх у dist/index.html, і хеш
+    // без нормалізації виходив інший — перевірка падала на справному коді.
+    const body = inline[1].replace(/\r\n/g, '\n');
+    const hash = 'sha256-' + createHash('sha256').update(body).digest('base64');
     check(csp.includes(hash), `CSP: хеш інлайнового скрипта застарів, має бути '${hash}'`);
   }
 }
