@@ -381,12 +381,21 @@ Stop-Process -Id <PID> -Force
 
 ### Фронтенд проти локальної бази
 
-Створи `app/.env.localdb.local` (у git не потрапляє):
+Потрібен `app/.env.localdb.local` (у git не потрапляє). Збери його з уже запущеного стеку:
+
+```bash
+cd app
+npm run env:local
+```
+
+Скрипт бере адресу й ключ із `npx supabase status`, підставляє `VITE_PARSER_URL=http://parser.invalid` і зберігає решту рядків файлу, якщо той уже є. Проганяй його щоразу після `supabase stop` / `start` із перезбиранням тому: ключ тоді змінюється, а розбіжність дає мовчазне падіння всіх E2E з акаунтом.
+
+Те саме вручну:
 
 ```
 VITE_SUPABASE_URL=http://127.0.0.1:54321
 VITE_SUPABASE_PUBLISHABLE_KEY=<Publishable key або anon key з npx supabase status>
-VITE_PARSER_URL=
+VITE_PARSER_URL=http://parser.invalid
 ```
 
 ```bash

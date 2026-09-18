@@ -50,3 +50,32 @@ test('у налаштуваннях є розділ встановлення з�
   // У тестовому браузері подія встановлення не приходить, тож видно одну з підказок.
   await expect(section.locator('p')).not.toHaveText('');
 });
+
+/**
+ * Сервер, що прийняв зʼєднання й замовк, — не те саме, що офлайн: fetch не
+ * відхиляється ніколи. Без тайм-ауту кнопка «Увійти» лишалась вимкненою
+ * назавжди, без повідомлення. Саме так виглядав зламаний локальний стек
+ * (SETUP.md, розділ 8) — а зовні це нічим не відрізнялось від зависання
+ * самого застосунку.
+ */
+test('мовчазний сервер не залишає кнопку входу вимкненою назавжди', async ({ page }) => {
+  // Тайм-аут 15 с плюс запас на прогрів сторінки.
+  test.setTimeout(60_000);
+
+  // Запит на вхід не отримує ні відповіді, ні помилки.
+  await page.route('**/auth/v1/token**', () => {});
+
+  await page.goto('/login');
+  await page.getByLabel(/пошта|e-mail|email/i).fill(EMAIL!);
+  await page.getByLabel(/пароль|hasło|password/i).fill(PASSWORD!);
+
+  const submit = page.getByRole('button', { name: /увійти|zaloguj|sign in/i });
+  await submit.click();
+  await expect(submit).toBeDisabled();
+
+  await expect(
+    page.getByText(/сервер не відповідає|serwer nie odpowiada|server is not responding/i),
+  ).toBeVisible({ timeout: 25_000 });
+  await expect(submit).toBeEnabled();
+  await expect(page).toHaveURL(/\/login/);
+});
