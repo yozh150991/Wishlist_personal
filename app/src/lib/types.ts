@@ -36,6 +36,13 @@ export type Item = {
   updated_at: string;
 };
 
+/**
+ * Поля позиції, які задає людина. Живе тут, а не в `db.ts`, щоб чисті модулі
+ * (`outboxOps.ts`) могли на нього спиратися, не тягнучи за собою клієнт бази.
+ */
+export type ItemInput = Pick<Item, 'title'> &
+  Partial<Pick<Item, 'url' | 'price' | 'quantity' | 'priority' | 'note' | 'image_url' | 'status'>>;
+
 export type Totals = {
   items_count: number;
   active_count: number;

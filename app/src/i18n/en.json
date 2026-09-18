@@ -222,6 +222,13 @@
   "offline": {
     "stale": "No connection. Showing a saved copy from {when} — changes will not be saved right now."
   },
+  "outbox": {
+    "pending": "Changes waiting for the network: {n}. They will be saved as soon as the connection is back.",
+    "retry": "Try now",
+    "sending": "Sending…",
+    "dropped": "The server rejected {n} change(s). Check the list — you will have to make them again.",
+    "confirmSignOut": "{n} change(s) are waiting for the network. Signing out will discard them. Sign out anyway?"
+  },
   "parser": {
     "fill": "Fill in",
     "partial": "Some fields came back empty — fill the rest in yourself.",

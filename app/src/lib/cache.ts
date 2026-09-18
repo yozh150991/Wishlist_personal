@@ -19,11 +19,8 @@
  * Будь-який збій IndexedDB (приватний режим, заборонене сховище, перевищена
  * квота) не вважається помилкою застосунку: кеш просто не працює.
  */
+import { OUTBOX, SNAPSHOTS, openDb, req, txDone } from './idb';
 import type { Item, Totals } from './types';
-
-const DB_NAME = 'wishlist';
-const DB_VERSION = 1;
-const STORE = 'snapshots';
 
 export type Snapshot<T> = { data: T; savedAt: string };
 
@@ -38,42 +35,15 @@ export const itemsKey = (listId: string) => `items:${listId}`;
 
 export type ItemsSnapshot = { items: Item[]; totals: Totals | null };
 
-function open(): Promise<IDBDatabase | null> {
-  return new Promise((resolve) => {
-    let req: IDBOpenDBRequest;
-    try {
-      req = indexedDB.open(DB_NAME, DB_VERSION);
-    } catch {
-      return resolve(null);
-    }
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'key' });
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => resolve(null);
-    // Інша вкладка тримає стару версію — без кешу, але без зависання.
-    req.onblocked = () => resolve(null);
-  });
-}
-
-function done(tx: IDBTransaction): Promise<boolean> {
-  return new Promise((resolve) => {
-    tx.oncomplete = () => resolve(true);
-    tx.onerror = () => resolve(false);
-    tx.onabort = () => resolve(false);
-  });
-}
-
 export async function saveSnapshot<T>(key: string, userId: string, data: T): Promise<void> {
   if (!userId) return;
-  const db = await open();
+  const db = await openDb();
   if (!db) return;
   try {
-    const tx = db.transaction(STORE, 'readwrite');
+    const tx = db.transaction(SNAPSHOTS, 'readwrite');
     const record: Record_<T> = { key, userId, savedAt: new Date().toISOString(), data };
-    tx.objectStore(STORE).put(record);
-    await done(tx);
+    tx.objectStore(SNAPSHOTS).put(record);
+    await txDone(tx);
   } catch {
     // Квота вичерпана або сховище заборонене — кеш просто не працює.
   } finally {
@@ -83,15 +53,11 @@ export async function saveSnapshot<T>(key: string, userId: string, data: T): Pro
 
 export async function readSnapshot<T>(key: string, userId: string): Promise<Snapshot<T> | null> {
   if (!userId) return null;
-  const db = await open();
+  const db = await openDb();
   if (!db) return null;
   try {
-    const tx = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).get(key);
-    const record = await new Promise<Record_<T> | undefined>((resolve) => {
-      req.onsuccess = () => resolve(req.result as Record_<T> | undefined);
-      req.onerror = () => resolve(undefined);
-    });
+    const tx = db.transaction(SNAPSHOTS, 'readonly');
+    const record = (await req(tx.objectStore(SNAPSHOTS).get(key))) as Record_<T> | undefined;
     // Чужий знімок не показуємо навіть на мить.
     if (!record || record.userId !== userId) return null;
     return { data: record.data, savedAt: record.savedAt };
@@ -102,14 +68,52 @@ export async function readSnapshot<T>(key: string, userId: string): Promise<Snap
   }
 }
 
-/** Стирає кеш цілком. Викликається при виході з акаунта. */
-export async function clearCache(): Promise<void> {
-  const db = await open();
+/**
+ * Змінює збережений знімок на місці, не чіпаючи час збереження.
+ *
+ * Потрібно черзі змін (етап 6.5): позначку «подаровано», зроблену офлайн, має
+ * бути видно й після перезавантаження сторінки, поки мережі все ще немає.
+ * Час збереження лишається старим навмисне — дані в знімку й далі з тієї
+ * самої давньої вибірки, підправлено лише те, що людина щойно зробила.
+ */
+export async function patchSnapshot<T>(
+  key: string,
+  userId: string,
+  change: (data: T) => T,
+): Promise<void> {
+  if (!userId) return;
+  const db = await openDb();
   if (!db) return;
   try {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).clear();
-    await done(tx);
+    const tx = db.transaction(SNAPSHOTS, 'readwrite');
+    const store = tx.objectStore(SNAPSHOTS);
+    const record = (await req(store.get(key))) as Record_<T> | undefined;
+    if (record && record.userId === userId) {
+      store.put({ ...record, data: change(record.data) });
+    }
+    await txDone(tx);
+  } catch {
+    // Немає знімка або сховище недоступне — нічого підправляти.
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Стирає кеш і чергу цілком. Викликається при виході з акаунта.
+ *
+ * Черга йде разом із кешем навмисне: у ній лежать назви позицій, тобто ті самі
+ * особисті дані. Незакінчену чергу застосунок не викидає мовчки — перед
+ * виходом він попереджає, що зміни ще не відправлені (ADR-029).
+ */
+export async function clearCache(): Promise<void> {
+  const db = await openDb();
+  if (!db) return;
+  try {
+    const tx = db.transaction([SNAPSHOTS, OUTBOX], 'readwrite');
+    tx.objectStore(SNAPSHOTS).clear();
+    tx.objectStore(OUTBOX).clear();
+    await txDone(tx);
   } catch {
     // Немає чого стирати.
   } finally {

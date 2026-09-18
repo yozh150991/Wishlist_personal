@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Item, ItemQuery, ItemStatus, List, Totals } from './types';
+import type { Item, ItemInput, ItemQuery, ItemStatus, List, Totals } from './types';
 
 /* ── Списки ─────────────────────────────── */
 
@@ -43,14 +43,18 @@ export async function deleteList(id: string): Promise<void> {
 
 /* ── Позиції ────────────────────────────── */
 
-export type ItemInput = Pick<Item, 'title'> &
-  Partial<Pick<Item, 'url' | 'price' | 'quantity' | 'priority' | 'note' | 'image_url' | 'status'>>;
+export type { ItemInput } from './types';
 
-export async function createItem(listId: string, input: ItemInput): Promise<Item> {
+/**
+ * `id` дозволено задати з клієнта — це основа ідемпотентності черги змін
+ * (ADR-029). Повторна відправка тієї самої позиції впирається в первинний
+ * ключ і повертає 23505 замість того, щоб створити дублікат.
+ */
+export async function createItem(listId: string, input: ItemInput, id?: string): Promise<Item> {
   // owner_id проставляє тригер items_sync_owner, з клієнта його не шлемо.
   const { data, error } = await supabase
     .from('items')
-    .insert({ ...input, list_id: listId })
+    .insert({ ...input, ...(id ? { id } : {}), list_id: listId })
     .select()
     .single();
   if (error) throw error;
