@@ -222,6 +222,13 @@
   "offline": {
     "stale": "Brak połączenia. Pokazujemy zapisaną kopię z {when} — zmiany teraz się nie zapiszą."
   },
+  "outbox": {
+    "pending": "Zmiany czekają na sieć: {n}. Zapiszą się, gdy tylko wróci połączenie.",
+    "retry": "Spróbuj teraz",
+    "sending": "Wysyłam…",
+    "dropped": "Serwer nie przyjął zmian: {n}. Sprawdź listę — trzeba je zrobić ponownie.",
+    "confirmSignOut": "Zmiany czekają na sieć: {n}. Wylogowanie je usunie. Wylogować mimo to?"
+  },
   "parser": {
     "fill": "Wypełnij",
     "partial": "Nie wszystko się udało — resztę uzupełnij ręcznie.",

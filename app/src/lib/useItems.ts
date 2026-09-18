@@ -4,6 +4,8 @@ import type { Cursor } from './db';
 import type { Item, ItemQuery, Totals } from './types';
 import { useI18n } from './i18n';
 import { errorText, isNetworkError } from './errors';
+import { applyToItems } from './outboxOps';
+import type { Op } from './outboxOps';
 import { itemsKey, readSnapshot, saveSnapshot } from './cache';
 import type { ItemsSnapshot } from './cache';
 
@@ -112,7 +114,28 @@ export function useItems(listId: string, query: ItemQuery, userId: string | unde
     void loadFirst();
   }, [loadFirst]);
 
-  return { items, totals, loading, loadingMore, done, error, staleAt, reload: loadFirst, loadMore };
+  /**
+   * Показати зміну, яка лягла в чергу (етап 6.5).
+   *
+   * Замість `reload()`: перечитувати нічого, бо мережі немає, а знімок у кеші
+   * черга вже підправила. Тут — те саме для того, що на екрані зараз.
+   */
+  const applyLocal = useCallback((op: Op) => {
+    setItems((prev) => applyToItems(prev, op));
+  }, []);
+
+  return {
+    items,
+    totals,
+    loading,
+    loadingMore,
+    done,
+    error,
+    staleAt,
+    reload: loadFirst,
+    loadMore,
+    applyLocal,
+  };
 }
 
 /** Відкладає значення — щоб пошук не бив у базу на кожну літеру. */

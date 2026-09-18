@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import {
-  createItem,
-  deleteItem,
-  deleteItems,
-  fetchList,
-  setItemsStatus,
-  updateItem,
-  updateList,
-} from '../lib/db';
+import { fetchList, updateList } from '../lib/db';
 import type { ItemInput, ListInput } from '../lib/db';
 import { useDebounced, useItems } from '../lib/useItems';
 import { useI18n } from '../lib/i18n';
@@ -25,6 +17,8 @@ import { ShareDialog } from '../components/ShareDialog';
 import { EventSummary } from '../components/EventSummary';
 import { ExportDialog } from '../components/ExportDialog';
 import { StaleNotice } from '../components/StaleNotice';
+import { newId, run } from '../lib/outbox';
+import type { Op } from '../lib/outbox';
 import { listKey, readSnapshot, saveSnapshot } from '../lib/cache';
 import { Note } from '../components/ui';
 
@@ -56,11 +50,19 @@ export default function ListDetail() {
   const query = useMemo<ItemQuery>(() => ({ ...draft, search }), [draft, search]);
 
   const userId = session?.user.id;
-  const { items, totals, loading, loadingMore, done, error, staleAt, reload, loadMore } = useItems(
-    id,
-    query,
-    userId,
-  );
+  const { items, totals, loading, loadingMore, done, error, staleAt, reload, loadMore, applyLocal } =
+    useItems(id, query, userId);
+
+  /**
+   * Одна дорога для всіх змін позицій (етап 6.5).
+   *
+   * Дійшло до сервера — перечитуємо дані; лягло в чергу — показуємо зміну самі:
+   * перечитувати нема звідки, а знімок у кеші черга вже підправила.
+   */
+  async function change(op: Op) {
+    if ((await run(userId ?? '', op)) === 'queued') applyLocal(op);
+    else await reload();
+  }
 
   useEffect(() => {
     let alive = true;
@@ -146,13 +148,12 @@ export default function ListDetail() {
   /** Куплене й подароване гостям не показується, тож у посилання йде лише актуальне. */
   const selectedActiveIds = selectedItems.filter((i) => i.status === 'active').map((i) => i.id);
 
-  async function bulk(action: () => Promise<void>) {
+  async function bulk(op: Op) {
     if (bulkBusy) return;
     setBulkBusy(true);
     setBulkError(null);
     try {
-      await action();
-      await reload();
+      await change(op);
       exitSelection();
     } catch (e) {
       setBulkError(errorText(e, t));
@@ -163,29 +164,29 @@ export default function ListDetail() {
 
   function bulkDelete() {
     if (!window.confirm(t('select.confirmDelete', { n: selected.size }))) return;
-    void bulk(() => deleteItems([...selected]));
+    void bulk({ kind: 'delete', listId: id, ids: [...selected] });
   }
 
   function bulkStatus(status: ItemStatus) {
-    void bulk(() => setItemsStatus([...selected], status));
+    void bulk({ kind: 'status', listId: id, ids: [...selected], status });
   }
 
   async function saveItem(input: ItemInput) {
-    if (itemDialog.item) await updateItem(itemDialog.item.id, input);
-    else await createItem(id, input);
-    await reload();
+    await change(
+      itemDialog.item
+        ? { kind: 'update', listId: id, id: itemDialog.item.id, input }
+        : { kind: 'create', listId: id, id: newId(), input },
+    );
   }
 
   async function removeItem(item: Item) {
     if (!window.confirm(t('item.confirmDelete', { title: item.title }))) return;
-    await deleteItem(item.id);
-    await reload();
+    await change({ kind: 'delete', listId: id, ids: [item.id] });
   }
 
   async function setStatus(item: Item, status: ItemStatus) {
     if (status === item.status) return;
-    await updateItem(item.id, { status });
-    await reload();
+    await change({ kind: 'status', listId: id, ids: [item.id], status });
   }
 
   async function saveList(input: ListInput) {

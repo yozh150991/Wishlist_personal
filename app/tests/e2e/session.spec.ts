@@ -190,16 +190,16 @@ test('після виходу з акаунта офлайн-копії не л�
  */
 
 /**
- * Читає або переписує знімок так само, як це робить застосунок: та сама версія
- * бази, і зʼєднання завжди закривається. Відкриття без версії створило б
- * порожню базу без сховища, після чого застосунок не зміг би створити своє —
- * і тест проходив би, нічого не перевіривши.
+ * Читає або переписує знімок, не прив'язуючись до версії бази: версія росте з
+ * кожним новим сховищем (черга змін підняла її до 2), і числом у тесті це
+ * дублювати не варто — відкриття зі старшою версією падає з `VersionError`.
+ * Зʼєднання закривається завжди, інакше наступне оновлення схеми заблокується.
  */
 async function snapshots(page: Page, replaceUserId?: string): Promise<number> {
   return page.evaluate(
     (foreign) =>
       new Promise<number>((resolve) => {
-        const req = indexedDB.open('wishlist', 1);
+        const req = indexedDB.open('wishlist');
         req.onupgradeneeded = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains('snapshots')) {
@@ -264,6 +264,156 @@ test('чужий знімок у сховищі не показується', as
 
   await expect(stale).toHaveCount(0);
   await expect(page.getByRole('link', { name: title })).toHaveCount(0);
+
+  await context.setOffline(false);
+});
+
+/**
+ * Черга змін (етап 6.5). Перевіряємо не сховище, а те, заради чого все це:
+ * зміна, зроблена без мережі, видно одразу й доходить до бази, коли мережа
+ * повертається.
+ */
+test('зміна статусу без мережі доходить до бази після повернення звʼязку', async ({
+  page,
+  context,
+}) => {
+  await signIn(page);
+  const title = unique('E2E outbox');
+  await createList(page, title);
+  await addItem(page, 'Кавоварка черги');
+
+  await context.setOffline(true);
+  await page.getByRole('combobox', { name: /кавоварка черги/i }).selectOption('gifted');
+
+  // Видно одразу, без мережі.
+  await expect(page.getByRole('combobox', { name: /кавоварка черги/i })).toHaveValue('gifted');
+  const waiting = page.getByText(/чекають на мережу|czekają na sieć|waiting for the network/i);
+  await expect(waiting).toBeVisible();
+
+  // Мережа повернулась — черга відправляється сама.
+  await context.setOffline(false);
+  await expect(waiting).toHaveCount(0, { timeout: 15_000 });
+
+  // І це справді в базі, а не лише на екрані: перезавантажуємо сторінку.
+  await page.reload();
+  await expect(page.getByRole('combobox', { name: /кавоварка черги/i })).toHaveValue('gifted');
+});
+
+test('позиція, створена без мережі, зʼявляється в списку й не дублюється в базі', async ({
+  page,
+  context,
+}) => {
+  await signIn(page);
+  const title = unique('E2E outbox add');
+  await createList(page, title);
+
+  await context.setOffline(true);
+  await addItem(page, 'Додано офлайн');
+  await expect(page.getByText('Додано офлайн', { exact: true })).toBeVisible();
+
+  await context.setOffline(false);
+  await expect(page.getByText(/чекають на мережу|czekają na sieć|waiting for the network/i)).toHaveCount(0, {
+    timeout: 15_000,
+  });
+
+  await page.reload();
+  // Рівно одна: id згенеровано на клієнті, тож повторна відправка не створює другу.
+  await expect(page.getByText('Додано офлайн', { exact: true })).toHaveCount(1);
+});
+
+test('зміни в черзі переживають перезавантаження сторінки', async ({ page, context }) => {
+  await signIn(page);
+  const title = unique('E2E outbox keep');
+  await createList(page, title);
+  await addItem(page, 'Переживе перезавантаження');
+
+  // Сторінку треба відвідати онлайн, щоб знімок ліг у кеш.
+  await page.getByRole('link', { name: /^списки$|^listy$|^lists$/i }).first().click();
+  await expect(page.getByRole('link', { name: title })).toBeVisible();
+  await page.getByRole('link', { name: title }).click();
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+
+  await context.setOffline(true);
+  await page.getByRole('combobox', { name: /переживе перезавантаження/i }).selectOption('purchased');
+  await expect(page.getByText(/чекають на мережу|czekają na sieć|waiting for the network/i)).toBeVisible();
+
+  // Перехід усередині застосунку: у режимі розробки Service Worker вимкнено.
+  await page.getByRole('link', { name: /^списки$|^listy$|^lists$/i }).first().click();
+  await page.getByRole('link', { name: title }).click();
+
+  // Знімок у кеші вже підправлений чергою, тож статус лишається зміненим.
+  await expect(page.getByRole('combobox', { name: /переживе перезавантаження/i })).toHaveValue(
+    'purchased',
+  );
+  await expect(page.getByText(/чекають на мережу|czekają na sieć|waiting for the network/i)).toBeVisible();
+
+  await context.setOffline(false);
+});
+
+/**
+ * Найважливіший сценарій черги: відправку обірвано **після** того, як сервер
+ * уже записав зміну. Клієнт бачить мережевий збій і лишає зміну в черзі, тож
+ * наступна спроба відправить її вдруге.
+ *
+ * Рятує `id`, згенерований на клієнті: повтор впирається в первинний ключ
+ * (`23505`), і черга вважає це успіхом. Без нього в списку зʼявився б дублікат.
+ */
+test('обірвана відправка не створює дублікат позиції', async ({ page }) => {
+  await signIn(page);
+  const title = unique('E2E outbox retry');
+  await createList(page, title);
+
+  // Перший POST доходить до бази, але відповідь до сторінки — ні.
+  let cut = true;
+  await page.route('**/rest/v1/items**', async (route) => {
+    if (cut && route.request().method() === 'POST') {
+      cut = false;
+      await route.fetch();
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+
+  await addItem(page, 'Позиція з обірваної відправки').catch(() => {});
+
+  // Зміна в черзі: клієнт вважає, що не дійшло.
+  const waiting = page.getByText(/чекають на мережу|czekają na sieć|waiting for the network/i);
+  await expect(waiting).toBeVisible();
+
+  // Друга спроба впирається в уже створений рядок і має порахувати це успіхом.
+  await page.getByRole('button', { name: /спробувати зараз|spróbuj teraz|try now/i }).click();
+  await expect(waiting).toHaveCount(0, { timeout: 15_000 });
+
+  await page.reload();
+  await expect(page.getByText('Позиція з обірваної відправки', { exact: true })).toHaveCount(1);
+});
+
+/**
+ * Вихід стирає чергу разом із кешем, тож незакінчену чергу застосунок не
+ * викидає мовчки. Дані людини не мають зникати без її відома.
+ */
+test('вихід із незакінченою чергою спершу питає', async ({ page, context }) => {
+  await signIn(page);
+  const title = unique('E2E outbox leave');
+  await createList(page, title);
+  await addItem(page, 'Незакінчена зміна');
+
+  await context.setOffline(true);
+  await page.getByRole('combobox', { name: /незакінчена зміна/i }).selectOption('gifted');
+  await expect(page.getByText(/чекають на мережу|czekają na sieć|waiting for the network/i)).toBeVisible();
+
+  // Скасовуємо запит — виходу не має статися. Перевіряємо саме відсутність
+  // події: `toHaveURL` тут марний, бо збігається миттєво, ще до переходу.
+  page.once('dialog', (d) => void d.dismiss());
+  await page.getByRole('button', { name: /^вийти$|^wyloguj$|^sign out$/i }).click();
+  await page.waitForURL(/\/login/, { timeout: 3000 }).then(
+    () => {
+      throw new Error('застосунок вийшов, хоча запит було скасовано');
+    },
+    () => undefined,
+  );
+  await expect(page.getByText(/чекають на мережу|czekają na sieć|waiting for the network/i)).toBeVisible();
 
   await context.setOffline(false);
 });
