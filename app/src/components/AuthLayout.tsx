@@ -34,10 +34,12 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         </div>
         <PrivacyDemo />
       </aside>
-      <div className="auth__form-wrap">
+      {/* Саме <main>: на цих сторінках немає каркаса застосунку, і без
+          орієнтира зчитувач екрана не має куди перейти до головного вмісту. */}
+      <main className="auth__form-wrap">
         <LanguagePicker className="auth__lang" />
         {children}
-      </div>
+      </main>
     </div>
   );
 }

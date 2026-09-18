@@ -51,9 +51,9 @@ test('мову можна перемкнути до входу, і вибір з
   await page.goto('/register');
   const picker = page.getByRole('group', { name: /мова|język|language/i });
 
-  await picker.getByRole('button', { name: 'Polski' }).click();
+  await picker.getByRole('button', { name: /^Polski/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Rejestracja' })).toBeVisible();
-  await expect(picker.getByRole('button', { name: 'Polski' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(picker.getByRole('button', { name: /^Polski/ })).toHaveAttribute('aria-pressed', 'true');
 
   // Вибір переживає перехід на іншу сторінку і перезавантаження.
   await page.goto('/login');
