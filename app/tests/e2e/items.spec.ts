@@ -229,3 +229,72 @@ test('до дати події нагадування не показуєтьс�
     page.getByRole('region', { name: /підсумки події|podsumowanie wydarzenia|event summary/i }),
   ).toHaveCount(0);
 });
+
+/**
+ * Експорт та імпорт (етап 6.3). Повний оберт через справжній браузер:
+ * завантаження файлу, читання, внесення назад.
+ */
+test('список вивантажується у CSV і вноситься назад', async ({ page }) => {
+  await signIn(page);
+  const title = unique('E2E transfer');
+  await createList(page, title);
+  await addItem(page, 'Кавоварка');
+  await addItem(page, 'Келихи');
+
+  // Вивантаження: браузер має отримати саме файл, а не перейти на blob-адресу.
+  await page.getByRole('button', { name: /^експорт$|^eksport$|^export$/i }).click();
+  const dialog = page.getByRole('dialog');
+  const wait = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: /csv/i }).click();
+  const file = await wait;
+  expect(file.suggestedFilename()).toMatch(/\.csv$/);
+  const saved = await file.path();
+
+  // Внесення назад створює окремий список із тими самими позиціями.
+  await page.goto('/lists');
+  await page.getByRole('button', { name: /^імпорт$|^import$/i }).click();
+  const importDialog = page.getByRole('dialog');
+  await importDialog.locator('#importFile').setInputFiles(saved);
+
+  await expect(importDialog.getByText(/позицій: 2|pozycji: 2|items to create: 2/i)).toBeVisible();
+  const copy = `${title} копія`;
+  await importDialog.locator('#importTitle').fill(copy);
+  await importDialog.getByRole('button', { name: /створити список|utwórz listę|create list/i }).click();
+  await expect(importDialog).toHaveCount(0);
+
+  await page.getByRole('link', { name: copy }).click();
+  await expect(page.getByRole('heading', { level: 1, name: copy })).toBeVisible();
+  await expect(page.getByText('Кавоварка', { exact: true })).toBeVisible();
+  await expect(page.getByText('Келихи', { exact: true })).toBeVisible();
+});
+
+test('зіпсовані рядки файлу показуються до створення списку, а не після', async ({ page }) => {
+  await signIn(page);
+  await page.goto('/lists');
+  await page.getByRole('button', { name: /^імпорт$|^import$/i }).click();
+  const dialog = page.getByRole('dialog');
+
+  await dialog.locator('#importFile').setInputFiles({
+    name: 'bad.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(
+      'title,price,quantity,status\nДобра позиція,100,2,active\n,50,1,active\nЩе одна,дорого,5000,невідомо\n',
+      'utf8',
+    ),
+  });
+
+  // Рядок без назви пропущено, решта — з поправками.
+  await expect(dialog.getByText(/позицій: 2|pozycji: 2|items to create: 2/i)).toBeVisible();
+  await dialog.getByRole('group').or(dialog.locator('details')).first().click();
+  await expect(dialog.getByText(/немає назви|brak nazwy|no title/i)).toBeVisible();
+  await expect(dialog.getByText(/поза межами|poza zakresem|outside/i)).toBeVisible();
+
+  const copy = unique('E2E import');
+  await dialog.locator('#importTitle').fill(copy);
+  await dialog.getByRole('button', { name: /створити список|utwórz listę|create list/i }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await page.getByRole('link', { name: copy }).click();
+  await expect(page.getByText('Добра позиція', { exact: true })).toBeVisible();
+  await expect(page.getByText('Ще одна', { exact: true })).toBeVisible();
+});

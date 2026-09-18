@@ -171,6 +171,57 @@
     "later": "Later",
     "done": "Event is over · {gifted} of {n} gifted"
   },
+  "transfer": {
+    "export": {
+      "open": "Export",
+      "title": "Export list",
+      "body": "Reservations and guest links stay out of the file — they never leave the app.",
+      "csv": "CSV for a spreadsheet",
+      "csvHint": "Opens in Excel, Numbers and Google Sheets.",
+      "json": "JSON for moving the list",
+      "jsonHint": "Also keeps the list name, currency and event date."
+    },
+    "import": {
+      "open": "Import",
+      "title": "Import list",
+      "file": "CSV or JSON file",
+      "hint": "A title column is required. Up to {max} items at a time.",
+      "pick": "Pick a file and you will see exactly what gets created.",
+      "fallbackTitle": "Imported list",
+      "region": "Preview",
+      "preview": "Items to create: {n}",
+      "nothing": "Nothing usable in this file.",
+      "andMore": "…and {n} more",
+      "issues": "Notes: {errors} errors, {warnings} warnings",
+      "rowLabel": "Row {row}:",
+      "fileLabel": "File:",
+      "submit": "Create list",
+      "tooBig": "The file is larger than {max} MB."
+    },
+    "issues": {
+      "titleRequired": "no title, row skipped.",
+      "titleLong": "title longer than {max} characters, row skipped.",
+      "noteLong": "note trimmed to {max} characters.",
+      "price": "could not read the price “{value}”, left empty.",
+      "quantity": "quantity “{value}” is outside 1–999, set to 1.",
+      "priority": "unknown priority “{value}”, set to medium.",
+      "status": "unknown status “{value}”, set to active.",
+      "url": "the link in “{field}” does not start with http, field cleared.",
+      "empty": "the file is empty.",
+      "noTitleColumn": "no title column in the header.",
+      "badJson": "this is not JSON.",
+      "noItems": "no items array.",
+      "foreignFormat": "file from “{format}” — read as much as possible.",
+      "currency": "unknown currency “{value}”, set to PLN.",
+      "eventDate": "could not read the date “{value}”, left empty.",
+      "listTitleLong": "list name trimmed to {max} characters.",
+      "descriptionLong": "description trimmed to {max} characters.",
+      "tooMany": "{count} items in the file, taking the first {max}."
+    }
+  },
+  "offline": {
+    "stale": "No connection. Showing a saved copy from {when} — changes will not be saved right now."
+  },
   "parser": {
     "fill": "Fill in",
     "partial": "Some fields came back empty — fill the rest in yourself.",
