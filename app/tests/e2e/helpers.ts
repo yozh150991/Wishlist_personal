@@ -92,7 +92,8 @@ export async function createShare(page: Page, pick: string[], title: string): Pr
   await dialog.getByLabel(/^заголовок для гостей$|heading for guests|nagłówek/i).fill(title);
   await dialog.getByRole('button', { name: /створити посилання|utwórz link|create link/i }).click();
 
-  const link = await dialog.getByLabel(/^посилання$|^link$/i).inputValue();
+  // Саме #shareLink: підпис «Посилання» має ще й поле URL у формі позиції.
+  const link = await dialog.locator('#shareLink').inputValue();
   expect(link).toMatch(/\/s\/[A-Za-z0-9_-]{22}$/);
   return link;
 }

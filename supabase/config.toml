@@ -394,7 +394,13 @@ deno_version = 2
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+# Вимкнено навмисне. Це локальний переглядач логів Logflare; його збирач
+# (контейнер vector) читає логи через сокет Docker-демона, якого на Windows
+# немає, поки демон не виставлено на tcp://localhost:2375. Без цього vector
+# іде в цикл перезапуску, `supabase start` вічно висить на «Waiting for health
+# checks», а разом із ним не піднімаються auth і Kong — запити входу висять
+# без відповіді. На бойовий Supabase і на CI не впливає.
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"

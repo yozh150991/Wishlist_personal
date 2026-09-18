@@ -163,6 +163,13 @@
     "noPrice": "{n} bez ceny",
     "gifted": "{n} podarowanych"
   },
+  "summary": {
+    "region": "Podsumowanie wydarzenia",
+    "banner": "Wydarzenie było {date} — oznaczyć, co już podarowano?",
+    "start": "Podsumuj",
+    "later": "Później",
+    "done": "Wydarzenie minęło · podarowano {gifted} z {n}"
+  },
   "parser": {
     "fill": "Wypełnij",
     "partial": "Nie wszystko się udało — resztę uzupełnij ręcznie.",

@@ -21,6 +21,7 @@ import { ItemCard } from '../components/ItemCard';
 import { ItemDialog } from '../components/ItemDialog';
 import { ListDialog } from '../components/ListDialog';
 import { ShareDialog } from '../components/ShareDialog';
+import { EventSummary } from '../components/EventSummary';
 import { Note } from '../components/ui';
 
 export default function ListDetail() {
@@ -40,6 +41,9 @@ export default function ListDetail() {
   const [shareDialog, setShareDialog] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  // Після натискання «Підбити підсумки» фільтр перемикається на актуальні,
+  // а вибір треба поставити вже на перезавантажену вибірку.
+  const [selectActiveOnLoad, setSelectActiveOnLoad] = useState(false);
 
   // Пошук відкладається, решта фільтрів застосовується одразу.
   const search = useDebounced(draft.search, 300);
@@ -70,6 +74,13 @@ export default function ListDetail() {
 
   const patch = useCallback((p: Partial<ItemQuery>) => setDraft((q) => ({ ...q, ...p })), []);
 
+  /** Підбити підсумки: показати лише актуальні позиції й вибрати їх усі. */
+  function startSummary() {
+    patch({ statuses: ['active'], search: '' });
+    setSelecting(true);
+    setSelectActiveOnLoad(true);
+  }
+
   function toggleSelect(item: Item) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -97,6 +108,12 @@ export default function ListDetail() {
       return next.size === prev.size ? prev : next;
     });
   }, [items]);
+
+  useEffect(() => {
+    if (!selectActiveOnLoad || loading) return;
+    setSelected(new Set(items.filter((i) => i.status === 'active').map((i) => i.id)));
+    setSelectActiveOnLoad(false);
+  }, [selectActiveOnLoad, loading, items]);
 
   const selectedItems = items.filter((i) => selected.has(i.id));
   /** Куплене й подароване гостям не показується, тож у посилання йде лише актуальне. */
@@ -200,6 +217,8 @@ export default function ListDetail() {
           </span>
         </p>
       )}
+
+      <EventSummary list={list} totals={totals} onStart={startSummary} />
 
       <Toolbar query={draft} onChange={patch} />
 
