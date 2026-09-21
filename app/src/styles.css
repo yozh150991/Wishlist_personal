@@ -660,6 +660,41 @@ select[multiple].input {
 
 /* Кут один на обох розкладках: на телефоні — над формою, на десктопі —
    над правою колонкою, бо ліва половина закінчується раніше. */
+/* Перемикач мови. Клас стояв у розмітці без жодного правила, тож браузер
+   малював три сірі прямокутники — єдине місце в застосунку, де було видно
+   стандартні кнопки. Вигляд той самий, що й у решти перемикачів (вибране —
+   заливка головної кнопки), лише компактніший: він живе в кутку сторінки
+   входу й у підвалі гостьової, де три повні пігулки забирали б пів екрана. */
+.picker {
+  display: inline-flex;
+  /* Щоб не розтягнувся, якщо колись потрапить у сітку-контейнер: перемикач
+     завжди завширшки зі свої три сегменти. */
+  justify-self: start;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-pill);
+  background: var(--color-surface);
+}
+.picker > button {
+  min-height: 40px;
+  padding: 0 var(--sp-5);
+  font: inherit;
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--color-neutral-700);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.picker > button:hover { color: var(--color-text); }
+.picker > button[aria-pressed='true'] {
+  color: var(--color-primary-ink);
+  background: var(--color-primary-fill);
+}
+
 .auth__lang {
   position: absolute;
   top: var(--sp-5);
@@ -1270,7 +1305,9 @@ select[multiple].input {
   border-color: var(--color-accent-700);
   color: var(--color-accent-900);
 }
-.guest__lang { flex: 1; justify-content: flex-end; }
+/* Своя ширина, а не розтягнута: кнопку «Вигляд» поруч і так тягне
+   `flex: 1`, тож перемикач сам опиняється біля правого краю. */
+.guest__lang { flex: none; }
 
 /* Мертве посилання: коло, заголовок, рядок пояснення — і нічого більше. */
 .guest--gone {
