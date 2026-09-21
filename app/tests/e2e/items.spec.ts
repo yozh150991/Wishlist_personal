@@ -96,20 +96,41 @@ test('на сторінці списку немає дубльованих id', 
  * Статуси — це набір, і останній обраний теж мусить зніматись. Клік по ньому
  * означає «показати всі»: порожній набір дав би порожній екран, а мовчазна
  * відмова читалась як зламана кнопка.
+ *
+ * Перезавантаження посеред тесту навмисне. Зміна статусу з картки й зміна
+ * фільтра — два незалежні перечитування вибірки, і без перезавантаження тест
+ * ловив то одне, то інше: у CI він падав двома різними способами на тому
+ * самому коді. Перевіряти тут треба поведінку фільтра, а не перегони.
  */
-test('клік по єдиному обраному статусу показує всі позиції', async ({ page }) => {
+test('клік по єдиному обраному статусу вмикає всі, а не жоден', async ({ page }) => {
   await signIn(page);
   await createList(page, unique('E2E status'));
   await addItem(page, 'Кавоварка');
-
-  // Подарована позиція випадає з усталеного фільтра «Актуальні».
+  // Запис мусить дійти до бази до перезавантаження: інакше воно обірве запит
+  // на півдорозі, і позиція лишиться актуальною.
+  const saved = page.waitForResponse((r) => r.url().includes('/items') && r.request().method() === 'PATCH' && r.ok());
   await page.getByRole('combobox', { name: /Кавоварка/ }).selectOption('gifted');
+  await saved;
+
+  // Усталений фільтр — «Актуально», тож подарована позиція зникає з вибірки.
+  await page.reload();
   await expect(page.getByText('Кавоварка', { exact: true })).toHaveCount(0);
 
   await openFilters(page);
-  await page.getByRole('button', { name: /^актуальні$|^aktualne$|^active$/i }).click();
-  await closeFilters(page);
+  const chip = (name: RegExp) => page.getByRole('button', { name });
+  const active = chip(/^актуально$|^aktualne$|^active$/i);
+  const purchased = chip(/^куплено$|^kupione$|^purchased$/i);
+  const gifted = chip(/^подаровано$|^podarowane$|^gifted$/i);
 
+  await expect(active).toHaveAttribute('aria-pressed', 'true');
+  await expect(purchased).toHaveAttribute('aria-pressed', 'false');
+
+  await active.click();
+  for (const one of [active, purchased, gifted]) {
+    await expect(one).toHaveAttribute('aria-pressed', 'true');
+  }
+
+  await closeFilters(page);
   await expect(page.getByText('Кавоварка', { exact: true })).toBeVisible();
 });
 
