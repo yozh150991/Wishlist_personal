@@ -97,3 +97,25 @@ export async function createShare(page: Page, pick: string[], title: string): Pr
   expect(link).toMatch(/\/s\/[A-Za-z0-9_-]{22}$/);
   return link;
 }
+
+/**
+ * Лічильник режиму вибору. Живе в шапці екрана, а не в панелі дій унизу,
+ * тому шукається на рівні сторінки: прив'язка до панелі ламалась би від
+ * кожного перенесення лічильника між блоками, хоч число на екрані є.
+ */
+export function selectedCount(page: Page, n: number): Locator {
+  return page.getByText(new RegExp(`^(вибрано|zaznaczono|selected): ${n}$`, 'i'));
+}
+
+/**
+ * Відкриває фільтри, якщо на цій ширині вони сховані в нижній лист.
+ * На широкому екрані панель уже розгорнута, а кнопки «Фільтри» там немає —
+ * тоді нічого робити не треба. Так один і той самий сценарій проходить
+ * і в десктопній, і в телефонній розкладці.
+ */
+export async function openFilters(page: Page) {
+  const toggle = page.getByRole('button', { name: /фільтри|filtry|filters/i });
+  if (!(await toggle.isVisible())) return;
+  await toggle.click();
+  await expect(openDialog(page)).toBeVisible();
+}

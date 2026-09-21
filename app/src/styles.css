@@ -485,22 +485,27 @@ select[multiple].input {
   padding: var(--sp-6) var(--sp-6) var(--sp-7);
 }
 
-/* Нижня навігація — телефон. Великий палець дістає її без перехоплення
-   телефона, тому вона внизу, а не вгорі. */
-.tabbar {
+/* Одна навігація на обидві розкладки: на телефоні — смуга внизу (великий
+   палець дістає її без перехоплення телефона), на десктопі — колонка збоку.
+   Підпис короткий чи довгий вибирає CSS, тому в дереві доступності завжди
+   рівно один орієнтир і рівно одне посилання на розділ. */
+.mainnav {
+  order: 2;
   position: sticky;
   bottom: 0;
   z-index: 10;
   display: flex;
   gap: var(--sp-1);
-  padding: var(--sp-3) var(--sp-5) var(--sp-5);
+  padding: var(--sp-3) var(--sp-5) max(var(--sp-5), env(safe-area-inset-bottom));
   border-top: 1px solid var(--color-divider);
   background: var(--color-surface);
-  /* Вирізи й смуга жестів на iPhone не мають накривати пункти. */
-  padding-bottom: max(var(--sp-5), env(safe-area-inset-bottom));
 }
 
-.tabbar__item {
+.mainnav__brand,
+.mainnav__who,
+.mainnav__long { display: none; }
+
+.mainnav__item {
   flex: 1;
   min-height: 52px;
   display: flex;
@@ -514,76 +519,65 @@ select[multiple].input {
   font-size: var(--t-meta);
   font-weight: 600;
 }
-.tabbar__item[aria-current='page'] {
+.mainnav__item[aria-current='page'] {
   background: var(--color-accent-200);
   color: var(--color-accent-800);
   font-weight: 700;
 }
-
-/* Бічна навігація — десктоп. У розмітці завжди, показується медіазапитом. */
-.sidenav { display: none; }
 
 @media (min-width: 56rem) {
   .shell { flex-direction: row; }
 
-  .tabbar { display: none; }
-
-  .sidenav {
+  .mainnav {
+    order: 0;
+    position: static;
     width: 232px;
     flex: none;
-    display: flex;
     flex-direction: column;
     gap: var(--sp-2);
     padding: var(--sp-7) var(--sp-6);
-    background: var(--color-surface);
+    border-top: 0;
   }
+
+  .mainnav__brand {
+    display: block;
+    padding: 0 var(--sp-5) var(--sp-7);
+    font-family: var(--font-heading);
+    font-weight: var(--weight-heading);
+    font-size: var(--t-sum);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .mainnav__item {
+    flex: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--sp-4);
+    min-height: 46px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    color: var(--color-text);
+    font-size: var(--t-item);
+  }
+
+  .mainnav__short { display: none; }
+  .mainnav__long { display: inline; }
+
+  .mainnav__who {
+    display: grid;
+    gap: var(--sp-1);
+    margin-top: auto;
+    padding: var(--sp-5) 14px;
+    border-radius: 20px;
+    background: var(--color-bg);
+  }
+  /* Довга пошта не має розсувати колонку — вона переноситься. */
+  .mainnav__mail { font-size: var(--t-small); font-weight: 600; word-break: break-all; }
+  .mainnav__who .btn { justify-self: start; margin-top: var(--sp-2); }
 
   .shell__main { padding: 26px var(--sp-8) var(--sp-8); }
 }
-
-.sidenav__brand {
-  padding: 0 var(--sp-5) var(--sp-7);
-  font-family: var(--font-heading);
-  font-weight: var(--weight-heading);
-  font-size: var(--t-sum);
-  color: var(--color-text);
-  text-decoration: none;
-}
-
-.sidenav__item {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  min-height: 46px;
-  padding: 0 14px;
-  border-radius: var(--r-pill);
-  text-decoration: none;
-  color: var(--color-text);
-  font-size: var(--t-item);
-  font-weight: 600;
-}
-.sidenav__item:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.sidenav__item[aria-current='page'] {
-  background: var(--color-accent-200);
-  color: var(--color-accent-800);
-  font-weight: 700;
-}
-
-.sidenav__who {
-  display: grid;
-  gap: var(--sp-1);
-  margin-top: auto;
-  padding: var(--sp-5) 14px;
-  border-radius: 20px;
-  background: var(--color-bg);
-}
-/* Довга пошта не має розсувати колонку — вона переноситься. */
-.sidenav__mail {
-  font-size: var(--t-small);
-  font-weight: 600;
-  word-break: break-all;
-}
-.sidenav__who .btn { justify-self: start; margin-top: var(--sp-2); }
 
 /* ── Заголовок сторінки ────────────────────────────────────── */
 

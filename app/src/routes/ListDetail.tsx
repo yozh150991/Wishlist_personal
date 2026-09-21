@@ -240,7 +240,11 @@ export default function ListDetail() {
           >
             <Icon name="x" size={18} />
           </button>
-          <div className="select-head__text">
+          {/* Лічильник переїхав із панелі дій у шапку, тож саме тут він має
+              бути живою областю: інакше зчитувач екрана мовчить, поки
+              людина ставить галочки, і кількість вибраного треба
+              перевіряти навпомацки. */}
+          <div className="select-head__text" role="status" aria-live="polite">
             <strong>{t('select.selected', { n: selected.size })}</strong>
             <span className="small">
               {t('select.activeAmong', { n: selectedActiveIds.length })}
@@ -358,7 +362,11 @@ export default function ListDetail() {
             <Icon name="alert" size={36} />
           </span>
           <h2>{t('item.errorTitle')}</h2>
-          <p className="lede">{t('item.errorBody')}</p>
+          {/* Спершу справжня причина («Немає зʼєднання»), і лише потім
+              заспокійливий рядок. Навпаки — і людина бачить, що щось
+              впало, але не дізнається що саме. */}
+          <p className="lede">{error}</p>
+          <p className="small muted">{t('item.errorBody')}</p>
           <button type="button" className="btn btn--primary" onClick={() => void reload()}>
             {t('common.retry')}
           </button>

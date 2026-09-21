@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { addItem, createList, hasAccount, settledDialog, signIn, unique } from './helpers';
+import {
+  addItem,
+  createList,
+  hasAccount,
+  openFilters,
+  selectedCount,
+  settledDialog,
+  signIn,
+  unique,
+} from './helpers';
 
 /**
  * Сценарії етапу 3 працюють з реальним акаунтом.
@@ -54,6 +63,9 @@ test('зміна розміру сторінки перезавантажує в
   await signIn(page);
   await createList(page, unique('E2E page size'));
 
+  // На телефоні розмір сторінки лежить у листі фільтрів, на десктопі —
+  // одразу на панелі.
+  await openFilters(page);
   const size = page.getByLabel(/на сторінці|na stronie|per page/i);
   await size.selectOption('10');
   await expect(size).toHaveValue('10');
@@ -131,7 +143,7 @@ test('масові дії: статус і видалення вибраних',
   await page.getByRole('button', { name: /^вибрати$|^zaznacz$|^select$/i }).click();
   await page.getByRole('checkbox', { name: /Перша/ }).check();
   await page.getByRole('checkbox', { name: /Друга/ }).check();
-  await expect(region.getByText(/^(вибрано|zaznaczono|selected): 2$/i)).toBeVisible();
+  await expect(selectedCount(page, 2)).toBeVisible();
   await region.getByRole('combobox').selectOption('gifted');
 
   await expect(region).toHaveCount(0);
@@ -168,7 +180,7 @@ test('масова дія не зачіпає вибрані позиції, с�
   await page.getByRole('searchbox').fill('Ябл');
   await expect(page.getByText('Груша', { exact: true })).toHaveCount(0);
   const region = page.getByRole('region', { name: /дії з вибраними|działania na zaznaczonych|actions for selected/i });
-  await expect(region.getByText(/^(вибрано|zaznaczono|selected): 1$/i)).toBeVisible();
+  await expect(selectedCount(page, 1)).toBeVisible();
 
   await region.getByRole('button', { name: /^видалити$|^usuń$|^delete$/i }).click();
   // Підтвердження — власний <dialog>, не вікно браузера.
@@ -216,7 +228,7 @@ test('після дати події застосунок пропонує пі�
   // «Підбити підсумки» вибирає всі актуальні позиції; лишається позначити їх подарованими.
   await banner.getByRole('button', { name: /підбити підсумки|podsumuj|wrap up/i }).click();
   const region = page.getByRole('region', { name: /дії з вибраними|działania na zaznaczonych|actions for selected/i });
-  await expect(region.getByText(/^(вибрано|zaznaczono|selected): 2$/i)).toBeVisible();
+  await expect(selectedCount(page, 2)).toBeVisible();
   await region.getByRole('combobox').selectOption('gifted');
 
   // Нагадування зникло, натомість тихий рядок із підсумком.
@@ -271,7 +283,7 @@ test('список вивантажується у CSV і вноситься н�
   await expect(importDialog.getByText(/позицій: 2|pozycji: 2|items to create: 2/i)).toBeVisible();
   const copy = `${title} копія`;
   await importDialog.locator('#importTitle').fill(copy);
-  await importDialog.getByRole('button', { name: /створити список|utwórz listę|create list/i }).click();
+  await importDialog.getByRole('button', { name: /імпортувати позиції|importuj pozycje|import items/i }).click();
   await expect(importDialog).toHaveCount(0);
 
   await page.getByRole('link', { name: copy }).click();
@@ -303,7 +315,7 @@ test('зіпсовані рядки файлу показуються до ст�
 
   const copy = unique('E2E import');
   await dialog.locator('#importTitle').fill(copy);
-  await dialog.getByRole('button', { name: /створити список|utwórz listę|create list/i }).click();
+  await dialog.getByRole('button', { name: /імпортувати позиції|importuj pozycje|import items/i }).click();
   await expect(dialog).toHaveCount(0);
 
   await page.getByRole('link', { name: copy }).click();
