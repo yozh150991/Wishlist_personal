@@ -758,3 +758,220 @@ select[multiple].input {
 
 .dialog--confirm .dialog__body { gap: var(--sp-3); padding-top: var(--sp-7); }
 .dialog--confirm .dialog__foot { border-top: 0; background: transparent; }
+
+/* ── Екран списку ──────────────────────────────────────────── */
+
+.list-head { display: flex; align-items: flex-start; gap: var(--sp-4); flex-wrap: wrap; }
+.list-head__text { flex: 1 1 14rem; min-width: 0; display: grid; gap: var(--sp-1); }
+.list-head h1 { font-size: var(--t-h2); line-height: 1.15; }
+/* Стрілка «назад» — той самий шеврон, повернутий: окрема іконка заради
+   одного напрямку не варта ваги в бандлі. */
+.list-head > .btn--icon svg { transform: rotate(90deg); }
+
+@media (min-width: 56rem) {
+  .list-head h1 { font-size: var(--t-display); }
+}
+
+.summary { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
+.summary__sum { font-family: var(--font-heading); font-weight: var(--weight-heading); font-size: var(--t-sum); }
+@media (min-width: 56rem) {
+  .summary__sum { font-size: 26px; }
+}
+
+.counter { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
+
+/* ── Пошук і фільтри ───────────────────────────────────────── */
+
+.filters__search { display: flex; gap: var(--sp-3); }
+.filters__search-field { position: relative; flex: 1; display: flex; align-items: center; }
+.filters__search-icon {
+  position: absolute;
+  left: 14px;
+  display: flex;
+  pointer-events: none;
+  color: var(--color-neutral-600);
+}
+.filters__search-field .input { padding-left: 38px; min-height: var(--tap); }
+
+.filters__toggle { position: relative; flex: none; }
+/* Значок усередині кнопки, а не поруч: при звуженні до самої іконки він
+   переїде в кут, а не зникне. */
+.filters__badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-pill);
+  background: var(--color-bg);
+  color: var(--color-accent-800);
+  font-size: var(--t-meta);
+  font-weight: 700;
+}
+
+.filters__group { display: grid; gap: var(--sp-3); }
+.filters__label {
+  font-size: var(--t-meta);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+}
+.filters__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.filters__row .input { width: auto; flex: 1 1 8rem; min-height: var(--tap); }
+.filters__row--price .input { flex: 1 1 5rem; }
+
+/* Панель фільтрів — тільки десктоп; на телефоні ті самі групи живуть у листі. */
+.filters__panel { display: none; }
+@media (min-width: 56rem) {
+  .filters__panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--sp-6);
+    padding: var(--sp-6);
+    border-radius: var(--r-card);
+    background: var(--color-surface);
+  }
+  .filters__toggle { display: none; }
+}
+
+/* Нижній лист: та сама оправа, що в діалога, але на весь екран завширшки. */
+.sheet { width: 100%; max-width: 100%; max-height: 88%; }
+.filters__sheet-body { gap: 18px; align-content: start; }
+@media (min-width: 40rem) {
+  .sheet { width: min(440px, 100%); }
+}
+
+/* ── Чипи активних фільтрів ────────────────────────────────── */
+
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-3); }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) 14px;
+  border-radius: var(--r-pill);
+  background: var(--color-surface);
+  font-size: var(--t-small);
+  font-weight: 600;
+}
+.chip__x {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--color-neutral-300);
+  color: var(--color-neutral-800);
+  cursor: pointer;
+}
+
+/* ── Позиції ───────────────────────────────────────────────── */
+
+.item-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-4); }
+.item-list[data-stale='true'] { opacity: 0.75; }
+
+.item {
+  display: flex;
+  gap: 11px;
+  padding: 13px;
+  border-radius: 22px;
+  background: var(--color-surface);
+}
+/* Куплене й подароване приглушуємо: воно ще потрібне, але вже не в фокусі. */
+.item[data-status='purchased'],
+.item[data-status='gifted'] { opacity: 0.72; }
+.item[data-selected='true'] { outline: 2px solid var(--color-accent); background: var(--color-bg); }
+
+.item__pick { display: flex; align-items: center; }
+.item__pick input { width: 24px; height: 24px; accent-color: var(--color-accent); cursor: pointer; }
+
+.item__image { width: 58px; height: 58px; flex: none; border-radius: var(--r-field); object-fit: cover; }
+
+.item__body { flex: 1; min-width: 0; display: grid; gap: var(--sp-1); align-content: start; }
+.item__line { display: flex; align-items: flex-start; gap: var(--sp-2); flex-wrap: wrap; }
+.item__title { flex: 1 1 auto; min-width: 0; font-size: var(--t-item); font-weight: 700; line-height: 1.3; }
+.item__title a { color: var(--color-text); text-decoration: none; }
+.item__title a:hover { text-decoration: underline; }
+.item__meta { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
+.item__price { font-size: var(--t-item); font-weight: 700; }
+.item__compact { font-size: var(--t-small); }
+.item__actions { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-2); }
+
+/* Статус лишається нативним <select>, але виглядає як тиха кнопка поруч. */
+.item__status {
+  font: inherit;
+  font-size: var(--t-meta);
+  font-weight: 600;
+  min-height: 36px;
+  padding: 0 var(--sp-5);
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+
+.variants-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+
+/* Скелет позиції повторює її геометрію. */
+.item.sk { align-items: flex-start; }
+.sk__thumb { width: 58px; height: 58px; flex: none; border-radius: var(--r-field); background: var(--color-neutral-300); }
+.sk__stack { flex: 1; display: grid; gap: var(--sp-3); }
+.sk__line--row { height: 30px; border-radius: var(--r-pill); }
+
+/* ── Плаваюча кнопка ───────────────────────────────────────── */
+
+.fab {
+  position: fixed;
+  right: var(--sp-6);
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--color-primary-fill);
+  color: var(--color-primary-ink);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+@media (min-width: 56rem) {
+  /* На десктопі нижньої навігації немає, тож кнопка сідає нижче. */
+  .fab { bottom: var(--sp-8); right: var(--sp-8); }
+}
+
+/* ── Панель вибору ─────────────────────────────────────────── */
+
+.selectbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: grid;
+  gap: var(--sp-4);
+  margin-top: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6) max(var(--sp-5), env(safe-area-inset-bottom));
+  border-radius: var(--r-card) var(--r-card) 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+.selectbar__info { display: grid; gap: 2px; }
+.selectbar__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.selectbar__status {
+  font: inherit;
+  font-size: var(--t-small);
+  min-height: 40px;
+  padding: 0 var(--sp-5);
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.selectbar__status:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.center { text-align: center; }

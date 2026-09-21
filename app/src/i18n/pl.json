@@ -119,8 +119,7 @@
     "loadMore": "Pokaż więcej",
     "end": "To wszystkie pozycje",
     "emptyTitle": "Brak pozycji",
-    "emptyBody": "Wklej link do produktu albo wpisz nazwę ręcznie. Link i cena są opcjonalne.",
-    "confirmDelete": "Usunąć „{title}”?",
+    "emptyBody": "Wklej link do produktu — nazwę i cenę pobierzemy sami.",
     "fields": {
       "url": "Link",
       "urlHint": "Autouzupełnianie pojawi się w następnym kroku",
@@ -163,7 +162,9 @@
     "actions": {
       "edit": "Edytuj",
       "delete": "Usuń",
-      "statusLabel": "Status pozycji „{title}”"
+      "statusLabel": "Status pozycji „{title}”",
+      "editLabel": "Zmień „{title}”",
+      "deleteLabel": "Usuń „{title}”"
     },
     "errors": {
       "titleRequired": "Podaj nazwę pozycji.",
@@ -175,7 +176,26 @@
       "variantsLong": "Nazwa — do 40 znaków, wartość — do 80.",
       "variantsMany": "Najwyżej pięć cech."
     },
-    "priorityLabel": "Priorytet: {value}"
+    "priorityLabel": "Priorytet: {value}",
+    "loading": "Wczytuję pozycje",
+    "errorTitle": "Pozycje się nie wczytały",
+    "errorBody": "Sama lista jest na miejscu — nie udało się pobrać tylko jej zawartości.",
+    "countAll": "pozycji: {n}",
+    "counter": "Pokazano {n} z {m}",
+    "noResultsTitle": "Nic nie znaleziono",
+    "noResultsBody": "Pozycje nigdzie nie zniknęły — ukrywają je filtry. Zdejmij zbędny albo wyczyść wszystkie.",
+    "resetFilters": "Wyczyść wszystkie filtry",
+    "chip": {
+      "search": "Szukaj: „{q}”",
+      "price": "Cena {from}–{to}",
+      "status": "Status: {list}",
+      "clearSearch": "Zdejmij filtr wyszukiwania",
+      "clearPrice": "Zdejmij filtr ceny",
+      "clearStatus": "Zdejmij filtr statusu"
+    },
+    "listLabel": "Pozycje listy",
+    "confirmTitle": "Usunąć „{title}”?",
+    "confirmBody": "Pozycja zniknie też ze wszystkich linków, w których była. Tego nie można cofnąć."
   },
   "toolbar": {
     "search": "Szukaj po nazwie",
@@ -191,7 +211,12 @@
       "title": "Wg nazwy",
       "price": "Wg ceny",
       "priority": "Wg priorytetu"
-    }
+    },
+    "status": "Status",
+    "filters": "Filtry",
+    "reset": "Wyczyść filtry",
+    "resetAll": "Wyczyść wszystko",
+    "done": "Gotowe"
   },
   "totals": {
     "active": "w {n} aktualnych pozycjach",
@@ -336,8 +361,9 @@
     "selectAll": "Zaznacz wszystkie widoczne",
     "statusLabel": "Zmień status zaznaczonych",
     "statusPlaceholder": "Oznacz jako…",
-    "confirmDelete": "Usunąć zaznaczone pozycje ({n})? Tego nie można cofnąć.",
-    "shareActiveOnly": "Do linku trafią tylko aktualne: {n}."
+    "shareActiveOnly": "Do linku trafią tylko aktualne: {n}.",
+    "confirmTitle": "Usunąć wybrane pozycje ({n})?",
+    "confirmBody": "Znikną też ze wszystkich linków, w których były. Tego nie można cofnąć."
   },
   "guest": {
     "goneTitle": "Link niedostępny",

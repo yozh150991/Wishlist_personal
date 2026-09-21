@@ -119,8 +119,7 @@
     "loadMore": "Show more",
     "end": "That's every item",
     "emptyTitle": "No items yet",
-    "emptyBody": "Paste a product link or type a name. Link and price are both optional.",
-    "confirmDelete": "Delete “{title}”?",
+    "emptyBody": "Paste a product link — we will pull the name and price ourselves.",
     "fields": {
       "url": "Link",
       "urlHint": "Auto-fill arrives in the next step",
@@ -163,7 +162,9 @@
     "actions": {
       "edit": "Edit",
       "delete": "Delete",
-      "statusLabel": "Status of “{title}”"
+      "statusLabel": "Status of “{title}”",
+      "editLabel": "Edit “{title}”",
+      "deleteLabel": "Delete “{title}”"
     },
     "errors": {
       "titleRequired": "Enter an item title.",
@@ -175,7 +176,26 @@
       "variantsLong": "Label up to 40 characters, value up to 80.",
       "variantsMany": "Five details at most."
     },
-    "priorityLabel": "Priority: {value}"
+    "priorityLabel": "Priority: {value}",
+    "loading": "Loading items",
+    "errorTitle": "Items did not load",
+    "errorBody": "The list itself is fine — only its contents could not be fetched.",
+    "countAll": "items: {n}",
+    "counter": "Showing {n} of {m}",
+    "noResultsTitle": "Nothing found",
+    "noResultsBody": "The items are still there — filters are hiding them. Drop one or clear them all.",
+    "resetFilters": "Clear all filters",
+    "chip": {
+      "search": "Search: “{q}”",
+      "price": "Price {from}–{to}",
+      "status": "Status: {list}",
+      "clearSearch": "Clear search filter",
+      "clearPrice": "Clear price filter",
+      "clearStatus": "Clear status filter"
+    },
+    "listLabel": "List items",
+    "confirmTitle": "Delete “{title}”?",
+    "confirmBody": "The item also disappears from every link it was in. This cannot be undone."
   },
   "toolbar": {
     "search": "Search by title",
@@ -191,7 +211,12 @@
       "title": "By title",
       "price": "By price",
       "priority": "By priority"
-    }
+    },
+    "status": "Status",
+    "filters": "Filters",
+    "reset": "Clear filters",
+    "resetAll": "Clear all",
+    "done": "Done"
   },
   "totals": {
     "active": "across {n} active items",
@@ -336,8 +361,9 @@
     "selectAll": "Select all shown",
     "statusLabel": "Change status of selected",
     "statusPlaceholder": "Mark as…",
-    "confirmDelete": "Delete the selected items ({n})? This can’t be undone.",
-    "shareActiveOnly": "Only active items go into the link: {n}."
+    "shareActiveOnly": "Only active items go into the link: {n}.",
+    "confirmTitle": "Delete the selected items ({n})?",
+    "confirmBody": "They also disappear from every link they were in. This cannot be undone."
   },
   "guest": {
     "goneTitle": "This link isn't available",
