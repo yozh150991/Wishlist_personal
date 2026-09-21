@@ -70,7 +70,12 @@ test('мовчазний сервер не залишає кнопку вход�
   await page.getByLabel(/пошта|e-mail|email/i).fill(EMAIL!);
   await page.getByLabel(/пароль|hasło|password/i).fill(PASSWORD!);
 
-  const submit = page.getByRole('button', { name: /увійти|zaloguj|sign in/i });
+  // Кнопка в роботі міняє підпис на дієслово («Входжу…»), тож локатор мусить
+  // упізнавати обидва стани — інакше після кліку він перестає щось знаходити,
+  // і падіння виглядає як «кнопка зникла», а не «підпис інший».
+  const submit = page.getByRole('button', {
+    name: /увійти|входжу|zaloguj|loguję|sign in|signing in/i,
+  });
   await submit.click();
   await expect(submit).toBeDisabled();
 
