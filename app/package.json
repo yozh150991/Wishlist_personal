@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "check:pwa": "node scripts/check-pwa.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test:e2e": "playwright test",
     "gen:types": "supabase gen types typescript --linked > src/types/database.ts"
