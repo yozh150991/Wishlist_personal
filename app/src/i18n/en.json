@@ -55,11 +55,9 @@
   "lists": {
     "title": "Lists",
     "emptyTitle": "Nothing here yet",
-    "emptyBody": "Create your first list — say, \"Birthday\" or \"For the flat\".",
+    "emptyBody": "Create your first list — a birthday, say. It stays private until you share individual items yourself.",
     "create": "Create list",
-    "soon": "Lists arrive in the next step.",
     "edit": "Edit list",
-    "confirmDelete": "Delete the list “{title}” with all its items?",
     "fields": {
       "title": "Title",
       "description": "Description",
@@ -69,7 +67,15 @@
     },
     "errors": {
       "titleRequired": "Enter a list title."
-    }
+    },
+    "loading": "Loading lists",
+    "errorTitle": "Lists did not load",
+    "itemCount": "items: {n}",
+    "deleteLabel": "Delete list {title}",
+    "confirmTitle": "Delete the list and all items ({n})?",
+    "confirmBody": "The links you shared will stop working along with the list. This cannot be undone.",
+    "confirmCta": "Delete list",
+    "deleting": "Deleting…"
   },
   "settings": {
     "title": "Settings",
@@ -102,7 +108,9 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
-    "close": "Close"
+    "close": "Close",
+    "retry": "Try again",
+    "keep": "Keep"
   },
   "item": {
     "add": "Add item",

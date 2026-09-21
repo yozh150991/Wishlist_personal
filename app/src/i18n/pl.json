@@ -55,11 +55,9 @@
   "lists": {
     "title": "Listy",
     "emptyTitle": "Na razie pusto",
-    "emptyBody": "Utwórz pierwszą listę — na przykład „Urodziny” albo „Do domu”.",
+    "emptyBody": "Utwórz pierwszą listę — na przykład „Urodziny”. Pozostanie prywatna, dopóki sam nie udostępnisz pojedynczych pozycji.",
     "create": "Utwórz listę",
-    "soon": "Listy pojawią się w następnym kroku.",
     "edit": "Edytuj listę",
-    "confirmDelete": "Usunąć listę „{title}” razem ze wszystkimi pozycjami?",
     "fields": {
       "title": "Nazwa",
       "description": "Opis",
@@ -69,7 +67,15 @@
     },
     "errors": {
       "titleRequired": "Podaj nazwę listy."
-    }
+    },
+    "loading": "Wczytuję listy",
+    "errorTitle": "Listy się nie wczytały",
+    "itemCount": "pozycji: {n}",
+    "deleteLabel": "Usuń listę {title}",
+    "confirmTitle": "Usunąć listę i wszystkie pozycje ({n})?",
+    "confirmBody": "Razem z listą przestaną działać linki, które udostępniłeś. Tego nie można cofnąć.",
+    "confirmCta": "Usuń listę",
+    "deleting": "Usuwam…"
   },
   "settings": {
     "title": "Ustawienia",
@@ -102,7 +108,9 @@
     "save": "Zapisz",
     "cancel": "Anuluj",
     "delete": "Usuń",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "retry": "Spróbuj ponownie",
+    "keep": "Zostaw"
   },
   "item": {
     "add": "Dodaj pozycję",

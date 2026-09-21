@@ -696,3 +696,65 @@ select[multiple].input {
   .auth__promise .privacy { background: var(--color-bg); }
   .auth__pane { padding: var(--sp-8); }
 }
+
+/* ── Сітка списків ─────────────────────────────────────────── */
+
+.page { display: flex; flex-direction: column; gap: var(--sp-5); }
+
+.list-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-5);
+}
+/* Збережена копія: вміст лишається на місці, але приглушений. Під цією
+   прозорістю немає тексту, який треба читати уважно (ADR-031). */
+.list-grid[data-stale='true'] { opacity: 0.75; }
+
+@media (min-width: 56rem) {
+  .list-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+}
+
+.list-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: 18px;
+  border-radius: 26px;
+  background: var(--color-surface);
+}
+.list-card__main { flex: 1; min-width: 0; display: grid; gap: var(--sp-2); }
+.list-card__title {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--t-card);
+  line-height: 1.2;
+  color: var(--color-text);
+  text-decoration: none;
+}
+.list-card__title:hover { text-decoration: underline; }
+.list-card__tags { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-1); }
+
+/* Скелет повторює геометрію картки, а не малює абстрактні прямокутники:
+   інакше при появі даних сторінка смикається. */
+.list-card.sk { display: grid; gap: var(--sp-3); }
+.sk__line--title { height: 19px; }
+.sk__line--tag { width: 52px; height: 20px; }
+.sk__tags { display: flex; gap: var(--sp-3); margin-top: var(--sp-1); }
+
+/* ── Заливна деструктивна кнопка ───────────────────────────── */
+
+/* Тільки в діалозі підтвердження: там вона єдина дія, і вагу треба показати.
+   У рядках дій деструктив лишається текстом (.btn--danger). */
+.btn--danger-fill {
+  background: var(--color-danger);
+  color: var(--color-bg);
+  min-height: 52px;
+  font-size: var(--t-lead);
+  font-weight: 700;
+}
+.btn--danger-fill:hover:not(:disabled) { filter: brightness(1.08); }
+
+.dialog--confirm .dialog__body { gap: var(--sp-3); padding-top: var(--sp-7); }
+.dialog--confirm .dialog__foot { border-top: 0; background: transparent; }

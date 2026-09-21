@@ -3,13 +3,25 @@ import type { Item, ItemInput, ItemQuery, ItemStatus, List, Totals } from './typ
 
 /* ── Списки ─────────────────────────────── */
 
+/**
+ * Картка списку показує, скільки в ньому позицій, тому кількість береться
+ * агрегатом у тому самому запиті: окремий запит на кожен список дав би N+1
+ * на екрані, який відкривається найчастіше.
+ *
+ * PostgREST повертає агрегат масивом з одного рядка — розгортаємо тут, щоб
+ * форма `List` лишалась пласкою і без змін лягала в офлайн-знімок.
+ */
 export async function fetchLists(): Promise<List[]> {
   const { data, error } = await supabase
     .from('lists')
-    .select('*')
+    .select('*, items(count)')
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as List[];
+  type Row = Omit<List, 'item_count'> & { items?: { count: number }[] | null };
+  return ((data ?? []) as Row[]).map(({ items, ...list }) => ({
+    ...list,
+    item_count: items?.[0]?.count ?? 0,
+  }));
 }
 
 export async function fetchList(id: string): Promise<List | null> {
