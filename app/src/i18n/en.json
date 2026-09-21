@@ -85,7 +85,16 @@
     "themeSystem": "Match system",
     "language": "Language",
     "account": "Account",
-    "signedInAs": "Signed in as {email}"
+    "signedInAs": "Signed in as {email}",
+    "colors": "Colors",
+    "scheme": {
+      "sage": "Sage",
+      "slyva": "Plum",
+      "vuhil": "Charcoal"
+    },
+    "schemeHint": "Charcoal is the high-contrast scheme.",
+    "contrastSuggestion": "Your system asks for higher contrast. Switch to",
+    "contrastShort": "Higher contrast"
   },
   "errors": {
     "invalidCredentials": "That email and password don't match.",
@@ -104,13 +113,15 @@
   "common": {
     "loading": "Loading",
     "notFound": "No such page",
-    "backHome": "Go home",
+    "backHome": "To lists",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
     "close": "Close",
     "retry": "Try again",
-    "keep": "Keep"
+    "keep": "Keep",
+    "saving": "Saving…",
+    "notFoundBody": "The address may be out of date, or have a typo in it."
   },
   "item": {
     "add": "Add item",
@@ -119,8 +130,7 @@
     "loadMore": "Show more",
     "end": "That's every item",
     "emptyTitle": "No items yet",
-    "emptyBody": "Paste a product link or type a name. Link and price are both optional.",
-    "confirmDelete": "Delete “{title}”?",
+    "emptyBody": "Paste a product link — we will pull the name and price ourselves.",
     "fields": {
       "url": "Link",
       "urlHint": "Auto-fill arrives in the next step",
@@ -163,7 +173,9 @@
     "actions": {
       "edit": "Edit",
       "delete": "Delete",
-      "statusLabel": "Status of “{title}”"
+      "statusLabel": "Status of “{title}”",
+      "editLabel": "Edit “{title}”",
+      "deleteLabel": "Delete “{title}”"
     },
     "errors": {
       "titleRequired": "Enter an item title.",
@@ -175,7 +187,26 @@
       "variantsLong": "Label up to 40 characters, value up to 80.",
       "variantsMany": "Five details at most."
     },
-    "priorityLabel": "Priority: {value}"
+    "priorityLabel": "Priority: {value}",
+    "loading": "Loading items",
+    "errorTitle": "Items did not load",
+    "errorBody": "The list itself is fine — only its contents could not be fetched.",
+    "countAll": "items: {n}",
+    "counter": "Showing {n} of {m}",
+    "noResultsTitle": "Nothing found",
+    "noResultsBody": "The items are still there — filters are hiding them. Drop one or clear them all.",
+    "resetFilters": "Clear all filters",
+    "chip": {
+      "search": "Search: “{q}”",
+      "price": "Price {from}–{to}",
+      "status": "Status: {list}",
+      "clearSearch": "Clear search filter",
+      "clearPrice": "Clear price filter",
+      "clearStatus": "Clear status filter"
+    },
+    "listLabel": "List items",
+    "confirmTitle": "Delete “{title}”?",
+    "confirmBody": "The item also disappears from every link it was in. This cannot be undone."
   },
   "toolbar": {
     "search": "Search by title",
@@ -191,7 +222,12 @@
       "title": "By title",
       "price": "By price",
       "priority": "By priority"
-    }
+    },
+    "status": "Status",
+    "filters": "Filters",
+    "reset": "Clear filters",
+    "resetAll": "Clear all",
+    "done": "Done"
   },
   "totals": {
     "active": "across {n} active items",
@@ -213,7 +249,9 @@
       "csv": "CSV for a spreadsheet",
       "csvHint": "Opens in Excel, Numbers and Google Sheets.",
       "json": "JSON for moving the list",
-      "jsonHint": "Also keeps the list name, currency and event date."
+      "jsonHint": "Also keeps the list name, currency and event date.",
+      "working": "Exporting… {done} of {total}",
+      "workingPlain": "Exporting…"
     },
     "import": {
       "open": "Import",
@@ -229,8 +267,9 @@
       "issues": "Notes: {errors} errors, {warnings} warnings",
       "rowLabel": "Row {row}:",
       "fileLabel": "File:",
-      "submit": "Create list",
-      "tooBig": "The file is larger than {max} MB."
+      "submit": "Import items ({n})",
+      "tooBig": "The file is larger than {max} MB.",
+      "importing": "Importing…"
     },
     "issues": {
       "titleRequired": "no title, row skipped.",
@@ -307,9 +346,7 @@
     "views": "views: {n}",
     "until": "valid until {date}",
     "emptyTitle": "No links yet",
-    "emptyBody": "Open a list, hit “Share”, tick the items you want.",
-    "confirmRevoke": "Revoke the link “{title}”? It will stop opening.",
-    "confirmDelete": "Delete the link “{title}” along with its stats?",
+    "emptyBody": "Open a list, pick the items and press “Create link”. A guest sees only those.",
     "state": {
       "revoked": "Revoked",
       "expired": "Expired"
@@ -327,7 +364,14 @@
     "errors": {
       "titleRequired": "Enter a heading.",
       "nothingSelected": "Pick at least one item first."
-    }
+    },
+    "loading": "Loading links",
+    "errorTitle": "Links did not load",
+    "confirmRevokeTitle": "Revoke the link “{title}”?",
+    "confirmRevokeBody": "It stops opening for everyone you sent it to. The stats stay.",
+    "confirmDeleteTitle": "Delete the link “{title}”?",
+    "confirmDeleteBody": "The view stats go with it. This cannot be undone.",
+    "creating": "Creating…"
   },
   "select": {
     "start": "Select",
@@ -336,23 +380,32 @@
     "selectAll": "Select all shown",
     "statusLabel": "Change status of selected",
     "statusPlaceholder": "Mark as…",
-    "confirmDelete": "Delete the selected items ({n})? This can’t be undone.",
-    "shareActiveOnly": "Only active items go into the link: {n}."
+    "shareActiveOnly": "Only active items go into the link: {n}.",
+    "confirmTitle": "Delete the selected items ({n})?",
+    "confirmBody": "They also disappear from every link they were in. This cannot be undone."
   },
   "guest": {
     "goneTitle": "This link isn't available",
-    "goneBody": "It may have been revoked or expired. Ask whoever sent it for a new one.",
+    "goneBody": "Check the address or ask whoever shared it for a new one.",
     "ownerBanner": "This is your own link. Reservations are hidden on purpose — so the gift stays a surprise.",
-    "hint": "Mark what you're taking and others will see it's spoken for. The list owner can't see this.",
     "take": "I'll take this",
-    "yours": "You're taking this",
+    "yours": "You are taking this",
     "cancel": "Changed my mind",
     "reserved": "Already taken",
-    "taken": "Someone just took that one.",
     "error": "That didn't work. Try again.",
     "emptyTitle": "Nothing here yet",
     "emptyBody": "Every item from this link is already unavailable.",
-    "footer": "This list is private. You only see what was shared with you."
+    "footer": "This list is private. You only see what was shared with you.",
+    "yoursPartial": "You are taking {n} · {left} left",
+    "takeSome": "Take {n} of {of}",
+    "takeMore": "Take one more",
+    "taking": "Taking…",
+    "needed": "{n} needed",
+    "allTaken": "All of them are taken",
+    "raceLost": "Someone took this a moment ago — your reservation is not here. The other items are free.",
+    "less": "Fewer",
+    "more": "More",
+    "appearance": "Appearance"
   },
   "pwa": {
     "updateReady": "A new version of Wishlist is available.",

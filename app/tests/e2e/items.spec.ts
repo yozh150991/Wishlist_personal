@@ -27,8 +27,12 @@ test('повний цикл: список, позиція без ціни, ре�
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText(/ціна не вказана|brak ceny|no price/i)).toHaveCount(0);
 
-  page.once('dialog', (d) => void d.accept());
   await page.getByRole('button', { name: /^видалити$|^usuń$|^delete$/i }).first().click();
+  // Підтвердження — власний <dialog>, не вікно браузера.
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^видалити$|^usuń$|^delete$/i })
+    .click();
   await expect(page.getByText('Навушники', { exact: true })).toHaveCount(0);
 });
 
@@ -139,8 +143,12 @@ test('масові дії: статус і видалення вибраних',
   await page.getByRole('button', { name: /^вибрати$|^zaznacz$|^select$/i }).click();
   await page.getByRole('checkbox', { name: /Перша/ }).check();
   await page.getByRole('checkbox', { name: /Третя/ }).check();
-  page.once('dialog', (d) => void d.accept());
   await region.getByRole('button', { name: /^видалити$|^usuń$|^delete$/i }).click();
+  // Підтвердження — власний <dialog>, не вікно браузера.
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^видалити$|^usuń$|^delete$/i })
+    .click();
 
   await expect(page.getByText('Перша', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Третя', { exact: true })).toHaveCount(0);
@@ -162,8 +170,12 @@ test('масова дія не зачіпає вибрані позиції, с�
   const region = page.getByRole('region', { name: /дії з вибраними|działania na zaznaczonych|actions for selected/i });
   await expect(region.getByText(/^(вибрано|zaznaczono|selected): 1$/i)).toBeVisible();
 
-  page.once('dialog', (d) => void d.accept());
   await region.getByRole('button', { name: /^видалити$|^usuń$|^delete$/i }).click();
+  // Підтвердження — власний <dialog>, не вікно браузера.
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^видалити$|^usuń$|^delete$/i })
+    .click();
   await expect(page.getByText('Яблуко', { exact: true })).toHaveCount(0);
 
   await page.getByRole('searchbox').fill('');

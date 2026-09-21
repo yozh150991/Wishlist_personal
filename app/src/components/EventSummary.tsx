@@ -76,10 +76,10 @@ export function EventSummary({
     <div className="event-summary" role="region" aria-label={t('summary.region')}>
       <p>{t('summary.banner', { date: formatDate(eventDate, locale) ?? eventDate })}</p>
       <div className="event-summary__actions">
-        <button type="button" className="btn btn--quiet" onClick={later}>
+        <button type="button" className="btn btn--secondary" onClick={later}>
           {t('summary.later')}
         </button>
-        <button type="button" className="btn" onClick={onStart}>
+        <button type="button" className="btn btn--primary" onClick={onStart}>
           {t('summary.start')}
         </button>
       </div>

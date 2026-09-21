@@ -18,14 +18,18 @@ import type { List } from '../lib/types';
 export function ExportDialog({
   open,
   list,
+  total,
   onClose,
 }: {
   open: boolean;
   list: List | null;
+  /** Скільки позицій у списку — щоб показати прогрес, а не просто спінер. */
+  total?: number;
   onClose: () => void;
 }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,9 +39,10 @@ export function ExportDialog({
   async function save(kind: 'csv' | 'json') {
     if (busy || !list) return;
     setBusy(true);
+    setDone(0);
     setError(null);
     try {
-      const items = await fetchAllItems(list.id);
+      const items = await fetchAllItems(list.id, setDone);
       const text = kind === 'csv' ? toCsv(items) : toJson(list, items);
       const type = kind === 'csv' ? 'text/csv' : 'application/json';
       downloadText(fileName(list.title, kind), text, type);
@@ -49,6 +54,10 @@ export function ExportDialog({
     }
   }
 
+  const working = total
+    ? t('transfer.export.working', { done, total })
+    : t('transfer.export.workingPlain');
+
   return (
     <Dialog open={open} onClose={onClose} title={t('transfer.export.title')}>
       {error && <Note tone="error">{error}</Note>}
@@ -57,17 +66,18 @@ export function ExportDialog({
       <div className="transfer__choice">
         <button
           type="button"
-          className="btn btn--wide"
+          className="btn btn--primary btn--block"
           disabled={busy}
           onClick={() => void save('csv')}
         >
-          {t('transfer.export.csv')}
+          {busy && <span className="spinner" />}
+          {busy ? working : t('transfer.export.csv')}
         </button>
         <p className="hint">{t('transfer.export.csvHint')}</p>
 
         <button
           type="button"
-          className="btn btn--wide"
+          className="btn btn--secondary btn--block"
           disabled={busy}
           onClick={() => void save('json')}
         >
@@ -76,8 +86,8 @@ export function ExportDialog({
         <p className="hint">{t('transfer.export.jsonHint')}</p>
       </div>
 
-      <div className="dialog__actions">
-        <button type="button" className="btn btn--quiet" onClick={onClose}>
+      <div className="dialog__foot">
+        <button type="button" className="btn btn--secondary" onClick={onClose}>
           {t('common.cancel')}
         </button>
       </div>

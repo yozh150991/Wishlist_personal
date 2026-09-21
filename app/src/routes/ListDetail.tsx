@@ -9,14 +9,16 @@ import { errorText, isNetworkError } from '../lib/errors';
 import { money } from '../lib/format';
 import { DEFAULT_QUERY, STATUSES } from '../lib/types';
 import type { Item, ItemQuery, ItemStatus, List } from '../lib/types';
-import { Toolbar } from '../components/Toolbar';
+import { Filters, isFiltered } from '../components/Filters';
 import { ItemCard } from '../components/ItemCard';
 import { ItemDialog } from '../components/ItemDialog';
 import { ListDialog } from '../components/ListDialog';
 import { ShareDialog } from '../components/ShareDialog';
 import { EventSummary } from '../components/EventSummary';
 import { ExportDialog } from '../components/ExportDialog';
-import { StaleNotice } from '../components/StaleNotice';
+import { useStale } from '../components/Banners';
+import { ConfirmDialog } from '../components/Dialog';
+import { Icon } from '../components/Icon';
 import { newId, run } from '../lib/outbox';
 import type { Op } from '../lib/outbox';
 import { listKey, readSnapshot, saveSnapshot } from '../lib/cache';
@@ -44,6 +46,9 @@ export default function ListDetail() {
   // а вибір треба поставити вже на перезавантажену вибірку.
   const [selectActiveOnLoad, setSelectActiveOnLoad] = useState(false);
   const [exportDialog, setExportDialog] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [confirmItem, setConfirmItem] = useState<Item | null>(null);
+  const [confirmBulk, setConfirmBulk] = useState(false);
 
   // Пошук відкладається, решта фільтрів застосовується одразу.
   const search = useDebounced(draft.search, 300);
@@ -102,6 +107,10 @@ export default function ListDetail() {
   }, [loadMore, done]);
 
   const patch = useCallback((p: Partial<ItemQuery>) => setDraft((q) => ({ ...q, ...p })), []);
+  const resetFilters = useCallback(() => setDraft(DEFAULT_QUERY), []);
+
+  // Банер про збережену копію живе в оболонці — на екрані завжди один банер.
+  useStale(staleAt ? new Date(staleAt) : null);
 
   /** Підбити підсумки: показати лише актуальні позиції й вибрати їх усі. */
   function startSummary() {
@@ -163,8 +172,7 @@ export default function ListDetail() {
   }
 
   function bulkDelete() {
-    if (!window.confirm(t('select.confirmDelete', { n: selected.size }))) return;
-    void bulk({ kind: 'delete', listId: id, ids: [...selected] });
+    setConfirmBulk(true);
   }
 
   function bulkStatus(status: ItemStatus) {
@@ -180,7 +188,6 @@ export default function ListDetail() {
   }
 
   async function removeItem(item: Item) {
-    if (!window.confirm(t('item.confirmDelete', { title: item.title }))) return;
     await change({ kind: 'delete', listId: id, ids: [item.id] });
   }
 
@@ -196,57 +203,53 @@ export default function ListDetail() {
 
   const currency = list?.currency ?? 'PLN';
 
+  const filtered = isFiltered(query);
+  const statusNames = query.statuses.map((x) => t(`item.status.${x}`)).join(', ');
+
   return (
     <div className="page">
-      <p className="small">
-        <Link to="/lists">← {t('lists.title')}</Link>
-      </p>
-
-      <div className="page__head page__head--row">
-        <div>
+      <header className="list-head">
+        <Link className="btn btn--icon btn--secondary" to="/lists" aria-label={t('lists.title')}>
+          <Icon name="chevronDown" size={18} />
+        </Link>
+        <div className="list-head__text">
           <h1>{list?.title ?? '…'}</h1>
-          {list?.description && <p className="lede">{list.description}</p>}
+          {list?.description && <p className="muted small">{list.description}</p>}
         </div>
         <div className="page__actions">
-          {selecting ? (
-            <button className="btn btn--quiet" onClick={exitSelection}>
-              {t('common.cancel')}
-            </button>
-          ) : (
-            <>
-              <button
-                className="btn btn--quiet"
-                onClick={() => setSelecting(true)}
-                disabled={items.length === 0}
-              >
-                {t('select.start')}
-              </button>
-              <button className="btn btn--quiet" onClick={() => setListDialog(true)} disabled={!list}>
-                {t('lists.edit')}
-              </button>
-              <button
-                className="btn btn--quiet"
-                onClick={() => setExportDialog(true)}
-                disabled={!list || items.length === 0}
-              >
-                {t('transfer.export.open')}
-              </button>
-              <button className="btn" onClick={() => setItemDialog({ open: true, item: null })}>
-                {t('item.add')}
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            className="btn btn--secondary btn--compact"
+            onClick={() => setListDialog(true)}
+            disabled={!list}
+          >
+            {t('lists.edit')}
+          </button>
+          <button
+            type="button"
+            className="btn btn--secondary btn--compact"
+            onClick={() => setExportDialog(true)}
+            disabled={!list || items.length === 0}
+          >
+            {t('transfer.export.open')}
+          </button>
+          <button
+            type="button"
+            className="btn btn--secondary btn--compact"
+            onClick={() => setSelecting(true)}
+            disabled={items.length === 0}
+          >
+            {t('select.start')}
+          </button>
         </div>
-      </div>
+      </header>
 
       {listError && <Note tone="error">{listError}</Note>}
-      {error && <Note tone="error">{error}</Note>}
-      {staleAt && <StaleNotice savedAt={staleAt} />}
 
       {totals && (
-        <p className="totals">
-          <strong>{money(totals.active_price, currency, locale)}</strong>{' '}
-          <span className="small">
+        <p className="summary">
+          <strong className="summary__sum">{money(totals.active_price, currency, locale)}</strong>
+          <span className="small muted">
             {t('totals.active', { n: totals.active_count })}
             {totals.items_no_price > 0 && ` · ${t('totals.noPrice', { n: totals.items_no_price })}`}
             {totals.gifted_count > 0 && ` · ${t('totals.gifted', { n: totals.gifted_count })}`}
@@ -256,43 +259,175 @@ export default function ListDetail() {
 
       <EventSummary list={list} totals={totals} onStart={startSummary} />
 
-      <Toolbar query={draft} onChange={patch} />
+      <Filters
+        query={draft}
+        onChange={patch}
+        onReset={resetFilters}
+        open={filtersOpen}
+        onOpen={() => setFiltersOpen(true)}
+        onClose={() => setFiltersOpen(false)}
+      />
+
+      {/* Постійний рядок під фільтрами: скільки видно з усього списку.
+          Без фільтрів він просто називає розмір списку. */}
+      {totals && !loading && (
+        <div className="counter">
+          <span className="small muted" aria-live="polite">
+            {filtered
+              ? t('item.counter', { n: items.length, m: totals.items_count })
+              : t('item.countAll', { n: totals.items_count })}
+          </span>
+          {filtered && (
+            <button type="button" className="btn btn--ghost btn--compact" onClick={resetFilters}>
+              {t('toolbar.reset')}
+            </button>
+          )}
+        </div>
+      )}
 
       {loading ? (
-        <p className="small">{t('common.loading')}…</p>
-      ) : items.length === 0 && !error ? (
-        <div className="empty">
+        <main aria-busy="true">
+          <span className="visually-hidden">{t('item.loading')}</span>
+          <ul className="item-list">
+            {[0, 1, 2].map((i) => (
+              <li className="item sk" key={i}>
+                <span className="sk__thumb" />
+                <span className="sk__stack">
+                  <span className="sk__line" style={{ width: '70%' }} />
+                  <span className="sk__line" style={{ width: '40%' }} />
+                  <span className="sk__line sk__line--row" style={{ width: '60%' }} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </main>
+      ) : error ? (
+        /* Помилка позицій окремо від помилки заголовка: якщо впали лише
+           позиції, назва й опис списку лишаються на місці. */
+        <main className="empty">
+          <span className="empty__icon empty__icon--danger">
+            <Icon name="alert" size={36} />
+          </span>
+          <h2>{t('item.errorTitle')}</h2>
+          <p className="lede">{t('item.errorBody')}</p>
+          <button type="button" className="btn btn--primary" onClick={() => void reload()}>
+            {t('common.retry')}
+          </button>
+        </main>
+      ) : items.length === 0 && filtered ? (
+        /* Фільтр нічого не знайшов — це не те саме, що порожній список:
+           позиції є, їх просто ховають. Тому чипи активних фільтрів. */
+        <main className="empty">
+          <span className="empty__icon empty__icon--accent">
+            <Icon name="search" size={36} />
+          </span>
+          <h2>{t('item.noResultsTitle')}</h2>
+          <p className="lede">{t('item.noResultsBody')}</p>
+          <div className="chips">
+            {query.search.trim() && (
+              <span className="chip">
+                {t('item.chip.search', { q: query.search })}
+                <button
+                  type="button"
+                  className="chip__x"
+                  aria-label={t('item.chip.clearSearch')}
+                  onClick={() => patch({ search: '' })}
+                >
+                  <Icon name="x" size={12} />
+                </button>
+              </span>
+            )}
+            {(query.priceMin || query.priceMax) && (
+              <span className="chip">
+                {t('item.chip.price', { from: query.priceMin || '0', to: query.priceMax || '∞' })}
+                <button
+                  type="button"
+                  className="chip__x"
+                  aria-label={t('item.chip.clearPrice')}
+                  onClick={() => patch({ priceMin: '', priceMax: '' })}
+                >
+                  <Icon name="x" size={12} />
+                </button>
+              </span>
+            )}
+            {query.statuses.length !== DEFAULT_QUERY.statuses.length && (
+              <span className="chip">
+                {t('item.chip.status', { list: statusNames })}
+                <button
+                  type="button"
+                  className="chip__x"
+                  aria-label={t('item.chip.clearStatus')}
+                  onClick={() => patch({ statuses: DEFAULT_QUERY.statuses })}
+                >
+                  <Icon name="x" size={12} />
+                </button>
+              </span>
+            )}
+          </div>
+          <button type="button" className="btn btn--primary" onClick={resetFilters}>
+            {t('item.resetFilters')}
+          </button>
+        </main>
+      ) : items.length === 0 ? (
+        <main className="empty">
           <h2>{t('item.emptyTitle')}</h2>
           <p className="lede">{t('item.emptyBody')}</p>
-        </div>
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => setItemDialog({ open: true, item: null })}
+          >
+            {t('item.add')}
+          </button>
+        </main>
       ) : (
-        <>
-          <div className="card-grid">
+        <main>
+          <h2 className="visually-hidden">{t('item.listLabel')}</h2>
+          <ul className="item-list" data-stale={staleAt ? 'true' : 'false'}>
             {items.map((item) => (
               <ItemCard
                 key={item.id}
                 item={item}
                 currency={currency}
                 onEdit={(i) => setItemDialog({ open: true, item: i })}
-                onDelete={(i) => void removeItem(i)}
+                onDelete={(i) => setConfirmItem(i)}
                 onSetStatus={(i, s) => void setStatus(i, s)}
                 selectable={selecting}
                 selected={selected.has(item.id)}
                 onToggleSelect={toggleSelect}
               />
             ))}
-          </div>
+          </ul>
 
           <div ref={sentinel} />
 
           {/* Запасний шлях: скрол може не спрацювати з клавіатури або при reduce-motion. */}
           {!done && (
-            <button className="btn btn--quiet btn--wide" disabled={loadingMore} onClick={() => void loadMore()}>
+            <button
+              type="button"
+              className="btn btn--secondary btn--block"
+              disabled={loadingMore}
+              onClick={() => void loadMore()}
+            >
+              {loadingMore && <span className="spinner" />}
               {loadingMore ? `${t('common.loading')}…` : t('item.loadMore')}
             </button>
           )}
-          {done && items.length > 0 && <p className="small center">{t('item.end')}</p>}
-        </>
+          {done && items.length > 0 && <p className="small muted center">{t('item.end')}</p>}
+        </main>
+      )}
+
+      {/* Плаваюча кнопка: додавання — найчастіша дія на цьому екрані, і на
+          телефоні вона має бути під великим пальцем, а не в шапці. */}
+      {!selecting && (
+        <button
+          type="button"
+          className="fab"
+          aria-label={t('item.add')}
+          onClick={() => setItemDialog({ open: true, item: null })}
+        >
+          <Icon name="plus" size={25} />
+        </button>
       )}
 
       {/* Панель вибору притиснута донизу екрана: вибір іде згори вниз,
@@ -300,7 +435,7 @@ export default function ListDetail() {
       {selecting && (
         <div className="selectbar" role="region" aria-label={t('select.region')}>
           <div className="selectbar__info">
-            <span>{t('select.selected', { n: selected.size })}</span>
+            <strong>{t('select.selected', { n: selected.size })}</strong>
             {selectedActiveIds.length > 0 && selectedActiveIds.length < selected.size && (
               <span className="small">{t('select.shareActiveOnly', { n: selectedActiveIds.length })}</span>
             )}
@@ -308,7 +443,8 @@ export default function ListDetail() {
           {bulkError && <Note tone="error">{bulkError}</Note>}
           <div className="selectbar__actions">
             <button
-              className="btn btn--quiet"
+              type="button"
+              className="btn btn--secondary btn--compact"
               disabled={bulkBusy}
               onClick={() => setSelected(new Set(items.map((i) => i.id)))}
             >
@@ -335,18 +471,28 @@ export default function ListDetail() {
               ))}
             </select>
             <button
-              className="btn btn--quiet btn--danger"
+              type="button"
+              className="btn btn--secondary btn--compact btn--danger"
               disabled={bulkBusy || selected.size === 0}
               onClick={bulkDelete}
             >
               {t('common.delete')}
             </button>
             <button
-              className="btn"
+              type="button"
+              className="btn btn--primary btn--compact"
               disabled={bulkBusy || selectedActiveIds.length === 0}
               onClick={() => setShareDialog(true)}
             >
               {t('share.create')}
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--compact"
+              disabled={bulkBusy}
+              onClick={exitSelection}
+            >
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -370,13 +516,38 @@ export default function ListDetail() {
         onClose={() => setItemDialog({ open: false, item: null })}
         onSave={saveItem}
       />
-      <ListDialog
-        open={listDialog}
+      <ListDialog open={listDialog} list={list} onClose={() => setListDialog(false)} onSave={saveList} />
+      <ExportDialog
+        open={exportDialog}
         list={list}
-        onClose={() => setListDialog(false)}
-        onSave={saveList}
+        total={totals?.items_count}
+        onClose={() => setExportDialog(false)}
       />
-      <ExportDialog open={exportDialog} list={list} onClose={() => setExportDialog(false)} />
+
+      <ConfirmDialog
+        open={confirmItem !== null}
+        title={t('item.confirmTitle', { title: confirmItem?.title ?? '' })}
+        body={t('item.confirmBody')}
+        confirmLabel={t('item.actions.delete')}
+        onConfirm={() => {
+          const victim = confirmItem;
+          setConfirmItem(null);
+          if (victim) void removeItem(victim);
+        }}
+        onClose={() => setConfirmItem(null)}
+      />
+      <ConfirmDialog
+        open={confirmBulk}
+        title={t('select.confirmTitle', { n: selected.size })}
+        body={t('select.confirmBody')}
+        confirmLabel={t('common.delete')}
+        busy={bulkBusy}
+        onConfirm={() => {
+          setConfirmBulk(false);
+          void bulk({ kind: 'delete', listId: id, ids: [...selected] });
+        }}
+        onClose={() => setConfirmBulk(false)}
+      />
     </div>
   );
 }
