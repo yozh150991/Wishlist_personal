@@ -176,31 +176,35 @@ export default function Lists() {
         <main>
           <ul className="list-grid" data-stale={staleAt ? 'true' : 'false'}>
             {lists.map((l) => (
+              /* Картка — сітка, а не рядок із двох колонок: підписи внизу
+                 йдуть на всю ширину, під кнопкою видалення. Загорнуті в
+                 колонку разом із назвою, вони мали на 44 px менше місця й
+                 переносились на другий рядок там, де в макеті стоять в один. */
               <li className="list-card" key={l.id}>
-                <div className="list-card__main">
-                  <Link className="list-card__title" to={`/lists/${l.id}`}>
-                    {l.title}
-                  </Link>
-                  {l.description && <p className="muted small">{l.description}</p>}
-                  <div className="list-card__tags">
-                    <span className="tag tag--neutral">{l.currency}</span>
-                    {l.event_date && (
-                      // Офлайн дата події перестає бути акцентом: вона може бути
-                      // застарілою так само, як і решта копії.
-                      <span className={staleAt ? 'tag tag--neutral' : 'tag tag--accent'}>
-                        {formatDate(l.event_date, locale)}
-                      </span>
-                    )}
-                    {typeof l.item_count === 'number' && (
-                      <span className="tag tag--neutral">{t('lists.itemCount', { n: l.item_count })}</span>
-                    )}
-                  </div>
+                <Link className="list-card__title" to={`/lists/${l.id}`}>
+                  {l.title}
+                </Link>
+                {l.description && <p className="list-card__desc muted small">{l.description}</p>}
+                <div className="list-card__tags">
+                  <span className="tag tag--neutral">{l.currency}</span>
+                  {l.event_date && (
+                    // Офлайн дата події перестає бути акцентом: вона може бути
+                    // застарілою так само, як і решта копії.
+                    <span className={staleAt ? 'tag tag--neutral' : 'tag tag--accent'}>
+                      {formatDate(l.event_date, locale)}
+                    </span>
+                  )}
+                  {typeof l.item_count === 'number' && (
+                    <span className="tag tag--neutral">{t('lists.itemCount', { n: l.item_count })}</span>
+                  )}
                 </div>
-                {/* Назва списку — в доступній назві кнопки: «Видалити» саме по
-                    собі в списку з трьох карток не каже, що буде видалено. */}
+                {/* Кнопка остання в розмітці, а місце їй дає сітка: зчитувач
+                    екрана читає спершу про що картка, а вже потім дію. Назва
+                    списку — в доступній назві: «Видалити» саме по собі в
+                    списку з трьох карток не каже, що буде видалено. */}
                 <button
                   type="button"
-                  className="btn btn--icon btn--secondary btn--danger"
+                  className="btn btn--icon btn--secondary btn--danger list-card__del"
                   aria-label={t('lists.deleteLabel', { title: l.title })}
                   onClick={() => setConfirm(l)}
                 >

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   addItem,
+  closeFilters,
   createList,
   hasAccount,
   openFilters,
@@ -89,6 +90,27 @@ test('на сторінці списку немає дубльованих id', 
     return [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
   });
   expect(dupes).toEqual([]);
+});
+
+/**
+ * Статуси — це набір, і останній обраний теж мусить зніматись. Клік по ньому
+ * означає «показати всі»: порожній набір дав би порожній екран, а мовчазна
+ * відмова читалась як зламана кнопка.
+ */
+test('клік по єдиному обраному статусу показує всі позиції', async ({ page }) => {
+  await signIn(page);
+  await createList(page, unique('E2E status'));
+  await addItem(page, 'Кавоварка');
+
+  // Подарована позиція випадає з усталеного фільтра «Актуальні».
+  await page.getByRole('combobox', { name: /Кавоварка/ }).selectOption('gifted');
+  await expect(page.getByText('Кавоварка', { exact: true })).toHaveCount(0);
+
+  await openFilters(page);
+  await page.getByRole('button', { name: /^актуальні$|^aktualne$|^active$/i }).click();
+  await closeFilters(page);
+
+  await expect(page.getByText('Кавоварка', { exact: true })).toBeVisible();
 });
 
 test('Enter у діалогах списку й позиції зберігає, а в примітці — ні', async ({ page }) => {

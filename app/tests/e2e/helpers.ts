@@ -124,6 +124,14 @@ export async function openFilters(page: Page) {
   await expect(openDialog(page)).toBeVisible();
 }
 
+/** Закриває лист фільтрів, якщо він відкритий: під ним список недосяжний. */
+export async function closeFilters(page: Page) {
+  const sheet = openDialog(page);
+  if (!(await sheet.isVisible())) return;
+  await page.keyboard.press('Escape');
+  await expect(sheet).toHaveCount(0);
+}
+
 /**
  * Виходить з акаунта. На телефоні кнопки виходу в нижній смузі немає — там
  * лише три розділи, а акаунт живе в Налаштуваннях; на десктопі вона поруч
