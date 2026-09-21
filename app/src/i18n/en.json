@@ -7,13 +7,11 @@
     "lists": "Lists",
     "shares": "Links",
     "settings": "Settings",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "label": "Sections",
+    "sharesLong": "My links"
   },
   "auth": {
-    "aside": {
-      "headline": "Your list stays yours.",
-      "body": "Add anything you like. Family sees only the items you pick and send."
-    },
     "email": "Email",
     "password": "Password",
     "passwordAgain": "Password again",
@@ -23,37 +21,43 @@
       "submit": "Sign in",
       "toRegister": "No account yet?",
       "toRegisterCta": "Create one",
-      "forgot": "Forgot password"
+      "forgot": "Forgot password",
+      "submitting": "Signing in…"
     },
     "register": {
       "title": "Create account",
       "submit": "Create account",
       "toLogin": "Already have an account?",
       "toLoginCta": "Sign in",
-      "checkEmail": "We sent a confirmation email to {email}. Open the link to finish signing up."
+      "checkEmail": "We sent a confirmation email to {email}. Open the link to finish signing up.",
+      "submitting": "Creating account…"
     },
     "reset": {
       "title": "Reset password",
       "body": "We'll send a link for setting a new password.",
       "submit": "Send link",
       "sent": "If an account for {email} exists, the link is in the inbox.",
-      "back": "Back to sign in"
+      "back": "Back to sign in",
+      "submitting": "Sending…"
     },
     "update": {
       "title": "New password",
       "submit": "Save password",
       "done": "Password changed.",
-      "expired": "This link expired or was already used. Request a new one."
+      "expired": "This link expired or was already used. Request a new one.",
+      "submitting": "Saving…"
+    },
+    "hero": {
+      "title": "Your list stays yours",
+      "body": "You decide who sees what. A guest only sees the items you pick."
     }
   },
   "lists": {
     "title": "Lists",
     "emptyTitle": "Nothing here yet",
-    "emptyBody": "Create your first list — say, \"Birthday\" or \"For the flat\".",
+    "emptyBody": "Create your first list — a birthday, say. It stays private until you share individual items yourself.",
     "create": "Create list",
-    "soon": "Lists arrive in the next step.",
     "edit": "Edit list",
-    "confirmDelete": "Delete the list “{title}” with all its items?",
     "fields": {
       "title": "Title",
       "description": "Description",
@@ -63,7 +67,15 @@
     },
     "errors": {
       "titleRequired": "Enter a list title."
-    }
+    },
+    "loading": "Loading lists",
+    "errorTitle": "Lists did not load",
+    "itemCount": "items: {n}",
+    "deleteLabel": "Delete list {title}",
+    "confirmTitle": "Delete the list and all items ({n})?",
+    "confirmBody": "The links you shared will stop working along with the list. This cannot be undone.",
+    "confirmCta": "Delete list",
+    "deleting": "Deleting…"
   },
   "settings": {
     "title": "Settings",
@@ -96,7 +108,9 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
-    "close": "Close"
+    "close": "Close",
+    "retry": "Try again",
+    "keep": "Keep"
   },
   "item": {
     "add": "Add item",
@@ -243,14 +257,18 @@
     }
   },
   "offline": {
-    "stale": "No connection. Showing a saved copy from {when} — changes will not be saved right now."
+    "stale": "No connection. Showing a saved copy from {when} — changes will not be saved right now.",
+    "title": "No connection",
+    "savedAt": "Showing a saved copy from {when} — changes will not be saved right now."
   },
   "outbox": {
     "pending": "Changes waiting for the network: {n}. They will be saved as soon as the connection is back.",
     "retry": "Try now",
     "sending": "Sending…",
     "dropped": "The server rejected {n} change(s). Check the list — you will have to make them again.",
-    "confirmSignOut": "{n} change(s) are waiting for the network. Signing out will discard them. Sign out anyway?"
+    "confirmSignOut": "{n} change(s) are waiting for the network. Signing out will discard them. Sign out anyway?",
+    "pendingTitle": "Changes waiting for the network: {n}",
+    "pendingBody": "They will be saved as soon as the connection is back."
   },
   "parser": {
     "fill": "Fill in",
@@ -346,5 +364,9 @@
     "installButton": "Install",
     "installIos": "On iPhone or iPad, open the site in Safari, tap “Share”, then “Add to Home Screen”.",
     "installManual": "Open the browser menu and choose “Install app” or “Add to Home screen”."
+  },
+  "banners": {
+    "more": "More messages: {n}",
+    "less": "Collapse"
   }
 }

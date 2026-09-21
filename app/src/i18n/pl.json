@@ -7,13 +7,11 @@
     "lists": "Listy",
     "shares": "Linki",
     "settings": "Ustawienia",
-    "signOut": "Wyloguj"
+    "signOut": "Wyloguj",
+    "label": "Sekcje",
+    "sharesLong": "Moje linki"
   },
   "auth": {
-    "aside": {
-      "headline": "Twoja lista zostaje twoja.",
-      "body": "Dodawaj wszystko, co chcesz. Bliscy zobaczą tylko te pozycje, które sam wybierzesz i wyślesz."
-    },
     "email": "E-mail",
     "password": "Hasło",
     "passwordAgain": "Hasło ponownie",
@@ -23,37 +21,43 @@
       "submit": "Zaloguj się",
       "toRegister": "Nie masz konta?",
       "toRegisterCta": "Załóż konto",
-      "forgot": "Nie pamiętam hasła"
+      "forgot": "Nie pamiętam hasła",
+      "submitting": "Loguję…"
     },
     "register": {
       "title": "Rejestracja",
       "submit": "Załóż konto",
       "toLogin": "Masz już konto?",
       "toLoginCta": "Zaloguj się",
-      "checkEmail": "Wysłaliśmy e-mail na {email}. Otwórz link, żeby dokończyć rejestrację."
+      "checkEmail": "Wysłaliśmy e-mail na {email}. Otwórz link, żeby dokończyć rejestrację.",
+      "submitting": "Tworzę konto…"
     },
     "reset": {
       "title": "Reset hasła",
       "body": "Wyślemy link, pod którym ustawisz nowe hasło.",
       "submit": "Wyślij link",
       "sent": "Jeśli konto {email} istnieje, link jest już w skrzynce.",
-      "back": "Wróć do logowania"
+      "back": "Wróć do logowania",
+      "submitting": "Wysyłam…"
     },
     "update": {
       "title": "Nowe hasło",
       "submit": "Zapisz hasło",
       "done": "Hasło zmienione.",
-      "expired": "Link wygasł albo został już użyty. Poproś o nowy."
+      "expired": "Link wygasł albo został już użyty. Poproś o nowy.",
+      "submitting": "Zapisuję…"
+    },
+    "hero": {
+      "title": "Twoja lista zostaje twoja",
+      "body": "Sam decydujesz, komu i co pokazać. Gość widzi tylko wybrane pozycje."
     }
   },
   "lists": {
     "title": "Listy",
     "emptyTitle": "Na razie pusto",
-    "emptyBody": "Utwórz pierwszą listę — na przykład „Urodziny” albo „Do domu”.",
+    "emptyBody": "Utwórz pierwszą listę — na przykład „Urodziny”. Pozostanie prywatna, dopóki sam nie udostępnisz pojedynczych pozycji.",
     "create": "Utwórz listę",
-    "soon": "Listy pojawią się w następnym kroku.",
     "edit": "Edytuj listę",
-    "confirmDelete": "Usunąć listę „{title}” razem ze wszystkimi pozycjami?",
     "fields": {
       "title": "Nazwa",
       "description": "Opis",
@@ -63,7 +67,15 @@
     },
     "errors": {
       "titleRequired": "Podaj nazwę listy."
-    }
+    },
+    "loading": "Wczytuję listy",
+    "errorTitle": "Listy się nie wczytały",
+    "itemCount": "pozycji: {n}",
+    "deleteLabel": "Usuń listę {title}",
+    "confirmTitle": "Usunąć listę i wszystkie pozycje ({n})?",
+    "confirmBody": "Razem z listą przestaną działać linki, które udostępniłeś. Tego nie można cofnąć.",
+    "confirmCta": "Usuń listę",
+    "deleting": "Usuwam…"
   },
   "settings": {
     "title": "Ustawienia",
@@ -96,7 +108,9 @@
     "save": "Zapisz",
     "cancel": "Anuluj",
     "delete": "Usuń",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "retry": "Spróbuj ponownie",
+    "keep": "Zostaw"
   },
   "item": {
     "add": "Dodaj pozycję",
@@ -243,14 +257,18 @@
     }
   },
   "offline": {
-    "stale": "Brak połączenia. Pokazujemy zapisaną kopię z {when} — zmiany teraz się nie zapiszą."
+    "stale": "Brak połączenia. Pokazujemy zapisaną kopię z {when} — zmiany teraz się nie zapiszą.",
+    "title": "Brak połączenia",
+    "savedAt": "Pokazano zapisaną kopię z {when} — zmiany teraz się nie zapiszą."
   },
   "outbox": {
     "pending": "Zmiany czekają na sieć: {n}. Zapiszą się, gdy tylko wróci połączenie.",
     "retry": "Spróbuj teraz",
     "sending": "Wysyłam…",
     "dropped": "Serwer nie przyjął zmian: {n}. Sprawdź listę — trzeba je zrobić ponownie.",
-    "confirmSignOut": "Zmiany czekają na sieć: {n}. Wylogowanie je usunie. Wylogować mimo to?"
+    "confirmSignOut": "Zmiany czekają na sieć: {n}. Wylogowanie je usunie. Wylogować mimo to?",
+    "pendingTitle": "Zmiany czekają na sieć: {n}",
+    "pendingBody": "Zapiszą się, gdy tylko wróci połączenie."
   },
   "parser": {
     "fill": "Wypełnij",
@@ -346,5 +364,9 @@
     "installButton": "Zainstaluj",
     "installIos": "Na iPhonie lub iPadzie otwórz stronę w Safari, stuknij „Udostępnij”, a potem „Do ekranu początkowego”.",
     "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”."
+  },
+  "banners": {
+    "more": "Więcej powiadomień: {n}",
+    "less": "Zwiń"
   }
 }

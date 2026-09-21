@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { authErrorKey } from '../lib/authErrors';
 import { AuthLayout } from '../components/AuthLayout';
-import { Field, Note } from '../components/ui';
+import { Field, Note, SubmitButton } from '../components/ui';
 
 export default function UpdatePassword() {
   const { t } = useI18n();
@@ -81,9 +81,11 @@ export default function UpdatePassword() {
               value={again}
               onChange={(e) => setAgain(e.target.value)}
             />
-            <button type="submit" className="btn btn--wide" disabled={busy}>
-              {t('auth.update.submit')}
-            </button>
+            <SubmitButton
+              busy={busy}
+              label={t('auth.update.submit')}
+              busyLabel={t('auth.update.submitting')}
+            />
           </>
         )}
       </form>

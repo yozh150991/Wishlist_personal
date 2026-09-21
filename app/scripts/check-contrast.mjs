@@ -70,6 +70,7 @@ const PAIRS = [
   ['Текст на гостьовому фоні', '--color-text', '--color-guest-bg', 4.5],
   ['Смужка «Високий»', '--color-prio-high', '--color-surface', 3],
   ['Смужка «Низький»', '--color-prio-low', '--color-surface', 3],
+  ['Підпис кнопки видалення', '--color-bg', '--color-danger', 4.5],
   ['Кільце фокуса', '--color-accent-700', '--color-bg', 3],
   ['Кільце фокуса на поверхні', '--color-accent-700', '--color-surface', 3],
 ];
