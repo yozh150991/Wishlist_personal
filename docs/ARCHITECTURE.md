@@ -136,23 +136,27 @@ GET /s/:token
 app/
 ├── index.html  vercel.json  vite.config.ts  playwright.config.ts
 ├── public/icons/         # іконки застосунку; PNG — з SVG через scripts/generate-icons.mjs
-├── scripts/              # generate-icons.mjs, check-pwa.mjs
+├── scripts/              # generate-icons.mjs, check-pwa.mjs, check-contrast.mjs
 ├── tsconfig.json         # src/, без типів Node
 ├── tsconfig.test.json    # tests/ і playwright.config.ts
 ├── src/
-│   ├── main.tsx  App.tsx  styles.css  vite-env.d.ts
+│   ├── main.tsx  App.tsx  vite-env.d.ts
 │   ├── routes/           # по файлу на сторінку
 │   │   ├── Login.tsx  Register.tsx  ResetPassword.tsx  UpdatePassword.tsx
 │   │   ├── Lists.tsx  ListDetail.tsx  Shares.tsx  Settings.tsx
 │   │   ├── SharedList.tsx          # /s/:token — гостьовий перегляд
 │   │   └── NotFound.tsx
+│   ├── styles.css  styles/tokens.css   # ритм і компоненти / шість палітр
 │   ├── components/
-│   │   ├── AppShell.tsx  AuthLayout.tsx  RequireAuth.tsx  ui.tsx
+│   │   ├── AppShell.tsx  AuthLayout.tsx  RequireAuth.tsx  ui.tsx  Icon.tsx
 │   │   ├── Dialog.tsx  ItemDialog.tsx  ListDialog.tsx  ShareDialog.tsx
-│   │   ├── ItemCard.tsx  Toolbar.tsx  LocaleSync.tsx  LanguagePicker.tsx  UpdatePrompt.tsx
+│   │   ├── ItemCard.tsx  Filters.tsx  LocaleSync.tsx  LanguagePicker.tsx  UpdatePrompt.tsx
+│   │   ├── Banners.tsx             # наскрізні повідомлення, рівно один на екран
+│   │   ├── AppearanceSync.tsx      # тема й схема власника → profiles
+│   │   ├── AppearanceSheet.tsx     # вибір вигляду для гостя
 │   │   ├── EventSummary.tsx        # нагадування підбити підсумки після події
 │   │   ├── VariantsField.tsx       # ознаки товару в діалозі позиції (ADR-030)
-│   │   └── ExportDialog.tsx  ImportDialog.tsx  OutboxNotice.tsx
+│   │   └── ExportDialog.tsx  ImportDialog.tsx
 │   ├── lib/
 │   │   ├── supabase.ts  auth.tsx  theme.tsx  i18n.tsx  authErrors.ts
 │   │   ├── db.ts  useItems.ts  shares.ts  guest.ts   # дані
@@ -195,9 +199,31 @@ ThemeProvider        тема; застосовується скриптом в 
 
 ## Стилі
 
-Без CSS-фреймворку (ADR-015). Токени — кастомні властивості в `:root`, темна тема перевизначає їх у `:root[data-theme='dark']`. Тема застосовується інлайновим скриптом у `<head>` до першого рендера, інакше на холодному старті блимає світлий фон.
+Без CSS-фреймворку (ADR-015, уточнено ADR-031).
 
-Шрифти самохостяться через `@fontsource-variable` — не CDN, бо офлайн-режим на етапі 6 має працювати повністю. Обидві гарнітури мають підмножини `cyrillic` і `latin-ext`, тож українська і польська діакритика покриті.
+Кольори живуть окремо від решти стилів — у `src/styles/tokens.css`. Там **шість повних наборів**: три схеми (Шавлія, Слива, Вугіль) × дві теми. Схема й тема — дві незалежні осі, обидві ставляться атрибутами на `<html>`:
+
+```
+<html data-scheme="sage" data-theme="light">
+```
+
+Атрибути пише інлайновий скрипт у `<head>` до першого рендера — інакше на холодному старті блимає чужа палітра. Жоден компонент не знає, яка схема активна, і ніде не звіряє її ім'я.
+
+**Склад палітри повний або ніякий.** Пропущений токен не ламає сторінку: він тихо падає на `:root`, тобто на світлу Шавлію, і в темній схемі дає світлий значок на темній картці. Тому кожен набір оголошує всі 45 змінних, навіть ті, якими сьогодні ніхто не користується.
+
+`src/styles.css` — усе решта: ритм (4/6/8/10/12/16/24/32), радіуси, тіні, типографіка й компоненти. Літеральних кольорів у ньому немає й бути не може: `npm run check:contrast` падає на будь-якому hex у `src/`, крім `tokens.css`.
+
+Вибір власника їде в `profiles.theme` / `profiles.scheme`, щоб переїжджав між пристроями; `localStorage` лишається, бо інлайновому скрипту треба щось прочитати до того, як приїде профіль. **Гість обирає сам** і не успадковує схему власника: йому може бути потрібен Вугіль, а його вибір на сервер не їде.
+
+### Аудит контрасту
+
+`npm run check:contrast` читає `tokens.css` і рахує 24 пари «фарба на фарбі» × 6 палітр = 144 перевірки: 4,5:1 для тексту, 3:1 для нетекстових індикаторів (смужки пріоритету, кільце фокуса). Числа беруться з тих самих токенів, що й у застосунку, тож таблиця не може розійтися з тим, що бачить людина. У CI стоїть **перед** збіркою — зламаний контраст видно за секунди.
+
+Додав пару кольорів у компонентах — додай її і в `PAIRS`, інакше вона лишиться неперевіреною.
+
+### Шрифти
+
+Самохостяться через `@fontsource-variable`, не з CDN: CSP пускає лише `'self'`, а офлайн-оболонка має відкриватися без мережі. Заголовки — Rubik 800, текст — Manrope; обидві покривають `cyrillic`, `cyrillic-ext` і `latin-ext`, тобто всі три мови. Арабиця й іврит, які Rubik возить із собою, у precache не потрапляють (`globIgnores` у `vite.config.ts`).
 
 ## Заголовки безпеки
 
