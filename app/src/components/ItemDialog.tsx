@@ -168,6 +168,7 @@ export function ItemDialog({
           <label htmlFor="url">{t('item.fields.url')}</label>
           <div className="url-row">
             <input
+              className="input"
               id="url"
               name="url"
               type="url"
@@ -194,7 +195,7 @@ export function ItemDialog({
             />
             <button
               type="button"
-              className="btn btn--quiet"
+              className="btn btn--secondary"
               disabled={parsing || !form.url.trim() || !parserConfigured()}
               onClick={() => void fillFromUrl()}
             >
@@ -210,6 +211,7 @@ export function ItemDialog({
           label={t('item.fields.title')}
           name="title"
           maxLength={200}
+          count
           value={form.title}
           onChange={(e) => set('title', e.target.value)}
         />
@@ -243,6 +245,7 @@ export function ItemDialog({
           <div className="field">
             <label htmlFor="priority">{t('item.fields.priority')}</label>
             <select
+              className="input"
               id="priority"
               value={form.priority}
               onChange={(e) => set('priority', e.target.value as ItemPriority)}
@@ -258,6 +261,7 @@ export function ItemDialog({
           <div className="field">
             <label htmlFor="status">{t('item.fields.status')}</label>
             <select
+              className="input"
               id="status"
               value={form.status}
               onChange={(e) => set('status', e.target.value as ItemStatus)}
@@ -285,6 +289,7 @@ export function ItemDialog({
         <div className="field">
           <label htmlFor="note">{t('item.fields.note')}</label>
           <textarea
+            className="input"
             id="note"
             rows={3}
             maxLength={1000}
@@ -294,11 +299,12 @@ export function ItemDialog({
         </div>
 
         <div className="dialog__foot">
-          <button type="button" className="btn btn--quiet" onClick={onClose}>
+          <button type="button" className="btn btn--secondary" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" className="btn" disabled={busy}>
-            {t('common.save')}
+          <button type="submit" className="btn btn--primary" disabled={busy}>
+            {busy && <span className="spinner" />}
+            {busy ? t('common.saving') : t('common.save')}
           </button>
         </div>
       </form>

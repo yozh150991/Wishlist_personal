@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { addItem, createList, hasAccount, settledDialog, signIn, unique } from './helpers';
+import {
+  addItem,
+  createList,
+  hasAccount,
+  openFilters,
+  selectedCount,
+  settledDialog,
+  signIn,
+  unique,
+} from './helpers';
 
 /**
  * Сценарії етапу 3 працюють з реальним акаунтом.
@@ -20,16 +29,20 @@ test('повний цикл: список, позиція без ціни, ре�
   // Підсумки чесно рахують позиції без ціни.
   await expect(page.getByText(/без ціни|bez ceny|without a price/i)).toBeVisible();
 
-  await page.getByRole('button', { name: /^змінити$|^edytuj$|^edit$/i }).first().click();
+  // Кнопки картки названі разом із позицією («Змінити «Навушники»»), щоб
+  // зчитувач екрана в списку з десяти карток казав, яку саме змінюють.
+  await page.getByRole('button', { name: /(змінити|edytuj|edit).*Навушники/i }).click();
   const dialog = await settledDialog(page);
   await dialog.getByLabel(/^ціна$|^cena$|^price$/i).fill('399');
   await dialog.getByRole('button', { name: /^зберегти$|^zapisz$|^save$/i }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText(/ціна не вказана|brak ceny|no price/i)).toHaveCount(0);
 
-  page.once('dialog', (d) => void d.accept());
-  await page.getByRole('button', { name: /^видалити$|^usuń$|^delete$/i }).first().click();
+  // Видалення однієї позиції — зворотна дія: підтвердження немає, замість
+  // нього зʼявляється тост «Скасувати» на сім секунд.
+  await page.getByRole('button', { name: /(видалити|usuń|delete).*Навушники/i }).click();
   await expect(page.getByText('Навушники', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^скасувати$|^cofnij$|^undo$/i })).toBeVisible();
 });
 
 test('пошук звужує вибірку', async ({ page }) => {
@@ -50,9 +63,32 @@ test('зміна розміру сторінки перезавантажує в
   await signIn(page);
   await createList(page, unique('E2E page size'));
 
+  // На телефоні розмір сторінки лежить у листі фільтрів, на десктопі —
+  // одразу на панелі.
+  await openFilters(page);
   const size = page.getByLabel(/на сторінці|na stronie|per page/i);
   await size.selectOption('10');
   await expect(size).toHaveValue('10');
+});
+
+/**
+ * Дубльований `id` — не косметика: `<label for>` веде на **перший** збіг у
+ * документі. Коли фільтри малювались двічі (панель і лист), підпис у листі
+ * фокусував схований контрол панелі, зчитувач екрана оголошував кожен
+ * фільтр двічі, а «На сторінці» не можна було вибрати з телефона взагалі.
+ */
+test('на сторінці списку немає дубльованих id', async ({ page }) => {
+  await signIn(page);
+  await createList(page, unique('E2E ids'));
+  await addItem(page, 'Кавоварка');
+  // Разом із фільтрами: саме там оправи дві, а набір контролів мусить бути один.
+  await openFilters(page);
+
+  const dupes = await page.evaluate(() => {
+    const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
+    return [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+  });
+  expect(dupes).toEqual([]);
 });
 
 test('Enter у діалогах списку й позиції зберігає, а в примітці — ні', async ({ page }) => {
@@ -127,7 +163,7 @@ test('масові дії: статус і видалення вибраних',
   await page.getByRole('button', { name: /^вибрати$|^zaznacz$|^select$/i }).click();
   await page.getByRole('checkbox', { name: /Перша/ }).check();
   await page.getByRole('checkbox', { name: /Друга/ }).check();
-  await expect(region.getByText(/^(вибрано|zaznaczono|selected): 2$/i)).toBeVisible();
+  await expect(selectedCount(page, 2)).toBeVisible();
   await region.getByRole('combobox').selectOption('gifted');
 
   await expect(region).toHaveCount(0);
@@ -139,8 +175,12 @@ test('масові дії: статус і видалення вибраних',
   await page.getByRole('button', { name: /^вибрати$|^zaznacz$|^select$/i }).click();
   await page.getByRole('checkbox', { name: /Перша/ }).check();
   await page.getByRole('checkbox', { name: /Третя/ }).check();
-  page.once('dialog', (d) => void d.accept());
   await region.getByRole('button', { name: /^видалити$|^usuń$|^delete$/i }).click();
+  // Підтвердження — власний <dialog>, не вікно браузера.
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^видалити$|^usuń$|^delete$/i })
+    .click();
 
   await expect(page.getByText('Перша', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Третя', { exact: true })).toHaveCount(0);
@@ -160,10 +200,14 @@ test('масова дія не зачіпає вибрані позиції, с�
   await page.getByRole('searchbox').fill('Ябл');
   await expect(page.getByText('Груша', { exact: true })).toHaveCount(0);
   const region = page.getByRole('region', { name: /дії з вибраними|działania na zaznaczonych|actions for selected/i });
-  await expect(region.getByText(/^(вибрано|zaznaczono|selected): 1$/i)).toBeVisible();
+  await expect(selectedCount(page, 1)).toBeVisible();
 
-  page.once('dialog', (d) => void d.accept());
   await region.getByRole('button', { name: /^видалити$|^usuń$|^delete$/i }).click();
+  // Підтвердження — власний <dialog>, не вікно браузера.
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^видалити$|^usuń$|^delete$/i })
+    .click();
   await expect(page.getByText('Яблуко', { exact: true })).toHaveCount(0);
 
   await page.getByRole('searchbox').fill('');
@@ -204,7 +248,7 @@ test('після дати події застосунок пропонує пі�
   // «Підбити підсумки» вибирає всі актуальні позиції; лишається позначити їх подарованими.
   await banner.getByRole('button', { name: /підбити підсумки|podsumuj|wrap up/i }).click();
   const region = page.getByRole('region', { name: /дії з вибраними|działania na zaznaczonych|actions for selected/i });
-  await expect(region.getByText(/^(вибрано|zaznaczono|selected): 2$/i)).toBeVisible();
+  await expect(selectedCount(page, 2)).toBeVisible();
   await region.getByRole('combobox').selectOption('gifted');
 
   // Нагадування зникло, натомість тихий рядок із підсумком.
@@ -259,7 +303,7 @@ test('список вивантажується у CSV і вноситься н�
   await expect(importDialog.getByText(/позицій: 2|pozycji: 2|items to create: 2/i)).toBeVisible();
   const copy = `${title} копія`;
   await importDialog.locator('#importTitle').fill(copy);
-  await importDialog.getByRole('button', { name: /створити список|utwórz listę|create list/i }).click();
+  await importDialog.getByRole('button', { name: /імпортувати позиції|importuj pozycje|import items/i }).click();
   await expect(importDialog).toHaveCount(0);
 
   await page.getByRole('link', { name: copy }).click();
@@ -291,7 +335,7 @@ test('зіпсовані рядки файлу показуються до ст�
 
   const copy = unique('E2E import');
   await dialog.locator('#importTitle').fill(copy);
-  await dialog.getByRole('button', { name: /створити список|utwórz listę|create list/i }).click();
+  await dialog.getByRole('button', { name: /імпортувати позиції|importuj pozycje|import items/i }).click();
   await expect(dialog).toHaveCount(0);
 
   await page.getByRole('link', { name: copy }).click();

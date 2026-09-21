@@ -7,13 +7,12 @@
     "lists": "Listy",
     "shares": "Linki",
     "settings": "Ustawienia",
-    "signOut": "Wyloguj"
+    "signOut": "Wyloguj",
+    "signedInAs": "Zalogowany jako",
+    "label": "Sekcje",
+    "sharesLong": "Moje linki"
   },
   "auth": {
-    "aside": {
-      "headline": "Twoja lista zostaje twoja.",
-      "body": "Dodawaj wszystko, co chcesz. Bliscy zobaczą tylko te pozycje, które sam wybierzesz i wyślesz."
-    },
     "email": "E-mail",
     "password": "Hasło",
     "passwordAgain": "Hasło ponownie",
@@ -23,37 +22,43 @@
       "submit": "Zaloguj się",
       "toRegister": "Nie masz konta?",
       "toRegisterCta": "Załóż konto",
-      "forgot": "Nie pamiętam hasła"
+      "forgot": "Nie pamiętam hasła",
+      "submitting": "Loguję…"
     },
     "register": {
       "title": "Rejestracja",
       "submit": "Załóż konto",
       "toLogin": "Masz już konto?",
       "toLoginCta": "Zaloguj się",
-      "checkEmail": "Wysłaliśmy e-mail na {email}. Otwórz link, żeby dokończyć rejestrację."
+      "checkEmail": "Wysłaliśmy e-mail na {email}. Otwórz link, żeby dokończyć rejestrację.",
+      "submitting": "Tworzę konto…"
     },
     "reset": {
       "title": "Reset hasła",
       "body": "Wyślemy link, pod którym ustawisz nowe hasło.",
       "submit": "Wyślij link",
       "sent": "Jeśli konto {email} istnieje, link jest już w skrzynce.",
-      "back": "Wróć do logowania"
+      "back": "Wróć do logowania",
+      "submitting": "Wysyłam…"
     },
     "update": {
       "title": "Nowe hasło",
       "submit": "Zapisz hasło",
       "done": "Hasło zmienione.",
-      "expired": "Link wygasł albo został już użyty. Poproś o nowy."
+      "expired": "Link wygasł albo został już użyty. Poproś o nowy.",
+      "submitting": "Zapisuję…"
+    },
+    "hero": {
+      "title": "Twoja lista zostaje twoja",
+      "body": "Sam decydujesz, komu i co pokazać. Gość widzi tylko wybrane pozycje."
     }
   },
   "lists": {
     "title": "Listy",
     "emptyTitle": "Na razie pusto",
-    "emptyBody": "Utwórz pierwszą listę — na przykład „Urodziny” albo „Do domu”.",
+    "emptyBody": "Utwórz pierwszą listę — na przykład „Urodziny”. Pozostanie prywatna, dopóki sam nie udostępnisz pojedynczych pozycji.",
     "create": "Utwórz listę",
-    "soon": "Listy pojawią się w następnym kroku.",
     "edit": "Edytuj listę",
-    "confirmDelete": "Usunąć listę „{title}” razem ze wszystkimi pozycjami?",
     "fields": {
       "title": "Nazwa",
       "description": "Opis",
@@ -63,7 +68,15 @@
     },
     "errors": {
       "titleRequired": "Podaj nazwę listy."
-    }
+    },
+    "loading": "Wczytuję listy",
+    "errorTitle": "Listy się nie wczytały",
+    "itemCount": "pozycji: {n}",
+    "deleteLabel": "Usuń listę {title}",
+    "confirmTitle": "Usunąć listę i wszystkie pozycje ({n})?",
+    "confirmBody": "Razem z listą przestaną działać linki, które udostępniłeś. Tego nie można cofnąć.",
+    "confirmCta": "Usuń listę",
+    "deleting": "Usuwam…"
   },
   "settings": {
     "title": "Ustawienia",
@@ -73,7 +86,16 @@
     "themeSystem": "Jak w systemie",
     "language": "Język",
     "account": "Konto",
-    "signedInAs": "Zalogowany jako {email}"
+    "signedInAs": "Zalogowany jako {email}",
+    "colors": "Kolory",
+    "scheme": {
+      "sage": "Szałwia",
+      "slyva": "Śliwka",
+      "vuhil": "Węgiel"
+    },
+    "schemeHint": "Węgiel — schemat o wzmocnionym kontraście.",
+    "contrastSuggestion": "System prosi o wzmocniony kontrast. Włączyć",
+    "contrastShort": "Wzmocniony kontrast"
   },
   "errors": {
     "invalidCredentials": "E-mail albo hasło się nie zgadzają.",
@@ -92,11 +114,16 @@
   "common": {
     "loading": "Ładowanie",
     "notFound": "Nie ma takiej strony",
-    "backHome": "Na start",
+    "backHome": "Do list",
     "save": "Zapisz",
     "cancel": "Anuluj",
     "delete": "Usuń",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "retry": "Spróbuj ponownie",
+    "keep": "Zostaw",
+    "saving": "Zapisuję…",
+    "notFoundBody": "Może adres jest nieaktualny albo jest w nim literówka.",
+    "done": "Gotowe"
   },
   "item": {
     "add": "Dodaj pozycję",
@@ -105,8 +132,7 @@
     "loadMore": "Pokaż więcej",
     "end": "To wszystkie pozycje",
     "emptyTitle": "Brak pozycji",
-    "emptyBody": "Wklej link do produktu albo wpisz nazwę ręcznie. Link i cena są opcjonalne.",
-    "confirmDelete": "Usunąć „{title}”?",
+    "emptyBody": "Wklej link do produktu — nazwę i cenę pobierzemy sami.",
     "fields": {
       "url": "Link",
       "urlHint": "Autouzupełnianie pojawi się w następnym kroku",
@@ -149,7 +175,9 @@
     "actions": {
       "edit": "Edytuj",
       "delete": "Usuń",
-      "statusLabel": "Status pozycji „{title}”"
+      "statusLabel": "Status pozycji „{title}”",
+      "editLabel": "Zmień „{title}”",
+      "deleteLabel": "Usuń „{title}”"
     },
     "errors": {
       "titleRequired": "Podaj nazwę pozycji.",
@@ -161,7 +189,24 @@
       "variantsLong": "Nazwa — do 40 znaków, wartość — do 80.",
       "variantsMany": "Najwyżej pięć cech."
     },
-    "priorityLabel": "Priorytet: {value}"
+    "priorityLabel": "Priorytet: {value}",
+    "loading": "Wczytuję pozycje",
+    "errorTitle": "Pozycje się nie wczytały",
+    "errorBody": "Sama lista jest na miejscu — nie udało się pobrać tylko jej zawartości.",
+    "countAll": "pozycji: {n}",
+    "counter": "Pokazano {n} z {m}",
+    "noResultsTitle": "Nic nie znaleziono",
+    "noResultsBody": "Pozycje nigdzie nie zniknęły — ukrywają je filtry. Zdejmij zbędny albo wyczyść wszystkie.",
+    "resetFilters": "Wyczyść wszystkie filtry",
+    "chip": {
+      "search": "Szukaj: „{q}”",
+      "price": "Cena {from}–{to}",
+      "status": "Status: {list}",
+      "clearSearch": "Zdejmij filtr wyszukiwania",
+      "clearPrice": "Zdejmij filtr ceny",
+      "clearStatus": "Zdejmij filtr statusu"
+    },
+    "listLabel": "Pozycje listy"
   },
   "toolbar": {
     "search": "Szukaj po nazwie",
@@ -177,7 +222,12 @@
       "title": "Wg nazwy",
       "price": "Wg ceny",
       "priority": "Wg priorytetu"
-    }
+    },
+    "status": "Status",
+    "filters": "Filtry",
+    "reset": "Wyczyść filtry",
+    "resetAll": "Wyczyść wszystko",
+    "done": "Gotowe"
   },
   "totals": {
     "active": "w {n} aktualnych pozycjach",
@@ -186,10 +236,11 @@
   },
   "summary": {
     "region": "Podsumowanie wydarzenia",
-    "banner": "Wydarzenie było {date} — oznaczyć, co już podarowano?",
     "start": "Podsumuj",
     "later": "Później",
-    "done": "Wydarzenie minęło · podarowano {gifted} z {n}"
+    "done": "Wydarzenie minęło · podarowano {gifted} z {n}",
+    "was": "Wydarzenie było {date}",
+    "ask": "Oznaczyć, co już podarowano?"
   },
   "transfer": {
     "export": {
@@ -199,7 +250,9 @@
       "csv": "CSV do arkusza",
       "csvHint": "Otwiera się w Excelu, Numbers i Arkuszach Google.",
       "json": "JSON do przeniesienia",
-      "jsonHint": "Zachowuje też nazwę listy, walutę i datę wydarzenia."
+      "jsonHint": "Zachowuje też nazwę listy, walutę i datę wydarzenia.",
+      "working": "Eksportuję… {done} z {total}",
+      "workingPlain": "Eksportuję…"
     },
     "import": {
       "open": "Import",
@@ -215,8 +268,9 @@
       "issues": "Uwagi: błędów {errors}, ostrzeżeń {warnings}",
       "rowLabel": "Wiersz {row}:",
       "fileLabel": "Plik:",
-      "submit": "Utwórz listę",
-      "tooBig": "Plik większy niż {max} MB."
+      "submit": "Importuj pozycje ({n})",
+      "tooBig": "Plik większy niż {max} MB.",
+      "importing": "Importuję…"
     },
     "issues": {
       "titleRequired": "brak nazwy, wiersz pominięty.",
@@ -243,14 +297,18 @@
     }
   },
   "offline": {
-    "stale": "Brak połączenia. Pokazujemy zapisaną kopię z {when} — zmiany teraz się nie zapiszą."
+    "stale": "Brak połączenia. Pokazujemy zapisaną kopię z {when} — zmiany teraz się nie zapiszą.",
+    "title": "Brak połączenia",
+    "savedAt": "Pokazano zapisaną kopię z {when} — zmiany teraz się nie zapiszą."
   },
   "outbox": {
     "pending": "Zmiany czekają na sieć: {n}. Zapiszą się, gdy tylko wróci połączenie.",
     "retry": "Spróbuj teraz",
     "sending": "Wysyłam…",
     "dropped": "Serwer nie przyjął zmian: {n}. Sprawdź listę — trzeba je zrobić ponownie.",
-    "confirmSignOut": "Zmiany czekają na sieć: {n}. Wylogowanie je usunie. Wylogować mimo to?"
+    "confirmSignOut": "Zmiany czekają na sieć: {n}. Wylogowanie je usunie. Wylogować mimo to?",
+    "pendingTitle": "Zmiany czekają na sieć: {n}",
+    "pendingBody": "Zapiszą się, gdy tylko wróci połączenie."
   },
   "parser": {
     "fill": "Wypełnij",
@@ -279,7 +337,7 @@
     "create": "Utwórz link",
     "selectItem": "Zaznacz „{title}”",
     "intro": "Do linku trafi {n} pozycji. Reszta listy pozostanie ukryta.",
-    "ready": "Link gotowy. Wyślij go komu chcesz.",
+    "ready": "Link gotowy",
     "link": "Link",
     "linkHint": "Kto ma ten link, widzi wybrane pozycje. Rejestracja niepotrzebna.",
     "copy": "Kopiuj",
@@ -288,10 +346,8 @@
     "itemCount": "pozycji: {n}",
     "views": "wyświetleń: {n}",
     "until": "ważny do {date}",
-    "emptyTitle": "Nie ma jeszcze linków",
-    "emptyBody": "Otwórz listę, kliknij „Udostępnij”, zaznacz pozycje.",
-    "confirmRevoke": "Unieważnić link „{title}”? Przestanie się otwierać.",
-    "confirmDelete": "Usunąć link „{title}” razem ze statystykami?",
+    "emptyTitle": "Jeszcze żadnego linku",
+    "emptyBody": "Otwórz listę, wybierz pozycje i naciśnij „Utwórz link”. Gość zobaczy tylko je.",
     "state": {
       "revoked": "Unieważniony",
       "expired": "Wygasł"
@@ -309,7 +365,15 @@
     "errors": {
       "titleRequired": "Podaj nagłówek.",
       "nothingSelected": "Najpierw zaznacz choć jedną pozycję."
-    }
+    },
+    "loading": "Wczytuję linki",
+    "errorTitle": "Linki się nie wczytały",
+    "confirmRevokeTitle": "Wycofać link „{title}”?",
+    "confirmRevokeBody": "Przestanie się otwierać u wszystkich, którym go wysłałeś. Statystyki zostaną.",
+    "confirmDeleteTitle": "Usunąć link „{title}”?",
+    "confirmDeleteBody": "Razem z nim zniknie statystyka wyświetleń. Tego nie można cofnąć.",
+    "creating": "Tworzę…",
+    "copyLink": "Kopiuj link"
   },
   "select": {
     "start": "Zaznacz",
@@ -318,23 +382,34 @@
     "selectAll": "Zaznacz wszystkie widoczne",
     "statusLabel": "Zmień status zaznaczonych",
     "statusPlaceholder": "Oznacz jako…",
-    "confirmDelete": "Usunąć zaznaczone pozycje ({n})? Tego nie można cofnąć.",
-    "shareActiveOnly": "Do linku trafią tylko aktualne: {n}."
+    "shareActiveOnly": "Do linku trafią tylko aktualne: {n}.",
+    "confirmTitle": "Usunąć wybrane pozycje ({n})?",
+    "confirmBody": "Znikną też ze wszystkich linków, w których były. Tego nie można cofnąć.",
+    "exit": "Wyjdź z trybu zaznaczania",
+    "activeAmong": "W tym aktualnych: {n}"
   },
   "guest": {
     "goneTitle": "Link niedostępny",
-    "goneBody": "Mógł zostać unieważniony albo wygasł. Poproś o nowy osobę, która go wysłała.",
+    "goneBody": "Sprawdź adres albo poproś o nowy tego, kto udostępniał.",
     "ownerBanner": "To twój link. Rezerwacje są ukryte celowo — żeby prezent został niespodzianką.",
-    "hint": "Zaznacz, co bierzesz — inni zobaczą, że to zajęte. Właściciel listy tego nie widzi.",
     "take": "Biorę to",
-    "yours": "Bierzesz",
+    "yours": "Bierzesz to",
     "cancel": "Rezygnuję",
     "reserved": "Już zajęte",
-    "taken": "Tę pozycję ktoś właśnie wziął.",
     "error": "Nie udało się. Spróbuj jeszcze raz.",
     "emptyTitle": "Na razie pusto",
     "emptyBody": "Wszystkie pozycje z tego linku są już niedostępne.",
-    "footer": "Lista jest prywatna. Widzisz tylko to, czym się z tobą podzielono."
+    "footer": "Lista jest prywatna. Widzisz tylko to, czym się z tobą podzielono.",
+    "yoursPartial": "Bierzesz {n} · zostało {left}",
+    "takeSome": "Wezmę {n} z {of}",
+    "takeMore": "Wziąć jeszcze",
+    "taking": "Biorę…",
+    "needed": "potrzeba {n}",
+    "allTaken": "Wszystko już biorą",
+    "raceLost": "Tę pozycję właśnie wzięto — twojej rezerwacji tu nie ma. Reszta pozycji jest wolna.",
+    "less": "Mniej",
+    "more": "Więcej",
+    "appearance": "Wygląd"
   },
   "pwa": {
     "updateReady": "Jest nowa wersja Wishlist.",
@@ -345,6 +420,17 @@
     "installHint": "Zainstaluj Wishlist na ekranie głównym — będzie się otwierać jak osobna aplikacja, bez paska przeglądarki.",
     "installButton": "Zainstaluj",
     "installIos": "Na iPhonie lub iPadzie otwórz stronę w Safari, stuknij „Udostępnij”, a potem „Do ekranu początkowego”.",
-    "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”."
+    "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”.",
+    "qrShow": "Pokaż kod QR",
+    "qrHint": "Wygodniej zainstalować na telefonie — zeskanuj adres."
+  },
+  "banners": {
+    "more": "Więcej powiadomień: {n}",
+    "less": "Zwiń"
+  },
+  "undo": {
+    "itemDeleted": "Pozycję usunięto",
+    "action": "Cofnij",
+    "offline": "Zapisze się później — teraz nie ma połączenia"
   }
 }

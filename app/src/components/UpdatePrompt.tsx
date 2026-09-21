@@ -31,10 +31,10 @@ export function UpdatePrompt() {
     <div className="update-banner" role="status">
       <span>{t('pwa.updateReady')}</span>
       <div className="update-banner__actions">
-        <button type="button" className="btn btn--quiet" onClick={() => setNeedRefresh(false)}>
+        <button type="button" className="btn btn--secondary" onClick={() => setNeedRefresh(false)}>
           {t('pwa.later')}
         </button>
-        <button type="button" className="btn" onClick={() => void updateServiceWorker(true)}>
+        <button type="button" className="btn btn--primary" onClick={() => void updateServiceWorker(true)}>
           {t('pwa.update')}
         </button>
       </div>

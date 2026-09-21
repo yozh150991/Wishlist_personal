@@ -97,3 +97,44 @@ export async function createShare(page: Page, pick: string[], title: string): Pr
   expect(link).toMatch(/\/s\/[A-Za-z0-9_-]{22}$/);
   return link;
 }
+
+/**
+ * Лічильник режиму вибору. Живе в шапці екрана, а не в панелі дій унизу,
+ * тому шукається на рівні сторінки: прив'язка до панелі ламалась би від
+ * кожного перенесення лічильника між блоками, хоч число на екрані є.
+ */
+export function selectedCount(page: Page, n: number): Locator {
+  return page.getByText(new RegExp(`^(вибрано|zaznaczono|selected): ${n}$`, 'i'));
+}
+
+/**
+ * Відкриває фільтри, якщо на цій ширині вони сховані в нижній лист.
+ * На широкому екрані панель уже розгорнута, а кнопки «Фільтри» там немає —
+ * тоді нічого робити не треба. Так один і той самий сценарій проходить
+ * і в десктопній, і в телефонній розкладці.
+ */
+export async function openFilters(page: Page) {
+  // Пошук стоїть поруч із кнопкою й на екрані завжди: поки його немає,
+  // сторінка ще не готова, і питання «чи видно кнопку Фільтри» отримало б
+  // відповідь «ні» просто тому, що її ще не намалювали.
+  await expect(page.getByRole('searchbox')).toBeVisible();
+  const toggle = page.getByRole('button', { name: /фільтри|filtry|filters/i });
+  if (!(await toggle.isVisible())) return;
+  await toggle.click();
+  await expect(openDialog(page)).toBeVisible();
+}
+
+/**
+ * Виходить з акаунта. На телефоні кнопки виходу в нижній смузі немає — там
+ * лише три розділи, а акаунт живе в Налаштуваннях; на десктопі вона поруч
+ * із поштою в бічній колонці. Перехід саме посиланням, а не `goto`: тест
+ * може бути офлайн, і перезавантаження сторінки йому нізвідки взяти.
+ */
+export async function signOut(page: Page) {
+  const button = page.getByRole('button', { name: /^вийти$|^wyloguj$|^sign out$/i });
+  if (!(await button.isVisible())) {
+    await page.getByRole('link', { name: /^налаштування$|^ustawienia$|^settings$/i }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  }
+  await button.click();
+}

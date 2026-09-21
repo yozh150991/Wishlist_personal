@@ -7,13 +7,12 @@
     "lists": "Lists",
     "shares": "Links",
     "settings": "Settings",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "signedInAs": "Signed in as",
+    "label": "Sections",
+    "sharesLong": "My links"
   },
   "auth": {
-    "aside": {
-      "headline": "Your list stays yours.",
-      "body": "Add anything you like. Family sees only the items you pick and send."
-    },
     "email": "Email",
     "password": "Password",
     "passwordAgain": "Password again",
@@ -23,37 +22,43 @@
       "submit": "Sign in",
       "toRegister": "No account yet?",
       "toRegisterCta": "Create one",
-      "forgot": "Forgot password"
+      "forgot": "Forgot password",
+      "submitting": "Signing in…"
     },
     "register": {
       "title": "Create account",
       "submit": "Create account",
       "toLogin": "Already have an account?",
       "toLoginCta": "Sign in",
-      "checkEmail": "We sent a confirmation email to {email}. Open the link to finish signing up."
+      "checkEmail": "We sent a confirmation email to {email}. Open the link to finish signing up.",
+      "submitting": "Creating account…"
     },
     "reset": {
       "title": "Reset password",
       "body": "We'll send a link for setting a new password.",
       "submit": "Send link",
       "sent": "If an account for {email} exists, the link is in the inbox.",
-      "back": "Back to sign in"
+      "back": "Back to sign in",
+      "submitting": "Sending…"
     },
     "update": {
       "title": "New password",
       "submit": "Save password",
       "done": "Password changed.",
-      "expired": "This link expired or was already used. Request a new one."
+      "expired": "This link expired or was already used. Request a new one.",
+      "submitting": "Saving…"
+    },
+    "hero": {
+      "title": "Your list stays yours",
+      "body": "You decide who sees what. A guest only sees the items you pick."
     }
   },
   "lists": {
     "title": "Lists",
     "emptyTitle": "Nothing here yet",
-    "emptyBody": "Create your first list — say, \"Birthday\" or \"For the flat\".",
+    "emptyBody": "Create your first list — a birthday, say. It stays private until you share individual items yourself.",
     "create": "Create list",
-    "soon": "Lists arrive in the next step.",
     "edit": "Edit list",
-    "confirmDelete": "Delete the list “{title}” with all its items?",
     "fields": {
       "title": "Title",
       "description": "Description",
@@ -63,7 +68,15 @@
     },
     "errors": {
       "titleRequired": "Enter a list title."
-    }
+    },
+    "loading": "Loading lists",
+    "errorTitle": "Lists did not load",
+    "itemCount": "items: {n}",
+    "deleteLabel": "Delete list {title}",
+    "confirmTitle": "Delete the list and all items ({n})?",
+    "confirmBody": "The links you shared will stop working along with the list. This cannot be undone.",
+    "confirmCta": "Delete list",
+    "deleting": "Deleting…"
   },
   "settings": {
     "title": "Settings",
@@ -73,7 +86,16 @@
     "themeSystem": "Match system",
     "language": "Language",
     "account": "Account",
-    "signedInAs": "Signed in as {email}"
+    "signedInAs": "Signed in as {email}",
+    "colors": "Colors",
+    "scheme": {
+      "sage": "Sage",
+      "slyva": "Plum",
+      "vuhil": "Charcoal"
+    },
+    "schemeHint": "Charcoal is the high-contrast scheme.",
+    "contrastSuggestion": "Your system asks for higher contrast. Switch to",
+    "contrastShort": "Higher contrast"
   },
   "errors": {
     "invalidCredentials": "That email and password don't match.",
@@ -92,11 +114,16 @@
   "common": {
     "loading": "Loading",
     "notFound": "No such page",
-    "backHome": "Go home",
+    "backHome": "To lists",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
-    "close": "Close"
+    "close": "Close",
+    "retry": "Try again",
+    "keep": "Keep",
+    "saving": "Saving…",
+    "notFoundBody": "The address may be out of date, or have a typo in it.",
+    "done": "Done"
   },
   "item": {
     "add": "Add item",
@@ -105,8 +132,7 @@
     "loadMore": "Show more",
     "end": "That's every item",
     "emptyTitle": "No items yet",
-    "emptyBody": "Paste a product link or type a name. Link and price are both optional.",
-    "confirmDelete": "Delete “{title}”?",
+    "emptyBody": "Paste a product link — we will pull the name and price ourselves.",
     "fields": {
       "url": "Link",
       "urlHint": "Auto-fill arrives in the next step",
@@ -149,7 +175,9 @@
     "actions": {
       "edit": "Edit",
       "delete": "Delete",
-      "statusLabel": "Status of “{title}”"
+      "statusLabel": "Status of “{title}”",
+      "editLabel": "Edit “{title}”",
+      "deleteLabel": "Delete “{title}”"
     },
     "errors": {
       "titleRequired": "Enter an item title.",
@@ -161,7 +189,24 @@
       "variantsLong": "Label up to 40 characters, value up to 80.",
       "variantsMany": "Five details at most."
     },
-    "priorityLabel": "Priority: {value}"
+    "priorityLabel": "Priority: {value}",
+    "loading": "Loading items",
+    "errorTitle": "Items did not load",
+    "errorBody": "The list itself is fine — only its contents could not be fetched.",
+    "countAll": "items: {n}",
+    "counter": "Showing {n} of {m}",
+    "noResultsTitle": "Nothing found",
+    "noResultsBody": "The items are still there — filters are hiding them. Drop one or clear them all.",
+    "resetFilters": "Clear all filters",
+    "chip": {
+      "search": "Search: “{q}”",
+      "price": "Price {from}–{to}",
+      "status": "Status: {list}",
+      "clearSearch": "Clear search filter",
+      "clearPrice": "Clear price filter",
+      "clearStatus": "Clear status filter"
+    },
+    "listLabel": "List items"
   },
   "toolbar": {
     "search": "Search by title",
@@ -177,7 +222,12 @@
       "title": "By title",
       "price": "By price",
       "priority": "By priority"
-    }
+    },
+    "status": "Status",
+    "filters": "Filters",
+    "reset": "Clear filters",
+    "resetAll": "Clear all",
+    "done": "Done"
   },
   "totals": {
     "active": "across {n} active items",
@@ -186,10 +236,11 @@
   },
   "summary": {
     "region": "Event summary",
-    "banner": "The event was on {date} — mark what has already been gifted?",
     "start": "Wrap up",
     "later": "Later",
-    "done": "Event is over · {gifted} of {n} gifted"
+    "done": "Event is over · {gifted} of {n} gifted",
+    "was": "The event was on {date}",
+    "ask": "Mark what has been gifted?"
   },
   "transfer": {
     "export": {
@@ -199,7 +250,9 @@
       "csv": "CSV for a spreadsheet",
       "csvHint": "Opens in Excel, Numbers and Google Sheets.",
       "json": "JSON for moving the list",
-      "jsonHint": "Also keeps the list name, currency and event date."
+      "jsonHint": "Also keeps the list name, currency and event date.",
+      "working": "Exporting… {done} of {total}",
+      "workingPlain": "Exporting…"
     },
     "import": {
       "open": "Import",
@@ -215,8 +268,9 @@
       "issues": "Notes: {errors} errors, {warnings} warnings",
       "rowLabel": "Row {row}:",
       "fileLabel": "File:",
-      "submit": "Create list",
-      "tooBig": "The file is larger than {max} MB."
+      "submit": "Import items ({n})",
+      "tooBig": "The file is larger than {max} MB.",
+      "importing": "Importing…"
     },
     "issues": {
       "titleRequired": "no title, row skipped.",
@@ -243,14 +297,18 @@
     }
   },
   "offline": {
-    "stale": "No connection. Showing a saved copy from {when} — changes will not be saved right now."
+    "stale": "No connection. Showing a saved copy from {when} — changes will not be saved right now.",
+    "title": "No connection",
+    "savedAt": "Showing a saved copy from {when} — changes will not be saved right now."
   },
   "outbox": {
     "pending": "Changes waiting for the network: {n}. They will be saved as soon as the connection is back.",
     "retry": "Try now",
     "sending": "Sending…",
     "dropped": "The server rejected {n} change(s). Check the list — you will have to make them again.",
-    "confirmSignOut": "{n} change(s) are waiting for the network. Signing out will discard them. Sign out anyway?"
+    "confirmSignOut": "{n} change(s) are waiting for the network. Signing out will discard them. Sign out anyway?",
+    "pendingTitle": "Changes waiting for the network: {n}",
+    "pendingBody": "They will be saved as soon as the connection is back."
   },
   "parser": {
     "fill": "Fill in",
@@ -279,7 +337,7 @@
     "create": "Create link",
     "selectItem": "Select “{title}”",
     "intro": "{n} items will go into this link. The rest of the list stays hidden.",
-    "ready": "Link is ready. Send it to whoever you like.",
+    "ready": "Link is ready",
     "link": "Link",
     "linkHint": "Anyone with this link sees the selected items. No sign-up needed.",
     "copy": "Copy",
@@ -289,9 +347,7 @@
     "views": "views: {n}",
     "until": "valid until {date}",
     "emptyTitle": "No links yet",
-    "emptyBody": "Open a list, hit “Share”, tick the items you want.",
-    "confirmRevoke": "Revoke the link “{title}”? It will stop opening.",
-    "confirmDelete": "Delete the link “{title}” along with its stats?",
+    "emptyBody": "Open a list, pick the items and press “Create link”. A guest sees only those.",
     "state": {
       "revoked": "Revoked",
       "expired": "Expired"
@@ -309,7 +365,15 @@
     "errors": {
       "titleRequired": "Enter a heading.",
       "nothingSelected": "Pick at least one item first."
-    }
+    },
+    "loading": "Loading links",
+    "errorTitle": "Links did not load",
+    "confirmRevokeTitle": "Revoke the link “{title}”?",
+    "confirmRevokeBody": "It stops opening for everyone you sent it to. The stats stay.",
+    "confirmDeleteTitle": "Delete the link “{title}”?",
+    "confirmDeleteBody": "The view stats go with it. This cannot be undone.",
+    "creating": "Creating…",
+    "copyLink": "Copy link"
   },
   "select": {
     "start": "Select",
@@ -318,23 +382,34 @@
     "selectAll": "Select all shown",
     "statusLabel": "Change status of selected",
     "statusPlaceholder": "Mark as…",
-    "confirmDelete": "Delete the selected items ({n})? This can’t be undone.",
-    "shareActiveOnly": "Only active items go into the link: {n}."
+    "shareActiveOnly": "Only active items go into the link: {n}.",
+    "confirmTitle": "Delete the selected items ({n})?",
+    "confirmBody": "They also disappear from every link they were in. This cannot be undone.",
+    "exit": "Leave selection mode",
+    "activeAmong": "Active among them: {n}"
   },
   "guest": {
     "goneTitle": "This link isn't available",
-    "goneBody": "It may have been revoked or expired. Ask whoever sent it for a new one.",
+    "goneBody": "Check the address or ask whoever shared it for a new one.",
     "ownerBanner": "This is your own link. Reservations are hidden on purpose — so the gift stays a surprise.",
-    "hint": "Mark what you're taking and others will see it's spoken for. The list owner can't see this.",
     "take": "I'll take this",
-    "yours": "You're taking this",
+    "yours": "You are taking this",
     "cancel": "Changed my mind",
     "reserved": "Already taken",
-    "taken": "Someone just took that one.",
     "error": "That didn't work. Try again.",
     "emptyTitle": "Nothing here yet",
     "emptyBody": "Every item from this link is already unavailable.",
-    "footer": "This list is private. You only see what was shared with you."
+    "footer": "This list is private. You only see what was shared with you.",
+    "yoursPartial": "You are taking {n} · {left} left",
+    "takeSome": "Take {n} of {of}",
+    "takeMore": "Take one more",
+    "taking": "Taking…",
+    "needed": "{n} needed",
+    "allTaken": "All of them are taken",
+    "raceLost": "Someone took this a moment ago — your reservation is not here. The other items are free.",
+    "less": "Fewer",
+    "more": "More",
+    "appearance": "Appearance"
   },
   "pwa": {
     "updateReady": "A new version of Wishlist is available.",
@@ -345,6 +420,17 @@
     "installHint": "Install Wishlist on your home screen — it will open as a separate app, without the browser bar.",
     "installButton": "Install",
     "installIos": "On iPhone or iPad, open the site in Safari, tap “Share”, then “Add to Home Screen”.",
-    "installManual": "Open the browser menu and choose “Install app” or “Add to Home screen”."
+    "installManual": "Open the browser menu and choose “Install app” or “Add to Home screen”.",
+    "qrShow": "Show QR code",
+    "qrHint": "It is handier on a phone — scan the address."
+  },
+  "banners": {
+    "more": "More messages: {n}",
+    "less": "Collapse"
+  },
+  "undo": {
+    "itemDeleted": "Item deleted",
+    "action": "Undo",
+    "offline": "It will be saved later — there is no connection right now"
   }
 }

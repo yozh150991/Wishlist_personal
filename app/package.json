@@ -10,14 +10,18 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "check:pwa": "node scripts/check-pwa.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test:e2e": "playwright test",
     "gen:types": "supabase gen types typescript --linked > src/types/database.ts"
   },
   "dependencies": {
-    "@fontsource-variable/commissioner": "^5.0.0",
-    "@fontsource-variable/source-serif-4": "^5.0.0",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@fontsource-variable/rubik": "^5.3.0",
     "@supabase/supabase-js": "^2.50.0",
+    "lucide-react": "^1.47.0",
+    "qrcode-generator": "^2.0.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0"

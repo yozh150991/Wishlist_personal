@@ -1,0 +1,2211 @@
+From b71d4e6e32000977692d613cfbbb57139174a357 Mon Sep 17 00:00:00 2001
+From: Ihor <dragonelf1509@gmail.com>
+Date: Mon, 21 Sep 2026 11:43:48 +0200
+Subject: [PATCH] =?UTF-8?q?=D1=80=D0=B5=D0=B4=D0=B8=D0=B7=D0=B0=D0=B9?=
+ =?UTF-8?q?=D0=BD:=20=D1=82=D0=BE=D0=BA=D0=B5=D0=BD-=D1=88=D0=B0=D1=80=20?=
+ =?UTF-8?q?=D1=88=D0=B5=D1=81=D1=82=D0=B8=20=D0=BF=D0=B0=D0=BB=D1=96=D1=82?=
+ =?UTF-8?q?=D1=80=20=D1=96=20=D0=B0=D1=83=D0=B4=D0=B8=D1=82=20=D0=BA=D0=BE?=
+ =?UTF-8?q?=D0=BD=D1=82=D1=80=D0=B0=D1=81=D1=82=D1=83=20=D1=8F=D0=BA=20?=
+ =?UTF-8?q?=D1=82=D0=B5=D1=81=D1=82?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Фундамент редизайну (ADR-031). Екрани поки не переверстані — вони йдуть
+наступними комітами в цій же гілці.
+
+- styles/tokens.css: три схеми × дві теми, по 45 змінних у кожному наборі.
+  Кроки рамп, яких не було в макетах, добудовані інтерполяцією в Oklab.
+- scripts/check-contrast.mjs: 22 пари × 6 палітр = 132 перевірки; падає також
+  на літеральному кольорі будь-де в src/, крім tokens.css. У CI перед збіркою.
+- styles.css повністю на --color-*: ритм, радіуси, тіні, типографіка,
+  базові компоненти. Старий словник (--paper, --ink, --muted) прибрано.
+- Шрифти: Rubik + Manrope замість Commissioner + Source Serif. Figtree з
+  пакета дизайну відхилено — у ньому немає кирилиці (ADR-031 §6).
+- profiles.scheme: схема власника переїжджає між пристроями; гість тримає
+  свій вибір у localStorage і на сервер його не шле.
+- index.html ставить data-scheme разом із data-theme; новий CSP-хеш.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0114zxjRPZzEQLmtHVCwZTe6
+---
+ .github/workflows/ci.yml                      |    3 +
+ app/index.html                                |   26 +-
+ app/package-lock.json                         |   16 +-
+ app/package.json                              |    5 +-
+ app/scripts/check-contrast.mjs                |  211 +++
+ app/src/lib/theme.tsx                         |  131 +-
+ app/src/main.tsx                              |    7 +-
+ app/src/styles.css                            | 1204 +++++------------
+ app/src/styles/tokens.css                     |  219 +++
+ app/vercel.json                               |    2 +-
+ app/vite.config.ts                            |    5 +-
+ docs/DECISIONS.md                             |   32 +
+ .../20260921140000_profile_scheme.sql         |   26 +
+ 13 files changed, 999 insertions(+), 888 deletions(-)
+ create mode 100644 app/scripts/check-contrast.mjs
+ create mode 100644 app/src/styles/tokens.css
+ create mode 100644 supabase/migrations/20260921140000_profile_scheme.sql
+
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index fcda2d0..5aa6197 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -47,6 +47,9 @@ jobs:
+ 
+       - run: npm ci
+       - run: npm run typecheck
++      # Аудит палітр: 22 пари × 6 палітр. Не потребує збірки, тому йде раніше —
++      # зламаний контраст видно за секунди, а не після build (ADR-031).
++      - run: npm run check:contrast
+       - run: npx vite build
+       # Маніфест, іконки й виключення гостьових сторінок із кешу Service Worker.
+       - run: npm run check:pwa
+diff --git a/app/index.html b/app/index.html
+index 24ed120..7b0ea36 100644
+--- a/app/index.html
++++ b/app/index.html
+@@ -12,18 +12,28 @@
+     />
+     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+-    <!-- Колір системних панелей; ThemeProvider оновлює його, коли тема обрана вручну. -->
+-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+-    <meta name="theme-color" content="#161b1a" media="(prefers-color-scheme: dark)" />
++    <!-- Запасний колір системних панелей на час до першого рендера; далі його
++         ставить ThemeProvider із живого --color-bg активної палітри, щоб
++         значення кольору лишалося рівно в одному файлі (styles/tokens.css). -->
++    <meta name="theme-color" content="#f5ead8" media="(prefers-color-scheme: light)" />
++    <meta name="theme-color" content="#221f1b" media="(prefers-color-scheme: dark)" />
+     <title>Wishlist</title>
+     <script>
+-      // Тема застосовується до першого рендера, щоб не було спалаху світлого фону.
++      // Схема й тема застосовуються до першого рендера, щоб не блимав чужий фон.
++      // Обидва атрибути ставляться завжди: токени лежать під
++      // [data-scheme][data-theme], і без пари селектор не влучить.
+       try {
++        var d = document.documentElement.dataset;
+         var t = localStorage.getItem('wl.theme') || 'system';
+-        var dark = t === 'dark' || (t === 'system' &&
+-          matchMedia('(prefers-color-scheme: dark)').matches);
+-        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+-      } catch (_) {}
++        var dark = t === 'dark' ||
++          (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
++        d.theme = dark ? 'dark' : 'light';
++        var s = localStorage.getItem('wl.scheme');
++        d.scheme = s === 'slyva' || s === 'vuhil' ? s : 'sage';
++      } catch (_) {
++        document.documentElement.dataset.theme = 'light';
++        document.documentElement.dataset.scheme = 'sage';
++      }
+     </script>
+   </head>
+   <body>
+diff --git a/app/package-lock.json b/app/package-lock.json
+index 3298665..3d51e83 100644
+--- a/app/package-lock.json
++++ b/app/package-lock.json
+@@ -8,8 +8,8 @@
+       "name": "wishlist-personal-app",
+       "version": "0.2.0",
+       "dependencies": {
+-        "@fontsource-variable/commissioner": "^5.0.0",
+-        "@fontsource-variable/source-serif-4": "^5.0.0",
++        "@fontsource-variable/manrope": "^5.3.0",
++        "@fontsource-variable/rubik": "^5.3.0",
+         "@supabase/supabase-js": "^2.50.0",
+         "react": "^18.3.1",
+         "react-dom": "^18.3.1",
+@@ -2060,19 +2060,19 @@
+         "node": ">=18"
+       }
+     },
+-    "node_modules/@fontsource-variable/commissioner": {
++    "node_modules/@fontsource-variable/manrope": {
+       "version": "5.3.0",
+-      "resolved": "https://registry.npmjs.org/@fontsource-variable/commissioner/-/commissioner-5.3.0.tgz",
+-      "integrity": "sha512-0IEvi8SO1slc5Pc9tA4OtA01I8UiCcEq/uh12oNjfHuABU9Lnz61l2V8o2cMPUUo3BAo5MbISVK2I/DSpBRw7Q==",
++      "resolved": "https://registry.npmjs.org/@fontsource-variable/manrope/-/manrope-5.3.0.tgz",
++      "integrity": "sha512-6D5dgokHsWDDMtmXHznKa0hK229NN+1a4BLPmUCLqcO1Pw5EEhWY5RFt0AcXnVRAljFFPfRtLkJePQj6LSsV6g==",
+       "license": "OFL-1.1",
+       "funding": {
+         "url": "https://github.com/sponsors/ayuhito"
+       }
+     },
+-    "node_modules/@fontsource-variable/source-serif-4": {
++    "node_modules/@fontsource-variable/rubik": {
+       "version": "5.3.0",
+-      "resolved": "https://registry.npmjs.org/@fontsource-variable/source-serif-4/-/source-serif-4-5.3.0.tgz",
+-      "integrity": "sha512-9vch9WqxjaaA+1o9Ur8pOgIGbCYLjRReOUel23A6lOpD1syptgjtkORevvNmldJ5kGXQL29onQUqI5Ltz0s3bQ==",
++      "resolved": "https://registry.npmjs.org/@fontsource-variable/rubik/-/rubik-5.3.0.tgz",
++      "integrity": "sha512-yQUf8qle24MJYA+EuauyF+cqjjN6I715nGjitt3sGmwZA0XfA4fWJcLq1C/diREZl4Qzn1E80nLMc0ipC/a4Lg==",
+       "license": "OFL-1.1",
+       "funding": {
+         "url": "https://github.com/sponsors/ayuhito"
+diff --git a/app/package.json b/app/package.json
+index b4ab610..e87f2b4 100644
+--- a/app/package.json
++++ b/app/package.json
+@@ -10,13 +10,14 @@
+     "build": "tsc --noEmit && vite build",
+     "preview": "vite preview",
+     "check:pwa": "node scripts/check-pwa.mjs",
++    "check:contrast": "node scripts/check-contrast.mjs",
+     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
+     "test:e2e": "playwright test",
+     "gen:types": "supabase gen types typescript --linked > src/types/database.ts"
+   },
+   "dependencies": {
+-    "@fontsource-variable/commissioner": "^5.0.0",
+-    "@fontsource-variable/source-serif-4": "^5.0.0",
++    "@fontsource-variable/manrope": "^5.3.0",
++    "@fontsource-variable/rubik": "^5.3.0",
+     "@supabase/supabase-js": "^2.50.0",
+     "react": "^18.3.1",
+     "react-dom": "^18.3.1",
+diff --git a/app/scripts/check-contrast.mjs b/app/scripts/check-contrast.mjs
+new file mode 100644
+index 0000000..4b252e6
+--- /dev/null
++++ b/app/scripts/check-contrast.mjs
+@@ -0,0 +1,211 @@
++/**
++ * Аудит палітр: контраст кожної пари «фарба на фарбі», яка реально трапляється
++ * в інтерфейсі, у кожній із шести палітр (три схеми × дві теми).
++ *
++ * Числа рахуються з `src/styles/tokens.css`, а не вписані сюди руками: інакше
++ * таблиця почала б розходитися з тим, що бачить користувач, і мовчки.
++ *
++ * Пороги WCAG AA: 4,5:1 для тексту, 3:1 для нетекстових індикаторів —
++ * смужки пріоритету й кільце фокуса.
++ *
++ * Додаєш палітру — вона автоматично потрапляє в прогін. Додаєш пару кольорів
++ * у компонентах — додай її і сюди, інакше вона лишиться неперевіреною.
++ *
++ * Запуск: npm run check:contrast   (у CI — разом із typecheck і збіркою)
++ */
++import { readFileSync, readdirSync } from 'node:fs';
++import { fileURLToPath } from 'node:url';
++import { dirname, join, relative } from 'node:path';
++
++const here = dirname(fileURLToPath(import.meta.url));
++const SRC = join(here, '..', 'src');
++const TOKENS = join(SRC, 'styles', 'tokens.css');
++
++/** Схеми й теми, які мусять існувати. Порядок — порядок колонок у таблиці. */
++const PALETTES = [
++  { scheme: 'sage', theme: 'light', short: 'Шавлія св.' },
++  { scheme: 'sage', theme: 'dark', short: 'Шавлія тм.' },
++  { scheme: 'slyva', theme: 'light', short: 'Слива св.' },
++  { scheme: 'slyva', theme: 'dark', short: 'Слива тм.' },
++  { scheme: 'vuhil', theme: 'light', short: 'Вугіль св.' },
++  { scheme: 'vuhil', theme: 'dark', short: 'Вугіль тм.' },
++];
++
++/**
++ * Обов'язковий склад палітри. Пропущений токен не ламає сторінку, а тихо падає
++ * на значення з :root — саме так темні схеми колись отримали світлі значки.
++ */
++const REQUIRED = [
++  '--color-bg', '--color-surface', '--color-text', '--color-divider',
++  ...Array.from({ length: 9 }, (_, i) => `--color-neutral-${i + 1}00`),
++  '--color-accent',
++  ...Array.from({ length: 9 }, (_, i) => `--color-accent-${i + 1}00`),
++  '--color-accent-2',
++  ...Array.from({ length: 9 }, (_, i) => `--color-accent-2-${i + 1}00`),
++  '--color-danger', '--color-danger-bg', '--color-danger-ink', '--color-danger-line',
++  '--color-guest-bg', '--color-guest-header', '--color-guest-card',
++  '--color-primary-fill', '--color-primary-ink', '--color-ghost-ink',
++  '--color-prio-high', '--color-prio-low',
++];
++
++/** [підпис, чорнило, тло, поріг] — те, що справді накладається одне на одне. */
++const PAIRS = [
++  ['Текст на фоні', '--color-text', '--color-bg', 4.5],
++  ['Текст на поверхні', '--color-text', '--color-surface', 4.5],
++  ['Приглушений текст на фоні', '--color-neutral-700', '--color-bg', 4.5],
++  ['Приглушений текст на поверхні', '--color-neutral-700', '--color-surface', 4.5],
++  ['Підпис головної кнопки', '--color-primary-ink', '--color-primary-fill', 4.5],
++  ['Кнопка-привид на фоні', '--color-ghost-ink', '--color-bg', 4.5],
++  ['Кнопка-привид на поверхні', '--color-ghost-ink', '--color-surface', 4.5],
++  ['Активний пункт навігації', '--color-accent-800', '--color-accent-200', 4.5],
++  ['Значок «Високий»', '--color-accent-800', '--color-accent-100', 4.5],
++  ['Значок «Низький»', '--color-accent-2-800', '--color-accent-2-100', 4.5],
++  ['Значок нейтральний', '--color-neutral-800', '--color-neutral-100', 4.5],
++  ['Банер небезпеки', '--color-danger-ink', '--color-danger-bg', 4.5],
++  ['«Видалити» на поверхні', '--color-danger', '--color-surface', 4.5],
++  ['Шапка режиму вибору', '--color-bg', '--color-accent-800', 4.5],
++  ['Гостьовий заголовок', '--color-accent-900', '--color-guest-header', 4.5],
++  ['Текст на гостьовій картці', '--color-text', '--color-guest-card', 4.5],
++  ['Приглушений на гостьовій картці', '--color-neutral-700', '--color-guest-card', 4.5],
++  ['Текст на гостьовому фоні', '--color-text', '--color-guest-bg', 4.5],
++  ['Смужка «Високий»', '--color-prio-high', '--color-surface', 3],
++  ['Смужка «Низький»', '--color-prio-low', '--color-surface', 3],
++  ['Кільце фокуса', '--color-accent-700', '--color-bg', 3],
++  ['Кільце фокуса на поверхні', '--color-accent-700', '--color-surface', 3],
++];
++
++/** Читає блок токенів за селектором. Повертає Map або null, якщо блоку немає. */
++function readBlock(css, selector) {
++  const at = css.indexOf(selector + ' {');
++  if (at === -1) return null;
++  const open = css.indexOf('{', at);
++  const close = css.indexOf('}', open);
++  const out = new Map();
++  for (const [, name, value] of css
++    .slice(open + 1, close)
++    .matchAll(/(--color-[a-z0-9-]+)\s*:\s*([^;]+)/g)) {
++    out.set(name, value.trim());
++  }
++  return out;
++}
++
++const srgb = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
++
++function luminance(hex) {
++  const [r, g, b] = [1, 3, 5].map((i) => srgb(parseInt(hex.slice(i, i + 2), 16) / 255));
++  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
++}
++
++function ratio(a, b) {
++  const [x, y] = [luminance(a), luminance(b)];
++  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
++}
++
++const num = (v) => v.toFixed(2).replace('.', ',');
++
++/**
++ * Жодного літерального кольору поза tokens.css.
++ *
++ * Захардкоджений hex виглядає правильно рівно в одній палітрі, а в решті п'яти
++ * тихо ламається — і помічають це не одразу. Тому перевірка механічна.
++ */
++function findHardcodedColors(dir, found = []) {
++  for (const entry of readdirSync(dir, { withFileTypes: true })) {
++    const full = join(dir, entry.name);
++    if (entry.isDirectory()) {
++      findHardcodedColors(full, found);
++      continue;
++    }
++    if (full === TOKENS) continue;
++    if (!/\.(css|ts|tsx)$/.test(entry.name)) continue;
++    const text = readFileSync(full, 'utf8');
++    text.split('\n').forEach((line, i) => {
++      for (const [hex] of line.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
++        // Кольори бувають лише в CSS-значеннях і в рядках; решта — якірні
++        // посилання, коментарі з ідентифікаторами тощо. Відсікаємо грубо:
++        // справжній колір — це 3, 6 або 8 шістнадцяткових цифр.
++        if (![4, 7, 9].includes(hex.length)) continue;
++        found.push(`${relative(SRC, full)}:${i + 1} — ${hex}`);
++      }
++    });
++  }
++  return found;
++}
++
++function main() {
++  const css = readFileSync(TOKENS, 'utf8');
++  const problems = findHardcodedColors(SRC).map(
++    (place) => `літеральний колір поза tokens.css: ${place}`,
++  );
++
++  // 1. Склад кожної палітри — повний.
++  const sets = PALETTES.map((p) => {
++    const selector = `[data-scheme='${p.scheme}'][data-theme='${p.theme}']`;
++    const block = readBlock(css, selector);
++    if (!block) {
++      problems.push(`немає блоку ${selector} — палітра «${p.short}» не оголошена`);
++      return { ...p, tokens: new Map() };
++    }
++    for (const token of REQUIRED) {
++      if (!block.has(token)) problems.push(`${p.short}: не оголошено ${token}`);
++    }
++    return { ...p, tokens: block };
++  });
++
++  // 2. Контраст кожної пари в кожній палітрі.
++  const worst = new Map();
++  let tight = null;
++  const rows = PAIRS.map(([label, fg, bg, min]) => {
++    const cells = sets.map((set) => {
++      const ink = set.tokens.get(fg);
++      const back = set.tokens.get(bg);
++      if (!ink || !back || !ink.startsWith('#') || !back.startsWith('#')) return '—';
++      const r = ratio(ink, back);
++      if (!worst.has(set.short) || r < worst.get(set.short)) worst.set(set.short, r);
++      if (!tight || r - min < tight.margin) tight = { margin: r - min, r, min, label, short: set.short };
++      if (r < min) {
++        problems.push(
++          `${set.short}: ${label} — ${num(r)}:1 проти порога ${num(min)} (${fg} на ${bg})`,
++        );
++        return num(r) + ' ✗';
++      }
++      return num(r);
++    });
++    return { label, min, cells };
++  });
++
++  // 3. Таблиця — той самий вигляд, що в макеті аудиту.
++  const head = ['Пара'.padEnd(34), 'Поріг'.padStart(6), ...sets.map((s) => s.short.padStart(11))];
++  console.log(head.join(' '));
++  console.log('─'.repeat(head.join(' ').length));
++  for (const row of rows) {
++    console.log(
++      [
++        row.label.padEnd(34),
++        num(row.min).padStart(6),
++        ...row.cells.map((c) => c.padStart(11)),
++      ].join(' '),
++    );
++  }
++  console.log('─'.repeat(head.join(' ').length));
++  console.log(
++    ['мінімум у палітрі'.padEnd(34), ''.padStart(6),
++      ...sets.map((s) => (worst.has(s.short) ? num(worst.get(s.short)) : '—').padStart(11))].join(' '),
++  );
++
++  const total = PAIRS.length * PALETTES.length;
++  if (problems.length) {
++    console.error(`\n✗ Аудит палітр не пройдено. Проблем: ${problems.length}`);
++    for (const p of problems) console.error('  · ' + p);
++    process.exit(1);
++  }
++  console.log(
++    `\n✓ Пар: ${PAIRS.length}, палітр: ${PALETTES.length}, перевірок: ${total} — усі проходять.`,
++  );
++  console.log(
++    `  Найтісніше місце — ${tight.label.toLowerCase()} у палітрі «${tight.short}»: ` +
++      `${num(tight.r)}:1 проти порога ${num(tight.min)}, запас +${num(tight.margin)}.`,
++  );
++}
++
++main();
+diff --git a/app/src/lib/theme.tsx b/app/src/lib/theme.tsx
+index be3f24c..fcae723 100644
+--- a/app/src/lib/theme.tsx
++++ b/app/src/lib/theme.tsx
+@@ -1,46 +1,135 @@
+-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
++import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+ import type { ReactNode } from 'react';
+ 
++/**
++ * Дві незалежні осі вигляду.
++ *
++ * `theme`  — світла / темна / як у системі.
++ * `scheme` — кольорова схема: Шавлія (усталена), Слива, Вугіль.
++ *
++ * Разом вони дають шість наборів токенів (`styles/tokens.css`). Компоненти
++ * жодної з осей не читають: усе, що звідси виходить назовні, — пара атрибутів
++ * `data-theme` / `data-scheme` на <html>.
++ *
++ * Обидва значення дублюються в localStorage навіть у власника, у якого вони
++ * їдуть у профіль: інлайновий скрипт у <head> має поставити атрибути до
++ * першого рендера, а профіль на той момент ще не завантажений. Профіль —
++ * джерело істини між пристроями, localStorage — щоб не блимало.
++ *
++ * Гість акаунта не має: у нього вибір живе тільки в localStorage і на сервер
++ * не їде — інакше це був би ще один сигнал про те, що хтось відкрив посилання.
++ */
++
+ export type Theme = 'light' | 'dark' | 'system';
++export type Scheme = 'sage' | 'slyva' | 'vuhil';
++
++export const THEMES: readonly Theme[] = ['light', 'dark', 'system'];
++export const SCHEMES: readonly Scheme[] = ['sage', 'slyva', 'vuhil'];
++
++const THEME_KEY = 'wl.theme';
++const SCHEME_KEY = 'wl.scheme';
++
++type Value = {
++  theme: Theme;
++  scheme: Scheme;
++  setTheme: (t: Theme) => void;
++  setScheme: (s: Scheme) => void;
++  /** true, якщо система просить посилений контраст, а Вугіль ще не обрано. */
++  suggestsContrast: boolean;
++};
++
++const Ctx = createContext<Value | null>(null);
++
++function isTheme(v: unknown): v is Theme {
++  return v === 'light' || v === 'dark' || v === 'system';
++}
++
++function isScheme(v: unknown): v is Scheme {
++  return v === 'sage' || v === 'slyva' || v === 'vuhil';
++}
++
++/** Читання зі сховища ніколи не валить застосунок: приватний режим може кинути. */
++function read<T>(key: string, guard: (v: unknown) => v is T, fallback: T): T {
++  try {
++    const raw = localStorage.getItem(key);
++    return guard(raw) ? raw : fallback;
++  } catch {
++    return fallback;
++  }
++}
+ 
+-const KEY = 'wl.theme';
+-const Ctx = createContext<{ theme: Theme; setTheme: (t: Theme) => void } | null>(null);
++function write(key: string, value: string) {
++  try {
++    localStorage.setItem(key, value);
++  } catch {
++    /* приватний режим або заборонене сховище — вибір просто не переживе вкладку */
++  }
++}
+ 
+-function apply(theme: Theme) {
+-  const dark =
+-    theme === 'dark' ||
+-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
++function prefersDark() {
++  return window.matchMedia('(prefers-color-scheme: dark)').matches;
++}
+ 
+-  // Системні панелі (адресний рядок, смуга статусу встановленого застосунку)
+-  // мають збігатися з фоном сторінки, а не з темою системи, якщо тему обрано вручну.
+-  // Значення — --surface зі styles.css: цей колір має верхня панель застосунку.
+-  const color = dark ? '#161b1a' : '#ffffff';
++/**
++ * Ставить атрибути на <html> і підганяє колір системних панелей.
++ *
++ * Колір не задається тут літералом: він читається з уже застосованої палітри,
++ * тому лишається рівно одне джерело значень — tokens.css. Без цього кожна нова
++ * схема вимагала б правити ще й цей файл, і хтось колись забув би.
++ */
++function apply(theme: Theme, scheme: Scheme) {
++  const root = document.documentElement;
++  root.dataset.theme = theme === 'system' ? (prefersDark() ? 'dark' : 'light') : theme;
++  root.dataset.scheme = scheme;
++
++  const bg = getComputedStyle(root).getPropertyValue('--color-bg').trim();
++  if (!bg) return;
+   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+-    m.setAttribute('content', color);
++    m.removeAttribute('media');
++    m.setAttribute('content', bg);
+   });
+ }
+ 
+ export function ThemeProvider({ children }: { children: ReactNode }) {
+-  const [theme, setThemeState] = useState<Theme>(
+-    () => (localStorage.getItem(KEY) as Theme | null) ?? 'system',
+-  );
++  const [theme, setThemeState] = useState<Theme>(() => read(THEME_KEY, isTheme, 'system'));
++  const [scheme, setSchemeState] = useState<Scheme>(() => read(SCHEME_KEY, isScheme, 'sage'));
+ 
+   useEffect(() => {
+-    apply(theme);
++    apply(theme, scheme);
+     if (theme !== 'system') return;
+     const mq = window.matchMedia('(prefers-color-scheme: dark)');
+-    const onChange = () => apply('system');
++    const onChange = () => apply('system', scheme);
+     mq.addEventListener('change', onChange);
+     return () => mq.removeEventListener('change', onChange);
+-  }, [theme]);
++  }, [theme, scheme]);
+ 
+   const setTheme = useCallback((t: Theme) => {
+-    localStorage.setItem(KEY, t);
++    write(THEME_KEY, t);
+     setThemeState(t);
+   }, []);
+ 
+-  return <Ctx.Provider value={{ theme, setTheme }}>{children}</Ctx.Provider>;
++  const setScheme = useCallback((s: Scheme) => {
++    write(SCHEME_KEY, s);
++    setSchemeState(s);
++  }, []);
++
++  // Людина, якій система вже вмикає посилений контраст, майже напевно хоче
++  // Вугілля. Пропонуємо, але не перемикаємо за неї: це її екран.
++  const suggestsContrast = useMemo(() => {
++    if (scheme === 'vuhil') return false;
++    try {
++      return window.matchMedia('(prefers-contrast: more)').matches;
++    } catch {
++      return false;
++    }
++  }, [scheme]);
++
++  const value = useMemo(
++    () => ({ theme, scheme, setTheme, setScheme, suggestsContrast }),
++    [theme, scheme, setTheme, setScheme, suggestsContrast],
++  );
++
++  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+ }
+ 
+ export function useTheme() {
+diff --git a/app/src/main.tsx b/app/src/main.tsx
+index 8194441..3433767 100644
+--- a/app/src/main.tsx
++++ b/app/src/main.tsx
+@@ -1,7 +1,10 @@
+ import { StrictMode } from 'react';
+ import { createRoot } from 'react-dom/client';
+-import '@fontsource-variable/commissioner';
+-import '@fontsource-variable/source-serif-4';
++// Обидві гарнітури самохостяться, а не тягнуться з Google Fonts: CSP пускає
++// лише 'self', і офлайн-оболонка має відкриватися без мережі (ADR-031).
++// Обидві покривають cyrillic, cyrillic-ext і latin-ext — тобто всі три мови.
++import '@fontsource-variable/rubik';
++import '@fontsource-variable/manrope';
+ import './styles.css';
+ // Слухач beforeinstallprompt має зʼявитися до того, як браузер надішле подію.
+ import './lib/install';
+diff --git a/app/src/styles.css b/app/src/styles.css
+index d317db3..f9cf2be 100644
+--- a/app/src/styles.css
++++ b/app/src/styles.css
+@@ -1,955 +1,469 @@
+-/* ─────────────────────────────────────────────
+-   Токени. Єдине джерело кольору, типографіки і ритму.
+-   Тема перемикається атрибутом data-theme на <html>.
+-   ───────────────────────────────────────────── */
++/* ─────────────────────────────────────────────────────────────
++   Єдина точка входу стилів. Кольори живуть окремо — у
++   styles/tokens.css, бо їх шість наборів і вони перевіряються
++   власним тестом (`npm run check:contrast`, ADR-031).
++
++   Тут — усе решта: ритм, радіуси, тіні, типографіка й компоненти.
++   Жодного літерального кольору нижче цього рядка: тільки var(--color-*).
++   ───────────────────────────────────────────────────────────── */
++
++@import './styles/tokens.css';
+ 
+ :root {
+-  --paper:      #f5f6f4;
+-  --surface:    #ffffff;
+-  --surface-2:  #eef0ee;
+-  --ink:        #171c1a;
+-  --muted:      #646c69;
+-  --line:       #dce0dd;
+-  --accent:     #4a2e6b;
+-  --accent-ink: #ffffff;
+-  --accent-dim: #ede8f3;
+-  --danger:     #a83a2e;
+-  --danger-dim: #f7ecea;
+-  --ok:         #2f6b4f;
+-
+-  --ff-ui:      'Commissioner Variable', system-ui, sans-serif;
+-  --ff-display: 'Source Serif 4 Variable', Georgia, serif;
+-
+-  /* Крок 1.25 від 16px */
+-  --t-xs: 0.8rem;
+-  --t-sm: 0.9rem;
+-  --t-md: 1rem;
+-  --t-lg: 1.25rem;
+-  --t-xl: 1.5625rem;
+-  --t-2xl: 1.953rem;
+-  --t-3xl: 2.441rem;
+-
+-  --sp-1: 0.25rem;
+-  --sp-2: 0.5rem;
+-  --sp-3: 0.75rem;
+-  --sp-4: 1rem;
+-  --sp-5: 1.5rem;
+-  --sp-6: 2rem;
+-  --sp-7: 3rem;
+-
+-  /* Радіус кодує ієрархію: поле < кнопка-в-полі < картка < панель */
+-  --r-input: 8px;
+-  --r-card:  14px;
+-  --r-panel: 20px;
+-}
+-
+-:root[data-theme='dark'] {
+-  --paper:      #0f1312;
+-  --surface:    #161b1a;
+-  --surface-2:  #1e2423;
+-  --ink:        #e7ebe8;
+-  --muted:      #98a19e;
+-  --line:       #262d2b;
+-  --accent:     #b79bdb;
+-  --accent-ink: #1a0f26;
+-  --accent-dim: #241a30;
+-  --danger:     #e08b7f;
+-  --danger-dim: #2b1a17;
+-  --ok:         #7cc0a0;
+-}
+-
+-*, *::before, *::after { box-sizing: border-box; }
+-
+-html, body, #root { height: 100%; }
++  /* Гарнітури. Rubik 800 — заголовки, Manrope — текст. Обидві самохостяться
++     й покривають cyrillic, cyrillic-ext і latin-ext: застосунок тримовний,
++     і шрифт без кирилиці мовчки падав би на системний (ADR-031). */
++  --font-heading: 'Rubik Variable', system-ui, sans-serif;
++  --font-body: 'Manrope Variable', system-ui, sans-serif;
++  --weight-heading: 800;
++
++  /* Розміри тексту — з макетів, не зі шкали: кожен має своє місце. */
++  --t-meta: 0.75rem;    /* 12px — домен магазину, підписи кадрів */
++  --t-small: 0.8125rem; /* 13px — нотатка, мета, лічильник */
++  --t-body: 0.875rem;   /* 14px — підписи кнопок, текст у картках */
++  --t-item: 0.9375rem;  /* 15px — назва позиції, ціна, текст форм */
++  --t-lead: 1rem;       /* 16px — головна кнопка, ввідний абзац */
++  --t-card: 1.1875rem;  /* 19px — заголовок картки списку */
++  --t-sum: 1.375rem;    /* 22px — підсумок списку */
++  --t-h2: 1.5rem;       /* 24px — заголовок екрана, мобілка */
++  --t-h1: 1.75rem;      /* 28px — заголовок розділу, мобілка */
++  --t-hero: 2rem;       /* 32px — заголовок входу */
++  --t-display: 2.25rem; /* 36px — заголовок екрана, десктоп */
++
++  /* Ритм 4 / 6 / 8 / 10 / 12 / 16 / 24 / 32. */
++  --sp-1: 4px;
++  --sp-2: 6px;
++  --sp-3: 8px;
++  --sp-4: 10px;
++  --sp-5: 12px;
++  --sp-6: 16px;
++  --sp-7: 24px;
++  --sp-8: 32px;
++
++  /* Радіус кодує ієрархію: пігулка < поле < картка < панель. */
++  --r-pill: 999px;
++  --r-field: 16px;
++  --r-card: 24px;
++  --r-panel: 32px;
++
++  /* Висота. Тінь бере найтемніший крок нейтральної рампи активної палітри,
++     тому в темних схемах вона лишається тінню, а не сірою плямою. */
++  --shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-neutral-900) 14%, transparent);
++  --shadow-md: 0 3px 10px color-mix(in srgb, var(--color-neutral-900) 16%, transparent);
++  --shadow-lg: 0 12px 32px color-mix(in srgb, var(--color-neutral-900) 22%, transparent);
++
++  /* Рух. Переходи короткі, без пружин: це список, а не презентація. */
++  --ease: cubic-bezier(0.2, 0, 0, 1);
++  --dur-fast: 150ms;
++  --dur: 200ms;
++  --dur-sheet: 250ms;
++
++  /* Мінімальна зручна ціль для пальця. Ніде не менше. */
++  --tap: 44px;
++}
++
++/* ── База ──────────────────────────────────────────────────── */
++
++*,
++*::before,
++*::after {
++  box-sizing: border-box;
++}
++
++html,
++body,
++#root {
++  height: 100%;
++}
+ 
+ body {
+   margin: 0;
+-  background: var(--paper);
+-  color: var(--ink);
+-  font-family: var(--ff-ui);
+-  font-size: var(--t-md);
+-  line-height: 1.55;
+-  font-variation-settings: 'wght' 400;
++  background: var(--color-bg);
++  color: var(--color-text);
++  font-family: var(--font-body);
++  font-size: var(--t-item);
++  line-height: 1.5;
+   -webkit-font-smoothing: antialiased;
++  /* Перемикання схеми не анімується навмисно: миготіння всього екрана
++     дратує більше, ніж різка зміна. */
++}
++
++h1,
++h2,
++h3,
++h4 {
++  margin: 0;
++  font-family: var(--font-heading);
++  font-weight: var(--weight-heading);
++  line-height: 1.12;
++  letter-spacing: -0.01em;
+ }
+ 
+-h1, h2, h3 { margin: 0; line-height: 1.2; font-weight: 600; }
++h1 { font-size: var(--t-h1); }
++h2 { font-size: var(--t-h2); }
++h3 { font-size: var(--t-card); }
++
++p { margin: 0; }
++
++a {
++  color: var(--color-accent-700);
++  text-underline-offset: 3px;
++}
++a:hover { color: var(--color-accent-800); }
+ 
+-a { color: var(--accent); text-underline-offset: 3px; }
++img { display: block; max-width: 100%; }
+ 
++/* Кільце фокуса — саме -700, а не базовий акцент: у світлій Шавлії акцент дає
++   3,14:1, тобто запас +0,14 на єдиному індикаторі клавіатурного фокуса.
++   Глибший крок дає 5,43:1 і тримається в усіх шести палітрах (ADR-031). */
++:focus { outline: none; }
+ :focus-visible {
+-  outline: 2px solid var(--accent);
++  outline: 2px solid var(--color-accent-700);
+   outline-offset: 2px;
+-  border-radius: 4px;
++  border-radius: var(--sp-1);
+ }
+ 
++::selection { background: var(--color-accent-200); }
++
+ @media (prefers-reduced-motion: reduce) {
+-  *, *::before, *::after { animation: none !important; transition: none !important; }
++  *,
++  *::before,
++  *::after {
++    animation-duration: 0.001ms !important;
++    animation-iteration-count: 1 !important;
++    transition-duration: 0.001ms !important;
++  }
+ }
+ 
+-/* ── Типографіка ───────────────────────────── */
++/* ── Типографічні помічники ────────────────────────────────── */
+ 
+-.display {
+-  font-family: var(--ff-display);
+-  font-weight: 400;
+-  line-height: 1.15;
+-  letter-spacing: -0.01em;
+-}
++/* Приглушений текст сидить на нейтральній рампі, а не на прозорості:
++   альфа дає різний контраст на різних тлах і провалює AA на поверхні. */
++.muted { color: var(--color-neutral-700); }
++.small { font-size: var(--t-small); }
++.meta { font-size: var(--t-meta); }
++.lede { color: var(--color-neutral-700); line-height: 1.45; }
+ 
+-.lede  { color: var(--muted); max-width: 46ch; }
+-.small { font-size: var(--t-sm); color: var(--muted); }
++/* Текст лише для зчитувачів екрана. */
++.visually-hidden {
++  position: absolute;
++  width: 1px;
++  height: 1px;
++  margin: -1px;
++  padding: 0;
++  overflow: hidden;
++  clip-path: inset(50%);
++  white-space: nowrap;
++  border: 0;
++}
+ 
+-/* ── Кнопки ────────────────────────────────── */
++/* ── Кнопки ────────────────────────────────────────────────── */
+ 
++/* Ширина ніколи не фіксується і текст ніколи не заборонено переносити:
++   українська й польська на 15–25 % довші за англійську, тож рядок дій
++   росте вгору, а не вшир (README, i18n). */
+ .btn {
+-  font: inherit;
+-  font-variation-settings: 'wght' 550;
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   gap: var(--sp-2);
+-  min-height: 44px;
+-  padding: 0 var(--sp-5);
++  min-height: var(--tap);
++  padding: var(--sp-3) var(--sp-6);
++  font: inherit;
++  font-size: var(--t-body);
++  font-weight: 600;
++  line-height: 1.2;
++  color: var(--color-text);
++  background: transparent;
+   border: 1px solid transparent;
+-  border-radius: var(--r-input);
+-  background: var(--accent);
+-  color: var(--accent-ink);
++  border-radius: var(--r-pill);
+   cursor: pointer;
+-  transition: opacity 120ms ease;
++  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+ }
+-.btn:hover:not(:disabled) { opacity: 0.88; }
+-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+-.btn--wide { width: 100%; }
++.btn:disabled { opacity: 0.45; cursor: not-allowed; }
++.btn svg { display: block; flex: none; }
+ 
+-.btn--quiet {
+-  background: transparent;
+-  color: var(--ink);
+-  border-color: var(--line);
+-}
+-.btn--bare {
+-  background: transparent;
+-  color: var(--muted);
+-  border-color: transparent;
+-  padding: 0 var(--sp-3);
++.btn--primary {
++  background: var(--color-primary-fill);
++  color: var(--color-primary-ink);
+ }
+-.btn--bare:hover:not(:disabled) { color: var(--ink); opacity: 1; }
++.btn--primary:hover:not(:disabled) { filter: brightness(1.12); }
+ 
+-/* ── Поля ──────────────────────────────────── */
+-
+-.field { display: grid; gap: var(--sp-2); }
+-.field > label { font-size: var(--t-sm); font-variation-settings: 'wght' 550; }
+-
+-.field input {
+-  font: inherit;
+-  min-height: 44px;
+-  padding: 0 var(--sp-3);
+-  color: var(--ink);
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-input);
+-}
+-.field input:focus { border-color: var(--accent); }
+-.field[data-invalid='true'] input { border-color: var(--danger); }
+-.field .hint { font-size: var(--t-xs); color: var(--muted); }
+-.field .hint[data-tone='error'] { color: var(--danger); }
+-
+-/* ── Повідомлення ──────────────────────────── */
+-
+-.note {
+-  padding: var(--sp-3) var(--sp-4);
+-  border-radius: var(--r-input);
+-  border: 1px solid var(--line);
+-  background: var(--surface-2);
+-  font-size: var(--t-sm);
+-}
+-.note[data-tone='error']   { background: var(--danger-dim); border-color: var(--danger); color: var(--danger); }
+-.note[data-tone='success'] { background: var(--accent-dim); border-color: var(--accent); }
+-
+-/* ── Сторінка автентифікації ───────────────── */
+-
+-.auth {
+-  min-height: 100%;
+-  display: grid;
+-  grid-template-columns: 1fr;
+-}
+-@media (min-width: 62rem) {
+-  .auth { grid-template-columns: 1.05fr 1fr; }
++.btn--secondary { border-color: var(--color-divider); }
++.btn--secondary:hover:not(:disabled) {
++  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+ }
+ 
+-.auth__aside {
+-  display: none;
+-  padding: var(--sp-7);
+-  background: var(--surface);
+-  border-right: 1px solid var(--line);
+-  flex-direction: column;
+-  justify-content: space-between;
+-  gap: var(--sp-7);
++.btn--ghost {
++  color: var(--color-ghost-ink);
++  padding-inline: var(--sp-4);
+ }
+-@media (min-width: 62rem) { .auth__aside { display: flex; } }
+-
+-.auth__form-wrap {
+-  display: flex;
+-  flex-direction: column;
+-  align-items: center;
+-  padding: var(--sp-5);
+-}
+-/* Перемикач мови — угорі праворуч, форма центрується в решті висоти. */
+-.auth__lang { align-self: flex-end; }
+-.auth__form-wrap > .auth__form { margin-block: auto; }
+-.auth__form {
+-  width: 100%;
+-  max-width: 25rem;
+-  display: grid;
+-  gap: var(--sp-4);
++.btn--ghost:hover:not(:disabled) {
++  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+ }
+-.auth__form h1 { font-size: var(--t-2xl); }
+-.auth__switch { font-size: var(--t-sm); color: var(--muted); }
+ 
+-/* Макет приватності: список, де відкрито рівно одну позицію. */
+-.privacy-demo {
+-  display: grid;
+-  gap: var(--sp-2);
+-  padding: var(--sp-4);
+-  background: var(--paper);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-panel);
+-}
+-.privacy-demo__row {
+-  display: grid;
+-  grid-template-columns: 2.25rem 1fr auto;
+-  align-items: center;
+-  gap: var(--sp-3);
+-  padding: var(--sp-3);
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-card);
+-}
+-.privacy-demo__thumb {
+-  width: 2.25rem; height: 2.25rem;
+-  border-radius: 6px;
+-  background: var(--surface-2);
+-}
+-.privacy-demo__bar {
+-  height: 0.6rem;
+-  border-radius: 3px;
+-  background: var(--surface-2);
+-}
+-.privacy-demo__price { height: 0.6rem; width: 3rem; border-radius: 3px; background: var(--surface-2); }
+-.privacy-demo__row[data-hidden='true'] { filter: blur(3px); opacity: 0.55; }
+-.privacy-demo__row[data-hidden='false'] {
+-  border-color: var(--accent);
+-  background: var(--accent-dim);
+-}
+-.privacy-demo__row[data-hidden='false'] .privacy-demo__bar,
+-.privacy-demo__row[data-hidden='false'] .privacy-demo__price,
+-.privacy-demo__row[data-hidden='false'] .privacy-demo__thumb { background: var(--accent); opacity: 0.35; }
++/* Деструктивна дія — кольором підпису, а не заливкою: вона стоїть у ряду
++   зі звичайними кнопками й не має важити більше за них. */
++.btn--danger { color: var(--color-danger); }
+ 
+-/* ── Каркас застосунку ─────────────────────── */
++.btn--block { width: 100%; }
+ 
+-.shell { min-height: 100%; display: flex; flex-direction: column; }
+-
+-.shell__bar {
+-  display: flex;
+-  align-items: center;
+-  gap: var(--sp-4);
+-  padding: var(--sp-3) var(--sp-5);
+-  background: var(--surface);
+-  border-bottom: 1px solid var(--line);
+-}
+-.shell__brand {
+-  font-family: var(--ff-display);
+-  font-size: var(--t-lg);
+-  margin-right: auto;
+-  text-decoration: none;
+-  color: var(--ink);
+-}
+-.shell__nav { display: flex; gap: var(--sp-1); }
+-.shell__nav a {
+-  padding: var(--sp-2) var(--sp-3);
+-  border-radius: var(--r-input);
+-  text-decoration: none;
+-  color: var(--muted);
+-  font-size: var(--t-sm);
+-}
+-.shell__nav a[aria-current='page'] { color: var(--ink); background: var(--surface-2); }
+-
+-.shell__main { flex: 1; padding: var(--sp-6) var(--sp-5); }
+-.page { max-width: 64rem; margin: 0 auto; display: grid; gap: var(--sp-5); }
+-.page__head { display: grid; gap: var(--sp-2); }
+-.page__head h1 { font-family: var(--ff-display); font-size: var(--t-3xl); font-weight: 400; }
+-
+-/* ── Порожній стан ─────────────────────────── */
+-
+-.empty {
+-  display: grid;
+-  gap: var(--sp-4);
+-  justify-items: start;
+-  padding: var(--sp-7) var(--sp-6);
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-panel);
++.btn--icon {
++  width: var(--tap);
++  height: var(--tap);
++  min-height: var(--tap);
++  padding: 0;
++  flex: none;
+ }
+-.empty h2 { font-family: var(--ff-display); font-size: var(--t-xl); font-weight: 400; }
+ 
+-/* ── Скелетон завантаження сесії ───────────── */
+-
+-.booting {
+-  min-height: 100%;
+-  display: grid;
+-  place-items: center;
+-  color: var(--muted);
++/* Спінер у кнопці, яка щось робить. Підпис при цьому змінюється на дієслово
++   («Зберігаю…»): кнопка ніколи просто не гасне. */
++.spinner {
++  width: 14px;
++  height: 14px;
++  flex: none;
++  border: 2px solid currentColor;
++  border-top-color: transparent;
++  border-radius: 50%;
++  animation: spin 700ms linear infinite;
+ }
+ 
+-/* ── Вибір (тема, мова) ────────────────────── */
+-
+-.picker { display: flex; gap: var(--sp-1); }
+-.picker button {
+-  font: inherit;
+-  font-size: var(--t-sm);
+-  min-height: 36px;
+-  padding: 0 var(--sp-3);
+-  background: transparent;
+-  color: var(--muted);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-input);
+-  cursor: pointer;
+-}
+-.picker button[aria-pressed='true'] {
+-  color: var(--ink);
+-  background: var(--surface-2);
+-  border-color: var(--ink);
++@keyframes spin {
++  to { transform: rotate(1turn); }
+ }
+ 
+-.settings-group { display: grid; gap: var(--sp-3); padding: var(--sp-5); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); }
++/* ── Поля ──────────────────────────────────────────────────── */
+ 
+-/* ─────────────────────────────────────────────
+-   Етап 3: списки, позиції, панель фільтрів
+-   ───────────────────────────────────────────── */
++.field { display: grid; gap: var(--sp-2); }
+ 
+-.page__head--row {
+-  display: flex;
+-  align-items: flex-end;
+-  justify-content: space-between;
+-  gap: var(--sp-4);
+-  flex-wrap: wrap;
++.field > label {
++  font-size: var(--t-small);
++  font-weight: 600;
++  color: var(--color-neutral-700);
+ }
+-.page__actions { display: flex; gap: var(--sp-2); }
+-.center { text-align: center; }
+ 
+-/* Поля, що зʼявились разом із діалогами */
+-.field select,
+-.field textarea {
++.input {
++  width: 100%;
++  min-height: 48px;
++  padding: var(--sp-3) var(--sp-6);
+   font: inherit;
+-  min-height: 44px;
+-  padding: var(--sp-2) var(--sp-3);
+-  color: var(--ink);
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-input);
++  font-size: var(--t-body);
++  color: var(--color-text);
++  caret-color: var(--color-accent);
++  background: var(--color-surface);
++  border: 1px solid var(--color-divider);
++  border-radius: var(--r-pill);
+ }
+-.field textarea { resize: vertical; line-height: 1.5; }
+-.field select:focus, .field textarea:focus { border-color: var(--accent); }
+-
+-/* ── Сітка списків ─────────────────────────── */
++.input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
++.input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+ 
+-.list-grid {
+-  list-style: none;
+-  margin: 0;
+-  padding: 0;
+-  display: grid;
+-  gap: var(--sp-3);
+-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
++/* Багаторядкове поле — не пігулка: текст у ньому починається з рогу. */
++textarea.input,
++select[multiple].input {
++  min-height: 96px;
++  border-radius: var(--r-field);
++  line-height: 1.5;
++  resize: vertical;
+ }
+-.list-card {
+-  display: flex;
+-  flex-direction: column;
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-card);
+-  overflow: hidden;
+-}
+-.list-card__link {
+-  display: grid;
+-  gap: var(--sp-2);
+-  padding: var(--sp-5);
+-  text-decoration: none;
+-  color: inherit;
+-  flex: 1;
+-}
+-.list-card__link:hover { background: var(--surface-2); }
+-.list-card__link h2 { font-family: var(--ff-display); font-size: var(--t-lg); font-weight: 400; }
+-.list-card__meta { color: var(--muted); }
+-.list-card > .btn { border-top: 1px solid var(--line); border-radius: 0; min-height: 40px; }
+ 
+-/* ── Підсумки ──────────────────────────────── */
++.field[data-invalid='true'] .input { border-color: var(--color-danger-line); }
+ 
+-.totals {
+-  margin: 0;
+-  padding: var(--sp-3) var(--sp-4);
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-card);
++.field .hint { font-size: var(--t-meta); color: var(--color-neutral-700); }
++.field .hint[data-tone='error'] { color: var(--color-danger-ink); }
++
++.check {
++  display: grid;
++  grid-template-columns: auto 1fr;
++  align-items: start;
++  gap: var(--sp-4);
++  cursor: pointer;
+ }
+-.totals strong { font-size: var(--t-lg); }
++.check input {
++  width: 20px;
++  height: 20px;
++  margin-top: 2px;
++  accent-color: var(--color-accent);
++}
++.check > span { display: grid; gap: var(--sp-1); }
+ 
+-/* ── Панель фільтрів ───────────────────────── */
++/* ── Значки ────────────────────────────────────────────────── */
+ 
+-.toolbar {
+-  display: flex;
+-  flex-wrap: wrap;
++.tag {
++  display: inline-flex;
+   align-items: center;
+-  gap: var(--sp-3);
+-  padding: var(--sp-3) var(--sp-4);
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-card);
+-}
+-.toolbar__group { display: flex; align-items: center; gap: var(--sp-2); }
+-.toolbar select,
+-.toolbar input {
+-  font: inherit;
+-  min-height: 40px;
+-  padding: 0 var(--sp-3);
+-  color: var(--ink);
+-  background: var(--paper);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-input);
++  font-size: var(--t-meta);
++  font-weight: 600;
++  letter-spacing: 0.02em;
++  padding: 3px var(--sp-4);
++  border-radius: var(--r-pill);
+ }
+-.toolbar__search { flex: 1 1 14rem; }
+-.toolbar__num { width: 6rem; }
+-.toolbar__statuses { flex-wrap: wrap; }
++.tag--neutral { background: var(--color-neutral-100); color: var(--color-neutral-800); }
++.tag--accent { background: var(--color-accent-100); color: var(--color-accent-800); }
++.tag--accent-2 { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
+ 
+-/* ── Сітка позицій ─────────────────────────── */
++/* ── Банери ────────────────────────────────────────────────── */
+ 
+-.card-grid {
+-  display: grid;
++/* Офлайн — не помилка. Черга змін і збережена копія йдуть другим акцентом,
++   червоний лишається тільки відхиленим змінам і справжнім помилкам. */
++.banner {
++  display: flex;
++  align-items: flex-start;
+   gap: var(--sp-4);
+-  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
++  padding: var(--sp-5) var(--sp-6);
++  border-radius: var(--r-field);
++  background: var(--color-accent-2-200);
++  color: var(--color-accent-2-900);
++  font-size: var(--t-body);
++  line-height: 1.4;
+ }
++.banner__title { font-weight: 700; }
++.banner--accent { background: var(--color-accent-200); color: var(--color-accent-900); }
++.banner--danger { background: var(--color-danger-bg); color: var(--color-danger-ink); }
++.banner__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
++
++/* ── Картки ────────────────────────────────────────────────── */
+ 
+ .card {
+-  position: relative;
+-  display: flex;
+-  flex-direction: column;
+-  background: var(--surface);
+-  border: 1px solid var(--line);
++  padding: var(--sp-6);
+   border-radius: var(--r-card);
+-  overflow: hidden;
++  background: var(--color-surface);
+ }
+-/* Куплене і подароване приглушуємо: воно ще потрібне, але вже не в фокусі. */
+-.card[data-status='purchased'],
+-.card[data-status='gifted'] { opacity: 0.6; }
+ 
+-.card__media {
+-  aspect-ratio: 4 / 3;
+-  background: var(--surface-2);
+-  border-bottom: 1px solid var(--line);
+-}
+-.card__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+-/* Пріоритет кодується вагою, а не трьома кольорами:
+-   низький — приглушений, середній — норма, високий — підкреслений.
+-   Шкала впорядкована, тому працює і без кольору (друк, дальтонізм). */
+-.card__prio {
+-  position: absolute;
+-  left: 0; top: 0; bottom: 0;
++/* Смужка пріоритету — єдиний носій пріоритету на картці, тому вона має власні
++   токени, а не крок акцентної рампи: рампові давали 2,11:1 і 1,54:1, нижче
++   порога 3:1 для нетекстових індикаторів (ADR-031). Середній пріоритет —
++   прозора смужка: місце лишається, щоб текст не стрибав. */
++.prio {
+   width: 4px;
++  align-self: stretch;
++  flex: none;
++  border-radius: var(--r-pill);
+   background: transparent;
+ }
+-.card[data-prio='high'] .card__prio { background: var(--accent); }
+-.card[data-prio='low']  .card__prio { background: var(--line); }
++.prio[data-prio='high'] { width: 5px; background: var(--color-prio-high); }
++.prio[data-prio='low'] { background: var(--color-prio-low); }
+ 
+-.card[data-prio='low'] .card__title,
+-.card[data-prio='low'] .card__price { color: var(--muted); }
+-.card[data-prio='low'] .card__title a { color: inherit; }
++/* ── Скелети ───────────────────────────────────────────────── */
+ 
+-.card__body {
+-  display: flex;
+-  flex-direction: column;
+-  gap: var(--sp-2);
+-  padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-5);
+-  flex: 1;
+-}
+-.card__tags {
+-  display: flex;
+-  align-items: center;
+-  gap: var(--sp-2);
+-  flex-wrap: wrap;
+-  margin-top: auto;
+-  padding-top: var(--sp-1);
+-}
+-.card__title { font-size: var(--t-md); font-variation-settings: 'wght' 600; }
+-.card__title a { color: inherit; text-decoration: none; }
+-.card__title a:hover { text-decoration: underline; }
+-.card__meta { margin: 0; display: flex; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap; }
+-.card__price { font-variation-settings: 'wght' 600; }
+-.card__host { color: var(--muted); }
+-.card__note { margin: 0; }
+-
+-.chip {
+-  justify-self: start;
+-  white-space: nowrap;
+-  font-size: var(--t-xs);
+-  padding: 2px var(--sp-2);
+-  border-radius: 999px;
+-  border: 1px solid var(--line);
+-  background: var(--surface-2);
+-}
+-
+-.chip--prio { font-variation-settings: 'wght' 600; }
+-.chip--prio[data-prio='high'] {
+-  color: var(--accent);
+-  border-color: var(--accent);
+-  background: var(--accent-dim);
+-}
+-.chip--prio[data-prio='low'] {
+-  color: var(--muted);
+-  border-color: var(--line);
+-  background: transparent;
++/* Заглушки точної висоти реальних карток, а не слово «Завантаження…».
++   Зсув по картках робить пульс живим, а не миготінням блоку. */
++.sk { animation: sk 1.4s ease-in-out infinite; }
++.sk:nth-child(2) { animation-delay: 0.15s; }
++.sk:nth-child(3) { animation-delay: 0.3s; }
++.sk__line {
++  height: 13px;
++  border-radius: var(--r-pill);
++  background: var(--color-neutral-300);
+ }
+ 
+-.card__actions {
+-  display: flex;
+-  border-top: 1px solid var(--line);
+-}
+-.card__actions .btn {
+-  flex: 1;
+-  min-width: 0;
+-  min-height: 40px;
+-  border-radius: 0;
+-  font-size: var(--t-sm);
++@keyframes sk {
++  0%, 100% { opacity: 0.5; }
++  50% { opacity: 0.9; }
+ }
+-.card__actions > * + * { border-left: 1px solid var(--line); }
+ 
+-/* Статус живе серед міток і виглядає як мітка — але лишається
+-   нативним <select>, тож клавіатура і зчитувачі екрана працюють. */
+-.card__status {
+-  font: inherit;
+-  font-size: var(--t-xs);
+-  min-height: 26px;
+-  padding: 0 var(--sp-2);
+-  color: var(--muted);
+-  background: var(--surface-2);
+-  border: 1px solid var(--line);
+-  border-radius: 999px;
+-  cursor: pointer;
+-}
+-.card__status:hover { color: var(--ink); }
+-.card__status[data-status='gifted'],
+-.card__status[data-status='purchased'] {
+-  color: var(--ink);
+-  background: var(--surface);
+-}
+-
+-/* ── Діалоги ───────────────────────────────── */
++/* ── Порожні стани й стани помилки ─────────────────────────── */
+ 
+-.dialog {
+-  width: min(34rem, calc(100vw - 2rem));
+-  max-height: min(85vh, 48rem);
+-  padding: 0;
+-  color: var(--ink);
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-panel);
+-  /* Флекс-колонка: голова фіксована, прокручується лише тіло. */
++.empty {
+   display: flex;
+   flex-direction: column;
+-  overflow: hidden;
+-}
+-.dialog:not([open]) { display: none; }
+-.dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+-.dialog__head {
+-  flex: 0 0 auto;
+-  display: flex;
+   align-items: center;
+-  justify-content: space-between;
+-  gap: var(--sp-3);
+-  padding: var(--sp-4) var(--sp-5);
+-  border-bottom: 1px solid var(--line);
+-}
+-.dialog__head h2 { font-family: var(--ff-display); font-size: var(--t-xl); font-weight: 400; }
+-.dialog__body {
+-  flex: 1 1 auto;
+-  padding: var(--sp-5);
+-  overflow-y: auto;
+-  overscroll-behavior: contain;
+-}
+-.dialog__foot { display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-2); }
+-
+-.form-grid { display: grid; gap: var(--sp-4); }
+-.form-row { display: grid; gap: var(--sp-3); grid-template-columns: 1fr 1fr; }
+-
+-@media (max-width: 30rem) {
+-  .form-row { grid-template-columns: 1fr; }
+-  .dialog { max-height: 92vh; }
+-}
+-
+-/* Текст лише для зчитувачів екрана. */
+-.visually-hidden {
+-  position: absolute;
+-  width: 1px; height: 1px;
+-  margin: -1px; padding: 0;
+-  overflow: hidden;
+-  clip-path: inset(50%);
+-  white-space: nowrap;
+-  border: 0;
+-}
+-
+-/* Поле посилання з кнопкою заповнення: обидва в одному рядку,
+-   тож їхні висоти збігаються без підгонки відступами. */
+-.url-row {
+-  display: flex;
+-  align-items: stretch;
+-  gap: var(--sp-2);
+-}
+-.url-row input { flex: 1 1 auto; min-width: 0; }
+-.url-row .btn { flex: 0 0 auto; white-space: nowrap; }
+-
+-@media (max-width: 30rem) {
+-  .url-row { flex-direction: column; }
+-}
+-
+-/* ─────────────────────────────────────────────
+-   Етап 5: вибір позицій, посилання, гостьова сторінка
+-   ───────────────────────────────────────────── */
+-
+-/* ── Прапорець у формі ─────────────────────── */
+-
+-.check {
+-  display: grid;
+-  grid-template-columns: auto 1fr;
+-  align-items: start;
++  justify-content: center;
++  text-align: center;
+   gap: var(--sp-3);
+-  cursor: pointer;
++  padding: var(--sp-8) var(--sp-7);
+ }
+-.check input { width: 1.1rem; height: 1.1rem; margin-top: 0.2rem; accent-color: var(--accent); }
+-.check > span { display: grid; gap: var(--sp-1); }
+-.check .hint { font-size: var(--t-xs); color: var(--muted); }
+-
+-/* ── Вибір позицій ─────────────────────────── */
+-
+-.card__select {
+-  position: absolute;
+-  top: var(--sp-2);
+-  right: var(--sp-2);
+-  z-index: 1;
++.empty__icon {
+   display: grid;
+   place-items: center;
+-  width: 2rem;
+-  height: 2rem;
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: 999px;
+-  cursor: pointer;
+-}
+-.card__select input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); cursor: pointer; }
+-.card[data-selected='true'] { border-color: var(--accent); }
+-.card[data-selected='true'] .card__select { border-color: var(--accent); background: var(--accent-dim); }
+-
+-/* Панель дії притиснута донизу: список гортається згори вниз,
+-   а кнопка має лишатись під рукою на будь-якій довжині. */
+-.selectbar {
+-  position: sticky;
+-  bottom: 0;
+-  z-index: 5;
+-  display: flex;
+-  align-items: center;
+-  justify-content: space-between;
+-  gap: var(--sp-4);
+-  flex-wrap: wrap;
+-  margin-top: var(--sp-4);
+-  padding: var(--sp-3) var(--sp-4);
+-  background: var(--surface);
+-  border: 1px solid var(--accent);
+-  border-radius: var(--r-card);
+-  box-shadow: 0 -4px 16px rgb(0 0 0 / 0.08);
+-}
+-.selectbar__info { display: grid; gap: 2px; }
+-.selectbar__actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+-.selectbar .note { flex-basis: 100%; margin: 0; }
+-/* Список статусів у панелі виглядає як тиха кнопка поруч, а не як поле форми. */
+-.selectbar__status {
+-  width: auto;
+-  min-width: 12.5rem;
+-  min-height: 44px;
+-  padding: 0 var(--sp-3);
+-  font: inherit;
+-  color: var(--ink);
+-  background: transparent;
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-input);
+-  cursor: pointer;
+-}
+-.selectbar__status:disabled { opacity: 0.5; cursor: default; }
+-.btn--danger { color: var(--danger); }
+-
+-/* На телефоні чотири дії в рядок не вміщаються, і панель розросталася до третини
+-   екрана, закриваючи картки, які саме треба вибирати. Сітка 2×2 і нижчі кнопки
+-   тримають її в межах п'ятої частини. */
+-@media (max-width: 40rem) {
+-  .selectbar { gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); }
+-  .selectbar__info { font-size: var(--t-sm); }
+-  .selectbar__actions {
+-    display: grid;
+-    grid-template-columns: 1fr 1fr;
+-    width: 100%;
+-  }
+-  .selectbar__actions .btn,
+-  .selectbar__status {
+-    min-width: 0;
+-    min-height: 40px;
+-    padding: 0 var(--sp-2);
+-    font-size: var(--t-sm);
+-  }
+-}
+-.btn--danger:hover:not(:disabled) { border-color: var(--danger); }
+-
+-/* ── Список посилань ───────────────────────── */
+-
+-.share-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
+-.share-card {
+-  display: flex;
+-  align-items: center;
+-  justify-content: space-between;
+-  gap: var(--sp-4);
+-  flex-wrap: wrap;
+-  padding: var(--sp-4) var(--sp-5);
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-card);
+-}
+-.share-card[data-state='revoked'],
+-.share-card[data-state='expired'] { opacity: 0.6; }
+-.share-card__main { display: grid; gap: var(--sp-1); }
+-.share-card__main h2 { font-size: var(--t-lg); }
+-.share-card__actions { display: flex; gap: var(--sp-1); }
+-
+-/* ── Гостьова сторінка ─────────────────────── */
+-
+-.guest {
+-  max-width: 60rem;
+-  margin: 0 auto;
+-  padding: var(--sp-6) var(--sp-5) var(--sp-7);
+-  display: grid;
+-  gap: var(--sp-5);
+-}
+-.guest__head {
+-  display: flex;
+-  align-items: flex-start;
+-  justify-content: space-between;
+-  gap: var(--sp-4);
+-  flex-wrap: wrap;
+-}
+-.guest__head h1 { font-size: var(--t-3xl); }
+-.guest__foot {
+-  text-align: center;
+-  padding-top: var(--sp-5);
+-  border-top: 1px solid var(--line);
+-}
+-
+-.guest__grid {
+-  list-style: none;
+-  margin: 0;
++  width: 96px;
++  height: 96px;
++  margin-bottom: var(--sp-2);
++  border-radius: 50%;
++  background: var(--color-accent-2-200);
++  color: var(--color-accent-2-700);
++}
++.empty__icon--accent { background: var(--color-accent-200); color: var(--color-accent-800); }
++.empty__icon--danger { background: var(--color-danger-bg); color: var(--color-danger-ink); }
++.empty p { max-width: 34ch; }
++.empty > .btn { margin-top: var(--sp-4); }
++
++/* ── Діалоги ───────────────────────────────────────────────── */
++
++/* На мобілці — нижній лист, на десктопі — по центру. Один елемент <dialog>,
++   різна композиція: фокус, Escape і бекдроп однакові в обох. */
++.dialog {
++  width: min(440px, 100%);
++  max-height: min(88vh, 46rem);
++  margin: auto auto 0;
+   padding: 0;
+-  display: grid;
+-  gap: var(--sp-4);
+-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+-}
+-.gcard {
++  color: var(--color-text);
++  background: var(--color-bg);
++  border: 0;
++  border-radius: var(--r-panel) var(--r-panel) 0 0;
++  box-shadow: var(--shadow-lg);
+   display: flex;
+   flex-direction: column;
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-card);
+   overflow: hidden;
++  animation: sheet-in var(--dur-sheet) var(--ease);
+ }
+-.gcard[data-taken='true'] { opacity: 0.55; }
+-.gcard__media { aspect-ratio: 4 / 3; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+-.gcard__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+-.gcard__body { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4); flex: 1; }
+-.gcard__title { font-size: var(--t-md); font-variation-settings: 'wght' 600; }
+-.gcard__title a { color: inherit; text-decoration: none; }
+-.gcard__title a:hover { text-decoration: underline; }
+-.gcard__meta { margin: 0; display: flex; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap; }
+-.gcard__price { font-variation-settings: 'wght' 600; font-size: var(--t-lg); }
+-.gcard__foot {
+-  display: flex;
+-  align-items: center;
+-  gap: var(--sp-2);
+-  margin-top: auto;
+-  padding-top: var(--sp-3);
+-}
+-.chip--mine { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+-
+-/* ── Нова версія застосунку ───────────────── */
+-/* Угорі, а не внизу: низ екрана зайнятий панеллю вибору. */
+-.update-banner {
+-  position: fixed;
+-  top: var(--sp-3);
+-  left: 50%;
+-  transform: translateX(-50%);
+-  z-index: 50;
+-  display: flex;
+-  align-items: center;
+-  gap: var(--sp-3);
+-  flex-wrap: wrap;
+-  width: min(36rem, calc(100% - 2 * var(--sp-3)));
+-  padding: var(--sp-3) var(--sp-4);
+-  background: var(--surface);
+-  border: 1px solid var(--accent);
+-  border-radius: var(--r-card);
+-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
++.dialog:not([open]) { display: none; }
++.dialog::backdrop { background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent); }
++
++@keyframes sheet-in {
++  from { transform: translateY(100%); }
+ }
+-.update-banner > span { flex: 1 1 12rem; }
+-.update-banner__actions { display: flex; gap: var(--sp-2); }
+ 
+-/* ── Нагадування підбити підсумки ─────────── */
+-.event-summary {
++.dialog__head {
++  flex: 0 0 auto;
+   display: flex;
+   align-items: center;
+-  justify-content: space-between;
+-  flex-wrap: wrap;
+-  gap: var(--sp-3);
+-  padding: var(--sp-4);
+-  background: var(--accent-dim);
+-  border: 1px solid var(--accent);
+-  border-radius: var(--r-panel);
+-}
+-.event-summary__actions { display: flex; gap: var(--sp-2); }
+-@media (max-width: 40rem) {
+-  .event-summary__actions { width: 100%; }
+-  .event-summary__actions .btn { flex: 1; }
+-}
+-
+-/* ── Експорт та імпорт (етап 6.3) ────────── */
+-
+-.transfer__choice {
+-  display: grid;
+-  gap: var(--sp-1);
+-  margin: var(--sp-3) 0;
+-}
+-
+-/* Підказка йде одразу під своєю кнопкою, без порожнього рядка між ними. */
+-.transfer__choice .hint {
+-  font-size: var(--t-xs);
+-  color: var(--muted);
+-  margin: 0 0 var(--sp-2);
+-}
+-
+-.transfer__preview {
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-panel);
+-  padding: var(--sp-3);
+-  background: var(--surface-2);
+-}
+-
+-.transfer__rows {
+-  list-style: none;
+-  margin: var(--sp-2) 0 0;
+-  padding: 0;
+-}
+-
+-.transfer__rows li {
+-  padding: 2px 0;
+-  border-bottom: 1px solid var(--line);
+-}
+-
+-.transfer__rows li:last-child {
+-  border-bottom: 0;
+-}
+-
+-.transfer__issues {
+-  margin-top: var(--sp-2);
+-}
+-
+-.transfer__issues summary {
+-  cursor: pointer;
+-}
+-
+-.transfer__issues ul {
+-  margin: var(--sp-1) 0 0;
+-  padding-left: var(--sp-4);
+-  font-size: var(--t-xs);
+-}
+-
+-.transfer__issues li[data-tone='error'] {
+-  color: var(--danger);
+-}
+-
+-/* Збережена копія списків, коли мережі немає (етап 6.4).
+-   Тло й рамку бере від .note; пунктир і приглушений текст кажуть «це не свіже»,
+-   не піднімаючи тривоги, як це робить .note[data-tone='error']. */
+-.note--stale {
+-  border-style: dashed;
+-  color: var(--muted);
++  gap: var(--sp-4);
++  padding: var(--sp-5) var(--sp-6) var(--sp-4);
+ }
++.dialog__head h2 { flex: 1; min-width: 0; }
+ 
+-/* Черга змін, що чекають на мережу (етап 6.5). */
+-.outbox {
++.dialog__body {
++  flex: 1 1 auto;
+   display: grid;
+-  gap: var(--sp-2);
+-  margin-bottom: var(--sp-4);
++  gap: var(--sp-6);
++  padding: 0 var(--sp-6) var(--sp-6);
++  overflow-y: auto;
++  overscroll-behavior: contain;
+ }
+ 
+-.outbox__row {
++/* Підвал липкий: у довгій формі кнопка дії має лишатись під рукою. */
++.dialog__foot {
++  flex: 0 0 auto;
+   display: flex;
+-  align-items: center;
+-  justify-content: space-between;
+-  gap: var(--sp-3);
+   flex-wrap: wrap;
++  justify-content: flex-end;
++  gap: var(--sp-3);
++  padding: var(--sp-5) var(--sp-6) var(--sp-7);
++  border-top: 1px solid var(--color-divider);
++  background: var(--color-surface);
+ }
+ 
+-/* ── Ознаки товару (ADR-030) ─────────────── */
+-
+-/* Чипи на картці: підпис приглушений, значення звичайним кольором —
+-   так пара читається як «Розмір M», а не як два рівноправні слова. */
+-.variants-chips {
+-  display: flex;
+-  flex-wrap: wrap;
+-  gap: var(--sp-1);
+-  margin: 0;
+-  padding: 0;
+-  list-style: none;
++@media (min-width: 40rem) {
++  .dialog {
++    margin: auto;
++    border-radius: var(--r-panel);
++    animation: none;
++  }
+ }
+-.chip--variant { white-space: normal; }
+-.chip__label { color: var(--muted); }
+ 
+-/* Редактор у діалозі позиції. */
+-.variants {
+-  display: grid;
+-  gap: var(--sp-2);
+-  margin: 0;
+-  padding: 0;
+-  border: 0;
++/* На вузькому екрані кнопки підтвердження стають одна під одною на всю
++   ширину, безпечна — нижче: промах пальцем не має нічого видаляти. */
++.dialog__foot--stack {
++  flex-direction: column-reverse;
+ }
+-.variants > legend {
+-  padding: 0;
+-  font-size: var(--t-sm);
+-  font-variation-settings: 'wght' 550;
+-}
+-.variants__row {
+-  display: grid;
+-  gap: var(--sp-2);
+-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+-  align-items: center;
++.dialog__foot--stack .btn { width: 100%; }
++@media (min-width: 40rem) {
++  .dialog__foot--stack { flex-direction: row; }
++  .dialog__foot--stack .btn { width: auto; }
+ }
+-/* Ті самі метрики, що в `.field input`: поля в одному діалозі мають збігатися,
+-   а 44px — мінімальна зручна ціль для пальця. */
+-.variants input {
+-  width: 100%;
+-  font: inherit;
+-  min-height: 44px;
+-  padding: 0 var(--sp-3);
+-  color: var(--ink);
+-  background: var(--surface);
+-  border: 1px solid var(--line);
+-  border-radius: var(--r-input);
+-}
+-.variants input:focus { border-color: var(--accent); }
+-.variants > .btn { justify-self: start; }
+-
+-/* На вузькому екрані три колонки не вміщаються: підпис і значення стають
+-   одне під одним, кнопка лишається праворуч від значення. */
++
++.form-grid { display: grid; gap: var(--sp-6); }
++.form-row { display: grid; gap: var(--sp-5); grid-template-columns: 1fr 1fr; }
+ @media (max-width: 30rem) {
+-  .variants__row { grid-template-columns: minmax(0, 1fr) auto; }
+-  .variants__label { grid-column: 1 / -1; }
++  .form-row { grid-template-columns: 1fr; }
+ }
+diff --git a/app/src/styles/tokens.css b/app/src/styles/tokens.css
+new file mode 100644
+index 0000000..1675f54
+--- /dev/null
++++ b/app/src/styles/tokens.css
+@@ -0,0 +1,219 @@
++/* ─────────────────────────────────────────────────────────────
++   Токени кольору. Три схеми × дві теми = шість повних наборів.
++
++   Схему й тему ставить інлайновий скрипт у <head> до першого
++   рендера: <html data-scheme="sage" data-theme="light">. Жоден
++   компонент не знає, яка схема активна, і ніде не звіряє її ім'я.
++
++   ПРАВИЛО: склад палітри повний або ніякий. Пропущений токен не
++   ламає сторінку — він тихо падає на значення з :root, тобто на
++   світлу Шавлію, і в темній схемі дає світлий значок на темній
++   картці. Тому кожен набір оголошує всі 45 змінних, навіть ті,
++   якими сьогодні ніхто не користується.
++
++   Кожна зміна тут перевіряється `npm run check:contrast`
++   (22 пари × 6 палітр = 132 перевірки, ADR-031).
++   ───────────────────────────────────────────────────────────── */
++
++/* Усталене — світла Шавлія. Дублює [data-scheme='sage'][data-theme='light']
++   навмисно: якщо скрипт у <head> не відпрацював, сторінка лишається читабельною. */
++
++/* Запасний набір = Шавлія · світла */
++:root {
++  /* Полотно */
++  --color-bg: #f5ead8; --color-surface: #ebddc5; --color-text: #201e1d;
++  --color-divider: color-mix(in srgb, var(--color-text) 16%, transparent);
++  /* Нейтральна рампа */
++  --color-neutral-100: #f9f4ed; --color-neutral-200: #eee7db; --color-neutral-300: #dcd3c4;
++  --color-neutral-400: #c0b6a5; --color-neutral-500: #a19786; --color-neutral-600: #82796a;
++  --color-neutral-700: #645c50; --color-neutral-800: #474238; --color-neutral-900: #2e2b25;
++  /* Акцент */
++  --color-accent: #7a8a5e; --color-accent-100: #f0fae1; --color-accent-200: #e1eecc;
++  --color-accent-300: #ccdbb2; --color-accent-400: #aebf92; --color-accent-500: #8fa073;
++  --color-accent-600: #728157; --color-accent-700: #56633f; --color-accent-800: #3d472b;
++  --color-accent-900: #272e1b;
++  /* Другий акцент */
++  --color-accent-2: #c67139; --color-accent-2-100: #fff2eb; --color-accent-2-200: #ffe1d0;
++  --color-accent-2-300: #ffc6a5; --color-accent-2-400: #f6a06b; --color-accent-2-500: #d67f48;
++  --color-accent-2-600: #b2622d; --color-accent-2-700: #8c491a; --color-accent-2-800: #643312;
++  --color-accent-2-900: #402310;
++  /* Небезпека */
++  --color-danger: #a83a2e; --color-danger-bg: #f7ded6; --color-danger-ink: #7a2a1c;
++  --color-danger-line: #b5533f;
++  /* Гостьова */
++  --color-guest-bg: #f7efe1; --color-guest-header: #f2ddc8; --color-guest-card: #fffaf2;
++  /* Ролі */
++  --color-primary-fill: #56633f; --color-primary-ink: #ffffff; --color-ghost-ink: #56633f;
++  --color-prio-high: #56633f; --color-prio-low: #8c491a;
++}
++
++/* Шавлія · світла */
++[data-scheme='sage'][data-theme='light'] {
++  /* Полотно */
++  --color-bg: #f5ead8; --color-surface: #ebddc5; --color-text: #201e1d;
++  --color-divider: color-mix(in srgb, var(--color-text) 16%, transparent);
++  /* Нейтральна рампа */
++  --color-neutral-100: #f9f4ed; --color-neutral-200: #eee7db; --color-neutral-300: #dcd3c4;
++  --color-neutral-400: #c0b6a5; --color-neutral-500: #a19786; --color-neutral-600: #82796a;
++  --color-neutral-700: #645c50; --color-neutral-800: #474238; --color-neutral-900: #2e2b25;
++  /* Акцент */
++  --color-accent: #7a8a5e; --color-accent-100: #f0fae1; --color-accent-200: #e1eecc;
++  --color-accent-300: #ccdbb2; --color-accent-400: #aebf92; --color-accent-500: #8fa073;
++  --color-accent-600: #728157; --color-accent-700: #56633f; --color-accent-800: #3d472b;
++  --color-accent-900: #272e1b;
++  /* Другий акцент */
++  --color-accent-2: #c67139; --color-accent-2-100: #fff2eb; --color-accent-2-200: #ffe1d0;
++  --color-accent-2-300: #ffc6a5; --color-accent-2-400: #f6a06b; --color-accent-2-500: #d67f48;
++  --color-accent-2-600: #b2622d; --color-accent-2-700: #8c491a; --color-accent-2-800: #643312;
++  --color-accent-2-900: #402310;
++  /* Небезпека */
++  --color-danger: #a83a2e; --color-danger-bg: #f7ded6; --color-danger-ink: #7a2a1c;
++  --color-danger-line: #b5533f;
++  /* Гостьова */
++  --color-guest-bg: #f7efe1; --color-guest-header: #f2ddc8; --color-guest-card: #fffaf2;
++  /* Ролі */
++  --color-primary-fill: #56633f; --color-primary-ink: #ffffff; --color-ghost-ink: #56633f;
++  --color-prio-high: #56633f; --color-prio-low: #8c491a;
++}
++
++/* Шавлія · темна */
++[data-scheme='sage'][data-theme='dark'] {
++  /* Полотно */
++  --color-bg: #221f1b; --color-surface: #2e2a24; --color-text: #f5ead8;
++  --color-divider: rgba(245,234,216,.2);
++  /* Нейтральна рампа */
++  --color-neutral-100: #2a2620; --color-neutral-200: #3a352d; --color-neutral-300: #4a443a;
++  --color-neutral-400: #6b6356; --color-neutral-500: #887f70; --color-neutral-600: #a79d8c;
++  --color-neutral-700: #c3b9a6; --color-neutral-800: #e2d8c5; --color-neutral-900: #0f0d0b;
++  /* Акцент */
++  --color-accent: #aebf92; --color-accent-100: #252c1a; --color-accent-200: #333c27;
++  --color-accent-300: #596548; --color-accent-400: #82916c; --color-accent-500: #aebf92;
++  --color-accent-600: #bdcda2; --color-accent-700: #ccdbb2; --color-accent-800: #e1eecc;
++  --color-accent-900: #f0fae1;
++  /* Другий акцент */
++  --color-accent-2: #f6a06b; --color-accent-2-100: #33200f; --color-accent-2-200: #4d2f1c;
++  --color-accent-2-300: #9d6541; --color-accent-2-400: #f6a06b; --color-accent-2-500: #f7ae80;
++  --color-accent-2-600: #f7bc94; --color-accent-2-700: #f6c9a8; --color-accent-2-800: #ffe1d0;
++  --color-accent-2-900: #ffeee3;
++  /* Небезпека */
++  --color-danger: #e08b7f; --color-danger-bg: #3d201a; --color-danger-ink: #ffd9d0;
++  --color-danger-line: #a8503f;
++  /* Гостьова */
++  --color-guest-bg: #1d1813; --color-guest-header: #33241a; --color-guest-card: #2b2620;
++  /* Ролі */
++  --color-primary-fill: #aebf92; --color-primary-ink: #221f1b; --color-ghost-ink: #ccdbb2;
++  --color-prio-high: #aebf92; --color-prio-low: #f6a06b;
++}
++
++/* Слива · світла */
++[data-scheme='slyva'][data-theme='light'] {
++  /* Полотно */
++  --color-bg: #f6f5f8; --color-surface: #ffffff; --color-text: #1a1820; --color-divider: #dcdae2;
++  /* Нейтральна рампа */
++  --color-neutral-100: #f0eff4; --color-neutral-200: #edecf1; --color-neutral-300: #dcdae2;
++  --color-neutral-400: #b3b0be; --color-neutral-500: #898794; --color-neutral-600: #61606c;
++  --color-neutral-700: #4e4d59; --color-neutral-800: #2d2b36; --color-neutral-900: #1a1820;
++  /* Акцент */
++  --color-accent: #4a2e6b; --color-accent-100: #f0ecf6; --color-accent-200: #e6dff0;
++  --color-accent-300: #aea1c3; --color-accent-400: #7a6697; --color-accent-500: #4a2e6b;
++  --color-accent-600: #543578; --color-accent-700: #5f3d85; --color-accent-800: #3b2456;
++  --color-accent-900: #2a1a3e;
++  /* Другий акцент */
++  --color-accent-2: #4f8f91; --color-accent-2-100: #eaf3f3; --color-accent-2-200: #dceaea;
++  --color-accent-2-300: #96bcbd; --color-accent-2-400: #4f8f91; --color-accent-2-500: #427b7d;
++  --color-accent-2-600: #36686a; --color-accent-2-700: #2a5658; --color-accent-2-800: #1f4446;
++  --color-accent-2-900: #17393a;
++  /* Небезпека */
++  --color-danger: #a62f3e; --color-danger-bg: #f5dce0; --color-danger-ink: #77202c;
++  --color-danger-line: #b55462;
++  /* Гостьова */
++  --color-guest-bg: #f2eef8; --color-guest-header: #e6dff0; --color-guest-card: #ffffff;
++  /* Ролі */
++  --color-primary-fill: #4a2e6b; --color-primary-ink: #ffffff; --color-ghost-ink: #4a2e6b;
++  --color-prio-high: #4a2e6b; --color-prio-low: #2a5658;
++}
++
++/* Слива · темна */
++[data-scheme='slyva'][data-theme='dark'] {
++  /* Полотно */
++  --color-bg: #14121a; --color-surface: #1e1b26; --color-text: #eae8f0;
++  --color-divider: rgba(234,232,240,.18);
++  /* Нейтральна рампа */
++  --color-neutral-100: #1e1b26; --color-neutral-200: #272333; --color-neutral-300: #342f44;
++  --color-neutral-400: #565064; --color-neutral-500: #787385; --color-neutral-600: #9b98a8;
++  --color-neutral-700: #b8b5c4; --color-neutral-800: #dedbe6; --color-neutral-900: #0a0810;
++  /* Акцент */
++  --color-accent: #b79bdb; --color-accent-100: #231a35; --color-accent-200: #33264a;
++  --color-accent-300: #5c4a77; --color-accent-400: #8871a8; --color-accent-500: #b79bdb;
++  --color-accent-600: #c2a9e2; --color-accent-700: #cdb8e9; --color-accent-800: #e0d3f2;
++  --color-accent-900: #efe7fa;
++  /* Другий акцент */
++  --color-accent-2: #6fb3b5; --color-accent-2-100: #152728; --color-accent-2-200: #1e3436;
++  --color-accent-2-300: #447072; --color-accent-2-400: #6fb3b5; --color-accent-2-500: #82bfc1;
++  --color-accent-2-600: #95cccd; --color-accent-2-700: #a8d8d9; --color-accent-2-800: #c2e5e6;
++  --color-accent-2-900: #d6f0f1;
++  /* Небезпека */
++  --color-danger: #e8909e; --color-danger-bg: #3a1c23; --color-danger-ink: #ffd7dd;
++  --color-danger-line: #a85466;
++  /* Гостьова */
++  --color-guest-bg: #191525; --color-guest-header: #2a2040; --color-guest-card: #221e2e;
++  /* Ролі */
++  --color-primary-fill: #b79bdb; --color-primary-ink: #14121a; --color-ghost-ink: #cdb8e9;
++  --color-prio-high: #b79bdb; --color-prio-low: #6fb3b5;
++}
++
++/* Вугіль · світла */
++[data-scheme='vuhil'][data-theme='light'] {
++  /* Полотно */
++  --color-bg: #ffffff; --color-surface: #f1f1f1; --color-text: #101010; --color-divider: #9a9a9a;
++  /* Нейтральна рампа */
++  --color-neutral-100: #ebebeb; --color-neutral-200: #e6e6e6; --color-neutral-300: #cfcfcf;
++  --color-neutral-400: #8a8a8a; --color-neutral-500: #696969; --color-neutral-600: #4a4a4a;
++  --color-neutral-700: #3a3a3a; --color-neutral-800: #1f1f1f; --color-neutral-900: #101010;
++  /* Акцент */
++  --color-accent: #123a6b; --color-accent-100: #eaf0f8; --color-accent-200: #d6e2f2;
++  --color-accent-300: #91a7c4; --color-accent-400: #516f97; --color-accent-500: #123a6b;
++  --color-accent-600: #123a6b; --color-accent-700: #123a6b; --color-accent-800: #0d2d52;
++  --color-accent-900: #081c34;
++  /* Другий акцент */
++  --color-accent-2: #2b5e3f; --color-accent-2-100: #e7f0ea; --color-accent-2-200: #d5e6da;
++  --color-accent-2-300: #7ea089; --color-accent-2-400: #2b5e3f; --color-accent-2-500: #27573a;
++  --color-accent-2-600: #245034; --color-accent-2-700: #20492f; --color-accent-2-800: #173824;
++  --color-accent-2-900: #143220;
++  /* Небезпека */
++  --color-danger: #8c1d13; --color-danger-bg: #fbe3e0; --color-danger-ink: #6b1109;
++  --color-danger-line: #8c1d13;
++  /* Гостьова */
++  --color-guest-bg: #f1f1f1; --color-guest-header: #d6e2f2; --color-guest-card: #ffffff;
++  /* Ролі */
++  --color-primary-fill: #123a6b; --color-primary-ink: #ffffff; --color-ghost-ink: #0d2d52;
++  --color-prio-high: #123a6b; --color-prio-low: #2b5e3f;
++}
++
++/* Вугіль · темна */
++[data-scheme='vuhil'][data-theme='dark'] {
++  /* Полотно */
++  --color-bg: #000000; --color-surface: #151515; --color-text: #ffffff; --color-divider: #5a5a5a;
++  /* Нейтральна рампа */
++  --color-neutral-100: #151515; --color-neutral-200: #1f1f1f; --color-neutral-300: #333333;
++  --color-neutral-400: #6e6e6e; --color-neutral-500: #959595; --color-neutral-600: #bdbdbd;
++  --color-neutral-700: #d6d6d6; --color-neutral-800: #f0f0f0; --color-neutral-900: #000000;
++  /* Акцент */
++  --color-accent: #9dc6ff; --color-accent-100: #0a1624; --color-accent-200: #12243a;
++  --color-accent-300: #3c5576; --color-accent-400: #6a8bb8; --color-accent-500: #9dc6ff;
++  --color-accent-600: #adcfff; --color-accent-700: #bcd8ff; --color-accent-800: #d7e7ff;
++  --color-accent-900: #eaf3ff;
++  /* Другий акцент */
++  --color-accent-2: #8fd6a8; --color-accent-2-100: #0d1f14; --color-accent-2-200: #143122;
++  --color-accent-2-300: #4e7e61; --color-accent-2-400: #8fd6a8; --color-accent-2-500: #9cdbb2;
++  --color-accent-2-600: #a8e1bb; --color-accent-2-700: #b4e6c5; --color-accent-2-800: #cdefda;
++  --color-accent-2-900: #dcf5e4;
++  /* Небезпека */
++  --color-danger: #ffb3a8; --color-danger-bg: #2a0f0b; --color-danger-ink: #ffd9d2;
++  --color-danger-line: #ff9a8e;
++  /* Гостьова */
++  --color-guest-bg: #0d0d0d; --color-guest-header: #12243a; --color-guest-card: #1a1a1a;
++  /* Ролі */
++  --color-primary-fill: #9dc6ff; --color-primary-ink: #000000; --color-ghost-ink: #bcd8ff;
++  --color-prio-high: #9dc6ff; --color-prio-low: #8fd6a8;
++}
+diff --git a/app/vercel.json b/app/vercel.json
+index dc31665..47e0126 100644
+--- a/app/vercel.json
++++ b/app/vercel.json
+@@ -15,7 +15,7 @@
+       "headers": [
+         {
+           "key": "Content-Security-Policy",
+-          "value": "default-src 'self'; script-src 'self' 'sha256-bwZ7doLfcTVRdL6yw6L1KwZav27r1sOIWgXUkERynv0='; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.run.app; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none';"
++          "value": "default-src 'self'; script-src 'self' 'sha256-45CnDnfyS5WJ6o3ubWDbJZVJdvBUJEb2ZdPbamtCOXw='; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.run.app; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none';"
+         },
+         {
+           "key": "X-Content-Type-Options",
+diff --git a/app/vite.config.ts b/app/vite.config.ts
+index ab0bda3..095602c 100644
+--- a/app/vite.config.ts
++++ b/app/vite.config.ts
+@@ -41,9 +41,12 @@ export default defineConfig({
+           // Джерело для генерації maskable-512.png, сторінці не потрібне.
+           'icons/maskable.svg',
+           // Шрифти самохостяться з усіма підмножинами, але застосунок українською,
+-          // польською й англійською: грецька й вʼєтнамська не знадобляться.
++          // польською й англійською: решта письмен у кеш не їде. Rubik возить із
++          // собою ще арабицю й іврит — це близько 200 КБ, яких ніхто не побачить.
+           'assets/*-greek-*.woff2',
+           'assets/*-vietnamese-*.woff2',
++          'assets/*-arabic-*.woff2',
++          'assets/*-hebrew-*.woff2',
+         ],
+         // Будь-яка адреса застосунку відкривається з кешованого index.html,
+         // навіть без мережі.
+diff --git a/docs/DECISIONS.md b/docs/DECISIONS.md
+index 44c7f98..ece9963 100644
+--- a/docs/DECISIONS.md
++++ b/docs/DECISIONS.md
+@@ -406,3 +406,35 @@
+ - **`text[]` із записом «Розмір: M».** Обмеження перевірялося б без jsonpath, зате підпис і значення довелося б розбирати рядком на кожному показі, а двокрапка у значенні ламала б розбір.
+ - **Власна SQL-функція `items_variants_ok(jsonb)` у `check`.** Найчитабельніший вираз, але кожна функція в `public` за замовчуванням отримує `EXECUTE` для `anon`, `authenticated` і `service_role` окремими грантами (CLAUDE.md §3.4), тож її довелося б відкликати руками й вносити в білий список `01_schema_guards.test.sql`. Перевірка форми даних такої ціни не варта.
+ - **Вільний текст у `note`, як було.** Нічого не коштує, але гість читає абзац замість двох слів, а парсер ніколи не зможе заповнити ознаки сам.
++
++## ADR-031: Шість палітр токенами, аудит контрасту як тест, шрифти з кирилицею
++Дата: 2026-09-21
++Статус: Прийнято · Замінює ADR-015
++
++**Контекст.** Редизайн приніс три кольорові схеми (Шавлія, Слива, Вугіль) × дві теми — шість наборів токенів. ADR-015 описував один набір у `src/styles.css` і тему як перевизначення; для шести наборів цього замало. Разом із палітрами прийшли три питання, на які довелось відповісти окремо.
++
++**Рішення.**
++
++1. **Кольори живуть у `src/styles/tokens.css`, решта стилів — у `src/styles.css`.** Схема й тема — дві незалежні осі, обидві ставляться атрибутами на `<html>`: `data-scheme` × `data-theme`. Жоден компонент не знає, яка схема активна, і ніде не звіряє її ім'я.
++
++2. **Склад палітри повний або ніякий** — усі 45 змінних у кожному з шести наборів. Пропущений токен не ламає сторінку: він тихо падає на `:root`, тобто на світлу Шавлію, і в темній схемі дає світлий значок на темній картці. Кроки рамп, яких не було в макетах, добудовані інтерполяцією в Oklab між сусідніми оголошеними значеннями — так вони лягають на ту саму шкалу світлості, що й решта.
++
++3. **Аудит контрасту — тест, а не картинка.** `npm run check:contrast` читає `tokens.css` і рахує 22 пари × 6 палітр = 132 перевірки: 4,5:1 для тексту, 3:1 для нетекстових індикаторів. Числа беруться з тих самих токенів, що й у застосунку, тому таблиця не може розійтися з тим, що бачить людина. Той самий скрипт падає на літеральному кольорі будь-де в `src/`, крім `tokens.css`. У CI стоїть перед збіркою: зламаний контраст видно за секунди.
++
++4. **Пріоритет має власні токени** `--color-prio-high` / `--color-prio-low`. Смужка — єдиний носій пріоритету на картці, а кроки акцентних рамп давали в світлій Шавлії 2,11:1 і 1,54:1, тобто нижче порога 3:1.
++
++5. **Кільце фокуса — `--color-accent-700`, не базовий акцент.** У світлій Шавлії акцент дає 3,14:1: формально понад поріг, але із запасом +0,14 на єдиному індикаторі клавіатурного фокуса. Глибший крок дає 5,43:1 і тримається в усіх шести палітрах.
++
++6. **Гарнітури — Rubik (заголовки) і Manrope (текст), самохостяться.** Пакет дизайну називав Figtree, але в ньому немає кирилиці: у `@fontsource-variable/figtree` лише `latin` і `latin-ext`. Весь основний текст українською мовчки падав би на системний шрифт — той самий дефект, який пакет уже знайшов і полагодив для заголовків, замінивши Caprasimo на Rubik, але лише для заголовків. Manrope найближчий до Figtree за пропорціями й характером і має `cyrillic`, `cyrillic-ext`, `latin-ext`.
++
++   Google Fonts як джерело відхилено: CSP пускає лише `'self'`, а офлайн-оболонка з етапу 6.1 має відкриватися без мережі.
++
++7. **Схема власника — у профілі** (`profiles.scheme`, міграція `20260921140000`), щоб переїжджала між пристроями. Тема лишається там, де була. В обох випадках значення дублюється в `localStorage`: інлайновий скрипт у `<head>` ставить атрибути до першого рендера, а профіль на той момент ще не завантажений.
++
++   **Гість обирає сам, і його вибір не їде на сервер.** Причина не естетична: гостю може бути потрібен Вугіль, і чужий вибір не має йому цього забороняти. А відправлений на сервер вибір був би ще одним сигналом про те, що хтось відкрив посилання (CLAUDE.md §3.2).
++
++**Наслідки.** Нова схема — це новий блок у `tokens.css` і нічого більше; жоден компонент не правиться. Ціна: `tokens.css` доведеться тримати повним руками, і кожна нова пара кольорів у компонентах має потрапити в список `PAIRS` — інакше лишиться неперевіреною. Precache трохи схуд (681 КБ проти 770): Manrope і Rubik легші за попередню пару, а арабиця й іврит із Rubik у кеш не їдуть.
++
++`color-mix()` тепер несуча конструкція (тіні, ховери, бекдроп), а не прикраса — це Safari 16.4+, Chrome 111+, Firefox 113+. Для PWA 2026 року прийнятно.
++
++**Відхилено.** *Один файл зі всіма шістьма наборами* — 1200 рядків, у яких кольори загублені серед компонентів. *Схема як клас на `<body>`* — атрибут читається інлайновим скриптом так само, але не конфліктує з іншими класами. *Аудит як окрема сторінка в застосунку* — її ніхто не відкриє після першого разу; тест у CI падає сам. *Генерувати палітри з базового кольору формулою* — виходить математично рівна, але візуально мертва шкала; значення в пакеті підібрані на око й перевірені числом.
+diff --git a/supabase/migrations/20260921140000_profile_scheme.sql b/supabase/migrations/20260921140000_profile_scheme.sql
+new file mode 100644
+index 0000000..313b5f5
+--- /dev/null
++++ b/supabase/migrations/20260921140000_profile_scheme.sql
+@@ -0,0 +1,26 @@
++-- 20260921140000_profile_scheme.sql
++-- Кольорова схема інтерфейсу в профілі власника (ADR-031).
++--
++-- Схема й тема — дві незалежні осі: три схеми × (світла / темна / як у системі).
++-- Тема вже має колонку `profiles.theme` з першої міграції; схема дістає таку
++-- саму, щоб вибір переїжджав між пристроями, а не жив в одному браузері.
++--
++-- Гостя це не стосується: у нього акаунта немає, його вибір лишається в
++-- localStorage і на сервер не їде. Відправляти його було б ще одним сигналом
++-- про те, що хтось відкрив посилання, — а про гостей власник не дізнається
++-- нічого (CLAUDE.md §3.2).
++
++create type public.app_scheme as enum ('sage', 'slyva', 'vuhil');
++
++comment on type public.app_scheme is
++  'Кольорова схема інтерфейсу. Значення = data-scheme на <html>, набори токенів — app/src/styles/tokens.css.';
++
++alter table public.profiles
++  add column scheme public.app_scheme not null default 'sage';
++
++comment on column public.profiles.scheme is
++  'Усталена Шавлія. Читає й пише лише власник через наявні політики profiles_select_own / profiles_update_own.';
++
++-- Нових політик не потрібно: `profiles` уже має RLS і дві політики на власника,
++-- а `anon` відкликано разом з усією таблицею в 20260910120100_rls.sql. Нова
++-- колонка успадковує їх — окремих грантів на колонку проєкт не використовує.
+-- 
+2.43.0
+

@@ -3,13 +3,25 @@ import type { Item, ItemInput, ItemQuery, ItemStatus, List, Totals } from './typ
 
 /* ── Списки ─────────────────────────────── */
 
+/**
+ * Картка списку показує, скільки в ньому позицій, тому кількість береться
+ * агрегатом у тому самому запиті: окремий запит на кожен список дав би N+1
+ * на екрані, який відкривається найчастіше.
+ *
+ * PostgREST повертає агрегат масивом з одного рядка — розгортаємо тут, щоб
+ * форма `List` лишалась пласкою і без змін лягала в офлайн-знімок.
+ */
 export async function fetchLists(): Promise<List[]> {
   const { data, error } = await supabase
     .from('lists')
-    .select('*')
+    .select('*, items(count)')
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as List[];
+  type Row = Omit<List, 'item_count'> & { items?: { count: number }[] | null };
+  return ((data ?? []) as Row[]).map(({ items, ...list }) => ({
+    ...list,
+    item_count: items?.[0]?.count ?? 0,
+  }));
 }
 
 export async function fetchList(id: string): Promise<List | null> {
@@ -73,8 +85,15 @@ export async function updateItem(id: string, patch: Partial<ItemInput>): Promise
  * Сторінка списку тримає в памʼяті лише поточну партію, а вивантажити треба
  * все. Ідемо діапазонами по 1000: стільки ж стоїть у `max_rows` PostgREST,
  * тож одним запитом більшого все одно не взяти.
+ *
+ * `onProgress` потрібен саме експорту: він перечитує весь список, і на
+ * великому це помітна пауза. Кнопка в цей час показує «Експортую… 18 з 34»,
+ * а не просто гасне.
  */
-export async function fetchAllItems(listId: string): Promise<Item[]> {
+export async function fetchAllItems(
+  listId: string,
+  onProgress?: (done: number) => void,
+): Promise<Item[]> {
   const PAGE = 1000;
   const out: Item[] = [];
   for (let from = 0; ; from += PAGE) {
@@ -87,6 +106,7 @@ export async function fetchAllItems(listId: string): Promise<Item[]> {
     if (error) throw error;
     const rows = (data ?? []) as Item[];
     out.push(...rows);
+    onProgress?.(out.length);
     if (rows.length < PAGE) return out;
   }
 }

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { EMAIL, PASSWORD, addItem, createList, hasAccount, signIn, unique } from './helpers';
+import { EMAIL, PASSWORD, addItem, createList, hasAccount, signIn, signOut, unique } from './helpers';
 
 /**
  * Поведінка сесії: вхід клавішею Enter, повернення на ?next, F5 без виходу.
@@ -34,11 +34,11 @@ test('без мережі — зрозуміла помилка, а не «[obje
   await context.setOffline(true);
 
   // Перехід усередині застосунку: сторінку не перевантажуємо, запит даних падає.
-  await page.getByRole('link', { name: /^посилання$|^linki$|^links$/i }).click();
+  await page.getByRole('link', { name: /^(мої )?посилання$|^(moje )?linki$|^(my )?links$/i }).click();
 
   await expect(page.getByText(/немає зʼєднання|немає з'єднання|brak połączenia|no internet connection/i)).toBeVisible();
   await expect(page.getByText('[object Object]')).toHaveCount(0);
-  await expect(page.getByRole('heading', { level: 2, name: /посилань ще немає|nie ma jeszcze linków|no links yet/i })).toHaveCount(0);
+  await expect(page.getByRole('heading', { level: 2, name: /ще жодного посилання|jeszcze żadnego linku|no links yet/i })).toHaveCount(0);
 
   await context.setOffline(false);
 });
@@ -48,8 +48,11 @@ test('у налаштуваннях є розділ встановлення з�
   await page.goto('/settings');
   const section = page.getByTestId('install');
   await expect(section.getByRole('heading', { name: /застосунок на телефоні|aplikacja na telefonie|app on your phone/i })).toBeVisible();
-  // У тестовому браузері подія встановлення не приходить, тож видно одну з підказок.
-  await expect(section.locator('p')).not.toHaveText('');
+  // Підказок у розділі дві: про встановлення і про QR для телефона. Нас
+  // цікавить перша — саме вона залежить від того, як браузер уміє ставити
+  // застосунок. У тестовому браузері подія встановлення не приходить, тож
+  // це одна з підказок «вручну».
+  await expect(section.locator('p').first()).not.toHaveText('');
 });
 
 /**
@@ -70,7 +73,12 @@ test('мовчазний сервер не залишає кнопку вход�
   await page.getByLabel(/пошта|e-mail|email/i).fill(EMAIL!);
   await page.getByLabel(/пароль|hasło|password/i).fill(PASSWORD!);
 
-  const submit = page.getByRole('button', { name: /увійти|zaloguj|sign in/i });
+  // Кнопка в роботі міняє підпис на дієслово («Входжу…»), тож локатор мусить
+  // упізнавати обидва стани — інакше після кліку він перестає щось знаходити,
+  // і падіння виглядає як «кнопка зникла», а не «підпис інший».
+  const submit = page.getByRole('button', {
+    name: /увійти|входжу|zaloguj|loguję|sign in|signing in/i,
+  });
   await submit.click();
   await expect(submit).toBeDisabled();
 
@@ -156,7 +164,7 @@ test('після виходу з акаунта офлайн-копії не л�
   await page.goto('/lists');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
-  await page.getByRole('button', { name: /^вийти$|^wyloguj$|^sign out$/i }).click();
+  await signOut(page);
   await expect(page).toHaveURL(/\/login/);
 
   // Порожньо саме в сховищі, а не лише на екрані.
@@ -247,7 +255,7 @@ test('чужий знімок у сховищі не показується', as
   // Через іншу сторінку, щоб список завантажився наново. Обидва переходи
   // дочікуємо: без цього тест лишався на /shares і перевіряв не ту сторінку —
   // «нічого немає» там теж правда.
-  await page.getByRole('link', { name: /^посилання$|^linki$|^links$/i }).click();
+  await page.getByRole('link', { name: /^(мої )?посилання$|^(moje )?linki$|^(my )?links$/i }).click();
   await page.waitForURL(/\/shares$/);
   await page.getByRole('link', { name: /^списки$|^listy$|^lists$/i }).first().click();
   await page.waitForURL(/\/lists$/);
@@ -255,8 +263,10 @@ test('чужий знімок у сховищі не показується', as
   // Стан сторінки читаємо за розміткою, а не за текстом: українською
   // «Немає зʼєднання» починають обидва повідомлення — і помилка, і позначка
   // копії, — тож за словами їх не розрізнити.
-  const stale = page.locator('.note--stale');
-  const failure = page.locator('.note[data-tone="error"]');
+  const stale = page.locator('[data-kind="stale"]');
+  const failure = page.getByRole('heading', {
+    name: /не завантажились|się nie wczytały|did not load/i,
+  });
 
   // Спершу дочекатись, поки сторінка взагалі відповість: без цього перевірки
   // «нічого немає» проходять на ще порожньому екрані.
@@ -406,7 +416,7 @@ test('вихід із незакінченою чергою спершу пит�
   // Скасовуємо запит — виходу не має статися. Перевіряємо саме відсутність
   // події: `toHaveURL` тут марний, бо збігається миттєво, ще до переходу.
   page.once('dialog', (d) => void d.dismiss());
-  await page.getByRole('button', { name: /^вийти$|^wyloguj$|^sign out$/i }).click();
+  await signOut(page);
   await page.waitForURL(/\/login/, { timeout: 3000 }).then(
     () => {
       throw new Error('застосунок вийшов, хоча запит було скасовано');

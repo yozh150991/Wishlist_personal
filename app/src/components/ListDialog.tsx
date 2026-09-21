@@ -72,6 +72,7 @@ export function ListDialog({
           label={t('lists.fields.title')}
           name="listTitle"
           maxLength={120}
+          count
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
@@ -79,6 +80,7 @@ export function ListDialog({
         <div className="field">
           <label htmlFor="description">{t('lists.fields.description')}</label>
           <textarea
+            className="input"
             id="description"
             rows={2}
             maxLength={2000}
@@ -91,6 +93,7 @@ export function ListDialog({
           <div className="field">
             <label htmlFor="currency">{t('lists.fields.currency')}</label>
             <select
+              className="input"
               id="currency"
               value={currency}
               onChange={(e) => setCurrency(e.target.value as Currency)}
@@ -114,11 +117,12 @@ export function ListDialog({
         </div>
 
         <div className="dialog__foot">
-          <button type="button" className="btn btn--quiet" onClick={onClose}>
+          <button type="button" className="btn btn--secondary" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" className="btn" disabled={busy}>
-            {t('common.save')}
+          <button type="submit" className="btn btn--primary" disabled={busy}>
+            {busy && <span className="spinner" />}
+            {busy ? t('common.saving') : t('common.save')}
           </button>
         </div>
       </form>

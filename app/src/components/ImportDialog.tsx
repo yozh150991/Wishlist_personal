@@ -105,6 +105,7 @@ export function ImportDialog({
         <div className="field">
           <label htmlFor="importFile">{t('transfer.import.file')}</label>
           <input
+            className="input"
             id="importFile"
             ref={input}
             type="file"
@@ -129,6 +130,7 @@ export function ImportDialog({
             <div className="field">
               <label htmlFor="importCurrency">{t('lists.fields.currency')}</label>
               <select
+                className="input"
                 id="importCurrency"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as Currency)}
@@ -191,11 +193,12 @@ export function ImportDialog({
         )}
 
         <div className="dialog__foot">
-          <button type="button" className="btn btn--quiet" onClick={onClose}>
+          <button type="button" className="btn btn--secondary" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" className="btn" disabled={busy || items.length === 0}>
-            {t('transfer.import.submit')}
+          <button type="submit" className="btn btn--primary" disabled={busy || items.length === 0}>
+            {busy && <span className="spinner" />}
+            {busy ? t('transfer.import.importing') : t('transfer.import.submit', { n: items.length })}
           </button>
         </div>
       </form>

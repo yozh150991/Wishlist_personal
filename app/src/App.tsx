@@ -5,6 +5,7 @@ import { ThemeProvider } from './lib/theme';
 import { RequireAuth } from './components/RequireAuth';
 import { AppShell } from './components/AppShell';
 import { LocaleSync } from './components/LocaleSync';
+import { AppearanceSync } from './components/AppearanceSync';
 import { UpdatePrompt } from './components/UpdatePrompt';
 import Login from './routes/Login';
 import Register from './routes/Register';
@@ -25,6 +26,9 @@ export default function App() {
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <LocaleSync />
+            {/* Тема й схема власника їдуть у профіль, щоб переїжджали
+                між пристроями. Гостьова сторінка цього не має. */}
+            <AppearanceSync />
             <Routes>
               {/* Публічні */}
               <Route path="/login" element={<Login />} />

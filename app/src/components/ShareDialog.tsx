@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Dialog } from './Dialog';
+import { Icon } from './Icon';
 import { Field, Note } from './ui';
 import { useI18n } from '../lib/i18n';
 import { errorText } from '../lib/errors';
@@ -84,23 +85,33 @@ export function ShareDialog({
   return (
     <Dialog open={open} onClose={onClose} title={t('share.create')}>
       {link ? (
-        <div className="form-grid">
-          <Note tone="success">{t('share.ready')}</Note>
+        /* Після створення тіло діалога змінюється повністю: форма зникає,
+           лишається те єдине, по що людина сюди прийшла, — адреса. */
+        <div className="ready">
+          <span className="ready__mark" aria-hidden="true">
+            <Icon name="check" size={32} />
+          </span>
+          <h3>{t('share.ready')}</h3>
 
-          <div className="field">
-            <label htmlFor="shareLink">{t('share.link')}</label>
-            <div className="url-row">
-              <input id="shareLink" readOnly value={link} onFocus={(e) => e.target.select()} />
-              <button type="button" className="btn" onClick={() => void copy()}>
-                {copied ? t('share.copied') : t('share.copy')}
-              </button>
-            </div>
-            <span className="hint">{t('share.linkHint')}</span>
-          </div>
+          <label className="visually-hidden" htmlFor="shareLink">
+            {t('share.link')}
+          </label>
+          <input
+            className="input ready__link"
+            id="shareLink"
+            readOnly
+            value={link}
+            onFocus={(e) => e.target.select()}
+          />
+          <p className="small muted">{t('share.linkHint')}</p>
 
-          <div className="dialog__foot">
-            <button type="button" className="btn btn--quiet" onClick={onClose}>
-              {t('common.close')}
+          <div className="ready__actions">
+            <button type="button" className="btn btn--primary btn--block" onClick={() => void copy()}>
+              <Icon name={copied ? 'check' : 'copy'} size={16} />
+              {copied ? t('share.copied') : t('share.copyLink')}
+            </button>
+            <button type="button" className="btn btn--secondary btn--block" onClick={onClose}>
+              {t('common.done')}
             </button>
           </div>
         </div>
@@ -121,6 +132,7 @@ export function ShareDialog({
             label={t('share.fields.title')}
             name="shareTitle"
             maxLength={120}
+            count
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -128,6 +140,7 @@ export function ShareDialog({
           <div className="field">
             <label htmlFor="shareMessage">{t('share.fields.message')}</label>
             <textarea
+              className="input"
               id="shareMessage"
               rows={2}
               maxLength={1000}
@@ -168,11 +181,12 @@ export function ShareDialog({
           />
 
           <div className="dialog__foot">
-            <button type="button" className="btn btn--quiet" onClick={onClose}>
+            <button type="button" className="btn btn--secondary" onClick={onClose}>
               {t('common.cancel')}
             </button>
-            <button type="submit" className="btn" disabled={busy}>
-              {t('share.create')}
+            <button type="submit" className="btn btn--primary" disabled={busy}>
+              {busy && <span className="spinner" />}
+              {busy ? t('share.creating') : t('share.create')}
             </button>
           </div>
         </form>

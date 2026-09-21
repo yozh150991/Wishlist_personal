@@ -32,6 +32,12 @@ export type List = {
   is_archived: boolean;
   created_at: string;
   updated_at: string;
+  /**
+   * Скільки позицій у списку. Не колонка: агрегат із `fetchLists`, потрібен
+   * лише картці на сторінці списків. Старий офлайн-знімок його не має, тому
+   * читається як необовʼязковий.
+   */
+  item_count?: number;
 };
 
 export type Item = {

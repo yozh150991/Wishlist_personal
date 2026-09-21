@@ -80,7 +80,7 @@ export function VariantsField({
           {/* type="button": усередині <form> будь-яка інша кнопка відправляє форму (CLAUDE.md §4). */}
           <button
             type="button"
-            className="btn btn--bare"
+            className="btn btn--ghost btn--compact"
             aria-label={t('item.variants.removeAria', { n: index + 1 })}
             onClick={() => remove(index)}
           >
@@ -91,7 +91,7 @@ export function VariantsField({
 
       <button
         type="button"
-        className="btn btn--quiet"
+        className="btn btn--secondary"
         disabled={variants.length >= VARIANTS_MAX}
         onClick={add}
       >
