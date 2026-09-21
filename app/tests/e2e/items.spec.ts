@@ -71,6 +71,26 @@ test('зміна розміру сторінки перезавантажує в
   await expect(size).toHaveValue('10');
 });
 
+/**
+ * Дубльований `id` — не косметика: `<label for>` веде на **перший** збіг у
+ * документі. Коли фільтри малювались двічі (панель і лист), підпис у листі
+ * фокусував схований контрол панелі, зчитувач екрана оголошував кожен
+ * фільтр двічі, а «На сторінці» не можна було вибрати з телефона взагалі.
+ */
+test('на сторінці списку немає дубльованих id', async ({ page }) => {
+  await signIn(page);
+  await createList(page, unique('E2E ids'));
+  await addItem(page, 'Кавоварка');
+  // Разом із фільтрами: саме там оправи дві, а набір контролів мусить бути один.
+  await openFilters(page);
+
+  const dupes = await page.evaluate(() => {
+    const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
+    return [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+  });
+  expect(dupes).toEqual([]);
+});
+
 test('Enter у діалогах списку й позиції зберігає, а в примітці — ні', async ({ page }) => {
   await signIn(page);
 

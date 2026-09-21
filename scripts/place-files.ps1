@@ -100,7 +100,7 @@ $map = @{
   'tokens.css' = 'app\src\styles'
   'check-contrast.mjs' = 'app\scripts'; 'check-i18n.mjs' = 'app\scripts'
   'Icon.tsx' = 'app\src\components'; 'Banners.tsx' = 'app\src\components'
-  'Filters.tsx' = 'app\src\components'
+  'Filters.tsx' = 'app\src\components'; 'media.ts' = 'app\src\lib'
   'AppearanceSync.tsx' = 'app\src\components'
   'AppearanceSheet.tsx' = 'app\src\components'
   'transfer.spec.ts' = 'app\tests\e2e'

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useI18n } from '../lib/i18n';
+import { useMediaQuery } from '../lib/media';
 import { DEFAULT_QUERY, PAGE_SIZES, SORT_KEYS, STATUSES } from '../lib/types';
 import type { ItemQuery, ItemStatus, PageSize, SortKey } from '../lib/types';
 import { Icon } from './Icon';
@@ -21,6 +22,14 @@ export function activeFilterCount(q: ItemQuery): number {
 export function isFiltered(q: ItemQuery): boolean {
   return activeFilterCount(q) > 0 || q.search.trim() !== '';
 }
+
+/**
+ * Ширина, з якої фільтри стоять розгорнутою панеллю, а не листом. Те саме
+ * число — у `styles.css` (`.filters__panel`, `.filters__toggle`): там воно
+ * задає оформлення, тут — яку з двох оправ узагалі малювати. Розійдуться —
+ * людина побачить порожнє місце замість фільтрів.
+ */
+const PANEL_FROM = '(min-width: 56rem)';
 
 /** Групи фільтрів. Однакові на телефоні й десктопі — різниться лише оправа. */
 function Groups({
@@ -176,6 +185,9 @@ export function Filters({
   const { t } = useI18n();
   const sheet = useRef<HTMLDialogElement>(null);
   const count = activeFilterCount(query);
+  // Оправа рівно одна: або панель, або лист. Групи всередині однакові, і
+  // намальовані двічі вони дали б по два контроли з тим самим `id`.
+  const wide = useMediaQuery(PANEL_FROM);
 
   useEffect(() => {
     const el = sheet.current;
@@ -183,6 +195,12 @@ export function Filters({
     if (open && !el.open) el.showModal();
     if (!open && el.open) el.close();
   }, [open]);
+
+  // Вікно розтягнули, поки лист відкритий: фільтри вже в панелі, а стан
+  // «лист відкрито» лишився б висіти й не дав би відкрити його знову.
+  useEffect(() => {
+    if (wide && open) onClose();
+  }, [wide, open, onClose]);
 
   return (
     <>
@@ -200,54 +218,58 @@ export function Filters({
             onChange={(e) => onChange({ search: e.target.value })}
           />
         </span>
-        <button
-          type="button"
-          className={count > 0 ? 'btn btn--primary filters__toggle' : 'btn btn--secondary filters__toggle'}
-          aria-expanded={open}
-          aria-haspopup="dialog"
-          onClick={onOpen}
-        >
-          <Icon name="filter" size={16} />
-          {t('toolbar.filters')}
-          {count > 0 && <span className="filters__badge">{count}</span>}
-        </button>
-      </search>
-
-      {/* Десктоп: ті самі групи в один ряд, без листа. */}
-      <div className="filters__panel">
-        <Groups query={query} onChange={onChange} />
-        {count > 0 && (
-          <button type="button" className="btn btn--ghost" onClick={onReset}>
-            {t('toolbar.reset')}
-          </button>
-        )}
-      </div>
-
-      {/* Телефон: нижній лист. */}
-      <dialog className="dialog sheet" ref={sheet} onClose={onClose} onCancel={onClose}>
-        <div className="dialog__head">
-          <h2>{t('toolbar.filters')}</h2>
-          <button type="button" className="btn btn--ghost btn--compact" onClick={onReset}>
-            {t('toolbar.resetAll')}
-          </button>
+        {!wide && (
           <button
             type="button"
-            className="btn btn--icon btn--secondary"
-            onClick={onClose}
-            aria-label={t('common.close')}
+            className={count > 0 ? 'btn btn--primary filters__toggle' : 'btn btn--secondary filters__toggle'}
+            aria-expanded={open}
+            aria-haspopup="dialog"
+            onClick={onOpen}
           >
-            <Icon name="x" size={18} />
+            <Icon name="filter" size={16} />
+            {t('toolbar.filters')}
+            {count > 0 && <span className="filters__badge">{count}</span>}
           </button>
-        </div>
-        <div className="dialog__body filters__sheet-body">
+        )}
+      </search>
+
+      {wide ? (
+        /* Десктоп: ті самі групи в один ряд, без листа. */
+        <div className="filters__panel">
           <Groups query={query} onChange={onChange} />
+          {count > 0 && (
+            <button type="button" className="btn btn--ghost" onClick={onReset}>
+              {t('toolbar.reset')}
+            </button>
+          )}
         </div>
-        <div className="dialog__foot">
-          <button type="button" className="btn btn--primary btn--block" onClick={onClose}>
-            {t('toolbar.done')}
-          </button>
-        </div>
-      </dialog>
+      ) : (
+        /* Телефон: нижній лист. */
+        <dialog className="dialog sheet" ref={sheet} onClose={onClose} onCancel={onClose}>
+          <div className="dialog__head">
+            <h2>{t('toolbar.filters')}</h2>
+            <button type="button" className="btn btn--ghost btn--compact" onClick={onReset}>
+              {t('toolbar.resetAll')}
+            </button>
+            <button
+              type="button"
+              className="btn btn--icon btn--secondary"
+              onClick={onClose}
+              aria-label={t('common.close')}
+            >
+              <Icon name="x" size={18} />
+            </button>
+          </div>
+          <div className="dialog__body filters__sheet-body">
+            <Groups query={query} onChange={onChange} />
+          </div>
+          <div className="dialog__foot">
+            <button type="button" className="btn btn--primary btn--block" onClick={onClose}>
+              {t('toolbar.done')}
+            </button>
+          </div>
+        </dialog>
+      )}
     </>
   );
 }

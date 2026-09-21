@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { EMAIL, PASSWORD, addItem, createList, hasAccount, signIn, unique } from './helpers';
+import { EMAIL, PASSWORD, addItem, createList, hasAccount, signIn, signOut, unique } from './helpers';
 
 /**
  * Поведінка сесії: вхід клавішею Enter, повернення на ?next, F5 без виходу.
@@ -164,7 +164,7 @@ test('після виходу з акаунта офлайн-копії не л�
   await page.goto('/lists');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
-  await page.getByRole('button', { name: /^вийти$|^wyloguj$|^sign out$/i }).click();
+  await signOut(page);
   await expect(page).toHaveURL(/\/login/);
 
   // Порожньо саме в сховищі, а не лише на екрані.
@@ -416,7 +416,7 @@ test('вихід із незакінченою чергою спершу пит�
   // Скасовуємо запит — виходу не має статися. Перевіряємо саме відсутність
   // події: `toHaveURL` тут марний, бо збігається миттєво, ще до переходу.
   page.once('dialog', (d) => void d.dismiss());
-  await page.getByRole('button', { name: /^вийти$|^wyloguj$|^sign out$/i }).click();
+  await signOut(page);
   await page.waitForURL(/\/login/, { timeout: 3000 }).then(
     () => {
       throw new Error('застосунок вийшов, хоча запит було скасовано');
