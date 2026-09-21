@@ -87,13 +87,19 @@ export default function SharedList() {
     if (data && !data.viewer_is_owner) void registerView(token);
   }, [data, token]);
 
-  async function take(item: SharedItem, quantity: number) {
+  /**
+   * `p_quantity` в `reserve_item` — це **підсумкова** кількість цього гостя, а
+   * не приріст: RPC робить `on conflict … do update set quantity = excluded`,
+   * а межу рахує як «чужі броні + твоя нова». Тому «Узяти ще» має слати суму,
+   * інакше повторний виклик просто перезаписав би бронь тим самим числом.
+   */
+  async function take(item: SharedItem, total: number) {
     if (!data?.allow_reservations || busyId) return;
     setBusyId(item.id);
     setError(null);
     try {
-      await reserveItem(token, item.id, guestKey(), quantity);
-      rememberReservation(token, item.id, (mine[item.id] ?? 0) + quantity);
+      await reserveItem(token, item.id, guestKey(), total);
+      rememberReservation(token, item.id, total);
       setMine(myReservations(token));
       setData(await fetchSharedList(token));
     } catch (e) {
@@ -273,7 +279,7 @@ export default function SharedList() {
                             type="button"
                             className="btn btn--primary btn--block"
                             disabled={busy}
-                            onClick={() => void take(item, item.quantity > 1 ? wanted : 1)}
+                            onClick={() => void take(item, takenByMe + (item.quantity > 1 ? wanted : 1))}
                           >
                             {busy && <span className="spinner" />}
                             {busy
