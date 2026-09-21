@@ -52,7 +52,9 @@ test('бронювання видно другому гостю і не видн
   const firstPage = await first.newPage();
   await firstPage.goto(link);
   await firstPage.getByRole('button', { name: /я візьму це|biorę to|i'll take this/i }).first().click();
-  await expect(firstPage.getByText(/^(ти береш|bierzesz|you're taking this)$/i)).toBeVisible();
+  await expect(
+    firstPage.getByText(/ти береш це|bierzesz to|you are taking this/i),
+  ).toBeVisible();
 
   const second = await browser.newContext();
   const secondPage = await second.newPage();
@@ -78,8 +80,13 @@ test('відкликане посилання перестає відкрива�
 
   await page.goto('/shares');
   const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: shareTitle }) });
-  page.once('dialog', (d) => void d.accept());
   await card.getByRole('button', { name: /відкликати|unieważnij|revoke/i }).click();
+  // Підтвердження — власний <dialog>, не вікно браузера: кнопку дії треба
+  // натиснути саме в ньому, а не перехоплювати подію 'dialog'.
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /відкликати|unieważnij|revoke/i })
+    .click();
   await expect(card.getByRole('button', { name: /відкликати|unieważnij|revoke/i })).toHaveCount(0);
 
   const guest = await browser.newContext();

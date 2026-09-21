@@ -16,27 +16,60 @@ export function guestKey(): string {
   return value;
 }
 
-/** Що саме забронював цей браузер — сервер такого питання не відповідає. */
+/**
+ * Що саме забронював цей браузер — і скільки штук.
+ *
+ * Сервер на таке питання не відповідає: `get_shared_list` віддає лише скільки
+ * всього зайнято, без розбивки по гостях. Інакше з відповіді можна було б
+ * вирахувати чужі броні.
+ *
+ * Формат — мапа `{ itemId: кількість }`. Старі записи були масивом
+ * ідентифікаторів; вони читаються як «по одній штуці», щоб бронь, зроблена до
+ * оновлення, не зникла в людини з екрана.
+ */
 function mineKey(token: string): string {
   return `wl.res.${token}`;
 }
 
-export function myReservations(token: string): string[] {
+export type MyReservations = Record<string, number>;
+
+export function myReservations(token: string): MyReservations {
   try {
     const raw = localStorage.getItem(mineKey(token));
-    return raw ? (JSON.parse(raw) as string[]) : [];
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return Object.fromEntries((parsed as string[]).map((id) => [id, 1]));
+    }
+    if (parsed && typeof parsed === 'object') {
+      const out: MyReservations = {};
+      for (const [id, n] of Object.entries(parsed as Record<string, unknown>)) {
+        if (typeof n === 'number' && n > 0) out[id] = n;
+      }
+      return out;
+    }
+    return {};
   } catch {
-    return [];
+    return {};
   }
 }
 
-export function rememberReservation(token: string, itemId: string): void {
-  const next = new Set(myReservations(token));
-  next.add(itemId);
-  localStorage.setItem(mineKey(token), JSON.stringify([...next]));
+function write(token: string, value: MyReservations): void {
+  try {
+    localStorage.setItem(mineKey(token), JSON.stringify(value));
+  } catch {
+    /* приватний режим: бронь на сервері лишається, просто цей браузер її забуде */
+  }
+}
+
+export function rememberReservation(token: string, itemId: string, quantity = 1): void {
+  const next = myReservations(token);
+  next[itemId] = quantity;
+  write(token, next);
 }
 
 export function forgetReservation(token: string, itemId: string): void {
-  const next = myReservations(token).filter((id) => id !== itemId);
-  localStorage.setItem(mineKey(token), JSON.stringify(next));
+  const next = myReservations(token);
+  delete next[itemId];
+  write(token, next);
 }

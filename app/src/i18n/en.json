@@ -93,7 +93,8 @@
       "vuhil": "Charcoal"
     },
     "schemeHint": "Charcoal is the high-contrast scheme.",
-    "contrastSuggestion": "Your system asks for higher contrast. Switch to"
+    "contrastSuggestion": "Your system asks for higher contrast. Switch to",
+    "contrastShort": "Higher contrast"
   },
   "errors": {
     "invalidCredentials": "That email and password don't match.",
@@ -379,18 +380,26 @@
   },
   "guest": {
     "goneTitle": "This link isn't available",
-    "goneBody": "It may have been revoked or expired. Ask whoever sent it for a new one.",
+    "goneBody": "Check the address or ask whoever shared it for a new one.",
     "ownerBanner": "This is your own link. Reservations are hidden on purpose — so the gift stays a surprise.",
-    "hint": "Mark what you're taking and others will see it's spoken for. The list owner can't see this.",
     "take": "I'll take this",
-    "yours": "You're taking this",
+    "yours": "You are taking this",
     "cancel": "Changed my mind",
     "reserved": "Already taken",
-    "taken": "Someone just took that one.",
     "error": "That didn't work. Try again.",
     "emptyTitle": "Nothing here yet",
     "emptyBody": "Every item from this link is already unavailable.",
-    "footer": "This list is private. You only see what was shared with you."
+    "footer": "This list is private. You only see what was shared with you.",
+    "yoursPartial": "You are taking {n} · {left} left",
+    "takeSome": "Take {n} of {of}",
+    "takeMore": "Take one more",
+    "taking": "Taking…",
+    "needed": "{n} needed",
+    "allTaken": "All of them are taken",
+    "raceLost": "Someone took this a moment ago — your reservation is not here. The other items are free.",
+    "less": "Fewer",
+    "more": "More",
+    "appearance": "Appearance"
   },
   "pwa": {
     "updateReady": "A new version of Wishlist is available.",

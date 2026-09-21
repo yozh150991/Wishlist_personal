@@ -93,7 +93,8 @@
       "vuhil": "Węgiel"
     },
     "schemeHint": "Węgiel — schemat o wzmocnionym kontraście.",
-    "contrastSuggestion": "System prosi o wzmocniony kontrast. Włączyć"
+    "contrastSuggestion": "System prosi o wzmocniony kontrast. Włączyć",
+    "contrastShort": "Wzmocniony kontrast"
   },
   "errors": {
     "invalidCredentials": "E-mail albo hasło się nie zgadzają.",
@@ -379,18 +380,26 @@
   },
   "guest": {
     "goneTitle": "Link niedostępny",
-    "goneBody": "Mógł zostać unieważniony albo wygasł. Poproś o nowy osobę, która go wysłała.",
+    "goneBody": "Sprawdź adres albo poproś o nowy tego, kto udostępniał.",
     "ownerBanner": "To twój link. Rezerwacje są ukryte celowo — żeby prezent został niespodzianką.",
-    "hint": "Zaznacz, co bierzesz — inni zobaczą, że to zajęte. Właściciel listy tego nie widzi.",
     "take": "Biorę to",
-    "yours": "Bierzesz",
+    "yours": "Bierzesz to",
     "cancel": "Rezygnuję",
     "reserved": "Już zajęte",
-    "taken": "Tę pozycję ktoś właśnie wziął.",
     "error": "Nie udało się. Spróbuj jeszcze raz.",
     "emptyTitle": "Na razie pusto",
     "emptyBody": "Wszystkie pozycje z tego linku są już niedostępne.",
-    "footer": "Lista jest prywatna. Widzisz tylko to, czym się z tobą podzielono."
+    "footer": "Lista jest prywatna. Widzisz tylko to, czym się z tobą podzielono.",
+    "yoursPartial": "Bierzesz {n} · zostało {left}",
+    "takeSome": "Wezmę {n} z {of}",
+    "takeMore": "Wziąć jeszcze",
+    "taking": "Biorę…",
+    "needed": "potrzeba {n}",
+    "allTaken": "Wszystko już biorą",
+    "raceLost": "Tę pozycję właśnie wzięto — twojej rezerwacji tu nie ma. Reszta pozycji jest wolna.",
+    "less": "Mniej",
+    "more": "Więcej",
+    "appearance": "Wygląd"
   },
   "pwa": {
     "updateReady": "Jest nowa wersja Wishlist.",
