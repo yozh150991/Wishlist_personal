@@ -467,3 +467,161 @@ select[multiple].input {
 @media (max-width: 30rem) {
   .form-row { grid-template-columns: 1fr; }
 }
+
+/* ── Каркас застосунку ─────────────────────────────────────── */
+
+.shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  padding: var(--sp-6) var(--sp-6) var(--sp-7);
+}
+
+/* Нижня навігація — телефон. Великий палець дістає її без перехоплення
+   телефона, тому вона внизу, а не вгорі. */
+.tabbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-5) var(--sp-5);
+  border-top: 1px solid var(--color-divider);
+  background: var(--color-surface);
+  /* Вирізи й смуга жестів на iPhone не мають накривати пункти. */
+  padding-bottom: max(var(--sp-5), env(safe-area-inset-bottom));
+}
+
+.tabbar__item {
+  flex: 1;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  border-radius: 18px;
+  text-decoration: none;
+  color: var(--color-neutral-700);
+  font-size: var(--t-meta);
+  font-weight: 600;
+}
+.tabbar__item[aria-current='page'] {
+  background: var(--color-accent-200);
+  color: var(--color-accent-800);
+  font-weight: 700;
+}
+
+/* Бічна навігація — десктоп. У розмітці завжди, показується медіазапитом. */
+.sidenav { display: none; }
+
+@media (min-width: 56rem) {
+  .shell { flex-direction: row; }
+
+  .tabbar { display: none; }
+
+  .sidenav {
+    width: 232px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    padding: var(--sp-7) var(--sp-6);
+    background: var(--color-surface);
+  }
+
+  .shell__main { padding: 26px var(--sp-8) var(--sp-8); }
+}
+
+.sidenav__brand {
+  padding: 0 var(--sp-5) var(--sp-7);
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--t-sum);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.sidenav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: var(--t-item);
+  font-weight: 600;
+}
+.sidenav__item:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.sidenav__item[aria-current='page'] {
+  background: var(--color-accent-200);
+  color: var(--color-accent-800);
+  font-weight: 700;
+}
+
+.sidenav__who {
+  display: grid;
+  gap: var(--sp-1);
+  margin-top: auto;
+  padding: var(--sp-5) 14px;
+  border-radius: 20px;
+  background: var(--color-bg);
+}
+/* Довга пошта не має розсувати колонку — вона переноситься. */
+.sidenav__mail {
+  font-size: var(--t-small);
+  font-weight: 600;
+  word-break: break-all;
+}
+.sidenav__who .btn { justify-self: start; margin-top: var(--sp-2); }
+
+/* ── Заголовок сторінки ────────────────────────────────────── */
+
+.page__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-6);
+  flex-wrap: wrap;
+}
+.page__head h1 { flex: 1 1 12rem; min-width: 0; }
+.page__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+
+@media (min-width: 56rem) {
+  .page__head h1 { font-size: var(--t-display); }
+}
+
+/* ── Наскрізні повідомлення ────────────────────────────────── */
+
+.banners {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+.banners > .banner { align-self: stretch; }
+
+.banner__icon { flex: none; display: flex; padding-top: 2px; }
+.banner__text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+
+/* Компактна кнопка живе всередині банера й рядка дій картки: 36–40 px замість
+   44. Це єдине місце, де ціль менша за 44 — вона ніколи не єдина на екрані,
+   а поруч завжди є повнорозмірний шлях до тієї самої дії. */
+.btn--compact {
+  min-height: 40px;
+  padding: var(--sp-2) var(--sp-5);
+  font-size: var(--t-small);
+}
+
+/* Дія всередині банера успадковує його чорнило, інакше вона світиться
+   акцентом іншої ролі просто тому, що це кнопка. */
+.banner .btn { color: inherit; border-color: color-mix(in srgb, currentColor 40%, transparent); }

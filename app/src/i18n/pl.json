@@ -7,7 +7,9 @@
     "lists": "Listy",
     "shares": "Linki",
     "settings": "Ustawienia",
-    "signOut": "Wyloguj"
+    "signOut": "Wyloguj",
+    "label": "Sekcje",
+    "sharesLong": "Moje linki"
   },
   "auth": {
     "aside": {
@@ -243,14 +245,18 @@
     }
   },
   "offline": {
-    "stale": "Brak połączenia. Pokazujemy zapisaną kopię z {when} — zmiany teraz się nie zapiszą."
+    "stale": "Brak połączenia. Pokazujemy zapisaną kopię z {when} — zmiany teraz się nie zapiszą.",
+    "title": "Brak połączenia",
+    "savedAt": "Pokazano zapisaną kopię z {when} — zmiany teraz się nie zapiszą."
   },
   "outbox": {
     "pending": "Zmiany czekają na sieć: {n}. Zapiszą się, gdy tylko wróci połączenie.",
     "retry": "Spróbuj teraz",
     "sending": "Wysyłam…",
     "dropped": "Serwer nie przyjął zmian: {n}. Sprawdź listę — trzeba je zrobić ponownie.",
-    "confirmSignOut": "Zmiany czekają na sieć: {n}. Wylogowanie je usunie. Wylogować mimo to?"
+    "confirmSignOut": "Zmiany czekają na sieć: {n}. Wylogowanie je usunie. Wylogować mimo to?",
+    "pendingTitle": "Zmiany czekają na sieć: {n}",
+    "pendingBody": "Zapiszą się, gdy tylko wróci połączenie."
   },
   "parser": {
     "fill": "Wypełnij",
@@ -346,5 +352,9 @@
     "installButton": "Zainstaluj",
     "installIos": "Na iPhonie lub iPadzie otwórz stronę w Safari, stuknij „Udostępnij”, a potem „Do ekranu początkowego”.",
     "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”."
+  },
+  "banners": {
+    "more": "Więcej powiadomień: {n}",
+    "less": "Zwiń"
   }
 }

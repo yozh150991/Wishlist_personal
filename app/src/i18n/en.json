@@ -7,7 +7,9 @@
     "lists": "Lists",
     "shares": "Links",
     "settings": "Settings",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "label": "Sections",
+    "sharesLong": "My links"
   },
   "auth": {
     "aside": {
@@ -243,14 +245,18 @@
     }
   },
   "offline": {
-    "stale": "No connection. Showing a saved copy from {when} — changes will not be saved right now."
+    "stale": "No connection. Showing a saved copy from {when} — changes will not be saved right now.",
+    "title": "No connection",
+    "savedAt": "Showing a saved copy from {when} — changes will not be saved right now."
   },
   "outbox": {
     "pending": "Changes waiting for the network: {n}. They will be saved as soon as the connection is back.",
     "retry": "Try now",
     "sending": "Sending…",
     "dropped": "The server rejected {n} change(s). Check the list — you will have to make them again.",
-    "confirmSignOut": "{n} change(s) are waiting for the network. Signing out will discard them. Sign out anyway?"
+    "confirmSignOut": "{n} change(s) are waiting for the network. Signing out will discard them. Sign out anyway?",
+    "pendingTitle": "Changes waiting for the network: {n}",
+    "pendingBody": "They will be saved as soon as the connection is back."
   },
   "parser": {
     "fill": "Fill in",
@@ -346,5 +352,9 @@
     "installButton": "Install",
     "installIos": "On iPhone or iPad, open the site in Safari, tap “Share”, then “Add to Home Screen”.",
     "installManual": "Open the browser menu and choose “Install app” or “Add to Home screen”."
+  },
+  "banners": {
+    "more": "More messages: {n}",
+    "less": "Collapse"
   }
 }
