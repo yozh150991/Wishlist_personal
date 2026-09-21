@@ -118,7 +118,11 @@ export async function openFilters(page: Page) {
   // сторінка ще не готова, і питання «чи видно кнопку Фільтри» отримало б
   // відповідь «ні» просто тому, що її ще не намалювали.
   await expect(page.getByRole('searchbox')).toBeVisible();
-  const toggle = page.getByRole('button', { name: /фільтри|filtry|filters/i });
+  // Підпис якірний і з необовʼязковим числом: у кнопці сидить значок
+  // кількості активних фільтрів («Фільтри 1»). Без якорів сюди ж потрапляли
+  // «Скинути фільтри» в панелі й «Скинути все» в листі — щойно фільтр стає
+  // активним, їх на екрані одразу дві, і помічник падав на strict mode.
+  const toggle = page.getByRole('button', { name: /^(фільтри|filtry|filters)(\s+\d+)?$/i });
   if (!(await toggle.isVisible())) return;
   await toggle.click();
   await expect(openDialog(page)).toBeVisible();
