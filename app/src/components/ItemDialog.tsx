@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Dialog } from './Dialog';
 import { ParseError, parseUrl, parserConfigured } from '../lib/parser';
 import { Field, Note } from './ui';
+import { VariantsField, cleanVariants, variantsError } from './VariantsField';
 import { useI18n } from '../lib/i18n';
 import { errorText } from '../lib/errors';
 import { PRIORITIES, STATUSES } from '../lib/types';
-import type { Item, ItemPriority, ItemStatus } from '../lib/types';
+import type { Item, ItemPriority, ItemStatus, ItemVariant } from '../lib/types';
 import type { ItemInput } from '../lib/db';
 
 const EMPTY = {
@@ -32,6 +33,9 @@ export function ItemDialog({
 }) {
   const { t } = useI18n();
   const [form, setForm] = useState(EMPTY);
+  // Пари живуть окремо від решти полів: у `form` усе — рядки, і масив у тому
+  // самому об'єкті зламав би типізацію `set()`.
+  const [variants, setVariants] = useState<ItemVariant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [parsing, setParsing] = useState(false);
@@ -61,6 +65,9 @@ export function ItemDialog({
           }
         : EMPTY,
     );
+    // Копія, а не посилання: інакше редагування правило б масив у списку
+    // ще до збереження.
+    setVariants(item ? item.variants.map((v) => ({ ...v })) : []);
   }, [open, item]);
 
   function set<K extends keyof typeof EMPTY>(key: K, value: (typeof EMPTY)[K]) {
@@ -113,6 +120,9 @@ export function ItemDialog({
       return setError(t('item.errors.badQuantity'));
     }
 
+    const variantsKey = variantsError(variants);
+    if (variantsKey) return setError(t(variantsKey));
+
     setBusy(true);
     setError(null);
     try {
@@ -123,6 +133,7 @@ export function ItemDialog({
         quantity: qty,
         priority: form.priority,
         note: form.note.trim() || null,
+        variants: cleanVariants(variants),
         image_url: form.image_url.trim() || null,
         status: form.status,
       });
@@ -259,6 +270,8 @@ export function ItemDialog({
             </select>
           </div>
         </div>
+
+        <VariantsField variants={variants} onChange={setVariants} />
 
         <Field
           label={t('item.fields.imageUrl')}

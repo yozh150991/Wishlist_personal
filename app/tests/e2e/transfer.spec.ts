@@ -38,6 +38,7 @@ function item(over: Partial<Item> = {}): Item {
     priority: 'high',
     status: 'active',
     note: null,
+    variants: [],
     image_url: null,
     source_site: 'shop.example.com',
     parsed_at: null,
@@ -66,6 +67,7 @@ test.describe('вивантаження', () => {
       status: 'active',
       note: null,
       image_url: null,
+      variants: [],
     });
   });
 
@@ -80,7 +82,7 @@ test.describe('вивантаження', () => {
     const csv = toCsv([item()]);
     expect(csv.startsWith('﻿')).toBe(true);
     expect(csv.split('\r\n')[0]).toBe(
-      '﻿title,url,price,quantity,priority,status,note,image_url',
+      '﻿title,url,price,quantity,priority,status,note,image_url,variants',
     );
   });
 
@@ -127,6 +129,7 @@ test.describe('повний оберт', () => {
       status: i.status,
       note: i.note,
       image_url: i.image_url,
+      variants: i.variants,
     })));
   });
 
@@ -144,7 +147,7 @@ test.describe('повний оберт', () => {
 });
 
 test.describe('перевірка при внесенні', () => {
-  const head = 'title,url,price,quantity,priority,status,note,image_url';
+  const head = 'title,url,price,quantity,priority,status,note,image_url,variants';
 
   test('рядок без назви пропускається з помилкою', () => {
     const r = parseCsvFile(`${head}\nНормальна,,,,,,,\n,,10,,,,,`, 'Список');
@@ -276,5 +279,80 @@ test.describe('перевірка при внесенні', () => {
     expect(parseFile('a.csv', 'title\nА', 'С').items).toHaveLength(1);
     expect(parseFile('dump', '{"items":[{"title":"А"}]}', 'С').items).toHaveLength(1);
     expect(parseFile('dump', 'title\nА', 'С').items).toHaveLength(1);
+  });
+});
+
+test.describe('ознаки товару', () => {
+  const head = 'title,url,price,quantity,priority,status,note,image_url,variants';
+
+  test('CSV: пари повертаються точно, навіть із роздільниками всередині', () => {
+    const variants = [
+      { label: 'Розмір', value: 'M; L' },
+      { label: 'Колір', value: 'чорний: матовий' },
+    ];
+    const back = parseCsvFile(toCsv([item({ variants })]), 'Список');
+    expect(back.issues).toEqual([]);
+    expect(back.items[0]?.variants).toEqual(variants);
+  });
+
+  test('CSV: людський запис «підпис: значення» теж читається', () => {
+    const r = parseCsvFile(`${head}\nСветр,,,,,,,,"Розмір: M; Колір: чорний"`, 'Список');
+    expect(r.issues).toEqual([]);
+    expect(r.items[0]?.variants).toEqual([
+      { label: 'Розмір', value: 'M' },
+      { label: 'Колір', value: 'чорний' },
+    ]);
+  });
+
+  test('порожня клітинка — просто порожній список, без зауважень', () => {
+    const r = parseCsvFile(`${head}\nСветр,,,,,,,,`, 'Список');
+    expect(r.items[0]?.variants).toEqual([]);
+    expect(r.issues).toEqual([]);
+  });
+
+  test('напівзаповнена пара відкидається з попередженням', () => {
+    const r = parseCsvFile(`${head}\nСветр,,,,,,,,"Розмір: ; Колір: чорний"`, 'Список');
+    expect(r.items[0]?.variants).toEqual([{ label: 'Колір', value: 'чорний' }]);
+    expect(r.issues.map((i) => i.key)).toEqual(['transfer.issues.variants']);
+  });
+
+  test('зайві пари відкидаються, задовгі обрізаються', () => {
+    const many = Array.from({ length: 7 }, (_, i) => `П${i}: з${i}`).join('; ');
+    const r = parseCsvFile(`${head}\nСветр,,,,,,,,"${many}"`, 'Список');
+    expect(r.items[0]?.variants).toHaveLength(5);
+    expect(r.issues.map((i) => i.key)).toEqual(['transfer.issues.variantsMany']);
+
+    const long = `${'п'.repeat(50)}: ${'з'.repeat(90)}`;
+    const r2 = parseCsvFile(`${head}\nСветр,,,,,,,,"${long}"`, 'Список');
+    expect(r2.items[0]?.variants[0]?.label).toHaveLength(40);
+    expect(r2.items[0]?.variants[0]?.value).toHaveLength(80);
+    expect(r2.issues.map((i) => i.key)).toEqual(['transfer.issues.variantsLong']);
+  });
+
+  test('переноси рядка в клітинці згортаються: база їх не прийме', () => {
+    const r = parseCsvFile(`${head}\nСветр,,,,,,,,"Розмір: M\nдодатково"`, 'Список');
+    expect(r.items[0]?.variants).toEqual([{ label: 'Розмір', value: 'M додатково' }]);
+  });
+
+  test('зіпсований JSON у клітинці не ламає рядок', () => {
+    const r = parseCsvFile(`${head}\nСветр,,,,,,,,"[{""label"":""Розмір"""`, 'Список');
+    expect(r.items).toHaveLength(1);
+    expect(r.items[0]?.variants).toEqual([]);
+    expect(r.issues.map((i) => i.key)).toEqual(['transfer.issues.variants']);
+  });
+
+  test('JSON: масив ознак читається як масив, а не як текст', () => {
+    const payload = JSON.stringify({
+      items: [{ title: 'Светр', variants: [{ label: 'Розмір', value: 'M' }] }],
+    });
+    const r = parseJsonFile(payload, 'Список');
+    expect(r.issues).toEqual([]);
+    expect(r.items[0]?.variants).toEqual([{ label: 'Розмір', value: 'M' }]);
+  });
+
+  test('ознаки не протікають у файл як службові поля', () => {
+    const text = toJson(list, [item({ variants: [{ label: 'Розмір', value: 'M' }] })]);
+    expect(JSON.parse(text).items[0].variants).toEqual([{ label: 'Розмір', value: 'M' }]);
+    expect(text).not.toContain('reserved');
   });
 });

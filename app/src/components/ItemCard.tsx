@@ -71,6 +71,18 @@ export function ItemCard({
           {host && <span className="small card__host">{host}</span>}
         </p>
 
+        {/* Ознаки йдуть перед нотаткою: це те, за чим подарунок вибирають,
+            а нотатка — вільний текст, який може бути довгим. */}
+        {item.variants.length > 0 && (
+          <ul className="variants-chips">
+            {item.variants.map((v, i) => (
+              <li className="chip chip--variant" key={i}>
+                <span className="chip__label">{v.label}</span> {v.value}
+              </li>
+            ))}
+          </ul>
+        )}
+
         {item.note && <p className="small card__note">{item.note}</p>}
 
         {/* Пріоритет позначається словом у обох крайніх значеннях;

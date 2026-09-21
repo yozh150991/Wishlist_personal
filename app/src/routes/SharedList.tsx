@@ -143,6 +143,18 @@ export default function SharedList() {
                     {host && <span className="small card__host">{host}</span>}
                   </p>
 
+                  {/* Заради цього варіанти й існують: той, хто дарує, має
+                      бачити розмір і колір, не питаючи власника. */}
+                  {item.variants.length > 0 && (
+                    <ul className="variants-chips">
+                      {item.variants.map((v, i) => (
+                        <li className="chip chip--variant" key={i}>
+                          <span className="chip__label">{v.label}</span> {v.value}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
                   {item.note && <p className="small">{item.note}</p>}
 
                   {data.allow_reservations && (

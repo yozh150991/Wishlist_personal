@@ -10,6 +10,7 @@
 | `20260910120300_grants.sql` | явні гранти на RPC, відкликання `EXECUTE` у `PUBLIC` |
 | `20260911100000_items_page_fix.sql` | новий `list_items_page` і індекси під нього (ADR-017) |
 | `20260916220000_revoke_default_function_grants.sql` | відкликання `EXECUTE` у `anon` на функції власника — `revoke from public` виявився недостатнім |
+| `20260921100000_item_variants.sql` | `items.variants` і його форма; `get_shared_list` віддає варіанти гостю (ADR-030) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 
@@ -23,7 +24,7 @@ auth.users
     └──1:N── lists             (title, description, currency, event_date, is_archived)
                  │
                  ├──1:N── items       (title, url?, price?, quantity,
-                 │           │         priority, note, image_url, status)
+                 │           │         priority, note, variants, image_url, status)
                  │           │
                  │           ├──N:M── share_items ──N:1── shares
                  │           │
@@ -56,6 +57,10 @@ auth.users
 | `gifted` | подаровано (підсумки після події) |
 
 Позиції зі статусом `purchased`/`gifted` **не показуються в спільних посиланнях** — щоб гість не купив те, що вже є.
+
+`variants` — ознаки товару: масив пар `{label, value}`, до пʼяти, підпис до 40 символів, значення до 80, обидва непорожні й без переносів рядка. Чому jsonb, а не колонки чи окрема таблиця — ADR-030.
+
+Форму перевіряє `check`-обмеження `items_variants_shape` на вбудованих операторах jsonpath, **без власної SQL-функції**: кожна функція в `public` тягне за собою явні гранти і запис у білий список `01_schema_guards.test.sql` (CLAUDE.md §3.4). Перший рядок обмеження обовʼязково в режимі `strict` — у `lax` вираз `$[*]` розгортає вкладені масиви, і `[[{…}]]` пройшло б як обʼєкт. Матриця значень — `supabase/tests/database/04_item_variants.test.sql`.
 
 ### `shares`
 `token` — 16 байтів із `gen_random_uuid()` у base64url, 22 символи і 122 біти випадковості (ADR-014: шість бітів UUIDv4 зайнято під версію і варіант). Перебір нереальний, тому окремого пароля не треба.

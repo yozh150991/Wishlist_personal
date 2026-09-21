@@ -6,6 +6,22 @@ export const CURRENCIES: Currency[] = ['PLN', 'UAH', 'EUR', 'USD'];
 export const PRIORITIES: ItemPriority[] = ['low', 'medium', 'high'];
 export const STATUSES: ItemStatus[] = ['active', 'purchased', 'gifted'];
 
+/**
+ * Ознака товару: «Розмір → M», «Колір → чорний» (ADR-030).
+ *
+ * Форму повторює check-обмеження `items_variants_shape`: до пʼяти пар, підпис
+ * до 40 символів, значення до 80, обидва непорожні й без переносів рядка.
+ * Межі продубльовано тут, щоб форма перевіряла їх до відправки (CLAUDE.md §4).
+ */
+export type ItemVariant = { label: string; value: string };
+
+export const VARIANTS_MAX = 5;
+export const VARIANT_LABEL_MAX = 40;
+export const VARIANT_VALUE_MAX = 80;
+
+/** Підписи, які пропонуються в полі: найчастіші й не більше. */
+export const VARIANT_LABEL_HINTS = ['size', 'color', 'model'] as const;
+
 export type List = {
   id: string;
   owner_id: string;
@@ -28,6 +44,7 @@ export type Item = {
   quantity: number;
   priority: ItemPriority;
   note: string | null;
+  variants: ItemVariant[];
   image_url: string | null;
   status: ItemStatus;
   source_site: string | null;
@@ -41,7 +58,9 @@ export type Item = {
  * (`outboxOps.ts`) могли на нього спиратися, не тягнучи за собою клієнт бази.
  */
 export type ItemInput = Pick<Item, 'title'> &
-  Partial<Pick<Item, 'url' | 'price' | 'quantity' | 'priority' | 'note' | 'image_url' | 'status'>>;
+  Partial<
+    Pick<Item, 'url' | 'price' | 'quantity' | 'priority' | 'note' | 'variants' | 'image_url' | 'status'>
+  >;
 
 export type Totals = {
   items_count: number;

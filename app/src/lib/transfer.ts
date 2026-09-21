@@ -1,5 +1,12 @@
-import { CURRENCIES, PRIORITIES, STATUSES } from './types';
-import type { Currency, Item, ItemPriority, ItemStatus, List } from './types';
+import {
+  CURRENCIES,
+  PRIORITIES,
+  STATUSES,
+  VARIANTS_MAX,
+  VARIANT_LABEL_MAX,
+  VARIANT_VALUE_MAX,
+} from './types';
+import type { Currency, Item, ItemPriority, ItemStatus, ItemVariant, List } from './types';
 
 /**
  * Експорт та імпорт списків (ROADMAP 6.3).
@@ -34,6 +41,9 @@ export const CSV_COLUMNS = [
   'status',
   'note',
   'image_url',
+  // Нова колонка стоїть у кінці: файли, збережені до появи ознак, читаються
+  // далі без змін, а чужі таблиці зі старим набором колонок не ламаються.
+  'variants',
 ] as const;
 
 export type TransferItem = {
@@ -45,6 +55,7 @@ export type TransferItem = {
   status: ItemStatus;
   note: string | null;
   image_url: string | null;
+  variants: ItemVariant[];
 };
 
 export type TransferList = {
@@ -103,7 +114,20 @@ export function toTransferItem(item: Item): TransferItem {
     status: item.status,
     note: item.note,
     image_url: item.image_url,
+    variants: item.variants ?? [],
   };
+}
+
+/**
+ * Ознаки в одній клітинці CSV — як JSON.
+ *
+ * Це єдиний запис, що точно повертається назад: підпис або значення можуть
+ * містити і крапку з комою, і двокрапку, і будь-який роздільник, який ми б
+ * вибрали. Читач приймає й людський запис «Розмір: M; Колір: чорний» — саме
+ * так ознаки допишуть руками в таблиці.
+ */
+function variantsOut(variants: ItemVariant[]): string {
+  return variants.length ? JSON.stringify(variants) : '';
 }
 
 export function toJson(list: List, items: Item[]): string {
@@ -146,6 +170,7 @@ export function toCsv(items: Item[]): string {
         csvCell(t.status),
         csvCell(t.note),
         csvCell(t.image_url),
+        csvCell(variantsOut(t.variants)),
       ].join(','),
     );
   }
@@ -243,6 +268,67 @@ function checkUrl(raw: string, row: number, field: string, issues: Issue[]): str
   return raw;
 }
 
+/**
+ * Ознаки з клітинки: приймається і JSON, і запис «Розмір: M; Колір: чорний».
+ *
+ * Пробільні символи згортаються в один пробіл: база не приймає переносів рядка
+ * й табуляцій усередині ознаки, а в клітинці CSV вони цілком можливі. Це
+ * мовчазне виправлення, а не попередження, — людина не помітить різниці.
+ */
+function parseVariants(raw: string, row: number, issues: Issue[]): ItemVariant[] {
+  if (!raw) return [];
+
+  const flat = (s: string) => s.replace(/\s+/g, ' ').trim();
+  let pairs: ItemVariant[];
+
+  if (raw.startsWith('[')) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      issues.push({ level: 'warning', row, key: 'transfer.issues.variants', vars: { value: raw.slice(0, 40) } });
+      return [];
+    }
+    if (!Array.isArray(parsed)) {
+      issues.push({ level: 'warning', row, key: 'transfer.issues.variants', vars: { value: raw.slice(0, 40) } });
+      return [];
+    }
+    pairs = parsed.map((entry) => {
+      const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+      return { label: flat(trimmed(record.label)), value: flat(trimmed(record.value)) };
+    });
+  } else {
+    pairs = raw.split(';').map((part) => {
+      const at = part.indexOf(':');
+      return at < 0
+        ? { label: '', value: flat(part) }
+        : { label: flat(part.slice(0, at)), value: flat(part.slice(at + 1)) };
+    });
+  }
+
+  // Напівзаповнена пара нічого не означає: ні підказки гостю, ні даних.
+  const filled = pairs.filter((p) => p.label !== '' || p.value !== '');
+  let out = filled.filter((p) => p.label !== '' && p.value !== '');
+  if (out.length < filled.length) {
+    issues.push({ level: 'warning', row, key: 'transfer.issues.variants', vars: { value: raw.slice(0, 40) } });
+  }
+
+  const trimmedPairs = out.map((p) => ({
+    label: p.label.slice(0, VARIANT_LABEL_MAX),
+    value: p.value.slice(0, VARIANT_VALUE_MAX),
+  }));
+  if (trimmedPairs.some((p, i) => p.label !== out[i]?.label || p.value !== out[i]?.value)) {
+    issues.push({ level: 'warning', row, key: 'transfer.issues.variantsLong' });
+  }
+  out = trimmedPairs;
+
+  if (out.length > VARIANTS_MAX) {
+    issues.push({ level: 'warning', row, key: 'transfer.issues.variantsMany' });
+    out = out.slice(0, VARIANTS_MAX);
+  }
+  return out;
+}
+
 /** Один рядок таблиці → позиція. `null`, якщо рядок непридатний. */
 function rowToItem(
   get: (column: (typeof CSV_COLUMNS)[number]) => string,
@@ -308,6 +394,7 @@ function rowToItem(
     status,
     note,
     image_url: checkUrl(get('image_url'), row, 'image_url', issues),
+    variants: parseVariants(get('variants'), row, issues),
   };
 }
 
@@ -416,7 +503,12 @@ export function parseJsonFile(text: string, fallbackTitle: string): ParseResult 
   const items: TransferItem[] = [];
   rawItems.forEach((entry, i) => {
     const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
-    const get = (column: (typeof CSV_COLUMNS)[number]) => trimmed(record[column]);
+    // Ознаки у JSON-файлі — справжній масив, а не рядок. Повертаємо його як
+    // JSON-текст: далі обидва формати читає одна й та сама `parseVariants`.
+    const get = (column: (typeof CSV_COLUMNS)[number]) => {
+      const raw = record[column];
+      return Array.isArray(raw) ? JSON.stringify(raw) : trimmed(raw);
+    };
     const item = rowToItem(get, i + 1, issues);
     if (item) items.push(item);
   });

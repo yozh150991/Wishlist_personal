@@ -54,6 +54,7 @@ function draftItem(op: Extract<Op, { kind: 'create' }>, now: string): Item {
     quantity: op.input.quantity ?? 1,
     priority: op.input.priority ?? 'medium',
     note: op.input.note ?? null,
+    variants: op.input.variants ?? [],
     image_url: op.input.image_url ?? null,
     status: op.input.status ?? 'active',
     source_site: null,

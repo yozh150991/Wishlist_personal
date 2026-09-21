@@ -1,8 +1,0 @@
-{
-  "name": "wishlist_personal",
-  "version": "1.0.0",
-  "license": "ISC",
-  "devDependencies": {
-    "supabase": "^2.117.0"
-  }
-}

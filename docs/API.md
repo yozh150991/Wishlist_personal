@@ -36,6 +36,7 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token });
     "id": "…", "title": "Навушники", "url": "https://…",
     "price": "399.00", "quantity": 1, "priority": "high",
     "note": null, "image_url": "https://…", "status": "active",
+    "variants": [{ "label": "Розмір", "value": "M" }],   // до 5 пар, ADR-030
     "reserved_qty": 1        // null, якщо переглядає власник
   }]
 }
@@ -43,6 +44,8 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token });
 Помилки (код `P0002`): `not_found`, `revoked`, `expired`. Фронт показує однакову сторінку «Посилання недоступне» для всіх трьох — щоб не підтверджувати існування токена.
 
 Показуються лише позиції зі `status = 'active'`. При `hide_prices: true` поле `price` повертається як `null` — ціна не їде на клієнт узагалі, не ховається стилями.
+
+`variants` від `hide_prices` не залежить: розмір і колір — не ціна, і саме заради них гість і дивиться картку.
 
 ### `register_share_view` — anon + authenticated
 ```ts
