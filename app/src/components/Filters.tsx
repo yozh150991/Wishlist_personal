@@ -43,9 +43,14 @@ function Groups({
 
   function toggleStatus(s: ItemStatus) {
     const has = query.statuses.includes(s);
-    // Останній статус не знімається: порожній набір дав би порожній екран,
-    // на якому незрозуміло, що робити далі.
-    if (has && query.statuses.length === 1) return;
+    // Клік по єдиному обраному статусу означає «показати всі», а не «не
+    // показувати нічого»: порожній набір дав би порожній екран, на якому
+    // незрозуміло, що робити далі. Раніше такий клік просто нічого не робив —
+    // і кнопка читалась як зламана.
+    if (has && query.statuses.length === 1) {
+      onChange({ statuses: [...STATUSES] });
+      return;
+    }
     onChange({ statuses: has ? query.statuses.filter((x) => x !== s) : [...query.statuses, s] });
   }
 
@@ -76,7 +81,7 @@ function Groups({
         <label className="filters__label" htmlFor="f-sort">
           {t('toolbar.sort')}
         </label>
-        <div className="filters__row">
+        <div className="filters__row filters__row--sort">
           <select
             id="f-sort"
             className="input"

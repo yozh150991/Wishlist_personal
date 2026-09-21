@@ -135,6 +135,20 @@ img { display: block; max-width: 100%; }
   }
 }
 
+/* Назву списку чи позиції пише людина, і там трапляється рядок без жодного
+   пробілу — вставлений артикул, склеєний заголовок із магазину. Без дозволу
+   рвати слово такий рядок не переноситься ніде: він наповзає на кнопки дій
+   і тягне за собою горизонтальну прокрутку всієї сторінки. `anywhere`, а не
+   `break-word`: тільки воно зменшує min-content, тож колонка в flex чи grid
+   справді може стиснутись. */
+.list-head h1,
+.page__head h1,
+.list-card__title,
+.item__title,
+.gcard__title,
+.share-card__title,
+.banner__title { overflow-wrap: anywhere; }
+
 /* ── Типографічні помічники ────────────────────────────────── */
 
 /* Приглушений текст сидить на нейтральній рампі, а не на прозорості:
@@ -234,7 +248,12 @@ img { display: block; max-width: 100%; }
 
 /* ── Поля ──────────────────────────────────────────────────── */
 
-.field { display: grid; gap: var(--sp-2); }
+/* `align-content: start` — не косметика. Поля в парі («Ціна» й «Кількість»,
+   «Валюта» й «Дата події») розтягуються до висоти вищого, а сітка за
+   усталеним `stretch` роздає зайву висоту своїм рядкам: підказка під одним
+   полем опускала сусіднє поле на 12 px і робила його вищим. Підписи при
+   цьому лишались на місці, тож перекіс читався як випадковий. */
+.field { display: grid; gap: var(--sp-2); align-content: start; }
 
 .field > label {
   font-size: var(--t-small);
@@ -710,15 +729,23 @@ select[multiple].input {
   .list-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 }
 
+/* Сітка, а не рядок: назва й опис ліворуч від кнопки, а підписи — на всю
+   ширину картки, під нею. У колонці поруч із кнопкою їм бракувало 44 px, і
+   «позицій: 2» зривалось на другий рядок. */
 .list-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sp-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--sp-4);
+  row-gap: var(--sp-2);
   padding: 18px;
   border-radius: 26px;
   background: var(--color-surface);
 }
-.list-card__main { flex: 1; min-width: 0; display: grid; gap: var(--sp-2); }
+.list-card__title,
+.list-card__desc { grid-column: 1; min-width: 0; }
+/* Кнопка остання в розмітці — місце їй призначене явно. */
+.list-card__del { grid-column: 2; grid-row: 1; }
 .list-card__title {
   font-family: var(--font-heading);
   font-weight: var(--weight-heading);
@@ -728,11 +755,12 @@ select[multiple].input {
   text-decoration: none;
 }
 .list-card__title:hover { text-decoration: underline; }
-.list-card__tags { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-1); }
+.list-card__tags { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-1); }
 
 /* Скелет повторює геометрію картки, а не малює абстрактні прямокутники:
    інакше при появі даних сторінка смикається. */
-.list-card.sk { display: grid; gap: var(--sp-3); }
+/* Скелет — одна колонка: кнопки видалення в ньому немає. */
+.list-card.sk { grid-template-columns: 1fr; gap: var(--sp-3); }
 .sk__line--title { height: 19px; }
 .sk__line--tag { width: 52px; height: 20px; }
 .sk__tags { display: flex; gap: var(--sp-3); margin-top: var(--sp-1); }
@@ -814,6 +842,14 @@ select[multiple].input {
 .filters__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 .filters__row .input { width: auto; flex: 1 1 8rem; min-height: var(--tap); }
 .filters__row--price .input { flex: 1 1 5rem; }
+/* Ширину селекта сортування задає найдовший варіант, а не припущення в 8rem.
+   В англійській «By priority» довший за нього, селект не міг стиснутись
+   нижче свого вмісту — і кнопка напрямку зривалась на другий рядок. Група
+   ставала на 52 px вищою за сусідні, а підпис «Сортування» вилазив над
+   панеллю. `nowrap` тримає кнопку в рядку, `min-width: 0` лишає селекту
+   право стиснутись там, де місця справді нема. */
+.filters__row--sort { flex-wrap: nowrap; }
+.filters__row--sort .input { flex: 1 1 auto; min-width: 0; }
 
 /* Панель фільтрів — тільки десктоп; на телефоні ті самі групи живуть у листі. */
 .filters__panel { display: none; }
