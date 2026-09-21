@@ -74,13 +74,18 @@ export function EventSummary({
 
   return (
     <div className="event-summary" role="region" aria-label={t('summary.region')}>
-      <p>{t('summary.banner', { date: formatDate(eventDate, locale) ?? eventDate })}</p>
+      <p className="event-summary__title">
+        {t('summary.was', { date: formatDate(eventDate, locale) ?? eventDate })}
+      </p>
+      <p>{t('summary.ask')}</p>
       <div className="event-summary__actions">
-        <button type="button" className="btn btn--secondary" onClick={later}>
-          {t('summary.later')}
-        </button>
+        {/* Головна дія перша: вона ж і безпечна — вмикає режим вибору,
+            нічого не змінюючи. */}
         <button type="button" className="btn btn--primary" onClick={onStart}>
           {t('summary.start')}
+        </button>
+        <button type="button" className="btn btn--secondary" onClick={later}>
+          {t('summary.later')}
         </button>
       </div>
     </div>

@@ -34,11 +34,11 @@ test('без мережі — зрозуміла помилка, а не «[obje
   await context.setOffline(true);
 
   // Перехід усередині застосунку: сторінку не перевантажуємо, запит даних падає.
-  await page.getByRole('link', { name: /^посилання$|^linki$|^links$/i }).click();
+  await page.getByRole('link', { name: /^(мої )?посилання$|^(moje )?linki$|^(my )?links$/i }).click();
 
   await expect(page.getByText(/немає зʼєднання|немає з'єднання|brak połączenia|no internet connection/i)).toBeVisible();
   await expect(page.getByText('[object Object]')).toHaveCount(0);
-  await expect(page.getByRole('heading', { level: 2, name: /посилань ще немає|nie ma jeszcze linków|no links yet/i })).toHaveCount(0);
+  await expect(page.getByRole('heading', { level: 2, name: /ще жодного посилання|jeszcze żadnego linku|no links yet/i })).toHaveCount(0);
 
   await context.setOffline(false);
 });
@@ -247,7 +247,7 @@ test('чужий знімок у сховищі не показується', as
   // Через іншу сторінку, щоб список завантажився наново. Обидва переходи
   // дочікуємо: без цього тест лишався на /shares і перевіряв не ту сторінку —
   // «нічого немає» там теж правда.
-  await page.getByRole('link', { name: /^посилання$|^linki$|^links$/i }).click();
+  await page.getByRole('link', { name: /^(мої )?посилання$|^(moje )?linki$|^(my )?links$/i }).click();
   await page.waitForURL(/\/shares$/);
   await page.getByRole('link', { name: /^списки$|^listy$|^lists$/i }).first().click();
   await page.waitForURL(/\/lists$/);

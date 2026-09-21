@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Dialog } from './Dialog';
+import { Icon } from './Icon';
 import { Field, Note } from './ui';
 import { useI18n } from '../lib/i18n';
 import { errorText } from '../lib/errors';
@@ -84,29 +85,33 @@ export function ShareDialog({
   return (
     <Dialog open={open} onClose={onClose} title={t('share.create')}>
       {link ? (
-        <div className="form-grid">
-          <Note tone="success">{t('share.ready')}</Note>
+        /* Після створення тіло діалога змінюється повністю: форма зникає,
+           лишається те єдине, по що людина сюди прийшла, — адреса. */
+        <div className="ready">
+          <span className="ready__mark" aria-hidden="true">
+            <Icon name="check" size={32} />
+          </span>
+          <h3>{t('share.ready')}</h3>
 
-          <div className="field">
-            <label htmlFor="shareLink">{t('share.link')}</label>
-            <div className="url-row">
-              <input
-                className="input"
-                id="shareLink"
-                readOnly
-                value={link}
-                onFocus={(e) => e.target.select()}
-              />
-              <button type="button" className="btn btn--primary" onClick={() => void copy()}>
-                {copied ? t('share.copied') : t('share.copy')}
-              </button>
-            </div>
-            <span className="hint">{t('share.linkHint')}</span>
-          </div>
+          <label className="visually-hidden" htmlFor="shareLink">
+            {t('share.link')}
+          </label>
+          <input
+            className="input ready__link"
+            id="shareLink"
+            readOnly
+            value={link}
+            onFocus={(e) => e.target.select()}
+          />
+          <p className="small muted">{t('share.linkHint')}</p>
 
-          <div className="dialog__foot">
-            <button type="button" className="btn btn--secondary" onClick={onClose}>
-              {t('common.close')}
+          <div className="ready__actions">
+            <button type="button" className="btn btn--primary btn--block" onClick={() => void copy()}>
+              <Icon name={copied ? 'check' : 'copy'} size={16} />
+              {copied ? t('share.copied') : t('share.copyLink')}
+            </button>
+            <button type="button" className="btn btn--secondary btn--block" onClick={onClose}>
+              {t('common.done')}
             </button>
           </div>
         </div>

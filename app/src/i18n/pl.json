@@ -121,7 +121,8 @@
     "retry": "Spróbuj ponownie",
     "keep": "Zostaw",
     "saving": "Zapisuję…",
-    "notFoundBody": "Może adres jest nieaktualny albo jest w nim literówka."
+    "notFoundBody": "Może adres jest nieaktualny albo jest w nim literówka.",
+    "done": "Gotowe"
   },
   "item": {
     "add": "Dodaj pozycję",
@@ -204,9 +205,7 @@
       "clearPrice": "Zdejmij filtr ceny",
       "clearStatus": "Zdejmij filtr statusu"
     },
-    "listLabel": "Pozycje listy",
-    "confirmTitle": "Usunąć „{title}”?",
-    "confirmBody": "Pozycja zniknie też ze wszystkich linków, w których była. Tego nie można cofnąć."
+    "listLabel": "Pozycje listy"
   },
   "toolbar": {
     "search": "Szukaj po nazwie",
@@ -236,10 +235,11 @@
   },
   "summary": {
     "region": "Podsumowanie wydarzenia",
-    "banner": "Wydarzenie było {date} — oznaczyć, co już podarowano?",
     "start": "Podsumuj",
     "later": "Później",
-    "done": "Wydarzenie minęło · podarowano {gifted} z {n}"
+    "done": "Wydarzenie minęło · podarowano {gifted} z {n}",
+    "was": "Wydarzenie było {date}",
+    "ask": "Oznaczyć, co już podarowano?"
   },
   "transfer": {
     "export": {
@@ -336,7 +336,7 @@
     "create": "Utwórz link",
     "selectItem": "Zaznacz „{title}”",
     "intro": "Do linku trafi {n} pozycji. Reszta listy pozostanie ukryta.",
-    "ready": "Link gotowy. Wyślij go komu chcesz.",
+    "ready": "Link gotowy",
     "link": "Link",
     "linkHint": "Kto ma ten link, widzi wybrane pozycje. Rejestracja niepotrzebna.",
     "copy": "Kopiuj",
@@ -371,7 +371,8 @@
     "confirmRevokeBody": "Przestanie się otwierać u wszystkich, którym go wysłałeś. Statystyki zostaną.",
     "confirmDeleteTitle": "Usunąć link „{title}”?",
     "confirmDeleteBody": "Razem z nim zniknie statystyka wyświetleń. Tego nie można cofnąć.",
-    "creating": "Tworzę…"
+    "creating": "Tworzę…",
+    "copyLink": "Kopiuj link"
   },
   "select": {
     "start": "Zaznacz",
@@ -382,7 +383,9 @@
     "statusPlaceholder": "Oznacz jako…",
     "shareActiveOnly": "Do linku trafią tylko aktualne: {n}.",
     "confirmTitle": "Usunąć wybrane pozycje ({n})?",
-    "confirmBody": "Znikną też ze wszystkich linków, w których były. Tego nie można cofnąć."
+    "confirmBody": "Znikną też ze wszystkich linków, w których były. Tego nie można cofnąć.",
+    "exit": "Wyjdź z trybu zaznaczania",
+    "activeAmong": "W tym aktualnych: {n}"
   },
   "guest": {
     "goneTitle": "Link niedostępny",
@@ -416,10 +419,17 @@
     "installHint": "Zainstaluj Wishlist na ekranie głównym — będzie się otwierać jak osobna aplikacja, bez paska przeglądarki.",
     "installButton": "Zainstaluj",
     "installIos": "Na iPhonie lub iPadzie otwórz stronę w Safari, stuknij „Udostępnij”, a potem „Do ekranu początkowego”.",
-    "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”."
+    "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”.",
+    "qrShow": "Pokaż kod QR",
+    "qrHint": "Wygodniej zainstalować na telefonie — zeskanuj adres."
   },
   "banners": {
     "more": "Więcej powiadomień: {n}",
     "less": "Zwiń"
+  },
+  "undo": {
+    "itemDeleted": "Pozycję usunięto",
+    "action": "Cofnij",
+    "offline": "Zapisze się później — teraz nie ma połączenia"
   }
 }

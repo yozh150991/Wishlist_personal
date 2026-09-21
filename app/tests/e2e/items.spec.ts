@@ -20,20 +20,20 @@ test('повний цикл: список, позиція без ціни, ре�
   // Підсумки чесно рахують позиції без ціни.
   await expect(page.getByText(/без ціни|bez ceny|without a price/i)).toBeVisible();
 
-  await page.getByRole('button', { name: /^змінити$|^edytuj$|^edit$/i }).first().click();
+  // Кнопки картки названі разом із позицією («Змінити «Навушники»»), щоб
+  // зчитувач екрана в списку з десяти карток казав, яку саме змінюють.
+  await page.getByRole('button', { name: /(змінити|edytuj|edit).*Навушники/i }).click();
   const dialog = await settledDialog(page);
   await dialog.getByLabel(/^ціна$|^cena$|^price$/i).fill('399');
   await dialog.getByRole('button', { name: /^зберегти$|^zapisz$|^save$/i }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText(/ціна не вказана|brak ceny|no price/i)).toHaveCount(0);
 
-  await page.getByRole('button', { name: /^видалити$|^usuń$|^delete$/i }).first().click();
-  // Підтвердження — власний <dialog>, не вікно браузера.
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: /^видалити$|^usuń$|^delete$/i })
-    .click();
+  // Видалення однієї позиції — зворотна дія: підтвердження немає, замість
+  // нього зʼявляється тост «Скасувати» на сім секунд.
+  await page.getByRole('button', { name: /(видалити|usuń|delete).*Навушники/i }).click();
   await expect(page.getByText('Навушники', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^скасувати$|^cofnij$|^undo$/i })).toBeVisible();
 });
 
 test('пошук звужує вибірку', async ({ page }) => {

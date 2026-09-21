@@ -72,6 +72,7 @@ const PAIRS = [
   ['Смужка «Низький»', '--color-prio-low', '--color-surface', 3],
   ['Підпис кнопки видалення', '--color-bg', '--color-danger', 4.5],
   ['Підпис у тості', '--color-bg', '--color-accent-2-700', 4.5],
+  ['Підпис у тості скасування', '--color-bg', '--color-neutral-800', 4.5],
   ['Кільце фокуса', '--color-accent-700', '--color-bg', 3],
   ['Кільце фокуса на поверхні', '--color-accent-700', '--color-surface', 3],
 ];

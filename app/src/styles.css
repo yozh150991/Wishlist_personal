@@ -1515,3 +1515,117 @@ img { display: block; max-width: 100%; }
 
 /* Порожній стан на всю сторінку: 404 і мертве посилання не мають каркаса. */
 .empty--page { min-height: 100%; }
+
+/* ── Режим вибору ──────────────────────────────────────────── */
+
+/* Змінюється весь екран, а не лише кнопки: темна шапка, інше тло сітки,
+   картки на полотні. Інакше людина не помічає, що тапи тепер означають
+   інше, і знімає позначки замість того, щоб відкривати позиції. */
+.select-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  margin: calc(var(--sp-6) * -1) calc(var(--sp-6) * -1) 0;
+  padding: var(--sp-6);
+  background: var(--color-accent-800);
+  color: var(--color-bg);
+}
+.select-head__text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.select-head__text strong { font-family: var(--font-heading); font-size: 20px; line-height: 1.15; }
+.select-head__text .small { opacity: 0.85; }
+/* Кнопки на темній шапці беруть її чорнило: акцентні кольори на ній
+   провалюються, а обводка з поточного кольору тримається в усіх палітрах. */
+.select-head__btn {
+  color: var(--color-bg);
+  border-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+
+@media (min-width: 56rem) {
+  .select-head { margin: -26px calc(var(--sp-8) * -1) 0; padding: var(--sp-6) var(--sp-8); }
+}
+
+.item-list[data-selecting='true'] .item { background: var(--color-bg); }
+
+/* ── Тост «Скасувати» ──────────────────────────────────────── */
+
+.undo {
+  position: fixed;
+  left: var(--sp-6);
+  right: var(--sp-6);
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 12;
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-5) var(--sp-5) var(--sp-5) 18px;
+  border-radius: 22px;
+  background: var(--color-neutral-800);
+  color: var(--color-bg);
+  box-shadow: var(--shadow-lg);
+}
+@media (min-width: 56rem) {
+  .undo { left: auto; right: var(--sp-8); bottom: var(--sp-8); width: min(26rem, calc(100% - 4rem)); }
+}
+.undo__row { display: flex; align-items: center; gap: var(--sp-5); }
+.undo__label { flex: 1; min-width: 0; font-size: var(--t-body); font-weight: 600; }
+.undo__btn {
+  color: var(--color-bg);
+  border-color: color-mix(in srgb, currentColor 40%, transparent);
+  font-weight: 700;
+}
+.undo__note { font-size: var(--t-meta); opacity: 0.8; }
+
+.undo__bar {
+  height: 3px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, currentColor 30%, transparent);
+  overflow: hidden;
+}
+.undo__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: currentColor;
+  transform-origin: left;
+  animation: undo-countdown 7s linear forwards;
+}
+@keyframes undo-countdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+/* При reduce-motion смужка не повзе, а просто стоїть: відлік однаково
+   видно з того, що кнопка зникає. */
+@media (prefers-reduced-motion: reduce) {
+  .undo__fill { animation: none; }
+}
+
+/* Екран «Посилання готове»: діалог міняє тіло, а не дописує знизу. */
+.ready { display: grid; justify-items: center; gap: var(--sp-4); text-align: center; }
+.ready__mark {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--color-accent-200);
+  color: var(--color-accent-800);
+}
+/* Адреса набирається моноширинним: секрет у ній посимвольний, і при
+   звірянні очима різниця між l, 1 та I має бути видна. */
+.ready__link {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: var(--t-small);
+  text-align: center;
+}
+.ready__actions { display: grid; gap: var(--sp-3); width: 100%; }
+
+/* QR з адресою застосунку. Полотно — власний токен, однаковий у всіх
+   палітрах: чому саме так, написано біля нього в tokens.css. */
+.qr { display: grid; justify-items: start; gap: var(--sp-3); }
+.qr__code {
+  width: 160px;
+  padding: var(--sp-3);
+  border-radius: var(--r-field);
+  background: var(--color-qr-paper);
+}
+.qr__code svg { width: 100%; height: auto; display: block; }
+.qr__url { font-size: var(--t-meta); color: var(--color-neutral-700); word-break: break-all; }

@@ -121,7 +121,8 @@
     "retry": "Try again",
     "keep": "Keep",
     "saving": "Saving…",
-    "notFoundBody": "The address may be out of date, or have a typo in it."
+    "notFoundBody": "The address may be out of date, or have a typo in it.",
+    "done": "Done"
   },
   "item": {
     "add": "Add item",
@@ -204,9 +205,7 @@
       "clearPrice": "Clear price filter",
       "clearStatus": "Clear status filter"
     },
-    "listLabel": "List items",
-    "confirmTitle": "Delete “{title}”?",
-    "confirmBody": "The item also disappears from every link it was in. This cannot be undone."
+    "listLabel": "List items"
   },
   "toolbar": {
     "search": "Search by title",
@@ -236,10 +235,11 @@
   },
   "summary": {
     "region": "Event summary",
-    "banner": "The event was on {date} — mark what has already been gifted?",
     "start": "Wrap up",
     "later": "Later",
-    "done": "Event is over · {gifted} of {n} gifted"
+    "done": "Event is over · {gifted} of {n} gifted",
+    "was": "The event was on {date}",
+    "ask": "Mark what has been gifted?"
   },
   "transfer": {
     "export": {
@@ -336,7 +336,7 @@
     "create": "Create link",
     "selectItem": "Select “{title}”",
     "intro": "{n} items will go into this link. The rest of the list stays hidden.",
-    "ready": "Link is ready. Send it to whoever you like.",
+    "ready": "Link is ready",
     "link": "Link",
     "linkHint": "Anyone with this link sees the selected items. No sign-up needed.",
     "copy": "Copy",
@@ -371,7 +371,8 @@
     "confirmRevokeBody": "It stops opening for everyone you sent it to. The stats stay.",
     "confirmDeleteTitle": "Delete the link “{title}”?",
     "confirmDeleteBody": "The view stats go with it. This cannot be undone.",
-    "creating": "Creating…"
+    "creating": "Creating…",
+    "copyLink": "Copy link"
   },
   "select": {
     "start": "Select",
@@ -382,7 +383,9 @@
     "statusPlaceholder": "Mark as…",
     "shareActiveOnly": "Only active items go into the link: {n}.",
     "confirmTitle": "Delete the selected items ({n})?",
-    "confirmBody": "They also disappear from every link they were in. This cannot be undone."
+    "confirmBody": "They also disappear from every link they were in. This cannot be undone.",
+    "exit": "Leave selection mode",
+    "activeAmong": "Active among them: {n}"
   },
   "guest": {
     "goneTitle": "This link isn't available",
@@ -416,10 +419,17 @@
     "installHint": "Install Wishlist on your home screen — it will open as a separate app, without the browser bar.",
     "installButton": "Install",
     "installIos": "On iPhone or iPad, open the site in Safari, tap “Share”, then “Add to Home Screen”.",
-    "installManual": "Open the browser menu and choose “Install app” or “Add to Home screen”."
+    "installManual": "Open the browser menu and choose “Install app” or “Add to Home screen”.",
+    "qrShow": "Show QR code",
+    "qrHint": "It is handier on a phone — scan the address."
   },
   "banners": {
     "more": "More messages: {n}",
     "less": "Collapse"
+  },
+  "undo": {
+    "itemDeleted": "Item deleted",
+    "action": "Undo",
+    "offline": "It will be saved later — there is no connection right now"
   }
 }
