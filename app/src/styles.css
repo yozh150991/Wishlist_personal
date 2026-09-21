@@ -482,6 +482,14 @@ select[multiple].input {
 }
 
 .form-grid { display: grid; gap: var(--sp-6); }
+/* Рядок «посилання + Заповнити». Клас стояв у розмітці, але стилів не мав
+   зовсім, тож кнопка лягала під поле впритул, без жодного відступу. Кнопка
+   має бути поруч із полем — саме тому вона й усередині рядка, а не під
+   усім блоком: інакше її довелося б вирівнювати відступом під висоту
+   підпису. Вузький екран ряд переносить, і тоді проміжок тримає `gap`. */
+.url-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.url-row .input { flex: 1 1 12rem; min-width: 0; }
+.url-row .btn { flex: none; }
 .form-row { display: grid; gap: var(--sp-5); grid-template-columns: 1fr 1fr; }
 @media (max-width: 30rem) {
   .form-row { grid-template-columns: 1fr; }
@@ -943,6 +951,43 @@ select[multiple].input {
   border-radius: var(--r-pill);
   cursor: pointer;
 }
+
+/* Ознаки товару в діалозі позиції. Блок приїхав з ADR-030 ще до редизайну,
+   і стилів йому не дісталось зовсім: поля лишались сірими прямокутниками
+   браузера, а рамка — типовою рамкою <fieldset>. Тепер це така сама панель,
+   як решта форми, а пара «підпис → значення» стоїть у сітці: на вузькому
+   екрані вона розкладається в стовпчик, а не стискає поля до нечитабельного. */
+.variants {
+  display: grid;
+  gap: var(--sp-4);
+  justify-items: start;
+  margin: 0;
+  padding: var(--sp-5);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-card);
+}
+.variants > legend {
+  padding: 0 var(--sp-2);
+  font-size: var(--t-small);
+  font-weight: 600;
+  color: var(--color-neutral-700);
+}
+.variants > .hint { margin: 0; }
+
+.variants__row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+}
+@media (max-width: 30rem) {
+  /* Два поля й кнопка в один ряд на телефоні лишають на значення 90 px —
+     тож підпис і значення стають одне під одним, а кнопка йде в кут. */
+  .variants__row { grid-template-columns: minmax(0, 1fr) auto; }
+  .variants__label { grid-column: 1 / -1; }
+}
+.variants__remove { justify-self: end; }
 
 .variants-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
 
