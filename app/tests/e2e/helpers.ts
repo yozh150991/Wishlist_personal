@@ -114,8 +114,27 @@ export function selectedCount(page: Page, n: number): Locator {
  * і в десктопній, і в телефонній розкладці.
  */
 export async function openFilters(page: Page) {
+  // Пошук стоїть поруч із кнопкою й на екрані завжди: поки його немає,
+  // сторінка ще не готова, і питання «чи видно кнопку Фільтри» отримало б
+  // відповідь «ні» просто тому, що її ще не намалювали.
+  await expect(page.getByRole('searchbox')).toBeVisible();
   const toggle = page.getByRole('button', { name: /фільтри|filtry|filters/i });
   if (!(await toggle.isVisible())) return;
   await toggle.click();
   await expect(openDialog(page)).toBeVisible();
+}
+
+/**
+ * Виходить з акаунта. На телефоні кнопки виходу в нижній смузі немає — там
+ * лише три розділи, а акаунт живе в Налаштуваннях; на десктопі вона поруч
+ * із поштою в бічній колонці. Перехід саме посиланням, а не `goto`: тест
+ * може бути офлайн, і перезавантаження сторінки йому нізвідки взяти.
+ */
+export async function signOut(page: Page) {
+  const button = page.getByRole('button', { name: /^вийти$|^wyloguj$|^sign out$/i });
+  if (!(await button.isVisible())) {
+    await page.getByRole('link', { name: /^налаштування$|^ustawienia$|^settings$/i }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  }
+  await button.click();
 }
