@@ -12,9 +12,15 @@ type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
    * написано «Пошта або пароль не підходять».
    */
   invalid?: boolean;
+  /**
+   * Показати «скільки з максимуму» під полем. Вмикається явно: біля ціни чи
+   * кількості лічильник був би шумом, а от у назві списку межа в 120 символів
+   * має бути видна до того, як база відповість 400 (CLAUDE.md §4).
+   */
+  count?: boolean;
 };
 
-export function Field({ label, hint, error, invalid, id, className, ...rest }: FieldProps) {
+export function Field({ label, hint, error, invalid, count, id, className, ...rest }: FieldProps) {
   const inputId = id ?? rest.name ?? label;
   const hintId = `${inputId}-hint`;
   const text = error ?? hint;
@@ -32,6 +38,11 @@ export function Field({ label, hint, error, invalid, id, className, ...rest }: F
       {text && (
         <span className="hint" id={hintId} data-tone={error ? 'error' : undefined}>
           {text}
+        </span>
+      )}
+      {count && typeof rest.value === 'string' && typeof rest.maxLength === 'number' && (
+        <span className="field__count" data-full={rest.value.length >= rest.maxLength}>
+          {rest.value.length} / {rest.maxLength}
         </span>
       )}
     </div>

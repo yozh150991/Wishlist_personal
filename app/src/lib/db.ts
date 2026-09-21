@@ -85,8 +85,15 @@ export async function updateItem(id: string, patch: Partial<ItemInput>): Promise
  * Сторінка списку тримає в памʼяті лише поточну партію, а вивантажити треба
  * все. Ідемо діапазонами по 1000: стільки ж стоїть у `max_rows` PostgREST,
  * тож одним запитом більшого все одно не взяти.
+ *
+ * `onProgress` потрібен саме експорту: він перечитує весь список, і на
+ * великому це помітна пауза. Кнопка в цей час показує «Експортую… 18 з 34»,
+ * а не просто гасне.
  */
-export async function fetchAllItems(listId: string): Promise<Item[]> {
+export async function fetchAllItems(
+  listId: string,
+  onProgress?: (done: number) => void,
+): Promise<Item[]> {
   const PAGE = 1000;
   const out: Item[] = [];
   for (let from = 0; ; from += PAGE) {
@@ -99,6 +106,7 @@ export async function fetchAllItems(listId: string): Promise<Item[]> {
     if (error) throw error;
     const rows = (data ?? []) as Item[];
     out.push(...rows);
+    onProgress?.(out.length);
     if (rows.length < PAGE) return out;
   }
 }

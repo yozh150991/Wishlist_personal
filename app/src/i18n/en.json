@@ -113,13 +113,15 @@
   "common": {
     "loading": "Loading",
     "notFound": "No such page",
-    "backHome": "Go home",
+    "backHome": "To lists",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
     "close": "Close",
     "retry": "Try again",
-    "keep": "Keep"
+    "keep": "Keep",
+    "saving": "Saving…",
+    "notFoundBody": "The address may be out of date, or have a typo in it."
   },
   "item": {
     "add": "Add item",
@@ -247,7 +249,9 @@
       "csv": "CSV for a spreadsheet",
       "csvHint": "Opens in Excel, Numbers and Google Sheets.",
       "json": "JSON for moving the list",
-      "jsonHint": "Also keeps the list name, currency and event date."
+      "jsonHint": "Also keeps the list name, currency and event date.",
+      "working": "Exporting… {done} of {total}",
+      "workingPlain": "Exporting…"
     },
     "import": {
       "open": "Import",
@@ -263,8 +267,9 @@
       "issues": "Notes: {errors} errors, {warnings} warnings",
       "rowLabel": "Row {row}:",
       "fileLabel": "File:",
-      "submit": "Create list",
-      "tooBig": "The file is larger than {max} MB."
+      "submit": "Import items ({n})",
+      "tooBig": "The file is larger than {max} MB.",
+      "importing": "Importing…"
     },
     "issues": {
       "titleRequired": "no title, row skipped.",
@@ -365,7 +370,8 @@
     "confirmRevokeTitle": "Revoke the link “{title}”?",
     "confirmRevokeBody": "It stops opening for everyone you sent it to. The stats stay.",
     "confirmDeleteTitle": "Delete the link “{title}”?",
-    "confirmDeleteBody": "The view stats go with it. This cannot be undone."
+    "confirmDeleteBody": "The view stats go with it. This cannot be undone.",
+    "creating": "Creating…"
   },
   "select": {
     "start": "Select",

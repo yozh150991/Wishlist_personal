@@ -517,7 +517,12 @@ export default function ListDetail() {
         onSave={saveItem}
       />
       <ListDialog open={listDialog} list={list} onClose={() => setListDialog(false)} onSave={saveList} />
-      <ExportDialog open={exportDialog} list={list} onClose={() => setExportDialog(false)} />
+      <ExportDialog
+        open={exportDialog}
+        list={list}
+        total={totals?.items_count}
+        onClose={() => setExportDialog(false)}
+      />
 
       <ConfirmDialog
         open={confirmItem !== null}

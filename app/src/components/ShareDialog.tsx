@@ -90,8 +90,14 @@ export function ShareDialog({
           <div className="field">
             <label htmlFor="shareLink">{t('share.link')}</label>
             <div className="url-row">
-              <input id="shareLink" readOnly value={link} onFocus={(e) => e.target.select()} />
-              <button type="button" className="btn" onClick={() => void copy()}>
+              <input
+                className="input"
+                id="shareLink"
+                readOnly
+                value={link}
+                onFocus={(e) => e.target.select()}
+              />
+              <button type="button" className="btn btn--primary" onClick={() => void copy()}>
                 {copied ? t('share.copied') : t('share.copy')}
               </button>
             </div>
@@ -99,7 +105,7 @@ export function ShareDialog({
           </div>
 
           <div className="dialog__foot">
-            <button type="button" className="btn btn--quiet" onClick={onClose}>
+            <button type="button" className="btn btn--secondary" onClick={onClose}>
               {t('common.close')}
             </button>
           </div>
@@ -121,6 +127,7 @@ export function ShareDialog({
             label={t('share.fields.title')}
             name="shareTitle"
             maxLength={120}
+            count
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -128,6 +135,7 @@ export function ShareDialog({
           <div className="field">
             <label htmlFor="shareMessage">{t('share.fields.message')}</label>
             <textarea
+              className="input"
               id="shareMessage"
               rows={2}
               maxLength={1000}
@@ -168,11 +176,12 @@ export function ShareDialog({
           />
 
           <div className="dialog__foot">
-            <button type="button" className="btn btn--quiet" onClick={onClose}>
+            <button type="button" className="btn btn--secondary" onClick={onClose}>
               {t('common.cancel')}
             </button>
-            <button type="submit" className="btn" disabled={busy}>
-              {t('share.create')}
+            <button type="submit" className="btn btn--primary" disabled={busy}>
+              {busy && <span className="spinner" />}
+              {busy ? t('share.creating') : t('share.create')}
             </button>
           </div>
         </form>

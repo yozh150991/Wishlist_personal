@@ -113,13 +113,15 @@
   "common": {
     "loading": "Ładowanie",
     "notFound": "Nie ma takiej strony",
-    "backHome": "Na start",
+    "backHome": "Do list",
     "save": "Zapisz",
     "cancel": "Anuluj",
     "delete": "Usuń",
     "close": "Zamknij",
     "retry": "Spróbuj ponownie",
-    "keep": "Zostaw"
+    "keep": "Zostaw",
+    "saving": "Zapisuję…",
+    "notFoundBody": "Może adres jest nieaktualny albo jest w nim literówka."
   },
   "item": {
     "add": "Dodaj pozycję",
@@ -247,7 +249,9 @@
       "csv": "CSV do arkusza",
       "csvHint": "Otwiera się w Excelu, Numbers i Arkuszach Google.",
       "json": "JSON do przeniesienia",
-      "jsonHint": "Zachowuje też nazwę listy, walutę i datę wydarzenia."
+      "jsonHint": "Zachowuje też nazwę listy, walutę i datę wydarzenia.",
+      "working": "Eksportuję… {done} z {total}",
+      "workingPlain": "Eksportuję…"
     },
     "import": {
       "open": "Import",
@@ -263,8 +267,9 @@
       "issues": "Uwagi: błędów {errors}, ostrzeżeń {warnings}",
       "rowLabel": "Wiersz {row}:",
       "fileLabel": "Plik:",
-      "submit": "Utwórz listę",
-      "tooBig": "Plik większy niż {max} MB."
+      "submit": "Importuj pozycje ({n})",
+      "tooBig": "Plik większy niż {max} MB.",
+      "importing": "Importuję…"
     },
     "issues": {
       "titleRequired": "brak nazwy, wiersz pominięty.",
@@ -365,7 +370,8 @@
     "confirmRevokeTitle": "Wycofać link „{title}”?",
     "confirmRevokeBody": "Przestanie się otwierać u wszystkich, którym go wysłałeś. Statystyki zostaną.",
     "confirmDeleteTitle": "Usunąć link „{title}”?",
-    "confirmDeleteBody": "Razem z nim zniknie statystyka wyświetleń. Tego nie można cofnąć."
+    "confirmDeleteBody": "Razem z nim zniknie statystyka wyświetleń. Tego nie można cofnąć.",
+    "creating": "Tworzę…"
   },
   "select": {
     "start": "Zaznacz",
