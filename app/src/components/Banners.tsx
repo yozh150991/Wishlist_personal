@@ -165,6 +165,11 @@ export function Banners() {
       {shown.map((item) => (
         <div
           key={item.key}
+          /* data-kind — єдиний надійний спосіб відрізнити банери одне від
+             одного ззовні: українською «Немає зʼєднання» починають і помилка,
+             і позначка копії, тож за текстом їх не розділити. На ньому ж
+             тримаються e2e-перевірки офлайну. */
+          data-kind={item.key}
           className={'banner' + (item.tone === 'danger' ? ' banner--danger' : '')}
           role={item.tone === 'danger' ? 'alert' : 'status'}
         >
