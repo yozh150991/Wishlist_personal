@@ -2,7 +2,7 @@
 //   node scripts/check-pwa.mjs
 // Падає з кодом 1, якщо маніфест, іконки або Service Worker не такі, як треба
 // для встановлення й для приватності гостьових посилань.
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -75,6 +75,18 @@ check(
 
 const robots = await readFile(join(dist, 'robots.txt'), 'utf8').catch(() => '');
 check(/^\s*Disallow:\s*\/s\//m.test(robots), 'robots.txt: немає рядка Disallow: /s/');
+
+// Жодного шрифта, вбудованого в CSS як `data:` URI. CSP дозволяє
+// `font-src 'self'`, тож вбудований шрифт браузер блокує мовчки — сторінка
+// виглядає справною, просто частина символів малюється системним шрифтом.
+// Саме так зникала кирилиця-ext Manrope разом зі знаком ₴.
+for (const file of (await readdir(join(dist, 'assets'))).filter((f) => f.endsWith('.css'))) {
+  const text = await readFile(join(dist, 'assets', file), 'utf8');
+  check(
+    !/url\(\s*["']?data:(font|application\/font)/i.test(text),
+    `assets/${file}: шрифт вбудовано в CSS як data: URI — CSP font-src 'self' його заблокує`,
+  );
+}
 
 const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 check(sw.includes('createHandlerBoundToURL("/index.html")'), 'sw.js: немає запасної навігації на index.html');

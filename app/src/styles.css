@@ -135,6 +135,20 @@ img { display: block; max-width: 100%; }
   }
 }
 
+/* Назву списку чи позиції пише людина, і там трапляється рядок без жодного
+   пробілу — вставлений артикул, склеєний заголовок із магазину. Без дозволу
+   рвати слово такий рядок не переноситься ніде: він наповзає на кнопки дій
+   і тягне за собою горизонтальну прокрутку всієї сторінки. `anywhere`, а не
+   `break-word`: тільки воно зменшує min-content, тож колонка в flex чи grid
+   справді може стиснутись. */
+.list-head h1,
+.page__head h1,
+.list-card__title,
+.item__title,
+.gcard__title,
+.share-card__title,
+.banner__title { overflow-wrap: anywhere; }
+
 /* ── Типографічні помічники ────────────────────────────────── */
 
 /* Приглушений текст сидить на нейтральній рампі, а не на прозорості:
@@ -234,7 +248,12 @@ img { display: block; max-width: 100%; }
 
 /* ── Поля ──────────────────────────────────────────────────── */
 
-.field { display: grid; gap: var(--sp-2); }
+/* `align-content: start` — не косметика. Поля в парі («Ціна» й «Кількість»,
+   «Валюта» й «Дата події») розтягуються до висоти вищого, а сітка за
+   усталеним `stretch` роздає зайву висоту своїм рядкам: підказка під одним
+   полем опускала сусіднє поле на 12 px і робила його вищим. Підписи при
+   цьому лишались на місці, тож перекіс читався як випадковий. */
+.field { display: grid; gap: var(--sp-2); align-content: start; }
 
 .field > label {
   font-size: var(--t-small);
@@ -463,6 +482,14 @@ select[multiple].input {
 }
 
 .form-grid { display: grid; gap: var(--sp-6); }
+/* Рядок «посилання + Заповнити». Клас стояв у розмітці, але стилів не мав
+   зовсім, тож кнопка лягала під поле впритул, без жодного відступу. Кнопка
+   має бути поруч із полем — саме тому вона й усередині рядка, а не під
+   усім блоком: інакше її довелося б вирівнювати відступом під висоту
+   підпису. Вузький екран ряд переносить, і тоді проміжок тримає `gap`. */
+.url-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.url-row .input { flex: 1 1 12rem; min-width: 0; }
+.url-row .btn { flex: none; }
 .form-row { display: grid; gap: var(--sp-5); grid-template-columns: 1fr 1fr; }
 @media (max-width: 30rem) {
   .form-row { grid-template-columns: 1fr; }
@@ -633,6 +660,41 @@ select[multiple].input {
 
 /* Кут один на обох розкладках: на телефоні — над формою, на десктопі —
    над правою колонкою, бо ліва половина закінчується раніше. */
+/* Перемикач мови. Клас стояв у розмітці без жодного правила, тож браузер
+   малював три сірі прямокутники — єдине місце в застосунку, де було видно
+   стандартні кнопки. Вигляд той самий, що й у решти перемикачів (вибране —
+   заливка головної кнопки), лише компактніший: він живе в кутку сторінки
+   входу й у підвалі гостьової, де три повні пігулки забирали б пів екрана. */
+.picker {
+  display: inline-flex;
+  /* Щоб не розтягнувся, якщо колись потрапить у сітку-контейнер: перемикач
+     завжди завширшки зі свої три сегменти. */
+  justify-self: start;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-pill);
+  background: var(--color-surface);
+}
+.picker > button {
+  min-height: 40px;
+  padding: 0 var(--sp-5);
+  font: inherit;
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--color-neutral-700);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.picker > button:hover { color: var(--color-text); }
+.picker > button[aria-pressed='true'] {
+  color: var(--color-primary-ink);
+  background: var(--color-primary-fill);
+}
+
 .auth__lang {
   position: absolute;
   top: var(--sp-5);
@@ -710,15 +772,23 @@ select[multiple].input {
   .list-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 }
 
+/* Сітка, а не рядок: назва й опис ліворуч від кнопки, а підписи — на всю
+   ширину картки, під нею. У колонці поруч із кнопкою їм бракувало 44 px, і
+   «позицій: 2» зривалось на другий рядок. */
 .list-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sp-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--sp-4);
+  row-gap: var(--sp-2);
   padding: 18px;
   border-radius: 26px;
   background: var(--color-surface);
 }
-.list-card__main { flex: 1; min-width: 0; display: grid; gap: var(--sp-2); }
+.list-card__title,
+.list-card__desc { grid-column: 1; min-width: 0; }
+/* Кнопка остання в розмітці — місце їй призначене явно. */
+.list-card__del { grid-column: 2; grid-row: 1; }
 .list-card__title {
   font-family: var(--font-heading);
   font-weight: var(--weight-heading);
@@ -728,11 +798,12 @@ select[multiple].input {
   text-decoration: none;
 }
 .list-card__title:hover { text-decoration: underline; }
-.list-card__tags { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-1); }
+.list-card__tags { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-1); }
 
 /* Скелет повторює геометрію картки, а не малює абстрактні прямокутники:
    інакше при появі даних сторінка смикається. */
-.list-card.sk { display: grid; gap: var(--sp-3); }
+/* Скелет — одна колонка: кнопки видалення в ньому немає. */
+.list-card.sk { grid-template-columns: 1fr; gap: var(--sp-3); }
 .sk__line--title { height: 19px; }
 .sk__line--tag { width: 52px; height: 20px; }
 .sk__tags { display: flex; gap: var(--sp-3); margin-top: var(--sp-1); }
@@ -814,6 +885,14 @@ select[multiple].input {
 .filters__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 .filters__row .input { width: auto; flex: 1 1 8rem; min-height: var(--tap); }
 .filters__row--price .input { flex: 1 1 5rem; }
+/* Ширину селекта сортування задає найдовший варіант, а не припущення в 8rem.
+   В англійській «By priority» довший за нього, селект не міг стиснутись
+   нижче свого вмісту — і кнопка напрямку зривалась на другий рядок. Група
+   ставала на 52 px вищою за сусідні, а підпис «Сортування» вилазив над
+   панеллю. `nowrap` тримає кнопку в рядку, `min-width: 0` лишає селекту
+   право стиснутись там, де місця справді нема. */
+.filters__row--sort { flex-wrap: nowrap; }
+.filters__row--sort .input { flex: 1 1 auto; min-width: 0; }
 
 /* Панель фільтрів — тільки десктоп; на телефоні ті самі групи живуть у листі. */
 .filters__panel { display: none; }
@@ -907,6 +986,43 @@ select[multiple].input {
   border-radius: var(--r-pill);
   cursor: pointer;
 }
+
+/* Ознаки товару в діалозі позиції. Блок приїхав з ADR-030 ще до редизайну,
+   і стилів йому не дісталось зовсім: поля лишались сірими прямокутниками
+   браузера, а рамка — типовою рамкою <fieldset>. Тепер це така сама панель,
+   як решта форми, а пара «підпис → значення» стоїть у сітці: на вузькому
+   екрані вона розкладається в стовпчик, а не стискає поля до нечитабельного. */
+.variants {
+  display: grid;
+  gap: var(--sp-4);
+  justify-items: start;
+  margin: 0;
+  padding: var(--sp-5);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-card);
+}
+.variants > legend {
+  padding: 0 var(--sp-2);
+  font-size: var(--t-small);
+  font-weight: 600;
+  color: var(--color-neutral-700);
+}
+.variants > .hint { margin: 0; }
+
+.variants__row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+}
+@media (max-width: 30rem) {
+  /* Два поля й кнопка в один ряд на телефоні лишають на значення 90 px —
+     тож підпис і значення стають одне під одним, а кнопка йде в кут. */
+  .variants__row { grid-template-columns: minmax(0, 1fr) auto; }
+  .variants__label { grid-column: 1 / -1; }
+}
+.variants__remove { justify-self: end; }
 
 .variants-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
 
@@ -1189,7 +1305,9 @@ select[multiple].input {
   border-color: var(--color-accent-700);
   color: var(--color-accent-900);
 }
-.guest__lang { flex: 1; justify-content: flex-end; }
+/* Своя ширина, а не розтягнута: кнопку «Вигляд» поруч і так тягне
+   `flex: 1`, тож перемикач сам опиняється біля правого краю. */
+.guest__lang { flex: none; }
 
 /* Мертве посилання: коло, заголовок, рядок пояснення — і нічого більше. */
 .guest--gone {

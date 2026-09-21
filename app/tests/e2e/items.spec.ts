@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   addItem,
+  closeFilters,
   createList,
   hasAccount,
   openFilters,
@@ -89,6 +90,50 @@ test('на сторінці списку немає дубльованих id', 
     return [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
   });
   expect(dupes).toEqual([]);
+});
+
+/**
+ * Статус — фільтр, який вмикається й вимикається тим самим натисканням.
+ * Порожній набір означає «без фільтра за статусом», а не порожній екран:
+ * саме таким список і відкривається. Колись тут стояла заборона знімати
+ * останній обраний статус, і кнопка мовчки нічого не робила.
+ *
+ * Перезавантаження навмисне: зміна статусу позиції й зміна фільтра — два
+ * незалежні перечитування вибірки, і тест, який чекає наслідку обох одразу,
+ * ловить то одне, то інше.
+ */
+test('останній обраний статус знімається й повертає всі позиції', async ({ page }) => {
+  await signIn(page);
+  await createList(page, unique('E2E status'));
+  await addItem(page, 'Кавоварка');
+
+  // Запис мусить дійти до бази до перезавантаження: інакше воно обірве запит
+  // на півдорозі, і позиція лишиться актуальною.
+  const saved = page.waitForResponse(
+    (r) => r.url().includes('/items') && r.request().method() === 'PATCH' && r.ok(),
+  );
+  await page.getByRole('combobox', { name: /Кавоварка/ }).selectOption('gifted');
+  await saved;
+  await page.reload();
+
+  const active = page.getByRole('button', { name: /^актуально$|^aktualne$|^active$/i });
+
+  // Фільтра за статусом немає — подарована позиція на місці.
+  await expect(page.getByText('Кавоварка', { exact: true })).toBeVisible();
+  await openFilters(page);
+  await expect(active).toHaveAttribute('aria-pressed', 'false');
+
+  await active.click();
+  await expect(active).toHaveAttribute('aria-pressed', 'true');
+  await closeFilters(page);
+  await expect(page.getByText('Кавоварка', { exact: true })).toHaveCount(0);
+
+  // Те саме натискання знімає фільтр — і позиція повертається.
+  await openFilters(page);
+  await active.click();
+  await expect(active).toHaveAttribute('aria-pressed', 'false');
+  await closeFilters(page);
+  await expect(page.getByText('Кавоварка', { exact: true })).toBeVisible();
 });
 
 test('Enter у діалогах списку й позиції зберігає, а в примітці — ні', async ({ page }) => {

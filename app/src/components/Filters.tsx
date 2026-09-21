@@ -43,9 +43,11 @@ function Groups({
 
   function toggleStatus(s: ItemStatus) {
     const has = query.statuses.includes(s);
-    // Останній статус не знімається: порожній набір дав би порожній екран,
-    // на якому незрозуміло, що робити далі.
-    if (has && query.statuses.length === 1) return;
+    // Знятий останній статус — це не порожній екран, а відсутність фільтра за
+    // статусом: `DEFAULT_QUERY.statuses` порожній, і в такому стані видно всі
+    // позиції. Раніше тут стояла заборона знімати останній — вона берегла від
+    // біди, якої не буває, а натомість давала кнопку, що мовчки нічого не
+    // робить.
     onChange({ statuses: has ? query.statuses.filter((x) => x !== s) : [...query.statuses, s] });
   }
 
@@ -76,7 +78,7 @@ function Groups({
         <label className="filters__label" htmlFor="f-sort">
           {t('toolbar.sort')}
         </label>
-        <div className="filters__row">
+        <div className="filters__row filters__row--sort">
           <select
             id="f-sort"
             className="input"

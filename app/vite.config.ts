@@ -72,5 +72,14 @@ export default defineConfig({
     // та Playwright ходять на старий — з чужим токеном HMR і, можливо, з бойовою базою.
     strictPort: true,
   },
-  build: { target: 'es2022', sourcemap: true },
+  build: {
+    target: 'es2022',
+    sourcemap: true,
+    // Шрифти ніколи не вбудовуються в CSS як `data:` URI. Vite за усталеним
+    // порогом інлайнить усе, менше за 4 КБ, і під нього потрапляла кирилиця-ext
+    // Manrope — разом зі знаком ₴. CSP дозволяє `font-src 'self'`, тож
+    // браузер такий шрифт мовчки блокував, і знак гривні в бою малювався
+    // системним шрифтом. Перевіряє `npm run check:pwa`.
+    assetsInlineLimit: (file: string) => (/\.(woff2?|ttf|otf|eot)$/i.test(file) ? false : undefined),
+  },
 });
