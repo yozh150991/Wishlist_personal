@@ -121,7 +121,8 @@
     "retry": "Spróbuj ponownie",
     "keep": "Zostaw",
     "saving": "Zapisuję…",
-    "notFoundBody": "Może adres jest nieaktualny albo jest w nim literówka."
+    "notFoundBody": "Może adres jest nieaktualny albo jest w nim literówka.",
+    "done": "Gotowe"
   },
   "item": {
     "add": "Dodaj pozycję",
@@ -335,7 +336,7 @@
     "create": "Utwórz link",
     "selectItem": "Zaznacz „{title}”",
     "intro": "Do linku trafi {n} pozycji. Reszta listy pozostanie ukryta.",
-    "ready": "Link gotowy. Wyślij go komu chcesz.",
+    "ready": "Link gotowy",
     "link": "Link",
     "linkHint": "Kto ma ten link, widzi wybrane pozycje. Rejestracja niepotrzebna.",
     "copy": "Kopiuj",
@@ -370,7 +371,8 @@
     "confirmRevokeBody": "Przestanie się otwierać u wszystkich, którym go wysłałeś. Statystyki zostaną.",
     "confirmDeleteTitle": "Usunąć link „{title}”?",
     "confirmDeleteBody": "Razem z nim zniknie statystyka wyświetleń. Tego nie można cofnąć.",
-    "creating": "Tworzę…"
+    "creating": "Tworzę…",
+    "copyLink": "Kopiuj link"
   },
   "select": {
     "start": "Zaznacz",
@@ -417,7 +419,9 @@
     "installHint": "Zainstaluj Wishlist na ekranie głównym — będzie się otwierać jak osobna aplikacja, bez paska przeglądarki.",
     "installButton": "Zainstaluj",
     "installIos": "Na iPhonie lub iPadzie otwórz stronę w Safari, stuknij „Udostępnij”, a potem „Do ekranu początkowego”.",
-    "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”."
+    "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”.",
+    "qrShow": "Pokaż kod QR",
+    "qrHint": "Wygodniej zainstalować na telefonie — zeskanuj adres."
   },
   "banners": {
     "more": "Więcej powiadomień: {n}",

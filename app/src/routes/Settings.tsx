@@ -2,6 +2,7 @@ import { useAuth } from '../lib/auth';
 import { useI18n, LOCALES } from '../lib/i18n';
 import { useTheme, SCHEMES, THEMES } from '../lib/theme';
 import { promptInstall, useInstallState } from '../lib/install';
+import { InstallQr } from '../components/InstallQr';
 import { pendingCount } from '../lib/outbox';
 import type { Scheme, Theme } from '../lib/theme';
 
@@ -123,6 +124,9 @@ export default function Settings() {
           )}
           {install === 'ios' && <p className="small muted">{t('pwa.installIos')}</p>}
           {install === 'manual' && <p className="small muted">{t('pwa.installManual')}</p>}
+          {/* На десктопі ставити застосунок зазвичай хочуть не сюди, а на
+              телефон — тож поряд лежить QR з адресою. */}
+          {install !== 'installed' && <InstallQr />}
         </section>
 
         <section className="settings__card settings__card--wide">

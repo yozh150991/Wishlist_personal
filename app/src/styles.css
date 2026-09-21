@@ -1341,3 +1341,35 @@ select[multiple].input {
 @media (prefers-reduced-motion: reduce) {
   .undo__fill { animation: none; }
 }
+
+/* Екран «Посилання готове»: діалог міняє тіло, а не дописує знизу. */
+.ready { display: grid; justify-items: center; gap: var(--sp-4); text-align: center; }
+.ready__mark {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--color-accent-200);
+  color: var(--color-accent-800);
+}
+/* Адреса набирається моноширинним: секрет у ній посимвольний, і при
+   звірянні очима різниця між l, 1 та I має бути видна. */
+.ready__link {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: var(--t-small);
+  text-align: center;
+}
+.ready__actions { display: grid; gap: var(--sp-3); width: 100%; }
+
+/* QR з адресою застосунку. Полотно — власний токен, однаковий у всіх
+   палітрах: чому саме так, написано біля нього в tokens.css. */
+.qr { display: grid; justify-items: start; gap: var(--sp-3); }
+.qr__code {
+  width: 160px;
+  padding: var(--sp-3);
+  border-radius: var(--r-field);
+  background: var(--color-qr-paper);
+}
+.qr__code svg { width: 100%; height: auto; display: block; }
+.qr__url { font-size: var(--t-meta); color: var(--color-neutral-700); word-break: break-all; }
