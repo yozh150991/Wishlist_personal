@@ -975,3 +975,96 @@ select[multiple].input {
 .selectbar__status:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .center { text-align: center; }
+
+/* ── Налаштування ──────────────────────────────────────────── */
+
+.settings { display: grid; gap: 14px; }
+
+/* Десктоп: дві колонки по 420 px, а не на всю ширину — ряд із трьох пігулок,
+   розтягнутий на 1000 px, читається гірше за компактну картку. */
+@media (min-width: 56rem) {
+  .settings { grid-template-columns: repeat(auto-fit, minmax(320px, 420px)); align-items: start; }
+  .settings__card--wide { grid-column: 1 / -1; }
+}
+
+.settings__card {
+  display: grid;
+  gap: var(--sp-4);
+  justify-items: start;
+  padding: 14px;
+  border-radius: var(--r-card);
+  background: var(--color-surface);
+}
+.settings__label {
+  font-family: var(--font-body);
+  font-size: var(--t-meta);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+}
+.settings__row { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+
+.scheme-dot {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  border-radius: var(--r-pill);
+}
+.scheme-dot[data-scheme-dot='sage'] { background: var(--color-dot-sage); }
+.scheme-dot[data-scheme-dot='slyva'] { background: var(--color-dot-slyva); }
+.scheme-dot[data-scheme-dot='vuhil'] { background: var(--color-dot-vuhil); }
+/* На обраній пігулці кружечок лежить на заливці акценту й може з нею злитись —
+   тонке кільце кольором підпису тримає його видимим у всіх шести палітрах. */
+.btn--primary .scheme-dot { box-shadow: 0 0 0 2px var(--color-primary-ink); }
+
+/* ── Мої посилання ─────────────────────────────────────────── */
+
+.share-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-5); }
+
+@media (min-width: 56rem) {
+  /* Дві колонки, а не три як у списків: рядок дій тут довший за картку. */
+  .share-list { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+}
+
+.share-card {
+  display: grid;
+  gap: var(--sp-4);
+  padding: 14px;
+  border-radius: var(--r-card);
+  background: var(--color-surface);
+  align-content: start;
+}
+.share-card[data-state='revoked'],
+.share-card[data-state='expired'] { opacity: 0.72; }
+.share-card__head { display: flex; align-items: flex-start; gap: var(--sp-3); flex-wrap: wrap; }
+.share-card__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+.share-card__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+
+/* ── Тост ──────────────────────────────────────────────────── */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4) 18px;
+  border-radius: var(--r-pill);
+  background: var(--color-accent-2-700);
+  color: var(--color-bg);
+  font-size: var(--t-body);
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+@media (min-width: 56rem) {
+  .toast { bottom: var(--sp-8); }
+}

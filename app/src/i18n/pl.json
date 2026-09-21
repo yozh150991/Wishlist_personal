@@ -85,7 +85,15 @@
     "themeSystem": "Jak w systemie",
     "language": "Język",
     "account": "Konto",
-    "signedInAs": "Zalogowany jako {email}"
+    "signedInAs": "Zalogowany jako {email}",
+    "colors": "Kolory",
+    "scheme": {
+      "sage": "Szałwia",
+      "slyva": "Śliwka",
+      "vuhil": "Węgiel"
+    },
+    "schemeHint": "Węgiel — schemat o wzmocnionym kontraście.",
+    "contrastSuggestion": "System prosi o wzmocniony kontrast. Włączyć"
   },
   "errors": {
     "invalidCredentials": "E-mail albo hasło się nie zgadzają.",
@@ -331,10 +339,8 @@
     "itemCount": "pozycji: {n}",
     "views": "wyświetleń: {n}",
     "until": "ważny do {date}",
-    "emptyTitle": "Nie ma jeszcze linków",
-    "emptyBody": "Otwórz listę, kliknij „Udostępnij”, zaznacz pozycje.",
-    "confirmRevoke": "Unieważnić link „{title}”? Przestanie się otwierać.",
-    "confirmDelete": "Usunąć link „{title}” razem ze statystykami?",
+    "emptyTitle": "Jeszcze żadnego linku",
+    "emptyBody": "Otwórz listę, wybierz pozycje i naciśnij „Utwórz link”. Gość zobaczy tylko je.",
     "state": {
       "revoked": "Unieważniony",
       "expired": "Wygasł"
@@ -352,7 +358,13 @@
     "errors": {
       "titleRequired": "Podaj nagłówek.",
       "nothingSelected": "Najpierw zaznacz choć jedną pozycję."
-    }
+    },
+    "loading": "Wczytuję linki",
+    "errorTitle": "Linki się nie wczytały",
+    "confirmRevokeTitle": "Wycofać link „{title}”?",
+    "confirmRevokeBody": "Przestanie się otwierać u wszystkich, którym go wysłałeś. Statystyki zostaną.",
+    "confirmDeleteTitle": "Usunąć link „{title}”?",
+    "confirmDeleteBody": "Razem z nim zniknie statystyka wyświetleń. Tego nie można cofnąć."
   },
   "select": {
     "start": "Zaznacz",
