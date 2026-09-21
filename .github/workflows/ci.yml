@@ -47,6 +47,9 @@ jobs:
 
       - run: npm ci
       - run: npm run typecheck
+      # Аудит палітр: 22 пари × 6 палітр. Не потребує збірки, тому йде раніше —
+      # зламаний контраст видно за секунди, а не після build (ADR-031).
+      - run: npm run check:contrast
       - run: npx vite build
       # Маніфест, іконки й виключення гостьових сторінок із кешу Service Worker.
       - run: npm run check:pwa

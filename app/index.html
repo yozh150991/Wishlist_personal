@@ -12,18 +12,28 @@
     />
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <!-- Колір системних панелей; ThemeProvider оновлює його, коли тема обрана вручну. -->
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#161b1a" media="(prefers-color-scheme: dark)" />
+    <!-- Запасний колір системних панелей на час до першого рендера; далі його
+         ставить ThemeProvider із живого --color-bg активної палітри, щоб
+         значення кольору лишалося рівно в одному файлі (styles/tokens.css). -->
+    <meta name="theme-color" content="#f5ead8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#221f1b" media="(prefers-color-scheme: dark)" />
     <title>Wishlist</title>
     <script>
-      // Тема застосовується до першого рендера, щоб не було спалаху світлого фону.
+      // Схема й тема застосовуються до першого рендера, щоб не блимав чужий фон.
+      // Обидва атрибути ставляться завжди: токени лежать під
+      // [data-scheme][data-theme], і без пари селектор не влучить.
       try {
+        var d = document.documentElement.dataset;
         var t = localStorage.getItem('wl.theme') || 'system';
-        var dark = t === 'dark' || (t === 'system' &&
-          matchMedia('(prefers-color-scheme: dark)').matches);
-        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-      } catch (_) {}
+        var dark = t === 'dark' ||
+          (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        d.theme = dark ? 'dark' : 'light';
+        var s = localStorage.getItem('wl.scheme');
+        d.scheme = s === 'slyva' || s === 'vuhil' ? s : 'sage';
+      } catch (_) {
+        document.documentElement.dataset.theme = 'light';
+        document.documentElement.dataset.scheme = 'sage';
+      }
     </script>
   </head>
   <body>

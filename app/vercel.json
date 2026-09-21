@@ -15,7 +15,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-bwZ7doLfcTVRdL6yw6L1KwZav27r1sOIWgXUkERynv0='; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.run.app; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none';"
+          "value": "default-src 'self'; script-src 'self' 'sha256-45CnDnfyS5WJ6o3ubWDbJZVJdvBUJEb2ZdPbamtCOXw='; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.run.app; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none';"
         },
         {
           "key": "X-Content-Type-Options",
