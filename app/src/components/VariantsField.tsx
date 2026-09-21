@@ -61,7 +61,7 @@ export function VariantsField({
           <input
             type="text"
             list={listId}
-            className="variants__label"
+            className="input variants__label"
             maxLength={VARIANT_LABEL_MAX}
             placeholder={t('item.variants.labelPlaceholder')}
             aria-label={t('item.variants.labelAria', { n: index + 1 })}
@@ -70,7 +70,7 @@ export function VariantsField({
           />
           <input
             type="text"
-            className="variants__value"
+            className="input variants__value"
             maxLength={VARIANT_VALUE_MAX}
             placeholder={t('item.variants.valuePlaceholder')}
             aria-label={t('item.variants.valueAria', { n: index + 1 })}
@@ -80,7 +80,7 @@ export function VariantsField({
           {/* type="button": усередині <form> будь-яка інша кнопка відправляє форму (CLAUDE.md §4). */}
           <button
             type="button"
-            className="btn btn--ghost btn--compact"
+            className="btn btn--ghost btn--compact btn--danger variants__remove"
             aria-label={t('item.variants.removeAria', { n: index + 1 })}
             onClick={() => remove(index)}
           >

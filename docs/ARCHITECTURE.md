@@ -225,7 +225,7 @@ ThemeProvider        тема; застосовується скриптом в 
 
 ### Шрифти
 
-Самохостяться через `@fontsource-variable`, не з CDN: CSP пускає лише `'self'`, а офлайн-оболонка має відкриватися без мережі. Заголовки — Rubik 800, текст — Manrope; обидві покривають `cyrillic`, `cyrillic-ext` і `latin-ext`, тобто всі три мови. Арабиця й іврит, які Rubik возить із собою, у precache не потрапляють (`globIgnores` у `vite.config.ts`).
+Самохостяться через `@fontsource-variable`, не з CDN: CSP пускає лише `'self'`, а офлайн-оболонка має відкриватися без мережі. Заголовки — Rubik 800, текст — Manrope; обидві покривають `cyrillic`, `cyrillic-ext` і `latin-ext`, тобто всі три мови. Арабиця й іврит, які Rubik возить із собою, у precache не потрапляють (`globIgnores` у `vite.config.ts`). Жоден шрифт не вбудовується в CSS як `data:` URI: усталений поріг Vite (4 КБ) інлайнив `cyrillic-ext` Manrope — підмножину зі знаком ₴, — а CSP `font-src 'self'` мовчки блокував його в бою. Тепер `assetsInlineLimit` явно виключає шрифти, і `npm run check:pwa` падає, якщо вбудований шрифт знову зʼявиться.
 
 ## Заголовки безпеки
 
