@@ -98,7 +98,7 @@ $map = @{
 
   # Redesign (ADR-031): tokens, icons, banners, filters, appearance.
   'tokens.css' = 'app\src\styles'
-  'check-contrast.mjs' = 'app\scripts'
+  'check-contrast.mjs' = 'app\scripts'; 'check-i18n.mjs' = 'app\scripts'
   'Icon.tsx' = 'app\src\components'; 'Banners.tsx' = 'app\src\components'
   'Filters.tsx' = 'app\src\components'
   'AppearanceSync.tsx' = 'app\src\components'
