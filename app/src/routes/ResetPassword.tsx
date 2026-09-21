@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase, publicOrigin } from '../lib/supabase';
 import { useI18n } from '../lib/i18n';
 import { AuthLayout } from '../components/AuthLayout';
-import { Field, Note } from '../components/ui';
+import { Field, Note, SubmitButton } from '../components/ui';
 
 export default function ResetPassword() {
   const { t } = useI18n();
@@ -50,9 +50,11 @@ export default function ResetPassword() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <button type="submit" className="btn btn--wide" disabled={busy}>
-              {t('auth.reset.submit')}
-            </button>
+            <SubmitButton
+              busy={busy}
+              label={t('auth.reset.submit')}
+              busyLabel={t('auth.reset.submitting')}
+            />
           </>
         )}
         <p className="auth__switch">

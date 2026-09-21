@@ -625,3 +625,74 @@ select[multiple].input {
 /* Дія всередині банера успадковує його чорнило, інакше вона світиться
    акцентом іншої ролі просто тому, що це кнопка. */
 .banner .btn { color: inherit; border-color: color-mix(in srgb, currentColor 40%, transparent); }
+
+/* ── Вхід, реєстрація, скидання пароля ─────────────────────── */
+
+.auth {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-6);
+  gap: var(--sp-7);
+}
+
+/* Кут один на обох розкладках: на телефоні — над формою, на десктопі —
+   над правою колонкою, бо ліва половина закінчується раніше. */
+.auth__lang {
+  position: absolute;
+  top: var(--sp-5);
+  right: var(--sp-6);
+  z-index: 1;
+}
+
+.auth__promise {
+  display: grid;
+  gap: var(--sp-7);
+  margin-top: var(--sp-8);
+}
+.auth__promise-text { display: grid; gap: var(--sp-3); }
+.auth__promise h2 { font-size: var(--t-hero); }
+
+.privacy {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-6);
+  border-radius: var(--r-card);
+  background: var(--color-surface);
+}
+.privacy__row {
+  height: 12px;
+  border-radius: var(--r-pill);
+  background: var(--color-neutral-400);
+}
+.privacy__row[data-open='true'] { background: var(--color-neutral-700); }
+
+.auth__pane { display: flex; flex-direction: column; justify-content: center; flex: 1; }
+.auth__form-wrap { width: 100%; max-width: 25rem; margin-inline: auto; }
+.auth__form { display: grid; gap: var(--sp-6); }
+.auth__form h1 { font-size: var(--t-hero); }
+.auth__form .btn--primary { min-height: 52px; font-size: var(--t-lead); }
+.auth__switch { font-size: var(--t-body); color: var(--color-neutral-700); text-align: center; }
+
+@media (min-width: 62rem) {
+  .auth {
+    flex-direction: row;
+    align-items: stretch;
+    padding: 0;
+    gap: 0;
+  }
+  /* Ліва половина — окрема поверхня: обіцянка продукту лежить на ній, а не
+     на полотні, тому метафора всередині бере колір полотна, не поверхні. */
+  .auth__promise {
+    width: 600px;
+    flex: none;
+    align-content: center;
+    margin-top: 0;
+    padding: var(--sp-8);
+    background: var(--color-surface);
+  }
+  .auth__promise h2 { font-size: 2.5rem; }
+  .auth__promise .privacy { background: var(--color-bg); }
+  .auth__pane { padding: var(--sp-8); }
+}

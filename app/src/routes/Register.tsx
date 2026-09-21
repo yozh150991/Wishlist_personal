@@ -4,7 +4,7 @@ import { supabase, publicOrigin } from '../lib/supabase';
 import { useI18n } from '../lib/i18n';
 import { authErrorKey } from '../lib/authErrors';
 import { AuthLayout } from '../components/AuthLayout';
-import { Field, Note } from '../components/ui';
+import { Field, Note, SubmitButton } from '../components/ui';
 
 export default function Register() {
   const { t, locale } = useI18n();
@@ -89,9 +89,11 @@ export default function Register() {
           onChange={(e) => setAgain(e.target.value)}
         />
 
-        <button type="submit" className="btn btn--wide" disabled={busy}>
-          {t('auth.register.submit')}
-        </button>
+        <SubmitButton
+          busy={busy}
+          label={t('auth.register.submit')}
+          busyLabel={t('auth.register.submitting')}
+        />
 
         <p className="auth__switch">
           {t('auth.register.toLogin')} <Link to="/login">{t('auth.register.toLoginCta')}</Link>

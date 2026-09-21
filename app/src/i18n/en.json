@@ -12,10 +12,6 @@
     "sharesLong": "My links"
   },
   "auth": {
-    "aside": {
-      "headline": "Your list stays yours.",
-      "body": "Add anything you like. Family sees only the items you pick and send."
-    },
     "email": "Email",
     "password": "Password",
     "passwordAgain": "Password again",
@@ -25,27 +21,35 @@
       "submit": "Sign in",
       "toRegister": "No account yet?",
       "toRegisterCta": "Create one",
-      "forgot": "Forgot password"
+      "forgot": "Forgot password",
+      "submitting": "Signing in…"
     },
     "register": {
       "title": "Create account",
       "submit": "Create account",
       "toLogin": "Already have an account?",
       "toLoginCta": "Sign in",
-      "checkEmail": "We sent a confirmation email to {email}. Open the link to finish signing up."
+      "checkEmail": "We sent a confirmation email to {email}. Open the link to finish signing up.",
+      "submitting": "Creating account…"
     },
     "reset": {
       "title": "Reset password",
       "body": "We'll send a link for setting a new password.",
       "submit": "Send link",
       "sent": "If an account for {email} exists, the link is in the inbox.",
-      "back": "Back to sign in"
+      "back": "Back to sign in",
+      "submitting": "Sending…"
     },
     "update": {
       "title": "New password",
       "submit": "Save password",
       "done": "Password changed.",
-      "expired": "This link expired or was already used. Request a new one."
+      "expired": "This link expired or was already used. Request a new one.",
+      "submitting": "Saving…"
+    },
+    "hero": {
+      "title": "Your list stays yours",
+      "body": "You decide who sees what. A guest only sees the items you pick."
     }
   },
   "lists": {

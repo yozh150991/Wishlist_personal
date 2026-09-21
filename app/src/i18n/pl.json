@@ -12,10 +12,6 @@
     "sharesLong": "Moje linki"
   },
   "auth": {
-    "aside": {
-      "headline": "Twoja lista zostaje twoja.",
-      "body": "Dodawaj wszystko, co chcesz. Bliscy zobaczą tylko te pozycje, które sam wybierzesz i wyślesz."
-    },
     "email": "E-mail",
     "password": "Hasło",
     "passwordAgain": "Hasło ponownie",
@@ -25,27 +21,35 @@
       "submit": "Zaloguj się",
       "toRegister": "Nie masz konta?",
       "toRegisterCta": "Załóż konto",
-      "forgot": "Nie pamiętam hasła"
+      "forgot": "Nie pamiętam hasła",
+      "submitting": "Loguję…"
     },
     "register": {
       "title": "Rejestracja",
       "submit": "Załóż konto",
       "toLogin": "Masz już konto?",
       "toLoginCta": "Zaloguj się",
-      "checkEmail": "Wysłaliśmy e-mail na {email}. Otwórz link, żeby dokończyć rejestrację."
+      "checkEmail": "Wysłaliśmy e-mail na {email}. Otwórz link, żeby dokończyć rejestrację.",
+      "submitting": "Tworzę konto…"
     },
     "reset": {
       "title": "Reset hasła",
       "body": "Wyślemy link, pod którym ustawisz nowe hasło.",
       "submit": "Wyślij link",
       "sent": "Jeśli konto {email} istnieje, link jest już w skrzynce.",
-      "back": "Wróć do logowania"
+      "back": "Wróć do logowania",
+      "submitting": "Wysyłam…"
     },
     "update": {
       "title": "Nowe hasło",
       "submit": "Zapisz hasło",
       "done": "Hasło zmienione.",
-      "expired": "Link wygasł albo został już użyty. Poproś o nowy."
+      "expired": "Link wygasł albo został już użyty. Poproś o nowy.",
+      "submitting": "Zapisuję…"
+    },
+    "hero": {
+      "title": "Twoja lista zostaje twoja",
+      "body": "Sam decydujesz, komu i co pokazać. Gość widzi tylko wybrane pozycje."
     }
   },
   "lists": {
