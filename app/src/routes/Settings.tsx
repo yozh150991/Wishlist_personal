@@ -46,8 +46,12 @@ export default function Settings() {
         {/* Кольори стоять першими й окремо від Теми: це дві незалежні осі,
             і зліплені в один список із шести пунктів вони б лише заплутали. */}
         <section className="settings__card">
-          <h2 className="settings__label">{t('settings.colors')}</h2>
-          <div className="settings__row" role="radiogroup" aria-label={t('settings.colors')}>
+          <h2 className="settings__label" id="set-colors">
+            {t('settings.colors')}
+          </h2>
+          {/* aria-labelledby, а не aria-label: інакше зчитувач екрана читає
+              «Кольори» двічі — як заголовок і як назву групи. */}
+          <div className="settings__row" role="radiogroup" aria-labelledby="set-colors">
             {SCHEMES.map((s) => (
               <button
                 key={s}
@@ -76,8 +80,10 @@ export default function Settings() {
         </section>
 
         <section className="settings__card">
-          <h2 className="settings__label">{t('settings.theme')}</h2>
-          <div className="settings__row" role="radiogroup" aria-label={t('settings.theme')}>
+          <h2 className="settings__label" id="set-theme">
+            {t('settings.theme')}
+          </h2>
+          <div className="settings__row" role="radiogroup" aria-labelledby="set-theme">
             {THEMES.map((v) => (
               <button
                 key={v}
@@ -94,8 +100,10 @@ export default function Settings() {
         </section>
 
         <section className="settings__card">
-          <h2 className="settings__label">{t('settings.language')}</h2>
-          <div className="settings__row" role="radiogroup" aria-label={t('settings.language')}>
+          <h2 className="settings__label" id="set-language">
+            {t('settings.language')}
+          </h2>
+          <div className="settings__row" role="radiogroup" aria-labelledby="set-language">
             {LOCALES.map((l) => (
               <button
                 key={l}
