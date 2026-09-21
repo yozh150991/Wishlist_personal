@@ -93,43 +93,45 @@ test('на сторінці списку немає дубльованих id', 
 });
 
 /**
- * Статуси — це набір, і останній обраний теж мусить зніматись. Клік по ньому
- * означає «показати всі»: порожній набір дав би порожній екран, а мовчазна
- * відмова читалась як зламана кнопка.
+ * Статус — фільтр, який вмикається й вимикається тим самим натисканням.
+ * Порожній набір означає «без фільтра за статусом», а не порожній екран:
+ * саме таким список і відкривається. Колись тут стояла заборона знімати
+ * останній обраний статус, і кнопка мовчки нічого не робила.
  *
- * Перезавантаження посеред тесту навмисне. Зміна статусу з картки й зміна
- * фільтра — два незалежні перечитування вибірки, і без перезавантаження тест
- * ловив то одне, то інше: у CI він падав двома різними способами на тому
- * самому коді. Перевіряти тут треба поведінку фільтра, а не перегони.
+ * Перезавантаження навмисне: зміна статусу позиції й зміна фільтра — два
+ * незалежні перечитування вибірки, і тест, який чекає наслідку обох одразу,
+ * ловить то одне, то інше.
  */
-test('клік по єдиному обраному статусу вмикає всі, а не жоден', async ({ page }) => {
+test('останній обраний статус знімається й повертає всі позиції', async ({ page }) => {
   await signIn(page);
   await createList(page, unique('E2E status'));
   await addItem(page, 'Кавоварка');
+
   // Запис мусить дійти до бази до перезавантаження: інакше воно обірве запит
   // на півдорозі, і позиція лишиться актуальною.
-  const saved = page.waitForResponse((r) => r.url().includes('/items') && r.request().method() === 'PATCH' && r.ok());
+  const saved = page.waitForResponse(
+    (r) => r.url().includes('/items') && r.request().method() === 'PATCH' && r.ok(),
+  );
   await page.getByRole('combobox', { name: /Кавоварка/ }).selectOption('gifted');
   await saved;
-
-  // Усталений фільтр — «Актуально», тож подарована позиція зникає з вибірки.
   await page.reload();
-  await expect(page.getByText('Кавоварка', { exact: true })).toHaveCount(0);
 
+  const active = page.getByRole('button', { name: /^актуально$|^aktualne$|^active$/i });
+
+  // Фільтра за статусом немає — подарована позиція на місці.
+  await expect(page.getByText('Кавоварка', { exact: true })).toBeVisible();
   await openFilters(page);
-  const chip = (name: RegExp) => page.getByRole('button', { name });
-  const active = chip(/^актуально$|^aktualne$|^active$/i);
-  const purchased = chip(/^куплено$|^kupione$|^purchased$/i);
-  const gifted = chip(/^подаровано$|^podarowane$|^gifted$/i);
-
-  await expect(active).toHaveAttribute('aria-pressed', 'true');
-  await expect(purchased).toHaveAttribute('aria-pressed', 'false');
+  await expect(active).toHaveAttribute('aria-pressed', 'false');
 
   await active.click();
-  for (const one of [active, purchased, gifted]) {
-    await expect(one).toHaveAttribute('aria-pressed', 'true');
-  }
+  await expect(active).toHaveAttribute('aria-pressed', 'true');
+  await closeFilters(page);
+  await expect(page.getByText('Кавоварка', { exact: true })).toHaveCount(0);
 
+  // Те саме натискання знімає фільтр — і позиція повертається.
+  await openFilters(page);
+  await active.click();
+  await expect(active).toHaveAttribute('aria-pressed', 'false');
   await closeFilters(page);
   await expect(page.getByText('Кавоварка', { exact: true })).toBeVisible();
 });
