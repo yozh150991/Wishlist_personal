@@ -48,8 +48,11 @@ test('у налаштуваннях є розділ встановлення з�
   await page.goto('/settings');
   const section = page.getByTestId('install');
   await expect(section.getByRole('heading', { name: /застосунок на телефоні|aplikacja na telefonie|app on your phone/i })).toBeVisible();
-  // У тестовому браузері подія встановлення не приходить, тож видно одну з підказок.
-  await expect(section.locator('p')).not.toHaveText('');
+  // Підказок у розділі дві: про встановлення і про QR для телефона. Нас
+  // цікавить перша — саме вона залежить від того, як браузер уміє ставити
+  // застосунок. У тестовому браузері подія встановлення не приходить, тож
+  // це одна з підказок «вручну».
+  await expect(section.locator('p').first()).not.toHaveText('');
 });
 
 /**

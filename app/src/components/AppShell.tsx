@@ -43,19 +43,29 @@ export function AppShell() {
   return (
     <StaleProvider>
       <div className="shell">
-        <nav className="sidenav" aria-label={t('nav.label')}>
-          <Link className="sidenav__brand" to="/lists">
+        {/*
+          Навігація одна на обидві розкладки, а не дві з прихованою.
+          Дві давали зчитувачу екрана два однакових орієнтири «Розділи» й по
+          два посилання на кожен розділ — а Playwright чесно знаходив обидва.
+          Підпис короткий чи довгий вибирає CSS: текст, схований `display:none`,
+          у доступну назву не потрапляє, тож вона завжди рівно одна.
+        */}
+        <nav className="mainnav" aria-label={t('nav.label')}>
+          <Link className="mainnav__brand" to="/lists">
             {t('app.name')}
           </Link>
+
           {NAV.map((item) => (
-            <NavLink key={item.to} className="sidenav__item" to={item.to}>
+            <NavLink key={item.to} className="mainnav__item" to={item.to}>
               <Icon name={item.icon} size={19} />
-              {t(item.longKey)}
+              <span className="mainnav__short">{t(item.key)}</span>
+              <span className="mainnav__long">{t(item.longKey)}</span>
             </NavLink>
           ))}
-          <div className="sidenav__who">
+
+          <div className="mainnav__who">
             <span className="meta muted">{t('settings.signedInAs')}</span>
-            <span className="sidenav__mail">{session?.user.email}</span>
+            <span className="mainnav__mail">{session?.user.email}</span>
             <button type="button" className="btn btn--ghost btn--compact" onClick={() => void leave()}>
               {t('nav.signOut')}
             </button>
@@ -66,15 +76,6 @@ export function AppShell() {
           <Banners />
           <Outlet />
         </div>
-
-        <nav className="tabbar" aria-label={t('nav.label')}>
-          {NAV.map((item) => (
-            <NavLink key={item.to} className="tabbar__item" to={item.to}>
-              <Icon name={item.icon} size={20} />
-              {t(item.key)}
-            </NavLink>
-          ))}
-        </nav>
       </div>
     </StaleProvider>
   );
