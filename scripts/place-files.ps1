@@ -49,6 +49,7 @@ $map = @{
   '20260910120300_grants.sql' = 'supabase\migrations'
   '20260911100000_items_page_fix.sql' = 'supabase\migrations'
   '20260916220000_revoke_default_function_grants.sql' = 'supabase\migrations'
+  '20260921100000_item_variants.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -56,6 +57,7 @@ $map = @{
   '01_schema_guards.test.sql' = 'supabase\tests\database'
   '02_owner_isolation.test.sql' = 'supabase\tests\database'
   '03_sharing_and_reservations.test.sql' = 'supabase\tests\database'
+  '04_item_variants.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -88,6 +90,7 @@ $map = @{
   'EventSummary.tsx' = 'app\src\components'; 'env-local.mjs' = 'app\scripts'
   'ExportDialog.tsx' = 'app\src\components'; 'ImportDialog.tsx' = 'app\src\components'
   'transfer.ts' = 'app\src\lib'; 'download.ts' = 'app\src\lib'
+  'VariantsField.tsx' = 'app\src\components'
   'cache.ts' = 'app\src\lib'; 'StaleNotice.tsx' = 'app\src\components'
   'idb.ts' = 'app\src\lib'; 'outbox.ts' = 'app\src\lib'; 'outboxOps.ts' = 'app\src\lib'
   'OutboxNotice.tsx' = 'app\src\components'; 'outbox.spec.ts' = 'app\tests\e2e'

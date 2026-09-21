@@ -897,3 +897,59 @@ a { color: var(--accent); text-underline-offset: 3px; }
   gap: var(--sp-3);
   flex-wrap: wrap;
 }
+
+/* ── Ознаки товару (ADR-030) ─────────────── */
+
+/* Чипи на картці: підпис приглушений, значення звичайним кольором —
+   так пара читається як «Розмір M», а не як два рівноправні слова. */
+.variants-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chip--variant { white-space: normal; }
+.chip__label { color: var(--muted); }
+
+/* Редактор у діалозі позиції. */
+.variants {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.variants > legend {
+  padding: 0;
+  font-size: var(--t-sm);
+  font-variation-settings: 'wght' 550;
+}
+.variants__row {
+  display: grid;
+  gap: var(--sp-2);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+  align-items: center;
+}
+/* Ті самі метрики, що в `.field input`: поля в одному діалозі мають збігатися,
+   а 44px — мінімальна зручна ціль для пальця. */
+.variants input {
+  width: 100%;
+  font: inherit;
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-input);
+}
+.variants input:focus { border-color: var(--accent); }
+.variants > .btn { justify-self: start; }
+
+/* На вузькому екрані три колонки не вміщаються: підпис і значення стають
+   одне під одним, кнопка лишається праворуч від значення. */
+@media (max-width: 30rem) {
+  .variants__row { grid-template-columns: minmax(0, 1fr) auto; }
+  .variants__label { grid-column: 1 / -1; }
+}

@@ -1,5 +1,5 @@
 import { supabase, publicOrigin } from './supabase';
-import type { Currency, ItemPriority, ItemStatus } from './types';
+import type { Currency, ItemPriority, ItemStatus, ItemVariant } from './types';
 
 export type Share = {
   id: string;
@@ -80,6 +80,8 @@ export type SharedItem = {
   quantity: number;
   priority: ItemPriority;
   note: string | null;
+  /** Ознаки товару (ADR-030). Від `hide_prices` не залежать — це не ціна. */
+  variants: ItemVariant[];
   image_url: string | null;
   status: ItemStatus;
   created_at: string;

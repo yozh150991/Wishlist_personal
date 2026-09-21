@@ -151,6 +151,7 @@ app/
 │   │   ├── Dialog.tsx  ItemDialog.tsx  ListDialog.tsx  ShareDialog.tsx
 │   │   ├── ItemCard.tsx  Toolbar.tsx  LocaleSync.tsx  LanguagePicker.tsx  UpdatePrompt.tsx
 │   │   ├── EventSummary.tsx        # нагадування підбити підсумки після події
+│   │   ├── VariantsField.tsx       # ознаки товару в діалозі позиції (ADR-030)
 │   │   └── ExportDialog.tsx  ImportDialog.tsx  OutboxNotice.tsx
 │   ├── lib/
 │   │   ├── supabase.ts  auth.tsx  theme.tsx  i18n.tsx  authErrors.ts

@@ -16,6 +16,7 @@ function item(over: Partial<Item> = {}): Item {
     quantity: 1,
     priority: 'medium',
     note: null,
+    variants: [],
     image_url: null,
     status: 'active',
     source_site: null,

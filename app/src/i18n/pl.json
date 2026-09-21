@@ -119,6 +119,23 @@
       "imageUrl": "Link do zdjęcia",
       "note": "Notatka"
     },
+    "variants": {
+      "legend": "Cechy produktu",
+      "empty": "Rozmiar, kolor, model — bez tego prezent trzeba zgadywać.",
+      "add": "Dodaj cechę",
+      "remove": "Usuń",
+      "removeAria": "Usuń cechę {n}",
+      "labelPlaceholder": "Nazwa",
+      "valuePlaceholder": "Wartość",
+      "labelAria": "Nazwa cechy {n}",
+      "valueAria": "Wartość cechy {n}",
+      "max": "Najwyżej {max} cech na pozycję.",
+      "hints": {
+        "size": "Rozmiar",
+        "color": "Kolor",
+        "model": "Model"
+      }
+    },
     "priority": {
       "low": "Niski",
       "medium": "Średni",
@@ -139,7 +156,10 @@
       "badUrl": "Link musi zaczynać się od http:// lub https://",
       "badPrice": "Cena musi być liczbą nie mniejszą od zera.",
       "badQuantity": "Ilość to liczba całkowita od 1 do 999.",
-      "priceTooBig": "Cena jest za duża."
+      "priceTooBig": "Cena jest za duża.",
+      "variantsHalf": "Wypełnij nazwę i wartość cechy — albo ją usuń.",
+      "variantsLong": "Nazwa — do 40 znaków, wartość — do 80.",
+      "variantsMany": "Najwyżej pięć cech."
     },
     "priorityLabel": "Priorytet: {value}"
   },
@@ -216,7 +236,10 @@
       "eventDate": "nie rozpoznano daty „{value}”, pozostała pusta.",
       "listTitleLong": "nazwę listy skrócono do {max} znaków.",
       "descriptionLong": "opis skrócono do {max} znaków.",
-      "tooMany": "pozycji w pliku {count}, weźmiemy pierwsze {max}."
+      "tooMany": "pozycji w pliku {count}, weźmiemy pierwsze {max}.",
+      "variants": "nie udało się odczytać cech «{value}», pole zostało puste.",
+      "variantsMany": "więcej niż pięć cech, nadmiar pominięto.",
+      "variantsLong": "cecha skrócona: nazwa do 40 znaków, wartość do 80."
     }
   },
   "offline": {

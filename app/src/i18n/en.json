@@ -119,6 +119,23 @@
       "imageUrl": "Image link",
       "note": "Note"
     },
+    "variants": {
+      "legend": "Product details",
+      "empty": "Size, colour, model — what a gift otherwise has to be guessed from.",
+      "add": "Add detail",
+      "remove": "Remove",
+      "removeAria": "Remove detail {n}",
+      "labelPlaceholder": "Label",
+      "valuePlaceholder": "Value",
+      "labelAria": "Label of detail {n}",
+      "valueAria": "Value of detail {n}",
+      "max": "At most {max} details per item.",
+      "hints": {
+        "size": "Size",
+        "color": "Colour",
+        "model": "Model"
+      }
+    },
     "priority": {
       "low": "Low",
       "medium": "Medium",
@@ -139,7 +156,10 @@
       "badUrl": "Link must start with http:// or https://",
       "badPrice": "Price must be a number of zero or more.",
       "badQuantity": "Quantity must be a whole number from 1 to 999.",
-      "priceTooBig": "That price is too large."
+      "priceTooBig": "That price is too large.",
+      "variantsHalf": "Fill in both the label and the value — or remove the detail.",
+      "variantsLong": "Label up to 40 characters, value up to 80.",
+      "variantsMany": "Five details at most."
     },
     "priorityLabel": "Priority: {value}"
   },
@@ -216,7 +236,10 @@
       "eventDate": "could not read the date “{value}”, left empty.",
       "listTitleLong": "list name trimmed to {max} characters.",
       "descriptionLong": "description trimmed to {max} characters.",
-      "tooMany": "{count} items in the file, taking the first {max}."
+      "tooMany": "{count} items in the file, taking the first {max}.",
+      "variants": "could not read details “{value}”, the field was left empty.",
+      "variantsMany": "more than five details, the extra ones were dropped.",
+      "variantsLong": "detail trimmed: label to 40 characters, value to 80."
     }
   },
   "offline": {
