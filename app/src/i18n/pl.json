@@ -204,9 +204,7 @@
       "clearPrice": "Zdejmij filtr ceny",
       "clearStatus": "Zdejmij filtr statusu"
     },
-    "listLabel": "Pozycje listy",
-    "confirmTitle": "Usunąć „{title}”?",
-    "confirmBody": "Pozycja zniknie też ze wszystkich linków, w których była. Tego nie można cofnąć."
+    "listLabel": "Pozycje listy"
   },
   "toolbar": {
     "search": "Szukaj po nazwie",
@@ -236,10 +234,11 @@
   },
   "summary": {
     "region": "Podsumowanie wydarzenia",
-    "banner": "Wydarzenie było {date} — oznaczyć, co już podarowano?",
     "start": "Podsumuj",
     "later": "Później",
-    "done": "Wydarzenie minęło · podarowano {gifted} z {n}"
+    "done": "Wydarzenie minęło · podarowano {gifted} z {n}",
+    "was": "Wydarzenie było {date}",
+    "ask": "Oznaczyć, co już podarowano?"
   },
   "transfer": {
     "export": {
@@ -382,7 +381,9 @@
     "statusPlaceholder": "Oznacz jako…",
     "shareActiveOnly": "Do linku trafią tylko aktualne: {n}.",
     "confirmTitle": "Usunąć wybrane pozycje ({n})?",
-    "confirmBody": "Znikną też ze wszystkich linków, w których były. Tego nie można cofnąć."
+    "confirmBody": "Znikną też ze wszystkich linków, w których były. Tego nie można cofnąć.",
+    "exit": "Wyjdź z trybu zaznaczania",
+    "activeAmong": "W tym aktualnych: {n}"
   },
   "guest": {
     "goneTitle": "Link niedostępny",
@@ -421,5 +422,10 @@
   "banners": {
     "more": "Więcej powiadomień: {n}",
     "less": "Zwiń"
+  },
+  "undo": {
+    "itemDeleted": "Pozycję usunięto",
+    "action": "Cofnij",
+    "offline": "Zapisze się później — teraz nie ma połączenia"
   }
 }

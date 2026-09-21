@@ -204,9 +204,7 @@
       "clearPrice": "Clear price filter",
       "clearStatus": "Clear status filter"
     },
-    "listLabel": "List items",
-    "confirmTitle": "Delete “{title}”?",
-    "confirmBody": "The item also disappears from every link it was in. This cannot be undone."
+    "listLabel": "List items"
   },
   "toolbar": {
     "search": "Search by title",
@@ -236,10 +234,11 @@
   },
   "summary": {
     "region": "Event summary",
-    "banner": "The event was on {date} — mark what has already been gifted?",
     "start": "Wrap up",
     "later": "Later",
-    "done": "Event is over · {gifted} of {n} gifted"
+    "done": "Event is over · {gifted} of {n} gifted",
+    "was": "The event was on {date}",
+    "ask": "Mark what has been gifted?"
   },
   "transfer": {
     "export": {
@@ -382,7 +381,9 @@
     "statusPlaceholder": "Mark as…",
     "shareActiveOnly": "Only active items go into the link: {n}.",
     "confirmTitle": "Delete the selected items ({n})?",
-    "confirmBody": "They also disappear from every link they were in. This cannot be undone."
+    "confirmBody": "They also disappear from every link they were in. This cannot be undone.",
+    "exit": "Leave selection mode",
+    "activeAmong": "Active among them: {n}"
   },
   "guest": {
     "goneTitle": "This link isn't available",
@@ -421,5 +422,10 @@
   "banners": {
     "more": "More messages: {n}",
     "less": "Collapse"
+  },
+  "undo": {
+    "itemDeleted": "Item deleted",
+    "action": "Undo",
+    "offline": "It will be saved later — there is no connection right now"
   }
 }

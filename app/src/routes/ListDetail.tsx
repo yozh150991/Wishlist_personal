@@ -19,6 +19,7 @@ import { ExportDialog } from '../components/ExportDialog';
 import { useStale } from '../components/Banners';
 import { ConfirmDialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
+import { UndoToast, useUndo } from '../components/UndoToast';
 import { newId, run } from '../lib/outbox';
 import type { Op } from '../lib/outbox';
 import { listKey, readSnapshot, saveSnapshot } from '../lib/cache';
@@ -47,7 +48,7 @@ export default function ListDetail() {
   const [selectActiveOnLoad, setSelectActiveOnLoad] = useState(false);
   const [exportDialog, setExportDialog] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [confirmItem, setConfirmItem] = useState<Item | null>(null);
+  const undoDelete = useUndo();
   const [confirmBulk, setConfirmBulk] = useState(false);
 
   // Пошук відкладається, решта фільтрів застосовується одразу.
@@ -148,6 +149,16 @@ export default function ListDetail() {
   }, [items]);
 
   useEffect(() => {
+    if (!selecting) return;
+    const onKey = (e: KeyboardEvent) => {
+      // Діалог теж слухає Escape; поки він відкритий, вибір не чіпаємо.
+      if (e.key === 'Escape' && !document.querySelector('dialog[open]')) exitSelection();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selecting]);
+
+  useEffect(() => {
     if (!selectActiveOnLoad || loading) return;
     setSelected(new Set(items.filter((i) => i.status === 'active').map((i) => i.id)));
     setSelectActiveOnLoad(false);
@@ -187,8 +198,19 @@ export default function ListDetail() {
     );
   }
 
-  async function removeItem(item: Item) {
-    await change({ kind: 'delete', listId: id, ids: [item.id] });
+  /**
+   * Видалення однієї позиції — зворотна дія, тож вона йде через тост
+   * «Скасувати», а не через діалог. Позиція зникає з екрана одразу, запит
+   * летить через сім секунд; поки відлік іде, скасування миттєве й не
+   * залежить від мережі.
+   */
+  function removeItem(item: Item) {
+    applyLocal({ kind: 'delete', listId: id, ids: [item.id] });
+    undoDelete.schedule({
+      label: t('undo.itemDeleted'),
+      commit: () => void change({ kind: 'delete', listId: id, ids: [item.id] }),
+      revert: () => void reload(),
+    });
   }
 
   async function setStatus(item: Item, status: ItemStatus) {
@@ -208,6 +230,32 @@ export default function ListDetail() {
 
   return (
     <div className="page">
+      {selecting ? (
+        <header className="select-head">
+          <button
+            type="button"
+            className="btn btn--icon select-head__btn"
+            aria-label={t('select.exit')}
+            onClick={exitSelection}
+          >
+            <Icon name="x" size={18} />
+          </button>
+          <div className="select-head__text">
+            <strong>{t('select.selected', { n: selected.size })}</strong>
+            <span className="small">
+              {t('select.activeAmong', { n: selectedActiveIds.length })}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn select-head__btn"
+            disabled={bulkBusy}
+            onClick={() => setSelected(new Set(items.map((i) => i.id)))}
+          >
+            {t('select.selectAll')}
+          </button>
+        </header>
+      ) : (
       <header className="list-head">
         <Link className="btn btn--icon btn--secondary" to="/lists" aria-label={t('lists.title')}>
           <Icon name="chevronDown" size={18} />
@@ -243,6 +291,7 @@ export default function ListDetail() {
           </button>
         </div>
       </header>
+      )}
 
       {listError && <Note tone="error">{listError}</Note>}
 
@@ -383,14 +432,18 @@ export default function ListDetail() {
       ) : (
         <main>
           <h2 className="visually-hidden">{t('item.listLabel')}</h2>
-          <ul className="item-list" data-stale={staleAt ? 'true' : 'false'}>
+          <ul
+            className="item-list"
+            data-stale={staleAt ? 'true' : 'false'}
+            data-selecting={selecting}
+          >
             {items.map((item) => (
               <ItemCard
                 key={item.id}
                 item={item}
                 currency={currency}
                 onEdit={(i) => setItemDialog({ open: true, item: i })}
-                onDelete={(i) => setConfirmItem(i)}
+                onDelete={(i) => removeItem(i)}
                 onSetStatus={(i, s) => void setStatus(i, s)}
                 selectable={selecting}
                 selected={selected.has(item.id)}
@@ -419,7 +472,7 @@ export default function ListDetail() {
 
       {/* Плаваюча кнопка: додавання — найчастіша дія на цьому екрані, і на
           телефоні вона має бути під великим пальцем, а не в шапці. */}
-      {!selecting && (
+      {!selecting && !undoDelete.pending && (
         <button
           type="button"
           className="fab"
@@ -434,22 +487,9 @@ export default function ListDetail() {
           а дія має лишатись під рукою на будь-якій довжині списку. */}
       {selecting && (
         <div className="selectbar" role="region" aria-label={t('select.region')}>
-          <div className="selectbar__info">
-            <strong>{t('select.selected', { n: selected.size })}</strong>
-            {selectedActiveIds.length > 0 && selectedActiveIds.length < selected.size && (
-              <span className="small">{t('select.shareActiveOnly', { n: selectedActiveIds.length })}</span>
-            )}
-          </div>
+          <p className="small muted">{t('select.shareActiveOnly', { n: selectedActiveIds.length })}</p>
           {bulkError && <Note tone="error">{bulkError}</Note>}
           <div className="selectbar__actions">
-            <button
-              type="button"
-              className="btn btn--secondary btn--compact"
-              disabled={bulkBusy}
-              onClick={() => setSelected(new Set(items.map((i) => i.id)))}
-            >
-              {t('select.selectAll')}
-            </button>
             {/* Статус застосовується одразу після вибору: дія оборотна, підтвердження зайве.
                 Порожній перший пункт потрібен, щоб вибір того самого статусу теж спрацьовував. */}
             <select
@@ -486,14 +526,6 @@ export default function ListDetail() {
             >
               {t('share.create')}
             </button>
-            <button
-              type="button"
-              className="btn btn--ghost btn--compact"
-              disabled={bulkBusy}
-              onClick={exitSelection}
-            >
-              {t('common.cancel')}
-            </button>
           </div>
         </div>
       )}
@@ -524,18 +556,8 @@ export default function ListDetail() {
         onClose={() => setExportDialog(false)}
       />
 
-      <ConfirmDialog
-        open={confirmItem !== null}
-        title={t('item.confirmTitle', { title: confirmItem?.title ?? '' })}
-        body={t('item.confirmBody')}
-        confirmLabel={t('item.actions.delete')}
-        onConfirm={() => {
-          const victim = confirmItem;
-          setConfirmItem(null);
-          if (victim) void removeItem(victim);
-        }}
-        onClose={() => setConfirmItem(null)}
-      />
+      <UndoToast pending={undoDelete.pending} onUndo={undoDelete.undo} />
+
       <ConfirmDialog
         open={confirmBulk}
         title={t('select.confirmTitle', { n: selected.size })}
