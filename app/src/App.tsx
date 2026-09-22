@@ -1,23 +1,18 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './lib/auth';
 import { I18nProvider } from './lib/i18n';
 import { ThemeProvider } from './lib/theme';
-import { RequireAuth } from './components/RequireAuth';
-import { AppShell } from './components/AppShell';
 import { LocaleSync } from './components/LocaleSync';
 import { AppearanceSync } from './components/AppearanceSync';
 import { UpdatePrompt } from './components/UpdatePrompt';
-import Login from './routes/Login';
-import Register from './routes/Register';
-import ResetPassword from './routes/ResetPassword';
-import UpdatePassword from './routes/UpdatePassword';
-import Lists from './routes/Lists';
-import ListDetail from './routes/ListDetail';
-import Shares from './routes/Shares';
-import SharedList from './routes/SharedList';
-import Settings from './routes/Settings';
-import NotFound from './routes/NotFound';
+import { DesignRoutes } from './designs/DesignRoutes';
 
+/**
+ * Каркас застосунку: провайдери, сесія, мова — усе, що спільне для обох
+ * версій дизайну. Самі екрани живуть у таблицях маршрутів версій
+ * (`designs/v1`, `designs/v2`), бо v2 переробляє й екрани, й порядок кроків
+ * (ADR-032).
+ */
 export default function App() {
   return (
     <ThemeProvider>
@@ -27,34 +22,11 @@ export default function App() {
           <AuthProvider>
             <LocaleSync />
             {/* Тема й схема власника їдуть у профіль, щоб переїжджали
-                між пристроями. Гостьова сторінка цього не має. */}
+                між пристроями. Гостьова сторінка цього не має. Версія
+                дизайну не їде: поки v2 наповнюється, вона не має вмикатися
+                сама на іншому пристрої. */}
             <AppearanceSync />
-            <Routes>
-              {/* Публічні */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/reset" element={<ResetPassword />} />
-              <Route path="/update-password" element={<UpdatePassword />} />
-              {/* Гостьовий перегляд: без каркаса застосунку і без входу. */}
-              <Route path="/s/:token" element={<SharedList />} />
-
-              {/* Захищені */}
-              <Route
-                element={
-                  <RequireAuth>
-                    <AppShell />
-                  </RequireAuth>
-                }
-              >
-                <Route path="/lists" element={<Lists />} />
-                <Route path="/lists/:id" element={<ListDetail />} />
-                <Route path="/shares" element={<Shares />} />
-                <Route path="/settings" element={<Settings />} />
-              </Route>
-
-              <Route path="/" element={<Navigate to="/lists" replace />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <DesignRoutes />
           </AuthProvider>
         </BrowserRouter>
       </I18nProvider>

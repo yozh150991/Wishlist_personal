@@ -1,10 +1,10 @@
 import { useAuth } from '../lib/auth';
 import { useI18n, LOCALES } from '../lib/i18n';
-import { useTheme, SCHEMES, THEMES } from '../lib/theme';
+import { useTheme, DESIGNS, SCHEMES, THEMES } from '../lib/theme';
 import { promptInstall, useInstallState } from '../lib/install';
 import { InstallQr } from '../components/InstallQr';
 import { pendingCount } from '../lib/outbox';
-import type { Scheme, Theme } from '../lib/theme';
+import type { Design, Scheme, Theme } from '../lib/theme';
 
 const LOCALE_LABEL: Record<string, string> = { uk: 'Українська', pl: 'Polski', en: 'English' };
 
@@ -20,7 +20,7 @@ function SchemeDot({ scheme }: { scheme: Scheme }) {
 
 export default function Settings() {
   const { t, locale, setLocale } = useI18n();
-  const { theme, scheme, setTheme, setScheme, suggestsContrast } = useTheme();
+  const { theme, scheme, design, setTheme, setScheme, setDesign, suggestsContrast } = useTheme();
   const { session, signOut } = useAuth();
   const install = useInstallState();
 
@@ -29,6 +29,24 @@ export default function Settings() {
     dark: t('settings.themeDark'),
     system: t('settings.themeSystem'),
   };
+
+  const designLabel: Record<Design, string> = {
+    v1: t('settings.design.v1'),
+    v2: t('settings.design.v2'),
+  };
+
+  /**
+   * Версії мають власні таблиці маршрутів, і адреси в них не зобовʼязані
+   * збігатися: у v2 інший флоу, а не перефарбовані ті самі екрани. Тому
+   * перемикання — це перехід на корінь із повним перезавантаженням, а не
+   * підміна дерева під ногами на сторінці, якої в іншій версії може не бути.
+   * Заразом інлайновий скрипт у `<head>` ставить атрибути заново (ADR-032).
+   */
+  function switchDesign(next: Design) {
+    if (next === design) return;
+    setDesign(next);
+    window.location.assign('/');
+  }
 
   async function leave() {
     const waiting = session?.user.id ? await pendingCount(session.user.id) : 0;
@@ -43,6 +61,30 @@ export default function Settings() {
       </div>
 
       <div className="settings">
+        {/* Дизайн стоїть перед кольорами й темою, бо він над ними: версія
+            задає форму інтерфейсу, а вже всередині неї працюють усі три
+            схеми й обидві теми (ADR-032). */}
+        <section className="settings__card" data-testid="design">
+          <h2 className="settings__label" id="set-design">
+            {t('settings.design.title')}
+          </h2>
+          <div className="settings__row" role="radiogroup" aria-labelledby="set-design">
+            {DESIGNS.map((d) => (
+              <button
+                key={d}
+                type="button"
+                role="radio"
+                aria-checked={design === d}
+                className={design === d ? 'btn btn--primary' : 'btn btn--secondary'}
+                onClick={() => switchDesign(d)}
+              >
+                {designLabel[d]}
+              </button>
+            ))}
+          </div>
+          <p className="small muted">{t('settings.designHint')}</p>
+        </section>
+
         {/* Кольори стоять першими й окремо від Теми: це дві незалежні осі,
             і зліплені в один список із шести пунктів вони б лише заплутали. */}
         <section className="settings__card">

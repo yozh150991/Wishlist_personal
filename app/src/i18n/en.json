@@ -80,6 +80,12 @@
   },
   "settings": {
     "title": "Settings",
+    "design": {
+      "title": "Design",
+      "v1": "v1 — current",
+      "v2": "v2 — new"
+    },
+    "designHint": "v2 has its own screens and its own flow, not just different colors. Switching reopens the app from the start; lists, links and reservations are shared by both versions.",
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
@@ -96,6 +102,11 @@
     "schemeHint": "Charcoal is the high-contrast scheme.",
     "contrastSuggestion": "Your system asks for higher contrast. Switch to",
     "contrastShort": "Higher contrast"
+  },
+  "design": {
+    "emptyTitle": "Design v2 is not here yet",
+    "emptyBody": "The new screens will live here. Your data is fine — it is this version that is empty.",
+    "backToV1": "Back to v1"
   },
   "errors": {
     "invalidCredentials": "That email and password don't match.",
@@ -258,8 +269,6 @@
       "open": "Import",
       "title": "Import list",
       "file": "CSV or JSON file",
-      "choose": "Choose file",
-      "noFile": "No file chosen",
       "hint": "A title column is required. Up to {max} items at a time.",
       "pick": "Pick a file and you will see exactly what gets created.",
       "fallbackTitle": "Imported list",
