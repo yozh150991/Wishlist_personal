@@ -258,6 +258,8 @@
       "open": "Import",
       "title": "Import list",
       "file": "CSV or JSON file",
+      "choose": "Choose file",
+      "noFile": "No file chosen",
       "hint": "A title column is required. Up to {max} items at a time.",
       "pick": "Pick a file and you will see exactly what gets created.",
       "fallbackTitle": "Imported list",

@@ -141,8 +141,10 @@ img { display: block; max-width: 100%; }
    і тягне за собою горизонтальну прокрутку всієї сторінки. `anywhere`, а не
    `break-word`: тільки воно зменшує min-content, тож колонка в flex чи grid
    справді може стиснутись. */
-.list-head h1,
-.page__head h1,
+h1,
+h2,
+h3,
+h4,
 .list-card__title,
 .item__title,
 .gcard__title,
@@ -482,6 +484,33 @@ select[multiple].input {
 }
 
 .form-grid { display: grid; gap: var(--sp-6); }
+
+/* Поле вибору файлу. `<input type="file">` лишається в потоці й фокусованим,
+   але невидимим: намалювати його не можна, а підписує він себе мовою
+   браузера — не нашою. Видиму частину беруть `<label>`-кнопка й рядок з
+   іменем файлу. Не `display: none` і не `visibility: hidden`: і те, і те
+   вибиває поле з порядку табуляції. */
+.filefield { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.filefield__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.filefield__button { flex: none; }
+/* Кільце фокуса переїжджає на кнопку: саме її бачить людина з клавіатурою. */
+.filefield__input:focus-visible + .filefield__button {
+  outline: 2px solid var(--color-accent-700);
+  outline-offset: 2px;
+}
+.filefield__name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--t-small);
+  color: var(--color-neutral-700);
+  overflow-wrap: anywhere;
+}
 /* Рядок «посилання + Заповнити». Клас стояв у розмітці, але стилів не мав
    зовсім, тож кнопка лягала під поле впритул, без жодного відступу. Кнопка
    має бути поруч із полем — саме тому вона й усередині рядка, а не під
@@ -1220,9 +1249,9 @@ select[multiple].input {
 }
 
 .gcard {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--sp-4);
-  align-content: start;
   padding: 14px;
   border-radius: var(--r-card);
   background: var(--color-guest-card);
@@ -1237,7 +1266,10 @@ select[multiple].input {
 .gcard__meta { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
 .gcard__price { font-size: var(--t-item); font-weight: 700; }
 
-.gcard__action { display: grid; gap: var(--sp-3); }
+/* Дія притиснута донизу картки: назви в сусідніх картках різної довжини,
+   і без цього «Я візьму це» стоять на різній висоті — око читає нерівний
+   ряд як недбалість, а не як різні назви. */
+.gcard__action { display: grid; gap: var(--sp-3); margin-top: auto; }
 .gcard__take { display: flex; align-items: center; gap: var(--sp-4); }
 .gcard__take .btn--block { flex: 1; min-height: 48px; }
 
@@ -1295,13 +1327,16 @@ select[multiple].input {
 .guest__bar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--sp-2);
   padding: var(--sp-4) var(--sp-5) max(var(--sp-5), env(safe-area-inset-bottom));
   background: var(--color-guest-header);
 }
+/* Кнопка за своїм підписом, а не на пів підвалу: «Вигляд» — не головна дія
+   гостьової сторінки, а дрібна зручність поруч із вибором мови. */
 .guest__bar-btn {
-  flex: 1;
-  min-height: 46px;
+  flex: none;
+  min-height: 44px;
   border-color: var(--color-accent-700);
   color: var(--color-accent-900);
 }

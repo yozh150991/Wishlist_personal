@@ -102,16 +102,27 @@ export function ImportDialog({
       >
         {error && <Note tone="error">{error}</Note>}
 
+        {/* Власне поле вибору файлу замість типового. Причина не в оформленні:
+            рідний `<input type="file">` підписує себе мовою браузера, тож
+            українець із російським Chrome бачив у нашому діалозі «Файл не
+            выбран». Сам `<input>` лишається на місці й лишається фокусованим —
+            зникає лише його вигляд, а підпис бере на себе `<label>`. */}
         <div className="field">
           <label htmlFor="importFile">{t('transfer.import.file')}</label>
-          <input
-            className="input"
-            id="importFile"
-            ref={input}
-            type="file"
-            accept=".csv,.json,text/csv,application/json"
-            onChange={(e) => void pick(e.target.files?.[0])}
-          />
+          <div className="filefield">
+            <input
+              className="filefield__input"
+              id="importFile"
+              ref={input}
+              type="file"
+              accept=".csv,.json,text/csv,application/json"
+              onChange={(e) => void pick(e.target.files?.[0])}
+            />
+            <label className="btn btn--secondary filefield__button" htmlFor="importFile">
+              {t('transfer.import.choose')}
+            </label>
+            <span className="filefield__name">{name === '' ? t('transfer.import.noFile') : name}</span>
+          </div>
           <span className="hint">{t('transfer.import.hint', { max: MAX_IMPORT_ITEMS })}</span>
         </div>
 
