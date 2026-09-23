@@ -123,6 +123,15 @@ $map = @{
   'safe-next.spec.ts' = 'app\tests\e2e'; 'helpers.ts' = 'app\tests\e2e'
   'session.spec.ts' = 'app\tests\e2e'; 'global-setup.ts' = 'app\tests'
 
+  # Design version switch (ADR-032). File names here are unique across the
+  # whole repository on purpose: this table maps by file name alone, so two
+  # files both called Routes.tsx could not be placed.
+  'design-v2.css' = 'app\src\styles'; 'design.spec.ts' = 'app\tests\e2e'
+  'DesignRoutes.tsx' = 'app\src\designs'
+  'RoutesV1.tsx' = 'app\src\designs\v1'
+  'RoutesV2.tsx' = 'app\src\designs\v2'
+  'PlaceholderV2.tsx' = 'app\src\designs\v2\screens'
+
   # parser service
   'requirements.txt' = 'services\parser'; 'requirements-dev.txt' = 'services\parser'
   'Dockerfile' = 'services\parser'; 'docker-compose.yml' = 'services\parser'

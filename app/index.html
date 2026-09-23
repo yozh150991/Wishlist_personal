@@ -19,9 +19,10 @@
     <meta name="theme-color" content="#221f1b" media="(prefers-color-scheme: dark)" />
     <title>Wishlist</title>
     <script>
-      // Схема й тема застосовуються до першого рендера, щоб не блимав чужий фон.
-      // Обидва атрибути ставляться завжди: токени лежать під
-      // [data-scheme][data-theme], і без пари селектор не влучить.
+      // Схема, тема й версія дизайну застосовуються до першого рендера, щоб не
+      // блимав чужий вигляд. Усі три атрибути ставляться завжди: токени лежать
+      // під [data-scheme][data-theme], і без пари селектор не влучить, а шар v2
+      // чіпляється за [data-design].
       try {
         var d = document.documentElement.dataset;
         var t = localStorage.getItem('wl.theme') || 'system';
@@ -30,9 +31,22 @@
         d.theme = dark ? 'dark' : 'light';
         var s = localStorage.getItem('wl.scheme');
         d.scheme = s === 'slyva' || s === 'vuhil' ? s : 'sage';
+        // ?design=v1 — аварійний вихід із v2. v2 має власні екрани, тож
+        // перемкнутися зсередини не буде чим, якщо вона впаде на першому
+        // рендері. Тут це працює ще до React. Параметр одразу прибираємо
+        // з адреси, щоб він не поїхав далі в чужому посиланні.
+        var u = new URL(location.href);
+        var q = u.searchParams.get('design');
+        if (q === 'v1' || q === 'v2') {
+          localStorage.setItem('wl.design', q);
+          u.searchParams.delete('design');
+          history.replaceState(null, '', u.pathname + u.search + u.hash);
+        }
+        d.design = localStorage.getItem('wl.design') === 'v2' ? 'v2' : 'v1';
       } catch (_) {
         document.documentElement.dataset.theme = 'light';
         document.documentElement.dataset.scheme = 'sage';
+        document.documentElement.dataset.design = 'v1';
       }
     </script>
   </head>

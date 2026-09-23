@@ -80,6 +80,12 @@
   },
   "settings": {
     "title": "Ustawienia",
+    "design": {
+      "title": "Design",
+      "v1": "v1 — obecny",
+      "v2": "v2 — nowy"
+    },
+    "designHint": "v2 to osobne ekrany i osobna kolejność kroków, a nie inne kolory. Przełączenie otwiera aplikację od początku; listy, linki i rezerwacje są wspólne dla obu wersji.",
     "theme": "Motyw",
     "themeLight": "Jasny",
     "themeDark": "Ciemny",
@@ -96,6 +102,11 @@
     "schemeHint": "Węgiel — schemat o wzmocnionym kontraście.",
     "contrastSuggestion": "System prosi o wzmocniony kontrast. Włączyć",
     "contrastShort": "Wzmocniony kontrast"
+  },
+  "design": {
+    "emptyTitle": "Design v2 jeszcze nie dotarł",
+    "emptyBody": "Tu pojawią się nowe ekrany. Dane są na miejscu — pusta jest tylko ta wersja.",
+    "backToV1": "Wróć do v1"
   },
   "errors": {
     "invalidCredentials": "E-mail albo hasło się nie zgadzają.",
@@ -258,6 +269,8 @@
       "open": "Import",
       "title": "Importuj listę",
       "file": "Plik CSV lub JSON",
+      "choose": "Wybierz plik",
+      "noFile": "Nie wybrano pliku",
       "hint": "Wymagana kolumna title. Do {max} pozycji naraz.",
       "pick": "Wybierz plik, a zobaczysz, co zostanie utworzone.",
       "fallbackTitle": "Zaimportowana lista",
