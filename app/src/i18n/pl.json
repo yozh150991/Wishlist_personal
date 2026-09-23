@@ -269,6 +269,8 @@
       "open": "Import",
       "title": "Importuj listę",
       "file": "Plik CSV lub JSON",
+      "choose": "Wybierz plik",
+      "noFile": "Nie wybrano pliku",
       "hint": "Wymagana kolumna title. Do {max} pozycji naraz.",
       "pick": "Wybierz plik, a zobaczysz, co zostanie utworzone.",
       "fallbackTitle": "Zaimportowana lista",
