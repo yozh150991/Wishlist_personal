@@ -29,7 +29,9 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token });
   "title": "Мій день народження",
   "message": null,
   "currency": "PLN",
+  "event_date": "2026-06-14",   // дата події списку або null — для шапки гостьової
   "owner_scheme": "sage",   // схема власника: sage | slyva | polotno | cytrus | nich (ADR-033)
+  "appearance_hue": 75,     // відтінок оформлення списку або null (ADR-034)
   "hide_prices": false,
   "allow_reservations": true,
   "viewer_is_owner": false,
@@ -47,6 +49,8 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token });
 Показуються лише позиції зі `status = 'active'`. При `hide_prices: true` поле `price` повертається як `null` — ціна не їде на клієнт узагалі, не ховається стилями.
 
 `variants` від `hide_prices` не залежить: розмір і колір — не ціна, і саме заради них гість і дивиться картку.
+
+`appearance_hue` — відтінок оформлення списку (ADR-034); назва оформлення приватна й не віддається. Рампу з відтінку рахує клієнт. `event_date` — дата події списку для шапки гостьової: гість і так запрошений саме на цю подію.
 
 `owner_scheme` — схема смаку власника: гість бачить список у ній (ADR-033). Висока контрастність власника гостю не віддається — це налаштування глядача, а не списку; свою гість вмикає сам. Схема читається щоразу, а не запікається в токен: власник змінив її — наступне відкриття посилання покаже нову.
 
@@ -114,6 +118,14 @@ await supabase.from('items').update({ status: 'gifted' }).in('id', ids);
 await supabase.from('items').delete().in('id', ids);
 ```
 Окремої RPC не потрібно: RLS так само відсіює чужі позиції, як і в одиночних запитах.
+
+Оформлення списку (ADR-034) — теж звичайними запитами, `lib/appearances.ts`:
+```ts
+await supabase.from('appearances').select('id, owner_id, name, hue, source, builtin_key, created_at, lists(count)');
+await supabase.from('appearances').insert({ owner_id, name, hue, source: 'manual' });
+await supabase.from('lists').update({ appearance_id }).eq('id', listId);   // null — без оформлення
+```
+Вбудовані події видно кожному власникові, змінити чи видалити їх не можна. Посилання на чуже оформлення база відхиляє з `42501`.
 
 ---
 

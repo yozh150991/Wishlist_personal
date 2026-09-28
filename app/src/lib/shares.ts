@@ -97,6 +97,10 @@ export type SharedList = {
   currency: Currency;
   /** Схема власника: гість бачить список у ній (resolveAppearance, правило 3). */
   owner_scheme: Scheme;
+  /** Відтінок оформлення списку або null (ADR-034). Назва оформлення гостю не йде. */
+  appearance_hue: number | null;
+  /** Дата події для шапки гостьової. */
+  event_date: string | null;
   hide_prices: boolean;
   allow_reservations: boolean;
   viewer_is_owner: boolean;
@@ -115,9 +119,15 @@ export async function fetchSharedList(token: string): Promise<SharedList> {
     const match = known.find((k) => code.includes(k));
     throw new Error(match ?? 'unknown');
   }
-  const list = data as SharedList & { owner_scheme: unknown };
-  // Старий бекенд або несподіване значення — усталена Шавлія, а не зламана сторінка.
-  return { ...list, owner_scheme: isScheme(list.owner_scheme) ? list.owner_scheme : 'sage' };
+  const list = data as SharedList & { owner_scheme: unknown; appearance_hue: unknown };
+  // Старий бекенд або несподіване значення — усталена Шавлія без оформлення,
+  // а не зламана сторінка.
+  return {
+    ...list,
+    owner_scheme: isScheme(list.owner_scheme) ? list.owner_scheme : 'sage',
+    appearance_hue: typeof list.appearance_hue === 'number' ? list.appearance_hue : null,
+    event_date: list.event_date ?? null,
+  };
 }
 
 export async function registerView(token: string): Promise<void> {

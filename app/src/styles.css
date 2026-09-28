@@ -1325,6 +1325,15 @@ select[multiple].input {
   color: var(--color-accent-900);
 }
 .guest__head h1 { font-size: 30px; line-height: 1.05; color: var(--color-accent-900); }
+/* Над заголовком — дата події дрібними капітелями, як на листівці. */
+.guest__kicker {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-900);
+}
 .guest__message { margin-top: var(--sp-3); line-height: 1.5; }
 
 .guest__body {
@@ -1599,3 +1608,118 @@ select[multiple].input {
 }
 .qr__code svg { width: 100%; height: auto; display: block; }
 .qr__url { font-size: var(--t-meta); color: var(--color-neutral-700); word-break: break-all; }
+
+/* ── Оформлення списку (ADR-034) ───────────────────────────── */
+
+/* Кружечок відтінку: колір рахує генератор із H, тож тут лише форма. */
+.hue-dot {
+  flex: none;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+.hue-dot--none {
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--color-neutral-400);
+}
+
+.appearance-list { display: grid; gap: var(--sp-3); }
+.appearance-row,
+.appearance-row__pick {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--sp-3) var(--sp-5);
+  font: inherit;
+  font-size: var(--t-item);
+  text-align: left;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  border-radius: var(--r-field);
+  cursor: pointer;
+}
+.appearance-row[aria-checked='true'],
+.appearance-row__pick[aria-checked='true'] { border-color: var(--color-accent-700); }
+.appearance-row:disabled,
+.appearance-row__pick:disabled { cursor: progress; }
+.appearance-row__name { flex: 1; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+/* Своє оформлення: вибір і видалення — дві окремі кнопки в одному рядку. */
+.appearance-row--own { padding: 0; gap: 0; cursor: default; background: transparent; }
+.appearance-row--own .appearance-row__pick { flex: 1; min-width: 0; }
+.appearance-row--own .btn--icon { flex: none; }
+
+.appearance-note {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-5) var(--sp-6);
+  border-radius: var(--r-card);
+  background: var(--color-accent-2-100);
+  color: var(--color-accent-2-900);
+}
+
+.field__label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
+
+/* Відтінки: колір кожної плитки — заливка головної кнопки в цьому відтінку,
+   тобто те, що людина й побачить на «Я візьму це». */
+.hue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: var(--sp-3); }
+.hue-swatch {
+  min-width: var(--tap);
+  min-height: var(--tap);
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-accent-700);
+  cursor: pointer;
+}
+[data-theme='dark'] .hue-swatch { background: var(--color-accent-500); }
+.hue-swatch[aria-checked='true'] {
+  outline: 3px solid var(--color-text);
+  outline-offset: 2px;
+}
+.hue-swatch--custom {
+  display: grid;
+  place-items: center;
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-divider);
+}
+[data-theme='dark'] .hue-swatch--custom { background: var(--color-surface); }
+.hue-slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--sp-4); min-height: var(--tap); }
+.hue-slider input { width: 100%; accent-color: var(--color-text); }
+
+/* Живий приклад у аркуші «Новий вигляд» — шматок гостьової в мініатюрі. */
+.appearance-sample {
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--r-card);
+}
+.appearance-sample .guest__head { padding: var(--sp-5) var(--sp-6); text-align: left; }
+.appearance-sample__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--t-h2);
+  line-height: 1.1;
+  color: var(--color-accent-900);
+  overflow-wrap: anywhere;
+}
+.appearance-sample .gcard { margin: var(--sp-5); }
+
+/* Смуга превʼю «як бачить гість»: пояснення й дорога назад до списку. */
+.preview-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+  margin: 0;
+  padding: var(--sp-4) var(--sp-6);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.preview-bar p { flex: 1; min-width: 14rem; margin: 0; }
+.preview-bar .btn svg { transform: rotate(90deg); }
+/* Посилання в ролі кнопки — без підкреслення, як і решта кнопок. */
+a.btn { text-decoration: none; }

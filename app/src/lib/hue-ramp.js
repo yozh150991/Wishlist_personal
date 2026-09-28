@@ -51,6 +51,9 @@ export const DARK_STEPS = {
  */
 export const HUE_PRESETS = [15, 45, 75, 135, 165, 195, 225, 255, 285, 315, 345];
 
+/** З чого починається аркуш «Новий вигляд». */
+export const DEFAULT_HUE = HUE_PRESETS[0];
+
 const toLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
 const toGamma = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
 

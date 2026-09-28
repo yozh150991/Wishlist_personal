@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchList, updateList } from '../lib/db';
 import type { ItemInput, ListInput } from '../lib/db';
 import { useDebounced, useItems } from '../lib/useItems';
@@ -16,6 +16,7 @@ import { ListDialog } from '../components/ListDialog';
 import { ShareDialog } from '../components/ShareDialog';
 import { EventSummary } from '../components/EventSummary';
 import { ExportDialog } from '../components/ExportDialog';
+import { AppearanceDialog } from '../components/AppearanceDialog';
 import { useStale } from '../components/Banners';
 import { ConfirmDialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
@@ -47,6 +48,8 @@ export default function ListDetail() {
   // а вибір треба поставити вже на перезавантажену вибірку.
   const [selectActiveOnLoad, setSelectActiveOnLoad] = useState(false);
   const [exportDialog, setExportDialog] = useState(false);
+  const [appearanceDialog, setAppearanceDialog] = useState(false);
+  const navigate = useNavigate();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const undoDelete = useUndo();
   const [confirmBulk, setConfirmBulk] = useState(false);
@@ -276,6 +279,16 @@ export default function ListDetail() {
             disabled={!list}
           >
             {t('lists.edit')}
+          </button>
+          {/* Оформлення живе в самому списку, а не в Налаштуваннях: це вигляд
+              події, яку бачать гості, а не смак власника (ADR-034). */}
+          <button
+            type="button"
+            className="btn btn--secondary btn--compact"
+            onClick={() => setAppearanceDialog(true)}
+            disabled={!list}
+          >
+            {t('appearance.open')}
           </button>
           <button
             type="button"
@@ -565,6 +578,14 @@ export default function ListDetail() {
         list={list}
         total={totals?.items_count}
         onClose={() => setExportDialog(false)}
+      />
+
+      <AppearanceDialog
+        open={appearanceDialog}
+        list={list}
+        onClose={() => setAppearanceDialog(false)}
+        onChanged={(appearanceId) => setList((l) => (l ? { ...l, appearance_id: appearanceId } : l))}
+        onPreview={() => navigate(`/lists/${id}/preview`)}
       />
 
       <UndoToast pending={undoDelete.pending} onUndo={undoDelete.undo} />

@@ -9,6 +9,7 @@ import Lists from '../../routes/Lists';
 import ListDetail from '../../routes/ListDetail';
 import Shares from '../../routes/Shares';
 import SharedList from '../../routes/SharedList';
+import GuestPreview from '../../routes/GuestPreview';
 import Settings from '../../routes/Settings';
 import NotFound from '../../routes/NotFound';
 
@@ -33,6 +34,17 @@ export default function DesignV1Routes() {
       <Route path="/update-password" element={<UpdatePassword />} />
       {/* Гостьовий перегляд: без каркаса застосунку і без входу. */}
       <Route path="/s/:token" element={<SharedList />} />
+
+      {/* «Показати, як бачить гість»: власник, але без каркаса застосунку —
+          гість його теж не бачить. */}
+      <Route
+        path="/lists/:id/preview"
+        element={
+          <RequireAuth>
+            <GuestPreview />
+          </RequireAuth>
+        }
+      />
 
       {/* Захищені */}
       <Route

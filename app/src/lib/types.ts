@@ -29,6 +29,8 @@ export type List = {
   description: string | null;
   currency: Currency;
   event_date: string | null;
+  /** Оформлення списку (ADR-034); null — без оформлення. Старий офлайн-знімок його не має. */
+  appearance_id?: string | null;
   is_archived: boolean;
   created_at: string;
   updated_at: string;

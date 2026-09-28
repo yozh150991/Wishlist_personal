@@ -5,11 +5,11 @@ import type { SharedItem, SharedList as Shared } from '../lib/shares';
 import { forgetReservation, guestKey, myReservations, rememberReservation } from '../lib/guest';
 import type { MyReservations } from '../lib/guest';
 import { useI18n } from '../lib/i18n';
-import { hostOf, money } from '../lib/format';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { AppearanceSheet } from '../components/AppearanceSheet';
 import { Icon } from '../components/Icon';
 import { useSurface } from '../lib/theme';
+import { GuestHeader, GuestItemBody } from '../components/GuestParts';
 
 /**
  * Скільки штук гість бере зараз. Живе окремо від броні: поки він крутить
@@ -56,7 +56,7 @@ function QuantityPicker({
 
 export default function SharedList() {
   const { token = '' } = useParams();
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
 
   const [data, setData] = useState<Shared | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,8 +93,8 @@ export default function SharedList() {
   useSurface(
     data
       ? data.viewer_is_owner
-        ? { kind: 'preview', hue: null }
-        : { kind: 'guest', ownerScheme: data.owner_scheme, hue: null }
+        ? { kind: 'preview', hue: data.appearance_hue }
+        : { kind: 'guest', ownerScheme: data.owner_scheme, hue: data.appearance_hue }
       : null,
   );
 
@@ -171,10 +171,7 @@ export default function SharedList() {
     // <main>: гостьову сторінку відкривають сторонні люди, і без орієнтира
     // зчитувач екрана не має куди перейти до головного вмісту.
     <main className="guest">
-      <header className="guest__head">
-        <h1>{data.title}</h1>
-        {data.message && <p className="guest__message">{data.message}</p>}
-      </header>
+      <GuestHeader title={data.title} message={data.message} eventDate={data.event_date} />
 
       <div className="guest__body">
         {data.viewer_is_owner && (
@@ -205,53 +202,12 @@ export default function SharedList() {
               const reserved = item.reserved_qty ?? 0;
               const takenByMe = mine[item.id] ?? 0;
               const left = item.quantity - reserved;
-              const price = money(item.price, data.currency, locale);
-              const host = hostOf(item.url);
               const busy = busyId === item.id;
               const wanted = Math.min(want[item.id] ?? 1, Math.max(left, 1));
 
               return (
                 <li className="gcard" key={item.id} data-taken={takenByMe === 0 && left <= 0}>
-                  <div className="gcard__top">
-                    {item.image_url && (
-                      <img className="gcard__image" src={item.image_url} alt="" loading="lazy" />
-                    )}
-                    <div className="gcard__text">
-                      <h2 className="gcard__title">
-                        {item.url ? (
-                          <a href={item.url} target="_blank" rel="noreferrer noopener">
-                            {item.title}
-                          </a>
-                        ) : (
-                          item.title
-                        )}
-                      </h2>
-
-                      {/* «Приховати ціни» прибирає рядок зовсім — без порожнього
-                          місця й без слова «приховано». */}
-                      <p className="gcard__meta">
-                        {price && <span className="gcard__price">{price}</span>}
-                        {item.quantity > 1 && (
-                          <span className="small muted">{t('guest.needed', { n: item.quantity })}</span>
-                        )}
-                      </p>
-                      {host && <p className="meta muted">{host}</p>}
-                    </div>
-                  </div>
-
-                  {/* Заради цього варіанти й існують: той, хто дарує, має
-                      бачити розмір і колір, не питаючи власника. */}
-                  {item.variants.length > 0 && (
-                    <ul className="variants-chips">
-                      {item.variants.map((v, i) => (
-                        <li className="tag tag--neutral" key={i}>
-                          <span className="muted">{v.label}</span>&nbsp;{v.value}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {item.note && <p className="small muted">{item.note}</p>}
+                  <GuestItemBody item={item} currency={data.currency}>
 
                   {/* Бронювання вимкнене — блок дії зникає повністю, а не
                       гасне: сторінка стає суто для читання. */}
@@ -311,6 +267,7 @@ export default function SharedList() {
                       )}
                     </div>
                   )}
+                  </GuestItemBody>
                 </li>
               );
             })}

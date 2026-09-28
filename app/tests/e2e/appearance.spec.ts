@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { hasAccount, signIn } from './helpers';
+import { addItem, createList, createShare, hasAccount, settledDialog, signIn, unique } from './helpers';
 
 /**
  * Вигляд: п'ять схем смаку, висока контрастність і правило вирішення
@@ -44,6 +44,90 @@ test.describe('з акаунтом', () => {
     await expect(contrast).toHaveAttribute('aria-checked', 'true');
     await expect(contrast).toBeDisabled();
     await expect(html(page)).toHaveAttribute('data-scheme', 'vuhil');
+  });
+});
+
+/**
+ * Оформлення списку (ADR-034): другий шар, що належить власникові. На свої
+ * екрани власника не лягає; гість бачить його поверх схеми власника; висока
+ * контрастність глядача вимикає його зовсім.
+ */
+test.describe('оформлення списку', () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  const openStyle = async (page: Page) => {
+    await page.getByRole('button', { name: /^оформлення$|^wygląd$|^style$/i }).click();
+    return page.getByRole('dialog');
+  };
+
+  test('гість бачить оформлення, власник у себе — ні, контраст гостя його вимикає', async ({ page, browser }) => {
+    await signIn(page);
+    await createList(page, unique('Style'));
+    await addItem(page, 'Келихи');
+
+    const dialog = await openStyle(page);
+    await dialog.getByRole('radio', { name: /весілля|wesele|wedding/i }).click();
+    await expect(dialog.getByRole('radio', { name: /весілля|wesele|wedding/i })).toHaveAttribute('aria-checked', 'true');
+    await page.keyboard.press('Escape');
+
+    // Свої екрани — своя схема: оформлення на них не лізе.
+    await expect(html(page)).not.toHaveAttribute('data-appearance', /.*/);
+
+    const link = await createShare(page, ['Келихи'], 'Оля та Богдан');
+    await page.keyboard.press('Escape');
+
+    const guest = await browser.newContext();
+    const guestPage = await guest.newPage();
+    await guestPage.goto(link);
+    await expect(guestPage.getByRole('heading', { level: 1, name: 'Оля та Богдан' })).toBeVisible();
+    await expect(html(guestPage)).toHaveAttribute('data-appearance', '75');
+    await expect(html(guestPage)).not.toHaveAttribute('data-scheme', 'vuhil');
+
+    // «Для себе» в гостя — лише тема й контраст; схеми немає зовсім.
+    await guestPage.getByRole('button', { name: /^вигляд$|^wygląd$|^appearance$/i }).click();
+    const sheet = guestPage.getByRole('dialog');
+    await expect(sheet.getByRole('radiogroup')).toHaveCount(1);
+    await expect(sheet.getByRole('radio', { name: /шавлія|szałwia|sage/i })).toHaveCount(0);
+
+    // Контраст глядача перемагає будь-яке оформлення.
+    await sheet.getByRole('switch', { name: /висока контрастність|wysoki kontrast|high contrast/i }).click();
+    await expect(html(guestPage)).toHaveAttribute('data-scheme', 'vuhil');
+    await expect(html(guestPage)).not.toHaveAttribute('data-appearance', /.*/);
+    await guest.close();
+  });
+
+  test('свій вигляд: назва без емодзі, одразу на списку, превʼю й видалення', async ({ page }) => {
+    await signIn(page);
+    await createList(page, unique('Own style'));
+    await addItem(page, 'Садові ножиці');
+
+    let dialog = await openStyle(page);
+    await dialog.getByRole('button', { name: /новий вигляд|nowy wygląd|new style/i }).click();
+    dialog = await settledDialog(page);
+    const name = unique('Ювілей').slice(0, 20);
+    await dialog.getByLabel(/^назва$|^nazwa$|^name$/i).fill('Свято 🎉');
+    await dialog.getByRole('button', { name: /зберегти вигляд|zapisz wygląd|save style/i }).click();
+    await expect(dialog.getByText(/без емодзі|bez emoji|no emoji/i)).toBeVisible();
+
+    await dialog.getByLabel(/^назва$|^nazwa$|^name$/i).fill(name);
+    await dialog.getByRole('radio', { name: /285/ }).click();
+    await dialog.getByRole('button', { name: /зберегти вигляд|zapisz wygląd|save style/i }).click();
+    await expect(dialog.getByRole('radio', { name: new RegExp(name) })).toHaveAttribute('aria-checked', 'true');
+
+    // Превʼю — єдиний свій екран, на який лягає оформлення.
+    await dialog.getByRole('button', { name: /показати, як бачить гість|pokaż, jak widzi gość|show how guests see it/i }).click();
+    await expect(page).toHaveURL(/\/preview$/);
+    await expect(html(page)).toHaveAttribute('data-appearance', '285');
+    await expect(page.getByText('Садові ножиці')).toBeVisible();
+    await page.getByRole('link', { name: /до списку|do listy|back to the list/i }).click();
+    await expect(html(page)).not.toHaveAttribute('data-appearance', /.*/);
+
+    // Видалення вигляду повертає список до схеми без оформлення.
+    dialog = await openStyle(page);
+    await dialog.getByRole('button', { name: new RegExp(`(видалити вигляд|usuń wygląd|delete style).*${name}`, 'i') }).click();
+    await page.getByRole('dialog').filter({ hasText: /цього не можна скасувати|nie da się cofnąć|can't be undone/i })
+      .getByRole('button', { name: /^видалити вигляд$|^usuń wygląd$|^delete style$/i }).click();
+    await expect(page.getByRole('radio', { name: /без оформлення|bez wyglądu|no style/i })).toHaveAttribute('aria-checked', 'true');
   });
 });
 

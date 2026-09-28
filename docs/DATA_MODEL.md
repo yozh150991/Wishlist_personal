@@ -13,6 +13,7 @@
 | `20260921100000_item_variants.sql` | `items.variants` і його форма; `get_shared_list` віддає варіанти гостю (ADR-030) |
 | `20260921140000_profile_scheme.sql` | `profiles.scheme` — кольорова схема інтерфейсу власника (ADR-031) |
 | `20260928090000_schemes_and_contrast.sql` | ще три схеми смаку, `profiles.high_contrast`; Вугіль — лише з тумблера; `get_shared_list` віддає схему власника (ADR-033) |
+| `20260928100000_list_appearances.sql` | `appearances` і `lists.appearance_id` — оформлення списку; `get_shared_list` віддає відтінок і дату події (ADR-034) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 
@@ -23,7 +24,10 @@ auth.users
     │
     ├──1:1── profiles          (locale, theme, scheme, high_contrast, default_currency)
     │
-    └──1:N── lists             (title, description, currency, event_date, is_archived)
+    ├──1:N── appearances       (name, hue, source) ← ще три вбудовані з owner_id = null
+    │            ▲
+    │            │ appearance_id (on delete set null)
+    └──1:N── lists             (title, description, currency, event_date, appearance_id, is_archived)
                  │
                  ├──1:N── items       (title, url?, price?, quantity,
                  │           │         priority, note, variants, image_url, status)
@@ -54,6 +58,19 @@ auth.users
 **Гість свого вигляду на сервер не шле.** Схеми він не обирає зовсім, а тема й висока контрастність лишаються в його браузері: акаунта в нього немає, а запис про вибір вигляду був би ще одним сигналом про те, що хтось відкрив посилання (CLAUDE.md §3.2).
 
 ## Таблиці
+
+### `appearances`
+Оформлення списку: назва + відтінок (ADR-034). Кольорів у базі немає — рампу з відтінку рахує застосунок (`app/src/lib/hue-ramp.js`) за анкерами світлості з макета, тож людина не може обрати непридатне.
+
+| Колонка | Сенс |
+|---|---|
+| `owner_id` | власник; `null` — вбудована подія |
+| `name` | до 24 символів, без емодзі; **приватна** — гостю не віддається. У вбудованих — службове імʼя, підпис перекладає застосунок за `builtin_key` |
+| `hue` | 0–359 |
+| `source` | `builtin` \| `manual` \| `cover` (останнє зарезервовано під «колір з обкладинки») |
+| `builtin_key` | `birthday` (H 358) \| `wedding` (H 75) \| `housewarming` (H 150) у вбудованих, `null` у своїх |
+
+RLS: власник бачить свої й вбудовані, змінює й видаляє лише свої; `anon` не має жодних прав. `lists.appearance_id` посилається на оформлення з `on delete set null` — видалення вигляду повертає списки до схеми глядача, а не лишає осиротілий id. Обмежувальна політика `lists_appearance_own_or_builtin` не дає послатися на чуже оформлення навіть із вгаданим id: зовнішній ключ власника не перевіряє.
 
 ### `lists`
 Користувач має довільну кількість списків. `currency` — одна на список: змішувати валюти в одному списку означало б курси, конвертацію і застарілі дані (ADR-005). `event_date` вмикає підказку «підбити підсумки» після дати.

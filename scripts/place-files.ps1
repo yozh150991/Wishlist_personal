@@ -52,6 +52,7 @@ $map = @{
   '20260921100000_item_variants.sql' = 'supabase\migrations'
   '20260921140000_profile_scheme.sql' = 'supabase\migrations'
   '20260928090000_schemes_and_contrast.sql' = 'supabase\migrations'
+  '20260928100000_list_appearances.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -139,6 +140,8 @@ $map = @{
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'
   'hue-ramp.d.ts' = 'app\src\lib'; 'Switch.tsx' = 'app\src\components'
   'appearance.spec.ts' = 'app\tests\e2e'
+  'appearances.ts' = 'app\src\lib'; 'AppearanceDialog.tsx' = 'app\src\components'
+  'GuestParts.tsx' = 'app\src\components'; 'GuestPreview.tsx' = 'app\src\routes'
 
   # parser service
   'requirements.txt' = 'services\parser'; 'requirements-dev.txt' = 'services\parser'
