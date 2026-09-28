@@ -18,10 +18,13 @@ export function GuestHeader({
   title,
   message,
   eventDate,
+  validUntil = null,
 }: {
   title: string;
   message: string | null;
   eventDate: string | null;
+  /** «Діє до 20 грудня, 23:59 за Києвом» — уже готовий рядок (lib/zones.ts). */
+  validUntil?: string | null;
 }) {
   const { locale } = useI18n();
   const day = formatDay(eventDate, locale);
@@ -32,6 +35,7 @@ export function GuestHeader({
       {day && <p className="guest__kicker">{day}</p>}
       <h1>{title}</h1>
       {message && <p className="guest__message">{message}</p>}
+      {validUntil && <p className="guest__valid">{validUntil}</p>}
     </header>
   );
 }

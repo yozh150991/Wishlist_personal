@@ -14,8 +14,9 @@
 | `20260921140000_profile_scheme.sql` | `profiles.scheme` — кольорова схема інтерфейсу власника (ADR-031) |
 | `20260928090000_schemes_and_contrast.sql` | ще три схеми смаку, `profiles.high_contrast`; Вугіль — лише з тумблера; `get_shared_list` віддає схему власника (ADR-033) |
 | `20260928100000_list_appearances.sql` | `appearances` і `lists.appearance_id` — оформлення списку; `get_shared_list` віддає відтінок і дату події (ADR-034) |
-| `20260928120000_sections_and_order.sql` | `sections`, `items.section_id` і `items.position`; `reorder_items` / `reorder_sections`; гість отримує розділи й ручний порядок (ADR-036) |
 | `20260928110000_guest_keys_and_claims.sql` | `reservations` → `claims` на рівні списку; ідентичність і ключі гостя, короткий код, ліміт спроб; однакова відповідь на мертве посилання; сліпе скидання (ADR-035) |
+| `20260928120000_sections_and_order.sql` | `sections`, `items.section_id` і `items.position`; `reorder_items` / `reorder_sections`; гість отримує розділи й ручний порядок (ADR-036) |
+| `20260928130000_share_expiry_zone.sql` | `shares.expires_tz` — зона власника; `create_share` бере день і зону, момент рахує база; `get_shared_list` віддає термін гостю (ADR-037) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 
@@ -42,7 +43,7 @@ auth.users
                  │           └──1:N── claims ──N:1── guest_identities ──1:N── guest_keys
                  │                        ↑ ізольовано від власника (усе праворуч теж)
                  │
-                 └──1:N── shares      (token, hide_prices, expires_at, revoked_at)
+                 └──1:N── shares      (token, hide_prices, expires_at, expires_tz, revoked_at)
 ```
 
 ## Мова користувача
@@ -112,6 +113,8 @@ RLS: власник бачить свої й вбудовані, змінює й
 Посилання **живе**: `get_shared_list` щоразу читає актуальні `items`. Видалив позицію в себе — вона зникла й у гостей (через `ON DELETE CASCADE` на `share_items.item_id`).
 
 Відкликання — `revoked_at`, а не `DELETE`: збереження історії й статистики переглядів.
+
+Термін — пара `expires_at` + `expires_tz` (ADR-037). «Діє до 20 грудня» — це 20 грудня **за зоною власника**: `create_share` отримує день і IANA-зону з браузера власника й записує момент 23:59:59 того дня в цій зоні (літній час враховано). `live_share` порівнює лише момент; зона потрібна, щоб гість побачив «діє до 20 грудня, 23:59 за Києвом», а власник у відрядженні — той самий «20 грудня». Check `shares_expires_tz_shape` не пускає довільний рядок і зону без моменту; чи зона справді існує, перевіряє `create_share` за `pg_timezone_names` (check так не вміє). ICU-імена браузера (`Europe/Kiev`, `Asia/Calcutta`) записуються сучасними (`Europe/Kyiv`, `Asia/Kolkata`). Посилання, створені до ADR-037, мають момент без зони.
 
 ### `claims`, `guest_identities`, `guest_keys`, `guest_code_attempts`
 **Інваріант проєкту** (ADR-035, раніше — `reservations`, ADR-008). Усі чотири таблиці мають `ENABLE ROW LEVEL SECURITY` і **жодної політики** — у Postgres це «заборонено всім», — плюс явний `REVOKE ALL ... FROM anon, authenticated`.

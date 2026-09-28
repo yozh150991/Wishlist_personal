@@ -1,6 +1,7 @@
 import { supabase, publicOrigin } from './supabase';
 import type { Currency, ItemPriority, ItemStatus, ItemVariant } from './types';
 import { isScheme } from './appearance';
+import { deviceTimeZone } from './zones';
 import type { Scheme } from './appearance';
 
 export type Share = {
@@ -13,6 +14,8 @@ export type Share = {
   hide_prices: boolean;
   allow_reservations: boolean;
   expires_at: string | null;
+  /** IANA-зона власника, у якій рахується «діє до» (ADR-037); null — без зони. */
+  expires_tz: string | null;
   revoked_at: string | null;
   view_count: number;
   last_viewed_at: string | null;
@@ -28,7 +31,8 @@ export type ShareInput = {
   message?: string | null;
   hidePrices?: boolean;
   allowReservations?: boolean;
-  expiresAt?: string | null;
+  /** День `YYYY-MM-DD`, до кінця якого діє посилання, — за зоною власника. */
+  expiresOn?: string | null;
 };
 
 export function shareUrl(token: string): string {
@@ -36,14 +40,36 @@ export function shareUrl(token: string): string {
 }
 
 export async function createShare(input: ShareInput): Promise<Share> {
-  const { data, error } = await supabase.rpc('create_share', {
+  const base = {
     p_list_id: input.listId,
     p_item_ids: input.itemIds,
     p_title: input.title,
     p_message: input.message ?? null,
     p_hide_prices: input.hidePrices ?? false,
     p_allow_reservations: input.allowReservations ?? true,
-    p_expires_at: input.expiresAt ?? null,
+  };
+  const on = input.expiresOn ?? null;
+  const tz = on ? deviceTimeZone() : null;
+
+  // Звичайний шлях: дата + зона, момент рахує база (ADR-037).
+  if (!on || tz) {
+    const { data, error } = await supabase.rpc('create_share', {
+      ...base,
+      ...(on ? { p_expires_on: on, p_expires_tz: tz } : {}),
+    });
+    if (!error) return data as Share;
+    // PGRST202 — у базі ще стара create_share без p_expires_on: фронтенд
+    // уже задеплоєно, а міграцію ще ні (DEPLOY.md, розділ 7).
+    const retry = /bad_time_zone/.test(error.message ?? '') || error.code === 'PGRST202';
+    if (!on || !retry) throw error;
+  }
+
+  // Браузер не назвав зону, база її не знає або ще не вміє зон: кінець дня
+  // за годинником пристрою, як до ADR-037. Посилання згасне вчасно, просто
+  // гість не побачить назви зони.
+  const { data, error } = await supabase.rpc('create_share', {
+    ...base,
+    p_expires_at: new Date(`${on}T23:59:59`).toISOString(),
   });
   if (error) throw error;
   return data as Share;
@@ -105,6 +131,9 @@ export type SharedList = {
   appearance_hue: number | null;
   /** Дата події для шапки гостьової. */
   event_date: string | null;
+  /** До коли діє посилання (момент) і в чиїй зоні це рахувати (ADR-037). */
+  expires_at: string | null;
+  expires_tz: string | null;
   hide_prices: boolean;
   allow_reservations: boolean;
   viewer_is_owner: boolean;
@@ -144,6 +173,8 @@ export async function fetchSharedList(token: string, key: string | null): Promis
     owner_scheme: isScheme(list.owner_scheme) ? list.owner_scheme : 'sage',
     appearance_hue: typeof list.appearance_hue === 'number' ? list.appearance_hue : null,
     event_date: list.event_date ?? null,
+    expires_at: list.expires_at ?? null,
+    expires_tz: typeof list.expires_tz === 'string' ? list.expires_tz : null,
     guest: list.guest ?? null,
     sections: Array.isArray(list.sections) ? list.sections : [],
     items: list.items.map((i) => ({ ...i, section_id: i.section_id ?? null })),

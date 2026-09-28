@@ -55,6 +55,7 @@ $map = @{
   '20260928100000_list_appearances.sql' = 'supabase\migrations'
   '20260928110000_guest_keys_and_claims.sql' = 'supabase\migrations'
   '20260928120000_sections_and_order.sql' = 'supabase\migrations'
+  '20260928130000_share_expiry_zone.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -65,6 +66,7 @@ $map = @{
   '04_item_variants.test.sql' = 'supabase\tests\database'
   '05_appearance.test.sql' = 'supabase\tests\database'
   '06_sections.test.sql' = 'supabase\tests\database'
+  '07_share_expiry.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -149,6 +151,7 @@ $map = @{
   'sections.ts' = 'app\src\lib'; 'SectionsView.tsx' = 'app\src\components'
   'SectionDialog.tsx' = 'app\src\components'; 'sections.spec.ts' = 'app\tests\e2e'
   'thresholds.spec.ts' = 'app\tests\e2e'
+  'zones.ts' = 'app\src\lib'; 'expiry.spec.ts' = 'app\tests\e2e'
 
   # parser service
   'requirements.txt' = 'services\parser'; 'requirements-dev.txt' = 'services\parser'

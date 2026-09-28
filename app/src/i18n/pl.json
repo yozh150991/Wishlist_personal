@@ -387,11 +387,12 @@
       "allowReservationsHint": "Goście będą mogli zaznaczyć, że biorą prezent. Ty tego nie zobaczysz — żeby została niespodzianka.",
       "hidePrices": "Ukryj ceny",
       "expiresAt": "Ważny do",
-      "expiresAtHint": "Opcjonalnie. Puste znaczy „dopóki nie unieważnisz”."
+      "expiresAtHint": "Opcjonalnie. Do 23:59 tego dnia według twojego czasu; puste — dopóki nie unieważnisz."
     },
     "errors": {
       "titleRequired": "Podaj nagłówek.",
-      "nothingSelected": "Najpierw zaznacz choć jedną pozycję."
+      "nothingSelected": "Najpierw zaznacz choć jedną pozycję.",
+      "expiresInPast": "Ta data już minęła — wybierz dziś lub później."
     },
     "loading": "Wczytuję linki",
     "errorTitle": "Linki się nie wczytały",
@@ -400,7 +401,8 @@
     "confirmDeleteTitle": "Usunąć link „{title}”?",
     "confirmDeleteBody": "Razem z nim zniknie statystyka wyświetleń. Tego nie można cofnąć.",
     "creating": "Tworzę…",
-    "copyLink": "Kopiuj link"
+    "copyLink": "Kopiuj link",
+    "untilPast": "był ważny do {date}"
   },
   "select": {
     "start": "Zaznacz",
@@ -490,7 +492,10 @@
     "filterPrice": "Cena",
     "filterEmpty": "Nic nie pasuje do tych filtrów.",
     "filterReset": "Wyczyść filtry",
-    "filterPriority": "Tylko z wysokim priorytetem"
+    "filterPriority": "Tylko z wysokim priorytetem",
+    "validUntil": "Ważny do {date}",
+    "validUntilCity": "Ważny do {date}, {time} {zone}",
+    "validUntilZone": "Ważny do {date}, {time} ({zone})"
   },
   "pwa": {
     "updateReady": "Jest nowa wersja Wishlist.",
@@ -588,5 +593,12 @@
     "orderHint": "Goście widzą właśnie tę kolejność. Przeciągnij za uchwyt, aby zmienić.",
     "viewOnlyHint": "To tylko widok na twoim ekranie — goście widzą kolejność z „Działów”.",
     "saveError": "Kolejność nie została zapisana. Spróbuj ponownie, gdy będzie połączenie."
+  },
+  "zone": {
+    "kyiv": "czasu kijowskiego",
+    "warsaw": "czasu warszawskiego",
+    "berlin": "czasu berlińskiego",
+    "prague": "czasu praskiego",
+    "london": "czasu londyńskiego"
   }
 }

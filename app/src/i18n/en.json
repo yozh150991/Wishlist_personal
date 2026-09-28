@@ -387,11 +387,12 @@
       "allowReservationsHint": "Guests can mark what they're taking. You won't see it — so the surprise holds.",
       "hidePrices": "Hide prices",
       "expiresAt": "Valid until",
-      "expiresAtHint": "Optional. Empty means “until you revoke it”."
+      "expiresAtHint": "Optional. Until the end of that day in your time zone; empty means until you revoke it."
     },
     "errors": {
       "titleRequired": "Enter a heading.",
-      "nothingSelected": "Pick at least one item first."
+      "nothingSelected": "Pick at least one item first.",
+      "expiresInPast": "That date has passed — pick today or later."
     },
     "loading": "Loading links",
     "errorTitle": "Links did not load",
@@ -400,7 +401,8 @@
     "confirmDeleteTitle": "Delete the link “{title}”?",
     "confirmDeleteBody": "The view stats go with it. This cannot be undone.",
     "creating": "Creating…",
-    "copyLink": "Copy link"
+    "copyLink": "Copy link",
+    "untilPast": "was valid until {date}"
   },
   "select": {
     "start": "Select",
@@ -490,7 +492,10 @@
     "filterPrice": "Price",
     "filterEmpty": "Nothing matches these filters.",
     "filterReset": "Clear filters",
-    "filterPriority": "High priority only"
+    "filterPriority": "High priority only",
+    "validUntil": "Valid until {date}",
+    "validUntilCity": "Valid until {date}, {time} {zone}",
+    "validUntilZone": "Valid until {date}, {time} ({zone})"
   },
   "pwa": {
     "updateReady": "A new version of Wishlist is available.",
@@ -588,5 +593,12 @@
     "orderHint": "Guests see exactly this order. Drag by the handle to change it.",
     "viewOnlyHint": "This is only your view — guests see the order from “Sections”.",
     "saveError": "The order wasn't saved. Try again when you're back online."
+  },
+  "zone": {
+    "kyiv": "Kyiv time",
+    "warsaw": "Warsaw time",
+    "berlin": "Berlin time",
+    "prague": "Prague time",
+    "london": "London time"
   }
 }

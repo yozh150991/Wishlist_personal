@@ -22,6 +22,7 @@ import {
 } from '../lib/guest';
 import { useI18n } from '../lib/i18n';
 import { money, num, priceThresholds } from '../lib/format';
+import { validUntilText } from '../lib/zones';
 import { useSurface } from '../lib/theme';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { AppearanceSheet } from '../components/AppearanceSheet';
@@ -490,7 +491,12 @@ export default function SharedList() {
     // <main>: гостьову сторінку відкривають сторонні люди, і без орієнтира
     // зчитувач екрана не має куди перейти до головного вмісту.
     <main className="guest">
-      <GuestHeader title={data.title} message={data.message} eventDate={data.event_date} />
+      <GuestHeader
+        title={data.title}
+        message={data.message}
+        eventDate={data.event_date}
+        validUntil={validUntilText(data.expires_at, data.expires_tz, locale, t)}
+      />
 
       <div className="guest__body">
         {data.viewer_is_owner && (

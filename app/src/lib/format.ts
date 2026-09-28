@@ -46,6 +46,84 @@ export function formatDay(isoDate: string | null, locale: string): string | null
   }).format(d);
 }
 
+/** Сьогоднішній календарний день цього пристрою як `YYYY-MM-DD`. */
+export function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Чи знає браузер цю IANA-зону. Невідома зона в Intl — RangeError. */
+export function isTimeZone(tz: string | null | undefined): tz is string {
+  if (!tz) return false;
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export type Deadline = {
+  /** «20 грудня», з роком — якщо не поточний (у тій самій зоні). */
+  day: string;
+  /** «23:59» / «11:59 PM» — годинник у зоні власника. */
+  time: string;
+  /** Зона, у якій рахували, або null — тоді day/time за годинником пристрою. */
+  tz: string | null;
+  /** Назва зони від браузера, мовою інтерфейсу: «за східноєвропейським часом». */
+  zoneName: string | null;
+};
+
+/**
+ * Момент терміну — словом і за годинником власника (ADR-037): «діє до 20
+ * грудня, 23:59» там, де живе він, а не гість. Без зони (посилання, створене
+ * до ADR-037) — за годинником цього пристрою.
+ */
+export function formatDeadline(
+  iso: string | null,
+  tz: string | null,
+  locale: string,
+): Deadline | null {
+  if (!iso) return null;
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return null;
+  // База зберігає сучасне імʼя (Europe/Kyiv); браузер зі старою ICU знає
+  // лише Europe/Kiev — той самий годинник.
+  const timeZone = isTimeZone(tz)
+    ? tz
+    : tz === 'Europe/Kyiv' && isTimeZone('Europe/Kiev')
+      ? 'Europe/Kiev'
+      : undefined;
+
+  const year = (d: Date) => new Intl.DateTimeFormat('en', { timeZone, year: 'numeric' }).format(d);
+  const sameYear = year(at) === year(new Date());
+  const day = new Intl.DateTimeFormat(locale, {
+    timeZone,
+    day: 'numeric',
+    month: 'long',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  }).format(at);
+  const time = new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit' }).format(at);
+
+  let zoneName: string | null = null;
+  if (timeZone) {
+    // longGeneric — «за східноєвропейським часом», без «стандартним»/«літнім»:
+    // гостю важить місто, а не сезон. Старі браузери його не знають — тоді long.
+    for (const timeZoneName of ['longGeneric', 'long'] as const) {
+      try {
+        zoneName =
+          new Intl.DateTimeFormat(locale, { timeZone, timeZoneName })
+            .formatToParts(at)
+            .find((p) => p.type === 'timeZoneName')?.value ?? null;
+        break;
+      } catch {
+        /* наступний варіант */
+      }
+    }
+  }
+  return { day, time, tz: timeZone ?? null, zoneName };
+}
+
 /** Дата з часом — для позначки «коли це збережено». */
 export function formatDateTime(iso: string | null, locale: string): string | null {
   if (!iso) return null;

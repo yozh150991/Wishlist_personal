@@ -5,6 +5,7 @@ import { Field, Note } from './ui';
 import { useI18n } from '../lib/i18n';
 import { errorText } from '../lib/errors';
 import { createShare, shareUrl } from '../lib/shares';
+import { localToday } from '../lib/format';
 
 export function ShareDialog({
   open,
@@ -49,6 +50,9 @@ export function ShareDialog({
     if (busy) return;
     if (!title.trim()) return setError(t('share.errors.titleRequired'));
     if (itemIds.length === 0) return setError(t('share.errors.nothingSelected'));
+    // Та сама межа, що й у create_share (expires_in_past): посилання, мертве
+    // з народження, нікому не потрібне.
+    if (expiresAt && expiresAt < localToday()) return setError(t('share.errors.expiresInPast'));
 
     setBusy(true);
     setError(null);
@@ -60,13 +64,15 @@ export function ShareDialog({
         message: message.trim() || null,
         hidePrices,
         allowReservations,
-        // Кінець обраного дня, а не його початок.
-        expiresAt: expiresAt ? new Date(`${expiresAt}T23:59:59`).toISOString() : null,
+        // Лише день: кінець дня за зоною власника рахує база (ADR-037).
+        expiresOn: expiresAt || null,
       });
       setLink(shareUrl(share.token));
       onCreated();
     } catch (e) {
-      setError(errorText(e, t));
+      // Опівночі між перевіркою вище й відповіддю сервера «сьогодні» могло
+      // стати «вчора» — той самий зрозумілий текст, а не код помилки.
+      setError(/expires_in_past/.test(errorText(e, t)) ? t('share.errors.expiresInPast') : errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -175,6 +181,7 @@ export function ShareDialog({
             label={t('share.fields.expiresAt')}
             name="expiresAt"
             type="date"
+            min={localToday()}
             hint={t('share.fields.expiresAtHint')}
             value={expiresAt}
             onChange={(e) => setExpiresAt(e.target.value)}

@@ -1335,6 +1335,8 @@ select[multiple].input {
   color: var(--color-accent-900);
 }
 .guest__message { margin-top: var(--sp-3); line-height: 1.5; }
+/* Термін посилання — дрібно й тихо: це довідка, а не попередження. */
+.guest__valid { margin: var(--sp-3) 0 0; font-size: var(--t-meta); color: var(--color-accent-900); }
 
 .guest__body {
   flex: 1;

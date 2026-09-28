@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useI18n } from '../lib/i18n';
-import { formatDate } from '../lib/format';
+import { formatDate, localToday } from '../lib/format';
 import type { List, Totals } from '../lib/types';
 
 /**
@@ -23,11 +23,13 @@ function dismissed(): Record<string, string> {
   }
 }
 
-/** Порівнюємо календарні дати, не моменти часу: подія «сьогодні» ще не минула. */
+/**
+ * Порівнюємо календарні дати, не моменти часу: подія «сьогодні» ще не минула.
+ * «Сьогодні» — за годинником пристрою, а банер бачить лише власник, тож це й
+ * є доба власника (ADR-037), як і в терміні посилання.
+ */
 function isPast(eventDate: string): boolean {
-  const today = new Date();
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  return eventDate < todayIso;
+  return eventDate < localToday();
 }
 
 export function EventSummary({
