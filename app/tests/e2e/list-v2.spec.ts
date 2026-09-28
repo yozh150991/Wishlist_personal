@@ -3,8 +3,8 @@ import type { Page } from '@playwright/test';
 import { EMAIL, PASSWORD, hasAccount, unique } from './helpers';
 
 /**
- * Сторінка списку дизайну v2 (ROADMAP, «Дизайн v2», кроки 3б-1 і 3б-2; потоки
- * C, D, F, O, R, V3).
+ * Сторінка списку дизайну v2 (ROADMAP, «Дизайн v2», кроки 3б-1, 3б-2 і 4б;
+ * потоки C, D, F, L, O, R, V3).
  *
  * Тег `@v2` — лише у v2-проєктах. Правила вигляду (сортування, групи, сума,
  * посилання, ціна) перевіряє без браузера items-view.spec.ts; тут — те, що
@@ -280,5 +280,60 @@ test.describe('сторінка списку v2: поділитися, поря�
     await deleted;
     await page.reload();
     await expect(page.getByRole('link', { name: new RegExp(escape(renamed)) })).toHaveCount(0);
+  });
+});
+
+test.describe('сторінка списку v2: чернетки', { tag: '@v2' }, () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('посилання без назви — чернетка «Потрібна назва»: гостям її не запропонувати, назва робить її позицією', async ({
+    page,
+  }) => {
+    await signInV2(page);
+    await newList(page, unique('V2 drafts'));
+    const plaid = unique('Плед');
+    await addManual(page, plaid);
+
+    // Посилання є, назви немає — «Зберегти чернетку» замість вигадування назви (L).
+    // Магазин «не віддав опису»: відповідь парсера підмінено, хоч би який він стояв.
+    await page.route(/\/parse$/, (route) => route.fulfill({ status: 502, body: '' }));
+    const slug = `lampa-${Date.now()}`;
+    await addButton(page).click();
+    const sheet = itemSheet(page);
+    await expect(sheet.locator('input[name="link"]')).toBeFocused();
+    await sheet.locator('input[name="link"]').fill(`https://www.shop.ua/${slug}/?utm_source=x`);
+    await sheet.getByRole('button', { name: /^(далі|dalej|next)$/i }).click();
+    await sheet.getByRole('button', { name: /зберегти чернетку|zapisz szkic|save as draft/i }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.getByRole('status').filter({ hasText: /чернетку збережено|szkic zapisany|draft saved/i })).toBeVisible();
+
+    const draft = card(page, `shop.ua/${slug}`);
+    await expect(draft).toContainText(/потрібна назва|potrzebna nazwa|needs a name/i);
+    await expect(page.getByRole('heading', { name: /потрібна назва · 1|potrzebna nazwa · 1|needs a name · 1/i })).toBeVisible();
+
+    // «Поділитися» чернетки не пропонує: гості її не бачать (ADR-046).
+    await page.getByRole('button', { name: /^(поділитися|udostępnij|share)$/i }).first().click();
+    const share = page.getByRole('dialog');
+    const choose = share.getByRole('button', { name: /^(обрати|wybierz|choose)$/i });
+    if (await choose.isVisible()) await choose.click();
+    await expect(share.getByRole('checkbox', { name: new RegExp(escape(plaid)) })).toBeVisible();
+    await expect(share.getByRole('checkbox', { name: new RegExp(escape(slug)) })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    if (await share.isVisible()) await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    // Відкрили чернетку — поле назви порожнє; назва робить її звичайною позицією.
+    await draft.getByRole('button').first().click();
+    const edit = page.getByRole('dialog', { name: /^(позиція|pozycja|item)$/i });
+    await expect(edit.locator('input[name="title"]')).toHaveValue('');
+    const lamp = unique('Керамічна лампа');
+    await edit.locator('input[name="title"]').fill(lamp);
+    await edit.getByRole('button', { name: /^(зберегти|zapisz|save)$/i }).click();
+    await expect(edit).toHaveCount(0);
+    await expect(card(page, lamp)).toBeVisible();
+    await expect(card(page, lamp)).not.toContainText(/потрібна назва|potrzebna nazwa|needs a name/i);
+    await page.reload();
+    await expect(card(page, lamp)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /потрібна назва|potrzebna nazwa|needs a name/i })).toHaveCount(0);
   });
 });

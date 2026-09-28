@@ -846,7 +846,8 @@
       "other": "Other",
       "done": "Purchased and gifted",
       "emptySection": "Nothing in this section yet.",
-      "sectionMenu": "Actions for section “{title}”"
+      "sectionMenu": "Actions for section “{title}”",
+      "draftsHint": "Guests don't see drafts until you name them."
     },
     "noResults": {
       "title": "Nothing for “{q}”",
@@ -863,18 +864,21 @@
       "status": "Status",
       "delete": "Delete",
       "deleteFailed": "Couldn't delete.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "draft": "Needs a name"
     },
     "toast": {
       "added": "Added: {title}",
       "deleted": "Deleted: {title}",
-      "undo": "Undo"
+      "undo": "Undo",
+      "drafted": "Draft saved"
     },
     "menuList": {
       "newSection": "New section",
       "inV1": "Open this list in the old look",
       "shareEmpty": "Nothing to share yet: the list has no open items.",
-      "exportBody": "Export to a file is only in the old look for now."
+      "exportBody": "Export to a file is only in the old look for now.",
+      "shareDrafts": "There are only drafts so far — name them and you can share them."
     },
     "section": {
       "newTitle": "New section",
@@ -979,6 +983,11 @@
       "body": "Want two? Better raise the quantity — guests will see how many are needed.",
       "more": "Quantity: {n}",
       "open": "Open the existing one"
+    },
+    "draft": {
+      "save": "Save as draft",
+      "hint": "Don't want to think of a name now? Save a draft — guests won't see it until you name it.",
+      "editNote": "This is a draft: guests don't see it. Add a name — or keep saving it as a draft."
     }
   },
   "v2share": {
@@ -1091,5 +1100,25 @@
       "submitting": "Creating…",
       "done": "Repeated from “{title}”."
     }
+  },
+  "v2add": {
+    "title": "Add to Wishlist",
+    "list": "To list",
+    "newList": "+ New",
+    "newListName": "New list name",
+    "newListOffline": "A new list needs a connection.",
+    "unread": "The shop didn't share a description. We'll keep the link — add the name now or later.",
+    "offline": "No connection. We'll add it once you're back online; the shop page can't be read right now.",
+    "added": "Added to “{title}”",
+    "queued": "Saved on this device. We'll add it to “{title}” once you're back online.",
+    "draftNote": "It's a “Needs a name” draft — guests won't see it until you name it.",
+    "open": "Open the list",
+    "nothingTitle": "Nothing to add",
+    "nothingBody": "What was shared has neither a link nor a name. Try “Share” again from the product page."
+  },
+  "v1add": {
+    "title": "Adding from other apps is in the new design",
+    "body": "To add what you shared, switch to the new design. You can switch back in Settings.",
+    "switch": "Switch and add"
   }
 }

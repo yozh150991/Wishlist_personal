@@ -63,6 +63,11 @@ export type Item = {
   section_id?: string | null;
   /** Ручний порядок у розділі; null — ще не впорядковано. */
   position?: number | null;
+  /**
+   * Чернетка без назви (ADR-046): у `title` — адреса. Гостям невидима. Старий
+   * офлайн-знімок поля не має — тоді це не чернетка.
+   */
+  needs_title?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -75,7 +80,17 @@ export type ItemInput = Pick<Item, 'title'> &
   Partial<
     Pick<
       Item,
-      'url' | 'price' | 'quantity' | 'priority' | 'note' | 'variants' | 'image_url' | 'status' | 'section_id' | 'position'
+      | 'url'
+      | 'price'
+      | 'quantity'
+      | 'priority'
+      | 'note'
+      | 'variants'
+      | 'image_url'
+      | 'status'
+      | 'section_id'
+      | 'position'
+      | 'needs_title'
     >
   >;
 

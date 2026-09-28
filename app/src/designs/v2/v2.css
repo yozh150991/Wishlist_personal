@@ -1629,3 +1629,13 @@ div.v2-chips { gap: var(--sp-3); }
 /* «Архів · 3» на головній — згорнутий, як «Куплене й подароване» у списку. */
 .v2-archive[open] > .v2-listgrid { margin-top: var(--sp-3); }
 .v2-listcard[data-tone='archived'] .v2-listcard__dot { background: var(--v2-dot, var(--color-neutral-200)); }
+
+/* ── Чернетки (крок 4б, потік L; ADR-046) ── */
+
+/* «Зберегти чернетку» під назвою: пояснення й кнопка, без окремого кроку. */
+.v2-draftrow { display: grid; gap: var(--sp-3); }
+/* У чернетки замість назви — адреса: тихіше, щоб не читалась як назва. */
+.v2-item[data-draft] .v2-item__title { color: var(--color-neutral-700); font-weight: 600; overflow-wrap: anywhere; }
+
+/* «Додати в Wishlist» (крок 4б): результат — заголовок і примітка одним повідомленням. */
+.v2-add__result { display: grid; justify-items: center; gap: var(--sp-4); }

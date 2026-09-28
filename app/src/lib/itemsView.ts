@@ -203,6 +203,29 @@ export function urlKey(href: string): string | null {
   return `${url.hostname.replace(/^www\./, '').toLowerCase()}${path}${query}`;
 }
 
+/**
+ * Назва чернетки (ADR-046): адреса без протоколу, `www.`, параметрів і якоря —
+ * «shop.ua/lampa-keramika». Її бачить v1, яка про чернетки не знає; v2 поруч
+ * пише «Потрібна назва».
+ */
+export function draftTitle(href: string): string {
+  const normal = normalizeUrl(href);
+  if (!normal) return href.trim().slice(0, ITEM_TITLE_MAX);
+  const url = new URL(normal);
+  let path = url.pathname.replace(/\/+$/, '');
+  try {
+    path = decodeURI(path);
+  } catch {
+    /* кривий відсоток — лишаємо як є */
+  }
+  return `${url.hostname.replace(/^www\./, '')}${path}`.slice(0, ITEM_TITLE_MAX);
+}
+
+/** Чернетка без назви — гостям невидима, у списку з міткою «Потрібна назва». */
+export function isDraft(item: Pick<Item, 'needs_title'>): boolean {
+  return Boolean(item.needs_title);
+}
+
 /** Позиція з тим самим посиланням (R2) — крім тієї, яку редагують. */
 export function findSameUrl(items: Item[], href: string, exceptId?: string): Item | undefined {
   const key = urlKey(href);

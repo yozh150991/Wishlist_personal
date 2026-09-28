@@ -13,6 +13,7 @@ import {
   ITEM_TITLE_MAX,
   ITEM_URL_MAX,
   PRIORITY_ORDER,
+  draftTitle,
   findSameTitle,
   findSameUrl,
   normalizeUrl,
@@ -57,7 +58,8 @@ const EMPTY: Form = {
 function fromItem(item: Item): Form {
   return {
     url: item.url ?? '',
-    title: item.title,
+    // У чернетки в назві — адреса-заглушка; поле порожнє, щоб його дописали.
+    title: item.needs_title ? '' : item.title,
     price: item.price === null ? '' : String(item.price),
     quantity: String(item.quantity),
     priority: item.priority,
@@ -81,6 +83,10 @@ type Note = { tone: 'warn' | 'info'; text: string };
  * Те саме посилання, що вже є в списку, — не заборона, а вибір (R2):
  * збільшити кількість, відкрити наявну або додати окремою. Схожа назва —
  * тихий рядок під полем.
+ *
+ * Не хочеш вигадувати назву зараз — «Зберегти чернетку» (L, ADR-046):
+ * позиція з посиланням і міткою «Потрібна назва», невидима гостям. Щойно
+ * назву дописано, це звичайна позиція.
  *
  * Ознаки («+ Розмір, колір») з'являються на вимогу — у формі за
  * замовчуванням їх немає (V1). Своє фото — пізніше (ROADMAP, крок 4+):
@@ -126,6 +132,8 @@ export function ItemSheetV2({
   const [variants, setVariants] = useState<ItemVariant[]>([]);
   const [variantsOpen, setVariantsOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  /** Спробували зберегти чернетку: помилки решти полів — видно, «Назви позицію» — ні. */
+  const [draftTried, setDraftTried] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [linkNote, setLinkNote] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
@@ -149,6 +157,8 @@ export function ItemSheetV2({
   const focusNext = useRef<'link' | 'title' | null>(null);
 
   const editing = item !== null;
+  /** Відкрили чернетку — поле назви порожнє, а «Зберегти чернетку» лишається. */
+  const draftEdit = Boolean(item?.needs_title);
 
   // Кожне відкриття — з чистого аркуша: попередня позиція не просочується в нову.
   useEffect(() => {
@@ -161,6 +171,7 @@ export function ItemSheetV2({
     setVariantsOpen(Boolean(item && item.variants.length > 0));
     setStage(item || presetTitle ? 'form' : 'link');
     setSubmitted(false);
+    setDraftTried(false);
     setLinkError(null);
     setLinkNote(null);
     setReading(false);
@@ -314,34 +325,71 @@ export function ItemSheetV2({
   const variantsKey = variantsError(filledVariants);
 
   const titleError = submitted && !title ? t('v2item.title.empty') : null;
+  const checked = submitted || draftTried;
   const urlError =
-    submitted && form.url.trim() && !urlNormal
+    checked && form.url.trim() && !urlNormal
       ? t('v2item.link.bad')
-      : submitted && urlNormal && urlNormal.length > ITEM_URL_MAX
+      : checked && urlNormal && urlNormal.length > ITEM_URL_MAX
         ? t('v2item.link.tooLong')
         : null;
   const priceError =
-    submitted && price.error === 'format'
+    checked && price.error === 'format'
       ? t('v2item.price.bad')
-      : submitted && price.error === 'tooBig'
+      : checked && price.error === 'tooBig'
         ? t('item.errors.priceTooBig')
         : null;
-  const qtyError = submitted && !qtyOk ? t('item.errors.badQuantity') : null;
+  const qtyError = checked && !qtyOk ? t('item.errors.badQuantity') : null;
 
   const same = stage === 'form' && urlNormal ? findSameUrl(items, urlNormal, item?.id) : undefined;
   const sameTitle = !same && title ? findSameTitle(items, title, item?.id) : undefined;
+
+  /** Поля, крім назви, — спільні для позиції й чернетки. `false` — щось хибне, фокус уже там. */
+  function checkRest(): boolean {
+    if (form.url.trim() && (!urlNormal || urlNormal.length > ITEM_URL_MAX)) {
+      urlRef.current?.focus();
+      return false;
+    }
+    if (price.error) {
+      priceRef.current?.focus();
+      return false;
+    }
+    if (!qtyOk) {
+      qtyRef.current?.focus();
+      return false;
+    }
+    if (variantsKey) {
+      setServer(t(variantsKey));
+      return false;
+    }
+    return true;
+  }
 
   async function save() {
     if (busy) return;
     setSubmitted(true);
     if (!title) return titleRef.current?.focus();
-    if (form.url.trim() && (!urlNormal || urlNormal.length > ITEM_URL_MAX)) return urlRef.current?.focus();
-    if (price.error) return priceRef.current?.focus();
-    if (!qtyOk) return qtyRef.current?.focus();
-    if (variantsKey) return setServer(t(variantsKey));
+    if (!checkRest()) return;
+    // Назвали чернетку — позначку знімаємо явно: назва може й збігтися з адресою.
+    await commit({ ...restInput(), title, ...(draftEdit ? { needs_title: false } : {}) });
+  }
 
-    const input: ItemInput = {
-      title,
+  /**
+   * «Зберегти чернетку» (L, ADR-046): замість назви — адреса. Відкриту
+   * чернетку зберігаємо з тією самою заглушкою й без позначки в запиті: так
+   * повтор із черги не суперечить перейменуванню, яке могло статися у v1.
+   */
+  async function saveDraft() {
+    if (busy || !urlNormal) return;
+    setDraftTried(true);
+    if (!checkRest()) return;
+    const input: ItemInput = draftEdit
+      ? { ...restInput(), title: item!.title }
+      : { ...restInput(), title: draftTitle(urlNormal), needs_title: true };
+    await commit(input);
+  }
+
+  function restInput(): Omit<ItemInput, 'title'> {
+    return {
       url: urlNormal,
       price: price.value,
       quantity: qty,
@@ -355,7 +403,9 @@ export function ItemSheetV2({
       // У новому розділі позиція стає зверху, поки власник її не пересуне.
       ...(sections.length > 0 && (item?.section_id ?? '') !== form.section_id ? { position: null } : {}),
     };
+  }
 
+  async function commit(input: ItemInput) {
     setBusy(true);
     setServer(null);
     try {
@@ -575,6 +625,22 @@ export function ItemSheetV2({
                   warning={sameTitle ? t('v2item.title.same', { title: sameTitle.title }) : null}
                   onChange={(e) => set('title', e.target.value)}
                 />
+
+                {urlNormal && !title && !reading && (!editing || draftEdit) && (
+                  <div className="v2-draftrow">
+                    <p className="v2-hint v2-hint--start">
+                      {draftEdit ? t('v2item.draft.editNote') : t('v2item.draft.hint')}
+                    </p>
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn--outline v2-btn--start"
+                      aria-disabled={busy || undefined}
+                      onClick={() => void saveDraft()}
+                    >
+                      {t('v2item.draft.save')}
+                    </button>
+                  </div>
+                )}
 
                 <div className="v2-row">
                   <FieldV2

@@ -126,7 +126,13 @@ test.describe('копії позицій', () => {
       status: 'active',
       section_id: null,
       position: null,
+      needs_title: false,
     });
+  });
+
+  test('чернетка й у копії лишається чернеткою — гості її так само не бачать', () => {
+    expect(copyInput(item({ needs_title: true })).needs_title).toBe(true);
+    expect(copyInput(item({ needs_title: undefined })).needs_title).toBe(false);
   });
 
   test('у копії немає ні id, ні списку, ні власника, ні службових полів', () => {

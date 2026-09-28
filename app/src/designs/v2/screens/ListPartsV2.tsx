@@ -183,12 +183,15 @@ export function ItemCardV2({
   const host = hostOf(item.url);
   const variants = item.variants.map((v) => v.value).join(' · ');
   const tagPriority = showPriority && item.priority !== 'medium';
+  // Чернетка (ADR-046): замість назви — адреса, поруч — «Потрібна назва».
+  const draft = Boolean(item.needs_title);
 
   return (
     <li
       className="v2-item"
       id={`v2-item-${item.id}`}
       data-status={item.status}
+      data-draft={draft || undefined}
       data-new={highlight || undefined}
       data-failed={failed ? 'true' : undefined}
     >
@@ -222,8 +225,13 @@ export function ItemCardV2({
                 {host && ` · ${host}`}
               </span>
               {variants && <span className="v2-item__meta">{variants}</span>}
-              {(tagPriority || item.status !== 'active') && (
+              {(tagPriority || item.status !== 'active' || draft) && (
                 <span className="v2-item__tags">
+                  {draft && (
+                    <span className="v2-tag" data-tone="warm">
+                      {t('v2list.item.draft')}
+                    </span>
+                  )}
                   {tagPriority && (
                     <span className="v2-tag" data-tone={item.priority === 'high' ? 'accent' : 'warm'}>
                       {priority(item.priority)}

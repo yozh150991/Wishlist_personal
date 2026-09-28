@@ -15,6 +15,13 @@ const manifest = JSON.parse(await readFile(join(dist, 'manifest.webmanifest'), '
 check(manifest.name && manifest.short_name, 'маніфест: немає name або short_name');
 check(manifest.display === 'standalone', 'маніфест: display має бути standalone');
 check(manifest.start_url === '/lists', 'маніфест: start_url має бути /lists');
+// «Поділитися» з інших застосунків (ADR-046): лише GET на /add з трьома параметрами.
+check(
+  manifest.share_target?.action === '/add' &&
+    manifest.share_target?.method === 'GET' &&
+    ['title', 'text', 'url'].every((k) => manifest.share_target?.params?.[k] === k),
+  'маніфест: share_target має вести GET-запитом на /add з параметрами title, text, url',
+);
 
 async function pngSize(path) {
   const b = await readFile(join(dist, path));

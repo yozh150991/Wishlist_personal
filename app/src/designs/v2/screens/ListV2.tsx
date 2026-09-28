@@ -48,6 +48,7 @@ import type { Section } from '../../../lib/sections';
 import {
   ITEM_QTY_MAX,
   TOOLS_FROM,
+  isDraft,
   isViewSort,
   matchesView,
   sortItems,
@@ -318,38 +319,45 @@ export default function ListV2() {
   const groups = useMemo(
     () =>
       viewGroups(
-        shown.filter((i) => i.status === 'active'),
+        shown.filter((i) => i.status === 'active' && !isDraft(i)),
         viewSort,
         sections,
         { keepEmpty: !filtering },
       ),
     [shown, viewSort, sections, filtering],
   );
+  /** Чернетки без назви (ADR-046) — окремо згори: їм бракує назви, а гостям їх не видно. */
+  const drafts = useMemo(
+    () => sortItems(shown.filter((i) => i.status === 'active' && isDraft(i)), 'recent'),
+    [shown],
+  );
   const done = useMemo(
     () => sortItems(shown.filter((i) => i.status !== 'active'), viewSort === 'priority' ? 'manual' : viewSort),
     [shown, viewSort],
   );
-  const activeShown = groups.reduce((n, g) => n + g.items.length, 0);
+  const activeShown = groups.reduce((n, g) => n + g.items.length, 0) + drafts.length;
 
-  /** Актуальні позиції в порядку гостя — для «Поділитися», превʼю й «Змінити порядок». */
+  /** Актуальні позиції — для «Після свята»; чернетки теж тут: це бажання власника. */
   const activeLive = useMemo(() => live.filter((i) => i.status === 'active'), [live]);
+  /** Те, що можуть побачити гості, у їхньому порядку: без чернеток (ADR-046). */
+  const shareable = useMemo(() => activeLive.filter((i) => !isDraft(i)), [activeLive]);
   const guestGroups = useMemo<PreviewGroup[]>(
     () =>
-      viewGroups(activeLive, 'manual', sections, { keepEmpty: false }).map((g) => ({
+      viewGroups(shareable, 'manual', sections, { keepEmpty: false }).map((g) => ({
         key: g.key,
         title: g.kind === 'section' ? g.section.title : null,
         items: g.items,
       })),
-    [activeLive, sections],
+    [shareable, sections],
   );
   const orderGroups = useMemo<OrderGroup[]>(
     () =>
-      viewGroups(activeLive, 'manual', sections, { keepEmpty: true }).map((g) => ({
+      viewGroups(shareable, 'manual', sections, { keepEmpty: true }).map((g) => ({
         key: g.key,
         section: g.kind === 'section' ? g.section : null,
         items: g.items,
       })),
-    [activeLive, sections],
+    [shareable, sections],
   );
 
   const currency = list?.currency ?? 'PLN';
@@ -384,7 +392,7 @@ export default function ListV2() {
     // Щойно додана позиція ще не в жодному посиланні, тож відкат — звичайне
     // видалення, без відліку.
     undo.schedule({
-      label: t('v2list.toast.added', { title: input.title }),
+      label: input.needs_title ? t('v2list.toast.drafted') : t('v2list.toast.added', { title: input.title }),
       commit: () => undefined,
       revert: () => void removeNow(created),
     });
@@ -736,7 +744,7 @@ export default function ListV2() {
           <span className="v2-listhead__actions">
             {/* Поділитися — головна дія зі списком, тож не лише в меню. Без
                 актуальних позицій ділитися нічим: посилання на порожнє не буває. */}
-            {ready && activeLive.length > 0 && !archived && (
+            {ready && shareable.length > 0 && !archived && (
               <button
                 type="button"
                 className="v2-iconbtn"
@@ -921,6 +929,17 @@ export default function ListV2() {
       ) : (
         <div className="v2-groups" data-stale={staleAt ? 'true' : undefined}>
           {activeShown === 0 && !filtering && <p className="v2-hint v2-hint--start">{t('v2list.allDone')}</p>}
+          {drafts.length > 0 && (
+            <section className="v2-group" aria-labelledby="v2-group-drafts">
+              <div className="v2-group__head">
+                <h2 className="v2-kicker v2-group__title" id="v2-group-drafts">
+                  {t('v2list.item.draft')} · {drafts.length}
+                </h2>
+              </div>
+              <p className="v2-hint v2-hint--start">{t('v2list.group.draftsHint')}</p>
+              <ul className="v2-items">{drafts.map(card)}</ul>
+            </section>
+          )}
           {groups.map((g, index) =>
             g.kind === 'all' ? (
               g.items.length > 0 && (
@@ -995,10 +1014,10 @@ export default function ListV2() {
               <button
                 type="button"
                 className="v2-menu__item"
-                aria-disabled={activeLive.length === 0 || undefined}
-                aria-describedby={activeLive.length === 0 ? 'v2-share-empty' : undefined}
+                aria-disabled={shareable.length === 0 || undefined}
+                aria-describedby={shareable.length === 0 ? 'v2-share-empty' : undefined}
                 onClick={() => {
-                  if (activeLive.length === 0) return;
+                  if (shareable.length === 0) return;
                   setListMenu(false);
                   setShareOpen(true);
                 }}
@@ -1020,10 +1039,10 @@ export default function ListV2() {
               <button
                 type="button"
                 className="v2-menu__item"
-                aria-disabled={activeLive.length < 2 || Boolean(staleAt) || undefined}
+                aria-disabled={shareable.length < 2 || Boolean(staleAt) || undefined}
                 aria-describedby={staleAt ? 'v2-order-offline' : undefined}
                 onClick={() => {
-                  if (activeLive.length < 2 || staleAt) return;
+                  if (shareable.length < 2 || staleAt) return;
                   startOrdering();
                 }}
               >
@@ -1092,9 +1111,9 @@ export default function ListV2() {
             {t('v2list.settings.title')}
           </button>
         </div>
-        {activeLive.length === 0 && !archived && (
+        {shareable.length === 0 && !archived && (
           <p className="v2-hint v2-hint--start" id="v2-share-empty">
-            {t('v2list.menuList.shareEmpty')}
+            {activeLive.length > 0 ? t('v2list.menuList.shareDrafts') : t('v2list.menuList.shareEmpty')}
           </p>
         )}
         {staleAt && !archived && (

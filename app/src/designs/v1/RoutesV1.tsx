@@ -11,6 +11,7 @@ import Shares from '../../routes/Shares';
 import GuestPreview from '../../routes/GuestPreview';
 import Settings from '../../routes/Settings';
 import NotFound from '../../routes/NotFound';
+import AddBridgeV1 from './AddBridgeV1';
 
 /**
  * Таблиця маршрутів дизайну v1 — нинішнього застосунку.
@@ -34,6 +35,9 @@ export default function DesignV1Routes() {
       <Route path="/register" element={<Register />} />
       <Route path="/reset" element={<ResetPassword />} />
       <Route path="/update-password" element={<UpdatePassword />} />
+
+      {/* Системне «Поділитися» (маніфест спільний) — функція v2; тут місток туди. */}
+      <Route path="/add" element={<AddBridgeV1 />} />
 
       {/* «Показати, як бачить гість»: власник, але без каркаса застосунку —
           гість його теж не бачить. */}

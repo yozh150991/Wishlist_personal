@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 import {
+  draftTitle,
   findSameTitle,
   findSameUrl,
+  isDraft,
   matchesView,
   normalizeUrl,
   parsePrice,
@@ -176,5 +178,23 @@ test.describe('ціна з поля', () => {
     expect(parsePrice('1,2345').error).toBe('format');
     expect(parsePrice('10000000000').error).toBe('tooBig');
     expect(parsePrice('9999999999').error).toBeNull();
+  });
+});
+
+test.describe('чернетки (ADR-046)', () => {
+  test('назва чернетки — адреса без протоколу, www., параметрів і кінцевої /', () => {
+    expect(draftTitle('https://www.shop.ua/lampa-keramika/?utm_source=x#top')).toBe('shop.ua/lampa-keramika');
+    expect(draftTitle('https://rozetka.com.ua/')).toBe('rozetka.com.ua');
+    expect(draftTitle('https://shop.ua/%D0%BB%D0%B0%D0%BC%D0%BF%D0%B0')).toBe('shop.ua/лампа');
+  });
+
+  test('назва чернетки не довша за межу назви з БД', () => {
+    expect(draftTitle(`https://shop.ua/${'a'.repeat(400)}`).length).toBe(200);
+  });
+
+  test('чернетка — лише з позначкою; старий знімок без поля — звичайна позиція', () => {
+    expect(isDraft(item({ needs_title: true }))).toBe(true);
+    expect(isDraft(item({ needs_title: false }))).toBe(false);
+    expect(isDraft(item())).toBe(false);
   });
 });

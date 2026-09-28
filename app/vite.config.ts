@@ -25,6 +25,13 @@ export default defineConfig({
         start_url: '/lists',
         scope: '/',
         display: 'standalone',
+        // Wishlist у системному «Поділитися» (Android, десктопний Chrome; потік L,
+        // ADR-046). GET: поширене приходить параметрами, а `/add` прибирає їх з адреси.
+        share_target: {
+          action: '/add',
+          method: 'GET',
+          params: { title: 'title', text: 'text', url: 'url' },
+        },
         background_color: '#f5f6f4',
         theme_color: '#ffffff',
         icons: [

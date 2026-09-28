@@ -105,6 +105,8 @@ export function copyInput(
     status: 'active',
     section_id: place.section_id,
     position: place.position,
+    // Чернетка лишається чернеткою й у копії: гості її так само не бачать (ADR-046).
+    needs_title: Boolean(item.needs_title),
   };
 }
 

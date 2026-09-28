@@ -846,7 +846,8 @@
       "other": "Inne",
       "done": "Kupione i podarowane",
       "emptySection": "W tym dziale na razie pusto.",
-      "sectionMenu": "Działania na dziale „{title}”"
+      "sectionMenu": "Działania na dziale „{title}”",
+      "draftsHint": "Goście nie widzą szkiców, dopóki ich nie nazwiesz."
     },
     "noResults": {
       "title": "Nic dla „{q}”",
@@ -863,18 +864,21 @@
       "status": "Status",
       "delete": "Usuń",
       "deleteFailed": "Nie udało się usunąć.",
-      "retry": "Jeszcze raz"
+      "retry": "Jeszcze raz",
+      "draft": "Potrzebna nazwa"
     },
     "toast": {
       "added": "Dodano: {title}",
       "deleted": "Usunięto: {title}",
-      "undo": "Cofnij"
+      "undo": "Cofnij",
+      "drafted": "Szkic zapisany"
     },
     "menuList": {
       "newSection": "Nowy dział",
       "inV1": "Otwórz tę listę w starym wyglądzie",
       "shareEmpty": "Na razie nie ma czym się dzielić: na liście nie ma aktualnych pozycji.",
-      "exportBody": "Eksport do pliku jest na razie tylko w starym wyglądzie."
+      "exportBody": "Eksport do pliku jest na razie tylko w starym wyglądzie.",
+      "shareDrafts": "Na razie są tylko szkice — nazwij je, a będzie można je udostępnić."
     },
     "section": {
       "newTitle": "Nowy dział",
@@ -979,6 +983,11 @@
       "body": "Chcesz dwie? Lepiej zwiększyć ilość — goście zobaczą, ile potrzeba.",
       "more": "Ilość: {n}",
       "open": "Otwórz istniejącą"
+    },
+    "draft": {
+      "save": "Zapisz szkic",
+      "hint": "Nie chcesz teraz wymyślać nazwy? Zapisz szkic — goście go nie zobaczą, dopóki go nie nazwiesz.",
+      "editNote": "To szkic: goście go nie widzą. Dopisz nazwę — albo zapisz dalej jako szkic."
     }
   },
   "v2share": {
@@ -1091,5 +1100,25 @@
       "submitting": "Tworzę…",
       "done": "Powtórzono z listy „{title}”."
     }
+  },
+  "v2add": {
+    "title": "Dodaj do Wishlist",
+    "list": "Do listy",
+    "newList": "+ Nowa",
+    "newListName": "Nazwa nowej listy",
+    "newListOffline": "Nową listę utworzymy dopiero z internetem.",
+    "unread": "Sklep nie podał opisu. Zapiszemy link — nazwę dopiszesz teraz albo później.",
+    "offline": "Brak połączenia. Dodamy, gdy wróci internet; strony sklepu teraz nie odczytamy.",
+    "added": "Dodano do „{title}”",
+    "queued": "Zapisane na telefonie. Dodamy do „{title}”, gdy wróci internet.",
+    "draftNote": "To szkic „Potrzebna nazwa” — goście go nie zobaczą, dopóki go nie nazwiesz.",
+    "open": "Otwórz listę",
+    "nothingTitle": "Nie ma czego dodać",
+    "nothingBody": "W udostępnionym nie ma ani linku, ani nazwy. Spróbuj „Udostępnij” jeszcze raz ze strony produktu."
+  },
+  "v1add": {
+    "title": "Dodawanie z innych aplikacji — w nowym wyglądzie",
+    "body": "Aby dodać udostępnione, przełącz się na nowy wygląd aplikacji. Wrócić możesz w Ustawieniach.",
+    "switch": "Przełącz i dodaj"
   }
 }

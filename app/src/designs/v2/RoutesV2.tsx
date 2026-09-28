@@ -9,6 +9,7 @@ import NewListV2 from './screens/NewListV2';
 import ListV2 from './screens/ListV2';
 import SharesV2 from './screens/SharesV2';
 import SettingsV2 from './screens/SettingsV2';
+import AddV2 from './screens/AddV2';
 import { RequireAuthV2, ShellV2 } from './ShellV2';
 // Стилі форми v2 їдуть разом із цим лінивим модулем (ADR-039, п. 9).
 import './v2.css';
@@ -34,7 +35,8 @@ import './v2.css';
  * новий список (крок 3а); сторінка списку з позиціями, «Поділитися», порядком,
  * оформленням і налаштуваннями (крок 3б); «Мої посилання» й «Налаштування»
  * (крок 3в). Усі екрани власника v1 мають пару у v2; невідома адреса —
- * заглушка з дорогою назад.
+ * заглушка з дорогою назад. `/add` — «Додати в Wishlist» із системного
+ * «Поділитися» (крок 4б): без каркаса, бо це аркуш поверх магазину.
  */
 export default function DesignV2Routes() {
   return (
@@ -43,6 +45,15 @@ export default function DesignV2Routes() {
       <Route path="/register" element={<RegisterV2 />} />
       <Route path="/reset" element={<ResetV2 />} />
       <Route path="/update-password" element={<NewPasswordV2 />} />
+
+      <Route
+        path="/add"
+        element={
+          <RequireAuthV2>
+            <AddV2 />
+          </RequireAuthV2>
+        }
+      />
 
       <Route
         element={

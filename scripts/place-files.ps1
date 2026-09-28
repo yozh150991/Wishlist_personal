@@ -57,6 +57,7 @@ $map = @{
   '20260928120000_sections_and_order.sql' = 'supabase\migrations'
   '20260928130000_share_expiry_zone.sql' = 'supabase\migrations'
   '20260928140000_owner_side_channels.sql' = 'supabase\migrations'
+  '20260928160000_item_drafts.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -69,6 +70,7 @@ $map = @{
   '06_sections.test.sql' = 'supabase\tests\database'
   '07_share_expiry.test.sql' = 'supabase\tests\database'
   '08_owner_side_channels.test.sql' = 'supabase\tests\database'
+  '09_item_drafts.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -169,6 +171,9 @@ $map = @{
   # Design v2 step 4a: after the event, archive, repeat next year.
   'AfterEventV2.tsx' = 'app\src\designs\v2\screens'; 'afterEvent.ts' = 'app\src\lib'
   'after-event.spec.ts' = 'app\tests\e2e'; 'after-event-v2.spec.ts' = 'app\tests\e2e'
+  # Design v2 step 4b: drafts, share target (/add), v1 bridge.
+  'AddV2.tsx' = 'app\src\designs\v2\screens'; 'AddBridgeV1.tsx' = 'app\src\designs\v1'
+  'shareTarget.ts' = 'app\src\lib'; 'share-target.spec.ts' = 'app\tests\e2e'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'
