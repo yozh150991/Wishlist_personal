@@ -166,6 +166,9 @@ $map = @{
   # Design v2 step 3c: my links, settings; outbox flushing shared by both designs.
   'SharesV2.tsx' = 'app\src\designs\v2\screens'; 'SettingsV2.tsx' = 'app\src\designs\v2\screens'
   'useOutbox.ts' = 'app\src\lib'
+  # Design v2 step 4a: after the event, archive, repeat next year.
+  'AfterEventV2.tsx' = 'app\src\designs\v2\screens'; 'afterEvent.ts' = 'app\src\lib'
+  'after-event.spec.ts' = 'app\tests\e2e'; 'after-event-v2.spec.ts' = 'app\tests\e2e'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'

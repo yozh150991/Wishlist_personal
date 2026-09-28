@@ -736,7 +736,8 @@
       "loading": "Wczytuję listy",
       "errorTitle": "Nie udało się wczytać list",
       "stale": "Brak połączenia. Pokazano zapisaną kopię z {time}.",
-      "deleted": "Lista „{title}” usunięta."
+      "deleted": "Lista „{title}” usunięta.",
+      "archive": "Archiwum"
     },
     "templates": {
       "title": "Na jaką okazję zbieramy?",
@@ -758,9 +759,11 @@
       "date": "Data wydarzenia · opcjonalnie",
       "nameEmpty": "Nazwij listę",
       "duplicate": "Taka lista już jest. Utworzyć drugą o tej samej nazwie?",
-      "pastDate": "Ta data już minęła — lista od razu trafi do minionych.",
+      "pastDate": "Ta data już minęła. Taka lista od razu trafi do archiwum — nie da się jej udostępnić gościom.",
       "submit": "Gotowe",
       "submitting": "Zapisuję…",
+      "submitArchive": "Utwórz jako archiwum",
+      "changeDate": "Zmień datę",
       "draftTitle": "Zostawić szkic?",
       "draftBody": "Nazwa jest już wpisana. Możemy ją zapisać i wrócić później.",
       "draftKeep": "Zapisz szkic",
@@ -1038,5 +1041,55 @@
       "saved": "Plik zapisany."
     },
     "deleteLater": "Usuwanie konta pojawi się tu później."
+  },
+  "v2after": {
+    "card": {
+      "kicker": "Święto minęło · {date}",
+      "title": "Jak minęło święto?",
+      "body": "Zamkniemy listę w minutę — albo wróć do tego później.",
+      "bodyAllDone": "Wszystko rozliczone. Zostało zarchiwizować listę albo powtórzyć ją za rok.",
+      "received": "Oznacz otrzymane",
+      "carry": "Przenieś to, czego wciąż chcę",
+      "repeat": "Powtórz na {year}",
+      "archive": "Zarchiwizuj",
+      "later": "Później",
+      "doneMark": "zrobione",
+      "noHints": "Tego, co wzięli goście, nie pokazujemy także po święcie — otrzymane oznaczasz ty."
+    },
+    "archiving": "Archiwizuję…",
+    "archived": {
+      "title": "Lista w archiwum.",
+      "body": "Nowego linku do niej nie utworzysz, a stare linki goście otwierają jak dotąd.",
+      "restore": "Przywróć z archiwum"
+    },
+    "received": {
+      "title": "Co podarowano?",
+      "body": "Zaznacz to, co podarowano — trafi do „Kupione i podarowane”. Tego, co wzięli goście, nie pokazujemy i teraz.",
+      "save": "Oznacz jako podarowane ({n})"
+    },
+    "carry": {
+      "title": "Czego jeszcze chcesz?",
+      "body": "Przeniesiemy kopie — ta lista zostanie taka, jaka była w dniu święta.",
+      "where": "Dokąd przenieść",
+      "newList": "Nowa lista",
+      "newName": "Nazwa nowej listy",
+      "newDefault": "Wciąż chcę",
+      "nothing": "Wybierz przynajmniej jedną pozycję.",
+      "submit": "Przenieś ({n})",
+      "submitting": "Przenoszę…",
+      "done": "Przeniesiono do „{title}”: {n}.",
+      "open": "Otwórz"
+    },
+    "repeat": {
+      "titlePlain": "Powtórz listę",
+      "body": "Nowa lista z tymi samymi ustawieniami, wyglądem i sekcjami.",
+      "items": "Niepodarowane pozycje · {n}",
+      "itemsHint": "Kopie w tych samych miejscach. Kupione i podarowane zostają tutaj.",
+      "noItems": "Brak niepodarowanych pozycji — nowa lista zacznie się pusta.",
+      "links": "Oznaczenia gości i linki nigdy nie są przenoszone: linki do nowej listy utworzysz od nowa, stare zostaną przy tej.",
+      "submit": "Utwórz",
+      "submitting": "Tworzę…",
+      "done": "Powtórzono z listy „{title}”."
+    }
   }
 }

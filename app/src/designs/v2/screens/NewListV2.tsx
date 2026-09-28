@@ -52,13 +52,14 @@ function dropDraft() {
  * - Список створюється однією назвою; решта налаштувань — усередині списку.
  *   Дата необов'язкова. Валюта — з профілю, інакше PLN, як у v1.
  * - Дубль назви — попередження, не заборона: у людини може бути два «Дім».
- *   Минула дата — теж лише попередження.
+ * - Минула дата — не заборона, а інша кнопка (U3): «Створити як архів» — для
+ *   старих свят, які хочуть зберегти в історії, — або «Змінити дату».
  * - Чернетка тримається на пристрої, тож «Назад» завжди має що врятувати:
  *   якщо щось уже вписано — питаємо «Лишити чернетку?», порожню форму
  *   закриваємо мовчки.
  *
- * Тип події, «Повторювати щороку» й «Створити як архів» потребують нових
- * полів у базі — це крок 4 (ROADMAP).
+ * Тип події й «Повторювати щороку» потребують нових полів у базі — це
+ * наступні частини кроку 4 (ROADMAP).
  */
 export default function NewListV2() {
   const { t } = useI18n();
@@ -80,6 +81,7 @@ export default function NewListV2() {
   const [currency, setCurrency] = useState<Currency>(FALLBACK_CURRENCY);
   const [asking, setAsking] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
+  const dateRef = useRef<HTMLInputElement>(null);
 
   // Назви наявних списків — лише для попередження про дубль; без мережі
   // попередження просто не буде.
@@ -101,7 +103,7 @@ export default function NewListV2() {
   const title = draft.title.trim();
   const titleError = submitted && !title ? t('v2app.newList.nameEmpty') : null;
   const duplicate = title && titles.includes(title.toLowerCase()) ? t('v2app.newList.duplicate') : null;
-  const past = draft.date && draft.date < localToday() ? t('v2app.newList.pastDate') : null;
+  const past = Boolean(draft.date) && draft.date < localToday();
 
   function leave() {
     if (draft.title.trim() || draft.date) setAsking(true);
@@ -118,7 +120,11 @@ export default function NewListV2() {
     setBusy(true);
     setServer(null);
     try {
-      const created = await createList({ title, event_date: draft.date || null, currency }, userId);
+      // Минула дата — одразу в архів (ADR-045): так кнопка й обіцяла.
+      const created = await createList(
+        { title, event_date: draft.date || null, currency, ...(past ? { is_archived: true } : {}) },
+        userId,
+      );
       dropDraft();
       // Решта налаштувань і перша позиція живуть усередині списку (B, C).
       navigate(`/lists/${created.id}`, { replace: true });
@@ -160,15 +166,25 @@ export default function NewListV2() {
           onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
         />
         <FieldV2
+          ref={dateRef}
           label={t('v2app.newList.date')}
           name="event_date"
           type="date"
           value={draft.date}
-          warning={past}
+          warning={past ? t('v2app.newList.pastDate') : null}
           onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))}
         />
 
-        <SubmitV2 busy={busy} label={t('v2app.newList.submit')} busyLabel={t('v2app.newList.submitting')} />
+        <SubmitV2
+          busy={busy}
+          label={past ? t('v2app.newList.submitArchive') : t('v2app.newList.submit')}
+          busyLabel={t('v2app.newList.submitting')}
+        />
+        {past && (
+          <button type="button" className="v2-btn v2-btn--ghost" onClick={() => dateRef.current?.focus()}>
+            {t('v2app.newList.changeDate')}
+          </button>
+        )}
       </form>
 
       <SheetV2 open={asking} onClose={() => setAsking(false)} labelledBy="v2-draft-title">

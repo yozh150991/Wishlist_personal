@@ -736,7 +736,8 @@
       "loading": "Loading lists",
       "errorTitle": "Lists didn't load",
       "stale": "No connection. Showing a saved copy from {time}.",
-      "deleted": "List “{title}” deleted."
+      "deleted": "List “{title}” deleted.",
+      "archive": "Archive"
     },
     "templates": {
       "title": "What occasion are we collecting for?",
@@ -758,9 +759,11 @@
       "date": "Event date · optional",
       "nameEmpty": "Name the list",
       "duplicate": "You already have a list with this name. Create another one?",
-      "pastDate": "This date has already passed — the list will go straight to Past.",
+      "pastDate": "This date has already passed. The list will go straight to the archive — you won't be able to share it with guests.",
       "submit": "Done",
       "submitting": "Saving…",
+      "submitArchive": "Create as archive",
+      "changeDate": "Change the date",
       "draftTitle": "Keep the draft?",
       "draftBody": "The name is already filled in. We can save it and you can come back later.",
       "draftKeep": "Save draft",
@@ -1038,5 +1041,55 @@
       "saved": "File saved."
     },
     "deleteLater": "Deleting your account will be available here later."
+  },
+  "v2after": {
+    "card": {
+      "kicker": "The celebration is over · {date}",
+      "title": "How did it go?",
+      "body": "Let's wrap up the list in a minute — or come back to it later.",
+      "bodyAllDone": "Everything is sorted. All that's left is to archive the list or repeat it next year.",
+      "received": "Mark what you received",
+      "carry": "Carry over what I still want",
+      "repeat": "Repeat for {year}",
+      "archive": "Archive",
+      "later": "Later",
+      "doneMark": "done",
+      "noHints": "We don't show what guests took, even after the celebration — you mark what you received."
+    },
+    "archiving": "Archiving…",
+    "archived": {
+      "title": "This list is archived.",
+      "body": "You can't create a new link to it; guests can still open the old links as before.",
+      "restore": "Restore from archive"
+    },
+    "received": {
+      "title": "What did you receive?",
+      "body": "Tick what you were given — it moves to “Purchased and gifted”. We don't show what guests took, not even now.",
+      "save": "Mark as gifted ({n})"
+    },
+    "carry": {
+      "title": "What do you still want?",
+      "body": "We copy the items over — this list stays exactly as it was on the day.",
+      "where": "Where to",
+      "newList": "New list",
+      "newName": "New list name",
+      "newDefault": "Still want",
+      "nothing": "Pick at least one item.",
+      "submit": "Carry over ({n})",
+      "submitting": "Carrying over…",
+      "done": "Copied to “{title}”: {n}.",
+      "open": "Open"
+    },
+    "repeat": {
+      "titlePlain": "Repeat the list",
+      "body": "A new list with the same settings, look and sections.",
+      "items": "Items not yet gifted · {n}",
+      "itemsHint": "Copies in the same places. Purchased and gifted items stay here.",
+      "noItems": "Nothing left ungifted — the new list starts empty.",
+      "links": "Guests' picks and links never carry over: you'll create new links for the new list, the old ones stay with this one.",
+      "submit": "Create",
+      "submitting": "Creating…",
+      "done": "Repeated from “{title}”."
+    }
   }
 }

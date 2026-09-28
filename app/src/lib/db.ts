@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { CURRENCIES } from './types';
 import type { Currency, Item, ItemInput, ItemQuery, ItemStatus, List, Totals } from './types';
 import { isNetworkError } from './errors';
+import { copyInput } from './afterEvent';
 
 /* ── Списки ─────────────────────────────── */
 
@@ -78,7 +79,7 @@ export async function fetchDefaultCurrency(userId: string): Promise<Currency | n
 }
 
 export type ListInput = Pick<List, 'title'> &
-  Partial<Pick<List, 'description' | 'currency' | 'event_date'>>;
+  Partial<Pick<List, 'description' | 'currency' | 'event_date' | 'is_archived'>>;
 
 export async function createList(input: ListInput, ownerId: string): Promise<List> {
   const { data, error } = await supabase
@@ -97,6 +98,16 @@ export async function updateList(id: string, patch: Partial<ListInput>): Promise
 
 export async function deleteList(id: string): Promise<void> {
   const { error } = await supabase.from('lists').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * Архів (ADR-045) — полиця власника: список лишається цілим, наявні посилання
+ * працюють як і раніше, а нове v2 створити не дає. v1 прапорця не знає й
+ * показує такий список серед звичайних.
+ */
+export async function setListArchived(id: string, archived: boolean): Promise<void> {
+  const { error } = await supabase.from('lists').update({ is_archived: archived }).eq('id', id);
   if (error) throw error;
 }
 
@@ -213,6 +224,72 @@ export async function createListWithItems(
         .insert(part.map((i) => ({ ...i, list_id: list.id })));
       if (error) throw error;
     }
+  } catch (e) {
+    await deleteList(list.id).catch(() => {});
+    throw e;
+  }
+  return list;
+}
+
+/**
+ * Копії позицій в інший список — «Ще хочу» після свята (M4, ADR-045).
+ * Оригінали не чіпаємо: архів лишається правдивим знімком свята, а позначки
+ * гостей не переїжджають — вони належать оригіналам.
+ */
+export async function copyItems(listId: string, items: ItemInput[]): Promise<void> {
+  for (const part of chunks(items, BULK_CHUNK)) {
+    const { error } = await supabase.from('items').insert(part.map((i) => ({ ...i, list_id: listId })));
+    if (error) throw error;
+  }
+}
+
+/**
+ * «Повторити на наступний рік» (S3, ADR-045): новий список із тими самими
+ * налаштуваннями — повідомлення гостям, валюта, оформлення, розділи в тому ж
+ * порядку — і копіями вибраних позицій на тих самих місцях. Позначки й
+ * посилання не переносяться ніколи.
+ *
+ * Як і в імпорті, транзакції на кілька запитів немає: не вдалося — щойно
+ * створений список видаляємо, щоб не лишити половину.
+ */
+export async function repeatList(
+  source: { list: List; sections: { id: string; title: string; position: number }[]; items: Item[] },
+  next: { title: string; event_date: string | null },
+  ownerId: string,
+): Promise<List> {
+  const { data, error } = await supabase
+    .from('lists')
+    .insert({
+      owner_id: ownerId,
+      title: next.title,
+      event_date: next.event_date,
+      description: source.list.description,
+      currency: source.list.currency,
+      appearance_id: source.list.appearance_id ?? null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  const list = data as List;
+  try {
+    // Розділи — по одному: так id нового точно відповідає старому.
+    const sectionIds = new Map<string, string>();
+    for (const s of source.sections) {
+      const { data: row, error: sErr } = await supabase
+        .from('sections')
+        .insert({ list_id: list.id, title: s.title, position: s.position })
+        .select('id')
+        .single();
+      if (sErr) throw sErr;
+      sectionIds.set(s.id, (row as { id: string }).id);
+    }
+    // Позиція з розділу, якого вже немає, стає в «Інше» без місця — як і в самому списку.
+    const inputs = source.items.map((i) => {
+      const section = i.section_id ? (sectionIds.get(i.section_id) ?? null) : null;
+      const lost = Boolean(i.section_id) && section === null;
+      return copyInput(i, { section_id: section, position: lost ? null : (i.position ?? null) });
+    });
+    await copyItems(list.id, inputs);
   } catch (e) {
     await deleteList(list.id).catch(() => {});
     throw e;

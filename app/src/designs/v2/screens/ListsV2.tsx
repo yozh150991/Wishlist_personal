@@ -49,7 +49,7 @@ type Arrival = {
   deletedTitle?: string;
 } | null;
 
-type Tone = 'soon' | 'undated' | 'past';
+type Tone = 'soon' | 'undated' | 'past' | 'archived';
 
 /** Шаблони свят для порожньої головної (U2): лише назва, решта — всередині. */
 const TEMPLATES = ['birthday', 'wedding', 'newYear', 'baby', 'housewarming', 'graduation', 'anniversary', 'secretSanta'] as const;
@@ -63,10 +63,11 @@ function day(iso: string): Date {
 /**
  * Головна v2 — «Мої списки» (потоки U1, B1, A4).
  *
- * Два блоки: «Найближчі» — за датою події, списки без дати одразу за ними;
- * «Минулі» — від найсвіжішого. На картці — коло (відтінок оформлення списку
- * або тон блоку), назва й один рядок: «18 жовтня · через 21 день», «без
- * дати · 6 позицій», «1 січня · 4 позиції не розібрано».
+ * Три блоки: «Найближчі» — за датою події, списки без дати одразу за ними;
+ * «Минулі» — ті, де ще щось не розібрано, згори, далі від найсвіжішого; і
+ * згорнутий «Архів · 3» (ADR-045). На картці — коло (відтінок оформлення
+ * списку або тон блоку), назва й один рядок: «18 жовтня · через 21 день»,
+ * «без дати · 6 позицій», «1 січня · 4 позиції не розібрано».
  *
  * Жодного слова про позначки гостей — ні числа, ні «сюрпризу до…» (ADR-040).
  * «Не розібрано» — це статуси самого власника.
@@ -192,14 +193,20 @@ export default function ListsV2() {
   const today = localToday();
   const visible = useMemo(() => lists.filter((l) => !hidden.has(l.id)), [lists, hidden]);
   const groups = useMemo(() => {
-    const soon = visible
+    const current = visible.filter((l) => !l.is_archived);
+    const soon = current
       .filter((l) => l.event_date && l.event_date.slice(0, 10) >= today)
       .sort((a, b) => a.event_date!.localeCompare(b.event_date!));
-    const undated = visible.filter((l) => !l.event_date);
-    const past = visible
+    const undated = current.filter((l) => !l.event_date);
+    // Минулі з нерозібраним тримаються згори, доки їх не закриють (U1, M).
+    const open = (l: List) => ((l.active_count ?? 0) > 0 ? 0 : 1);
+    const past = current
       .filter((l) => l.event_date && l.event_date.slice(0, 10) < today)
-      .sort((a, b) => b.event_date!.localeCompare(a.event_date!));
-    return { soon, undated, past };
+      .sort((a, b) => open(a) - open(b) || b.event_date!.localeCompare(a.event_date!));
+    const archived = visible
+      .filter((l) => l.is_archived)
+      .sort((a, b) => (b.event_date ?? '').localeCompare(a.event_date ?? '') || b.created_at.localeCompare(a.created_at));
+    return { soon, undated, past, archived };
   }, [visible, today]);
 
   const relative = useMemo(() => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }), [locale]);
@@ -207,6 +214,7 @@ export default function ListsV2() {
   function meta(l: List, tone: Tone): string {
     const n = l.item_count ?? 0;
     if (tone === 'undated') return `${t('v2app.lists.noDate')} · ${counts.items(n)}`;
+    if (tone === 'archived') return `${formatDay(l.event_date, locale) ?? t('v2app.lists.noDate')} · ${counts.items(n)}`;
     const date = formatDay(l.event_date, locale) ?? '';
     if (tone === 'soon') {
       const days = Math.round((day(l.event_date!).getTime() - day(today).getTime()) / 86_400_000);
@@ -421,6 +429,14 @@ export default function ListsV2() {
               </h2>
               <ul className="v2-listgrid">{groups.past.map((l) => card(l, 'past'))}</ul>
             </section>
+          )}
+          {groups.archived.length > 0 && (
+            <details className="v2-done v2-archive">
+              <summary className="v2-done__summary">
+                {t('v2app.lists.archive')} · {groups.archived.length}
+              </summary>
+              <ul className="v2-listgrid">{groups.archived.map((l) => card(l, 'archived'))}</ul>
+            </details>
           )}
         </div>
       )}

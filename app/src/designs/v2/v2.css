@@ -1587,3 +1587,45 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-qr__code { width: 176px; padding: var(--sp-3); background: var(--color-qr-paper); border-radius: 16px; }
 .v2-qr__code svg { display: block; width: 100%; height: auto; }
 .v2-qr__url { font-size: var(--t-small); overflow-wrap: anywhere; }
+
+/* ── Після свята й архів (крок 4а, потоки M, S3, U; ADR-045) ── */
+
+/* «Як минуло свято?» — картка вгорі списку. Кроки — ті самі пункти, що й у
+   меню «⋯», щоб не вчити нову форму. */
+.v2-after {
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-6);
+  background: var(--color-surface);
+  border-radius: var(--r-card);
+}
+.v2-after > .v2-kicker { margin-bottom: 0; }
+.v2-after__title {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--t-h2);
+  line-height: 1.2;
+}
+.v2-after__label { flex: 1; }
+.v2-after__done { display: inline-flex; color: var(--color-accent-2-800); }
+.v2-after > .v2-btn--ghost { justify-self: start; }
+@media (min-width: 56rem) {
+  .v2-after__steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Архівний список: полиця, а не замок — рядок із «Повернути з архіву». */
+.v2-archived {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3) var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--color-surface);
+  border-radius: var(--r-card);
+}
+.v2-archived__icon { flex: none; color: var(--color-neutral-700); }
+.v2-archived__text { flex: 1 1 14rem; }
+
+/* «Архів · 3» на головній — згорнутий, як «Куплене й подароване» у списку. */
+.v2-archive[open] > .v2-listgrid { margin-top: var(--sp-3); }
+.v2-listcard[data-tone='archived'] .v2-listcard__dot { background: var(--v2-dot, var(--color-neutral-200)); }

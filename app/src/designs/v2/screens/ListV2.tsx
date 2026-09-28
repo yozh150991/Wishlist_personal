@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertCircle,
+  Archive,
+  ArchiveRestore,
   ArrowDownUp,
   ChevronLeft,
   Eye,
@@ -11,25 +13,28 @@ import {
   MoreHorizontal,
   Palette,
   Plus,
+  Repeat,
   Search,
   SearchX,
   Settings2,
   Share2,
   X,
 } from 'lucide-react';
-import { deleteList, fetchList, updateList } from '../../../lib/db';
+import { deleteList, fetchList, setListArchived, updateList } from '../../../lib/db';
 import type { ListInput } from '../../../lib/db';
 import { fetchListViews } from '../../../lib/shares';
 import { useItems } from '../../../lib/useItems';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
 import { errorText, isNetworkError } from '../../../lib/errors';
-import { formatDateTime, formatDay, moneyShort, num } from '../../../lib/format';
+import { formatDateTime, formatDay, localToday, moneyShort, num } from '../../../lib/format';
 import { listKey, readSnapshot, saveSnapshot, sectionsKey } from '../../../lib/cache';
 import { newId, run } from '../../../lib/outbox';
 import type { Op } from '../../../lib/outbox';
 import { useUndo } from '../../../lib/undo';
 import { designSwitchHref } from '../../../lib/authFlow';
+import { afterEventDue, eventYear, isPastEvent, readSnooze, snoozeNext, writeSnooze } from '../../../lib/afterEvent';
+import type { Snooze } from '../../../lib/afterEvent';
 import {
   createSection,
   deleteSection,
@@ -62,6 +67,8 @@ import type { PreviewGroup } from './PreviewV2';
 import { ReorderV2 } from './ReorderV2';
 import type { OrderGroup } from './ReorderV2';
 import { ShareSheetV2 } from './ShareSheetV2';
+import { AfterEventCardV2, ArchivedNoteV2, CarrySheetV2, ReceivedSheetV2, RepeatSheetV2 } from './AfterEventV2';
+import type { AfterStep } from './AfterEventV2';
 import {
   ConfirmSheetV2,
   ItemCardV2,
@@ -138,6 +145,11 @@ type ListState = 'loading' | 'ready' | 'missing';
  * із перетягуванням і «Вище / Нижче», оформлення, розділи, налаштування й
  * видалення списку: тостом, якщо список ніхто не відкривав, і з введенням
  * назви, якщо відкривали (F3).
+ *
+ * Після свята (крок 4а, потоки M, S3; ADR-045) — картка «Як минуло свято?»:
+ * позначити отримане, перенести копії того, що ще хочеш, повторити на
+ * наступний рік, архівувати або «Пізніше». Архівний список — полиця: без
+ * «Поділитися», «+» і правки порядку, з «Повернути з архіву» вгорі.
  */
 export default function ListV2() {
   const { id = '' } = useParams();
@@ -197,6 +209,16 @@ export default function ListV2() {
   const [ordering, setOrdering] = useState(false);
   const hue = useAppearanceHue(list?.appearance_id);
 
+  /* ── Після свята й архів (ADR-045) ── */
+  const [snooze, setSnooze] = useState<Snooze | null>(() => readSnooze(id));
+  const [afterStep, setAfterStep] = useState<AfterStep | null>(null);
+  const [afterDone, setAfterDone] = useState<Set<AfterStep>>(new Set());
+  const [archiving, setArchiving] = useState(false);
+  /** «Ще хочу» дійшло: куди й скільки — з посиланням туди. */
+  const [carried, setCarried] = useState<{ id: string; title: string; n: number } | null>(null);
+  /** Одноразовий рядок, з яким сюди прийшли (напр. «Повторено з …»). */
+  const [flash, setFlash] = useState<string | null>(null);
+
   const undo = useUndo(UNDO_MS);
 
   useEffect(() => {
@@ -206,14 +228,23 @@ export default function ListV2() {
     setHidden(new Set());
     setFailed(new Map());
     setOrdering(false);
+    setSnooze(readSnooze(id));
+    setAfterStep(null);
+    setAfterDone(new Set());
+    setCarried(null);
   }, [id]);
 
   // Перший запуск «Вставити посилання на річ» (Q2) веде сюди з одразу
   // відкритою формою позиції. Стан історії чистимо, щоб F5 не відкривав її знову.
   useEffect(() => {
-    if (!(location.state as { add?: boolean } | null)?.add) return;
+    const state = location.state as { add?: boolean; flash?: string } | null;
+    if (!state?.add && !state?.flash) {
+      setFlash(null);
+      return;
+    }
     navigate(location.pathname, { replace: true, state: null });
-    setSheet({ open: true, item: null });
+    if (state.add) setSheet({ open: true, item: null });
+    setFlash(state.flash ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -527,6 +558,44 @@ export default function ListV2() {
     if (fresh) setList(fresh);
   }
 
+  /* ── Після свята й архів (M, S3, ADR-045) ── */
+
+  /** «Позначити отримане»: той самий шлях, що й статус з меню, — працює й офлайн. */
+  async function markReceived(ids: string[]) {
+    const op: Op = { kind: 'status', listId: id, ids, status: 'gifted' };
+    setActionError(null);
+    const result = await run(userId, op);
+    applyLocal(op);
+    if (result === 'sent') void refresh();
+    setAfterDone((s) => new Set(s).add('received'));
+  }
+
+  /** Архів — одним натиском і так само назад: це полиця, а не видалення. */
+  async function archive(next: boolean) {
+    if (archiving || !list) return;
+    setListMenu(false);
+    setArchiving(true);
+    setActionError(null);
+    try {
+      await setListArchived(id, next);
+      const fresh = { ...list, is_archived: next };
+      setList(fresh);
+      if (userId) void saveSnapshot(listKey(id), userId, fresh);
+    } catch (e) {
+      setActionError(t('v2list.actionFailed', { error: errorText(e, t) }));
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  /** «Пізніше»: вперше — на три дні, вдруге — назовсім (M1). */
+  function later() {
+    if (!list?.event_date) return;
+    const next = snoozeNext(snooze, list.event_date, localToday());
+    writeSnooze(id, next);
+    setSnooze(next);
+  }
+
   /**
    * Видалення списку (F3): три ваги — три захисти. Список, який ніхто не
    * відкривав, іде тостом «Відмінити» на головній; відкривали — вводимо назву
@@ -585,6 +654,11 @@ export default function ListV2() {
     totals.gifted_count > 0 ? t('v2list.sum.gifted', { n: totals.gifted_count }) : null,
   ].filter(Boolean);
   const eventDay = formatDay(list?.event_date ?? null, locale);
+  const today = localToday();
+  const archived = Boolean(list?.is_archived);
+  const past = list ? isPastEvent(list, today) : false;
+  const listYear = list ? eventYear(list) : null;
+  const afterDue = list !== null && ready && !ordering && afterEventDue(list, today, snooze);
 
   function groupHeading(g: ViewGroup, index: number) {
     const headingId = `v2-group-${index}`;
@@ -662,7 +736,7 @@ export default function ListV2() {
           <span className="v2-listhead__actions">
             {/* Поділитися — головна дія зі списком, тож не лише в меню. Без
                 актуальних позицій ділитися нічим: посилання на порожнє не буває. */}
-            {ready && activeLive.length > 0 && (
+            {ready && activeLive.length > 0 && !archived && (
               <button
                 type="button"
                 className="v2-iconbtn"
@@ -691,6 +765,28 @@ export default function ListV2() {
         <NoteV2 tone="info">{t('v2app.lists.stale', { time: formatDateTime(staleAt, locale) ?? '' })}</NoteV2>
       )}
       {actionError && <NoteV2 tone="error">{actionError}</NoteV2>}
+      {flash && <NoteV2 tone="info">{flash}</NoteV2>}
+      {carried && (
+        <NoteV2 tone="info">
+          {t('v2after.carry.done', { title: carried.title, n: carried.n })}{' '}
+          <Link to={`/lists/${carried.id}`} className="v2-link">
+            {t('v2after.carry.open')}
+          </Link>
+        </NoteV2>
+      )}
+      {archived && !ordering && <ArchivedNoteV2 busy={archiving} onRestore={() => void archive(false)} />}
+
+      {afterDue && list && (
+        <AfterEventCardV2
+          list={list}
+          openCount={activeLive.length}
+          done={afterDone}
+          archiving={archiving}
+          onStep={setAfterStep}
+          onArchive={() => void archive(true)}
+          onLater={later}
+        />
+      )}
 
       {ready && live.length > 0 && !ordering && (
         <p className="v2-sum">
@@ -789,10 +885,14 @@ export default function ListV2() {
             <ListPlus size={32} strokeWidth={STROKE} />
           </span>
           <h2 className="v2-empty__title">{t('v2list.empty.title')}</h2>
-          <p className="v2-lede">{t('v2list.empty.body')}</p>
-          <button type="button" className="v2-btn v2-btn--primary" onClick={() => openNew()}>
-            {t('v2list.add')}
-          </button>
+          {!archived && (
+            <>
+              <p className="v2-lede">{t('v2list.empty.body')}</p>
+              <button type="button" className="v2-btn v2-btn--primary" onClick={() => openNew()}>
+                {t('v2list.add')}
+              </button>
+            </>
+          )}
         </div>
       ) : filtering && shown.length === 0 ? (
         /* Нічого не знайшлось — це не порожній список: позиції є, їх ховає
@@ -852,7 +952,7 @@ export default function ListV2() {
 
       {/* Плаваюча «+» — під великим пальцем. Поки видно тост, її немає: вони
           ділять одне місце, а «Відмінити» важливіше ці шість секунд. */}
-      {ready && live.length > 0 && !undo.pending && !ordering && (
+      {ready && live.length > 0 && !undo.pending && !ordering && !archived && (
         <button type="button" className="v2-fab v2-fab--float" aria-label={t('v2list.add')} onClick={() => openNew()}>
           <Plus size={26} strokeWidth={STROKE} aria-hidden="true" />
         </button>
@@ -888,65 +988,97 @@ export default function ListV2() {
           {list?.title}
         </h2>
         <div className="v2-menu">
+          {/* Архівний список — полиця: поділитися, змінити порядок чи вигляд уже
+              нема для кого. Лишаються повтор, повернення й налаштування. */}
+          {!archived && (
+            <>
+              <button
+                type="button"
+                className="v2-menu__item"
+                aria-disabled={activeLive.length === 0 || undefined}
+                aria-describedby={activeLive.length === 0 ? 'v2-share-empty' : undefined}
+                onClick={() => {
+                  if (activeLive.length === 0) return;
+                  setListMenu(false);
+                  setShareOpen(true);
+                }}
+              >
+                <Share2 size={20} strokeWidth={STROKE} aria-hidden="true" />
+                {t('v2list.share')}
+              </button>
+              <button
+                type="button"
+                className="v2-menu__item"
+                onClick={() => {
+                  setListMenu(false);
+                  setPreviewOpen(true);
+                }}
+              >
+                <Eye size={20} strokeWidth={STROKE} aria-hidden="true" />
+                {t('appearance.preview')}
+              </button>
+              <button
+                type="button"
+                className="v2-menu__item"
+                aria-disabled={activeLive.length < 2 || Boolean(staleAt) || undefined}
+                aria-describedby={staleAt ? 'v2-order-offline' : undefined}
+                onClick={() => {
+                  if (activeLive.length < 2 || staleAt) return;
+                  startOrdering();
+                }}
+              >
+                <ListOrdered size={20} strokeWidth={STROKE} aria-hidden="true" />
+                {t('v2list.reorder.cta')}
+              </button>
+              <button
+                type="button"
+                className="v2-menu__item"
+                onClick={() => {
+                  setListMenu(false);
+                  setAppearanceOpen(true);
+                }}
+              >
+                <Palette size={20} strokeWidth={STROKE} aria-hidden="true" />
+                {t('appearance.title')}
+              </button>
+              <button
+                type="button"
+                className="v2-menu__item"
+                onClick={() => {
+                  setListMenu(false);
+                  setSectionSheet({ open: true, section: null });
+                }}
+              >
+                <FolderPlus size={20} strokeWidth={STROKE} aria-hidden="true" />
+                {t('v2list.menuList.newSection')}
+              </button>
+            </>
+          )}
+          {(archived || past) && (
+            <button
+              type="button"
+              className="v2-menu__item"
+              onClick={() => {
+                setListMenu(false);
+                setAfterStep('repeat');
+              }}
+            >
+              <Repeat size={20} strokeWidth={STROKE} aria-hidden="true" />
+              {listYear !== null ? t('v2after.card.repeat', { year: listYear + 1 }) : t('v2after.repeat.titlePlain')}
+            </button>
+          )}
           <button
             type="button"
             className="v2-menu__item"
-            aria-disabled={activeLive.length === 0 || undefined}
-            aria-describedby={activeLive.length === 0 ? 'v2-share-empty' : undefined}
-            onClick={() => {
-              if (activeLive.length === 0) return;
-              setListMenu(false);
-              setShareOpen(true);
-            }}
+            aria-disabled={archiving || undefined}
+            onClick={() => void archive(!archived)}
           >
-            <Share2 size={20} strokeWidth={STROKE} aria-hidden="true" />
-            {t('v2list.share')}
-          </button>
-          <button
-            type="button"
-            className="v2-menu__item"
-            onClick={() => {
-              setListMenu(false);
-              setPreviewOpen(true);
-            }}
-          >
-            <Eye size={20} strokeWidth={STROKE} aria-hidden="true" />
-            {t('appearance.preview')}
-          </button>
-          <button
-            type="button"
-            className="v2-menu__item"
-            aria-disabled={activeLive.length < 2 || Boolean(staleAt) || undefined}
-            aria-describedby={staleAt ? 'v2-order-offline' : undefined}
-            onClick={() => {
-              if (activeLive.length < 2 || staleAt) return;
-              startOrdering();
-            }}
-          >
-            <ListOrdered size={20} strokeWidth={STROKE} aria-hidden="true" />
-            {t('v2list.reorder.cta')}
-          </button>
-          <button
-            type="button"
-            className="v2-menu__item"
-            onClick={() => {
-              setListMenu(false);
-              setAppearanceOpen(true);
-            }}
-          >
-            <Palette size={20} strokeWidth={STROKE} aria-hidden="true" />
-            {t('appearance.title')}
-          </button>
-          <button
-            type="button"
-            className="v2-menu__item"
-            onClick={() => {
-              setListMenu(false);
-              setSectionSheet({ open: true, section: null });
-            }}
-          >
-            <FolderPlus size={20} strokeWidth={STROKE} aria-hidden="true" />
-            {t('v2list.menuList.newSection')}
+            {archived ? (
+              <ArchiveRestore size={20} strokeWidth={STROKE} aria-hidden="true" />
+            ) : (
+              <Archive size={20} strokeWidth={STROKE} aria-hidden="true" />
+            )}
+            {archived ? t('v2after.archived.restore') : t('v2after.card.archive')}
           </button>
           <button
             type="button"
@@ -960,12 +1092,12 @@ export default function ListV2() {
             {t('v2list.settings.title')}
           </button>
         </div>
-        {activeLive.length === 0 && (
+        {activeLive.length === 0 && !archived && (
           <p className="v2-hint v2-hint--start" id="v2-share-empty">
             {t('v2list.menuList.shareEmpty')}
           </p>
         )}
-        {staleAt && (
+        {staleAt && !archived && (
           <p className="v2-hint v2-hint--start" id="v2-order-offline">
             {t('v2list.reorder.offline')}
           </p>
@@ -980,6 +1112,43 @@ export default function ListV2() {
       </SheetV2>
 
       <ShareSheetV2 open={shareOpen} list={list} groups={guestGroups} onClose={() => setShareOpen(false)} />
+
+      <ReceivedSheetV2
+        open={afterStep === 'received'}
+        items={activeLive}
+        currency={currency}
+        onClose={() => setAfterStep(null)}
+        onSave={markReceived}
+      />
+
+      {list && (
+        <CarrySheetV2
+          open={afterStep === 'carry'}
+          list={list}
+          items={activeLive}
+          userId={userId}
+          onClose={() => setAfterStep(null)}
+          onDone={(target, n) => {
+            setCarried({ ...target, n });
+            setAfterDone((s) => new Set(s).add('carry'));
+          }}
+        />
+      )}
+
+      {list && (
+        <RepeatSheetV2
+          open={afterStep === 'repeat'}
+          list={list}
+          sections={sections}
+          items={activeLive}
+          userId={userId}
+          onClose={() => setAfterStep(null)}
+          onCreated={(created) => {
+            setAfterStep(null);
+            navigate(`/lists/${created.id}`, { state: { flash: t('v2after.repeat.done', { title: list.title }) } });
+          }}
+        />
+      )}
 
       <PreviewSheetV2
         open={previewOpen}
