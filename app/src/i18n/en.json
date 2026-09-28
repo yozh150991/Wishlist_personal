@@ -112,7 +112,12 @@
   "design": {
     "emptyTitle": "Design v2 is not here yet",
     "emptyBody": "The new screens will live here. Your data is fine — it is this version that is empty.",
-    "backToV1": "Back to v1"
+    "backToV1": "Back to v1",
+    "tryV2": "Try the new look",
+    "backToV1Link": "Back to the old look",
+    "signedInAs": "Account: {email}",
+    "signOut": "Sign out",
+    "toLogin": "Sign in"
   },
   "errors": {
     "invalidCredentials": "That email and password don't match.",
@@ -600,5 +605,96 @@
     "berlin": "Berlin time",
     "prague": "Prague time",
     "london": "London time"
+  },
+  "v2auth": {
+    "language": "Language",
+    "back": "Back",
+    "show": "Show password",
+    "hide": "Hide password",
+    "or": "or with email",
+    "google": "Continue with Google",
+    "cancel": "Cancel",
+    "sending": "Sending…",
+    "toLogin": "Back to sign in",
+    "ruleMet": "done",
+    "ruleOpen": "not yet",
+    "password": "Password",
+    "passwordEmpty": "Enter your password",
+    "passwordRules": "The password doesn't meet the requirements below yet",
+    "email": {
+      "label": "Email",
+      "placeholder": "you@example.com",
+      "empty": "Enter your email",
+      "noAt": "The @ sign is missing",
+      "incomplete": "The address looks incomplete"
+    },
+    "rules": {
+      "long": "At least {n} characters",
+      "notEmail": "Not the same as your email",
+      "notCommon": "Not one of the most common passwords"
+    },
+    "login": {
+      "title": "Your list stays yours",
+      "lede": "Guests see only what you open to them.",
+      "forgot": "Forgot your password?",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "toRegister": "No account yet?",
+      "toRegisterCta": "Sign up",
+      "paused": "Three attempts in a row didn't match. Next one in {time}.",
+      "resetCta": "Reset password",
+      "pausedButton": "Try again in {time}",
+      "confirmed": "Email confirmed. Now sign in with your password.",
+      "linkFailed": "Signing in via the link or Google didn't work. Try again."
+    },
+    "expired": {
+      "title": "This link no longer works",
+      "body": "The link from the email has expired, was already used, or was opened in a different browser. We'll send a new confirmation email — the old one will stop working.",
+      "submit": "Send a new email",
+      "sent": "If {email} isn't confirmed yet, a new email is on its way."
+    },
+    "register": {
+      "title": "New account",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "toLogin": "Already have an account?",
+      "toLoginCta": "Sign in"
+    },
+    "taken": {
+      "error": "An account with this email already exists.",
+      "title": "Is this you?",
+      "login": "Sign in with this email",
+      "reset": "Send a link for a new password",
+      "resetSent": "The email is in your inbox. Open it on this same device — the link works for an hour.",
+      "googleHint": "Created the account with Google? Then sign in with Google — it has no password."
+    },
+    "check": {
+      "title": "The email is in your inbox",
+      "body": "Tap the link in the email sent to {email} — then you can sign in. The link works for an hour.",
+      "open": "Open email",
+      "resend": "Send again",
+      "resendIn": "Send again · in {time}",
+      "resent": "A new email has been sent.",
+      "change": "Change email"
+    },
+    "reset": {
+      "title": "Reset password",
+      "body": "We'll send an email with a link to set a new password. Open it on this same device and in this same browser — elsewhere the link won't work.",
+      "submit": "Send link",
+      "sentTitle": "Email sent",
+      "sentBody": "If an account for {email} exists, the email is already in the inbox. The link works for an hour and only once."
+    },
+    "update": {
+      "title": "New password",
+      "for": "For {email}",
+      "field": "New password",
+      "submit": "Save and sign in",
+      "submitting": "Saving…",
+      "others": "Other devices will be signed out.",
+      "same": "That's your previous password — a new one is needed.",
+      "deadTitle": "This link has already been used",
+      "deadBody": "Or more than an hour has passed, or it was opened in a different browser. Send a new one — your email is already filled in.",
+      "deadSubmit": "Send a new link"
+    }
   }
 }

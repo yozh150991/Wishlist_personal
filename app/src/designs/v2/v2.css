@@ -25,3 +25,303 @@
    4. Правило, яке має сенс лише в одній палітрі, — помилка ревʼю:
       v2 працює з усіма п'ятьма схемами, Вугіллям і обома темами.
    ───────────────────────────────────────────────────────────── */
+
+/* ── Службове ─────────────────────────────────────────────── */
+
+.v2-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Рамка входу (потоки A, Q, T) ─────────────────────────── */
+
+/* Одна колонка по центру: мова вгорі праворуч, дорога до старого вигляду
+   внизу. На десктопі — та сама колонка на ширшому полотні: окремої
+   десктопної композиції для входу потоки 2.0 не дають. */
+.v2-auth {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--sp-6);
+  padding: var(--sp-6);
+  background: var(--color-bg);
+}
+@media (min-width: 40rem) {
+  .v2-auth { padding: var(--sp-8); }
+}
+
+.v2-auth__top { display: flex; justify-content: flex-end; }
+.v2-auth__main { display: flex; align-items: center; justify-content: center; }
+.v2-auth__col { width: 100%; max-width: 25rem; }
+
+.v2-auth__design {
+  text-align: center;
+  font-size: var(--t-small);
+  color: var(--color-neutral-700);
+}
+.v2-auth__design a { color: inherit; }
+
+/* Вибір мови — рідний <select>: доступний з клавіатури й на телефоні без
+   жодного коду. Стрілку лишаємо браузерну: власна була б картинкою з
+   літеральним кольором, а кольори живуть лише в tokens.css. */
+.v2-lang {
+  min-height: 40px;
+  padding: 0 var(--sp-5);
+  font: inherit;
+  font-size: var(--t-body);
+  font-weight: 600;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+
+/* ── Композиція ───────────────────────────────────────────── */
+
+.v2-stack { display: grid; gap: var(--sp-6); }
+.v2-head { display: grid; gap: var(--sp-3); }
+
+.v2-title {
+  font-size: var(--t-hero);
+  line-height: 1.12;
+}
+
+.v2-lede { font-size: var(--t-item); color: var(--color-neutral-700); }
+.v2-hint { font-size: var(--t-small); color: var(--color-neutral-700); text-align: center; }
+
+.v2-switch {
+  text-align: center;
+  font-size: var(--t-body);
+  color: var(--color-neutral-700);
+}
+
+.v2-link {
+  font-weight: 700;
+  color: var(--color-ghost-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.v2-link:hover { color: var(--color-accent-800); }
+
+/* Шапка з «назад»: «Новий акаунт», «Новий пароль». */
+.v2-back { display: flex; align-items: center; gap: var(--sp-3); margin-inline-start: calc(-1 * var(--sp-4)); }
+.v2-back__title { font-size: var(--t-card); }
+
+/* ── Кнопки ───────────────────────────────────────────────── */
+
+/* Ширина ніколи не фіксується, текст переноситься: польська й українська
+   довші за англійську (README, i18n). */
+.v2-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+  padding: var(--sp-3) var(--sp-6);
+  font: inherit;
+  font-size: var(--t-body);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.v2-btn--block { width: 100%; }
+
+.v2-btn--primary {
+  min-height: 52px;
+  font-size: var(--t-lead);
+  color: var(--color-primary-ink);
+  background: var(--color-primary-fill);
+}
+.v2-btn--primary:hover { color: var(--color-primary-ink); filter: brightness(1.12); }
+
+.v2-btn--outline {
+  min-height: 48px;
+  background: color-mix(in srgb, var(--color-neutral-100) 60%, transparent);
+  border-color: var(--color-divider);
+}
+.v2-btn--outline:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+
+.v2-btn--ghost { color: var(--color-ghost-ink); justify-self: center; }
+.v2-btn--ghost:hover { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+
+/* Кнопка, що працює або чекає, не гасне мовчки: підпис уже інший, а
+   приглушення лише підтримує його. Натиск нічого не робить — це стереже
+   обробник, не атрибут disabled, тож фокус лишається на місці. */
+.v2-btn[aria-disabled='true'] { opacity: 0.72; cursor: default; filter: none; }
+.v2-btn[data-busy='true'] { cursor: progress; }
+
+.v2-spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: v2-spin 700ms linear infinite;
+}
+@keyframes v2-spin { to { transform: rotate(1turn); } }
+
+.v2-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  flex: none;
+  padding: 0;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.v2-iconbtn:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+
+/* ── Поля ─────────────────────────────────────────────────── */
+
+.v2-field { display: grid; gap: var(--sp-2); align-content: start; }
+
+.v2-field__label {
+  font-size: var(--t-small);
+  font-weight: 600;
+  color: var(--color-neutral-700);
+}
+
+.v2-field__box { position: relative; }
+
+.v2-input {
+  width: 100%;
+  min-height: 48px;
+  padding: var(--sp-3) var(--sp-6);
+  font: inherit;
+  font-size: var(--t-item);
+  color: var(--color-text);
+  caret-color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-pill);
+}
+.v2-input::placeholder { color: var(--color-neutral-700); }
+.v2-input:hover { border-color: color-mix(in srgb, var(--color-text) 40%, transparent); }
+.v2-input:focus-visible { border-color: var(--color-accent-700); outline-offset: 0; }
+
+/* Кнопка «показати пароль» усередині поля — місце під неї лишає відступ. */
+.v2-field__box:has(.v2-field__addon) .v2-input { padding-inline-end: 52px; }
+.v2-field__addon { position: absolute; inset-block: 2px; inset-inline-end: 2px; height: auto; }
+
+/* Помилка живе під своїм полем (A2): рамка й тло поля, рядок з іконкою. */
+.v2-field[data-invalid='true'] .v2-input {
+  border-color: var(--color-danger-line);
+  background: color-mix(in srgb, var(--color-danger-bg) 55%, var(--color-surface));
+}
+.v2-field__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--color-danger-ink);
+}
+.v2-field__error svg { flex: none; margin-top: 1px; }
+
+.v2-field__after { display: flex; justify-content: flex-end; font-size: var(--t-body); }
+.v2-field__after .v2-link { display: inline-flex; align-items: center; min-height: var(--tap); }
+
+/* ── Вимоги до пароля ─────────────────────────────────────── */
+
+.v2-rules {
+  display: grid;
+  gap: var(--sp-2);
+  margin: calc(-1 * var(--sp-3)) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--color-neutral-700);
+}
+.v2-rules__item { display: flex; align-items: center; gap: var(--sp-3); }
+.v2-rules__item[data-met='true'] { color: var(--color-accent-2-800); }
+.v2-rules__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 1.5px solid var(--color-neutral-400);
+  border-radius: 50%;
+}
+.v2-rules__item[data-met='true'] .v2-rules__mark {
+  border-color: transparent;
+  color: var(--color-accent-2-600);
+}
+
+/* ── «або поштою» ─────────────────────────────────────────── */
+
+.v2-or {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  font-size: var(--t-body);
+  color: var(--color-neutral-700);
+}
+.v2-or::before,
+.v2-or::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--color-divider);
+}
+
+/* ── Повідомлення ─────────────────────────────────────────── */
+
+/* Над полями, а не тостом: людина дивиться на поля й повертається до них. */
+.v2-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-5) var(--sp-6);
+  font-size: var(--t-body);
+  border-radius: 20px;
+}
+.v2-note svg { flex: none; margin-top: 1px; }
+.v2-note a { color: inherit; font-weight: 700; }
+.v2-note--error { color: var(--color-danger-ink); background: var(--color-danger-bg); }
+.v2-note--info { color: var(--color-accent-800); background: var(--color-accent-200); }
+
+/* ── Екрани-стани: «Лист уже в пошті», «Посилання не діє» ─── */
+
+.v2-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+}
+.v2-circle--calm { color: var(--color-accent-800); background: var(--color-accent-200); }
+.v2-circle--warm { color: var(--color-accent-2-800); background: var(--color-accent-2-200); }
+
+/* Картка розвилки «Це ти?» (Q, гілка «пошта вже є»). */
+.v2-card {
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-6);
+  background: var(--color-surface);
+  border-radius: var(--r-card);
+}
+.v2-card__title { font-size: var(--t-item); }

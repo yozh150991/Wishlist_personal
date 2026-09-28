@@ -142,6 +142,19 @@ Authentication → URL Configuration:
 
 Без цього кроку посилання в листах підтвердження й скидання пароля вестимуть на `localhost`, тобто в нікуди для всіх, крім тебе.
 
+Адреси повернення несуть версію дизайну: `…/lists?design=v1`, `…/login?design=v2&from=confirm`, `…/update-password?design=v2` (ADR-039, п. 5). Шаблон із `/**` пропускає їх разом із параметрами. Якщо колись заміниш його точними адресами — підтвердження й скидання пароля мовчки поведуть на Site URL.
+
+### 4.1. Вхід через Google (дизайн v2)
+
+Кнопка «Продовжити з Google» є лише на екранах входу й реєстрації v2 і з'являється тільки тоді, коли у Vercel стоїть `VITE_AUTH_GOOGLE=1`. Спершу провайдер, потім змінна: кнопка, що веде на «provider is not enabled», гірша за відсутню.
+
+1. **Google Cloud Console** (той самий проєкт, що й для парсера, або окремий) → **APIs & Services → OAuth consent screen**: тип *External*, назва застосунку, пошта підтримки. Досить базових доступів `openid`, `email`, `profile`. Поки застосунок у статусі *Testing*, увійти зможуть лише додані тестові користувачі — для рідних або додай їхні адреси, або переведи застосунок у *Production*.
+2. **APIs & Services → Credentials → Create credentials → OAuth client ID**: тип *Web application*. У **Authorized redirect URIs** — рівно одна адреса: `https://<project-ref>.supabase.co/auth/v1/callback`. Google повертає людину до Supabase, а вже Supabase — у застосунок за Redirect URLs з розділу 4.
+3. **Supabase → Authentication → Sign In / Providers → Google**: увімкнути, вставити *Client ID* і *Client Secret*, зберегти. Секрет живе лише тут — ні в репозиторії, ні у Vercel його немає.
+4. **Vercel → Settings → Environment Variables**: `VITE_AUTH_GOOGLE` = `1`, далі **Redeploy** — змінні `VITE_*` вшиваються під час збірки.
+
+Хто зареєструвався через Google, пароля не має: у v1, де кнопки Google немає, він увійде лише через «Забув пароль» (ADR-039, п. 7). Apple — окремим рішенням: для нього потрібен платний Apple Developer Program.
+
 ---
 
 ## 5. Пошта

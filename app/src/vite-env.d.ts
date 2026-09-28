@@ -6,6 +6,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_PUBLISHABLE_KEY: string;
   readonly VITE_PARSER_URL?: string;
   readonly VITE_PUBLIC_ORIGIN?: string;
+  /** '1' — показувати вхід через Google (провайдер налаштовано в Supabase). */
+  readonly VITE_AUTH_GOOGLE?: string;
 }
 
 interface ImportMeta {

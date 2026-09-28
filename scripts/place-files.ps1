@@ -144,6 +144,11 @@ $map = @{
   'PlaceholderV2.tsx' = 'app\src\designs\v2\screens'
   # Design v2 foundation (ADR-039): lazy v2 styles, /l/ guest route.
   'v2.css' = 'app\src\designs\v2'; 'GuestV2.tsx' = 'app\src\designs\v2\screens'
+  # Design v2 sign-in (ADR-042): shared auth helpers and v2 screens.
+  'authFlow.ts' = 'app\src\lib'; 'password.ts' = 'app\src\lib'
+  'AuthPartsV2.tsx' = 'app\src\designs\v2\screens'; 'LoginV2.tsx' = 'app\src\designs\v2\screens'
+  'RegisterV2.tsx' = 'app\src\designs\v2\screens'; 'ResetV2.tsx' = 'app\src\designs\v2\screens'
+  'NewPasswordV2.tsx' = 'app\src\designs\v2\screens'; 'auth-v2.spec.ts' = 'app\tests\e2e'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'

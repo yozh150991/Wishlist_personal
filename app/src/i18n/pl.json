@@ -112,7 +112,12 @@
   "design": {
     "emptyTitle": "Design v2 jeszcze nie dotarł",
     "emptyBody": "Tu pojawią się nowe ekrany. Dane są na miejscu — pusta jest tylko ta wersja.",
-    "backToV1": "Wróć do v1"
+    "backToV1": "Wróć do v1",
+    "tryV2": "Wypróbuj nowy wygląd",
+    "backToV1Link": "Wróć do starego wyglądu",
+    "signedInAs": "Konto: {email}",
+    "signOut": "Wyloguj się",
+    "toLogin": "Zaloguj się"
   },
   "errors": {
     "invalidCredentials": "E-mail albo hasło się nie zgadzają.",
@@ -600,5 +605,96 @@
     "berlin": "czasu berlińskiego",
     "prague": "czasu praskiego",
     "london": "czasu londyńskiego"
+  },
+  "v2auth": {
+    "language": "Język",
+    "back": "Wstecz",
+    "show": "Pokaż hasło",
+    "hide": "Ukryj hasło",
+    "or": "lub e-mailem",
+    "google": "Kontynuuj z Google",
+    "cancel": "Anuluj",
+    "sending": "Wysyłam…",
+    "toLogin": "Do logowania",
+    "ruleMet": "spełnione",
+    "ruleOpen": "jeszcze nie",
+    "password": "Hasło",
+    "passwordEmpty": "Wpisz hasło",
+    "passwordRules": "Hasło nie spełnia jeszcze wymagań poniżej",
+    "email": {
+      "label": "E-mail",
+      "placeholder": "ty@poczta.pl",
+      "empty": "Wpisz e-mail",
+      "noAt": "Brakuje znaku @",
+      "incomplete": "Adres wygląda na niepełny"
+    },
+    "rules": {
+      "long": "Co najmniej {n} znaków",
+      "notEmail": "Inne niż adres e-mail",
+      "notCommon": "Nie z najpopularniejszych haseł"
+    },
+    "login": {
+      "title": "Twoja lista zostaje twoja",
+      "lede": "Gość widzi tylko to, co mu udostępniasz.",
+      "forgot": "Nie pamiętasz hasła?",
+      "submit": "Zaloguj się",
+      "submitting": "Loguję…",
+      "toRegister": "Nie masz jeszcze konta?",
+      "toRegisterCta": "Zarejestruj się",
+      "paused": "Trzy próby z rzędu nie pasowały. Następna za {time}.",
+      "resetCta": "Zresetuj hasło",
+      "pausedButton": "Znowu można za {time}",
+      "confirmed": "E-mail potwierdzony. Teraz zaloguj się hasłem.",
+      "linkFailed": "Nie udało się zalogować przez link ani przez Google. Spróbuj ponownie."
+    },
+    "expired": {
+      "title": "Link już nie działa",
+      "body": "Link z wiadomości wygasł, został już użyty albo otwarto go w innej przeglądarce. Wyślemy nową wiadomość z potwierdzeniem — stara przestanie działać.",
+      "submit": "Wyślij nową wiadomość",
+      "sent": "Jeśli adres {email} nie jest jeszcze potwierdzony, nowa wiadomość jest już w drodze."
+    },
+    "register": {
+      "title": "Nowe konto",
+      "submit": "Utwórz konto",
+      "submitting": "Tworzę konto…",
+      "toLogin": "Masz już konto?",
+      "toLoginCta": "Zaloguj się"
+    },
+    "taken": {
+      "error": "Konto z tym adresem już istnieje.",
+      "title": "To ty?",
+      "login": "Zaloguj się tym adresem",
+      "reset": "Wyślij link do nowego hasła",
+      "resetSent": "Wiadomość jest już w skrzynce. Otwórz ją na tym samym urządzeniu — link działa godzinę.",
+      "googleHint": "Konto założone przez Google? To loguj się też przez Google — nie ma ono hasła."
+    },
+    "check": {
+      "title": "Wiadomość już w skrzynce",
+      "body": "Kliknij link w wiadomości wysłanej na {email} — potem możesz się zalogować. Link działa godzinę.",
+      "open": "Otwórz pocztę",
+      "resend": "Wyślij ponownie",
+      "resendIn": "Wyślij ponownie · za {time}",
+      "resent": "Nowa wiadomość wysłana.",
+      "change": "Zmień e-mail"
+    },
+    "reset": {
+      "title": "Reset hasła",
+      "body": "Wyślemy wiadomość z linkiem do nowego hasła. Otwórz ją na tym samym urządzeniu i w tej samej przeglądarce — gdzie indziej link nie zadziała.",
+      "submit": "Wyślij link",
+      "sentTitle": "Wiadomość wysłana",
+      "sentBody": "Jeśli konto {email} istnieje, wiadomość jest już w skrzynce. Link działa godzinę i zadziała raz."
+    },
+    "update": {
+      "title": "Nowe hasło",
+      "for": "Dla {email}",
+      "field": "Nowe hasło",
+      "submit": "Zapisz i zaloguj",
+      "submitting": "Zapisuję…",
+      "others": "Inne urządzenia zostaną wylogowane.",
+      "same": "To poprzednie hasło — potrzebne jest nowe.",
+      "deadTitle": "Ten link został już użyty",
+      "deadBody": "Albo minęła ponad godzina, albo otwarto go w innej przeglądarce. Wyślij nowy — adres jest już wpisany.",
+      "deadSubmit": "Wyślij nowy link"
+    }
   }
 }

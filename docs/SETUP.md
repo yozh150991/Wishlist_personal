@@ -256,7 +256,7 @@ rollback;
 ```bash
 cp .env.example app/.env.local     # потім лишити тільки блок фронтенду
 ```
-Заповнити `VITE_SUPABASE_URL` і `VITE_SUPABASE_PUBLISHABLE_KEY`. Файл уже в `.gitignore` — перевір `git status`, його не має бути серед відстежуваних.
+Заповнити `VITE_SUPABASE_URL` і `VITE_SUPABASE_PUBLISHABLE_KEY`. `VITE_AUTH_GOOGLE=1` додавай лише тоді, коли провайдер Google увімкнено в тому Supabase, на який дивиться фронтенд (DEPLOY.md, розділ 4.1): без нього кнопки Google на екранах v2 просто немає. Файл уже в `.gitignore` — перевір `git status`, його не має бути серед відстежуваних.
 
 ---
 
