@@ -9,6 +9,7 @@ import { hostOf, money } from '../lib/format';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { AppearanceSheet } from '../components/AppearanceSheet';
 import { Icon } from '../components/Icon';
+import { useSurface } from '../lib/theme';
 
 /**
  * Скільки штук гість бере зараз. Живе окремо від броні: поки він крутить
@@ -86,6 +87,16 @@ export default function SharedList() {
   useEffect(() => {
     if (data && !data.viewer_is_owner) void registerView(token);
   }, [data, token]);
+
+  // Гість — у схемі власника; власник на власному посиланні — у своїй (він і
+  // є власник). Поки дані не приїхали, вигляд не чіпаємо, щоб не блимнути.
+  useSurface(
+    data
+      ? data.viewer_is_owner
+        ? { kind: 'preview', hue: null }
+        : { kind: 'guest', ownerScheme: data.owner_scheme, hue: null }
+      : null,
+  );
 
   /**
    * `p_quantity` в `reserve_item` — це **підсумкова** кількість цього гостя, а

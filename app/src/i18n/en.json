@@ -97,11 +97,17 @@
     "scheme": {
       "sage": "Sage",
       "slyva": "Plum",
-      "vuhil": "Charcoal"
+      "vuhil": "Charcoal",
+      "polotno": "Canvas",
+      "cytrus": "Citrus",
+      "nich": "Night"
     },
-    "schemeHint": "Charcoal is the high-contrast scheme.",
-    "contrastSuggestion": "Your system asks for higher contrast. Switch to",
-    "contrastShort": "Higher contrast"
+    "a11y": "Accessibility",
+    "highContrast": "High contrast",
+    "highContrastHint": "Turns on Charcoal (AAA) and stops list styles from changing it. Overrides everything below.",
+    "highContrastSystem": "Turned on by your system: the device asks for more contrast. You can turn it off in the device settings.",
+    "schemeLocked": "While high contrast is on, the scheme doesn't apply. Your choice is kept for when you turn it off.",
+    "nichHint": "Night is dark by default. You can pick the light theme under Theme."
   },
   "design": {
     "emptyTitle": "Design v2 is not here yet",
@@ -422,7 +428,10 @@
     "raceLost": "Someone took this a moment ago — your reservation is not here. The other items are free.",
     "less": "Fewer",
     "more": "More",
-    "appearance": "Appearance"
+    "appearance": "Appearance",
+    "forMe": "Just for you",
+    "forMeHint": "doesn't change the list",
+    "appearanceNote": "The list's author chose its look. The color scheme can't be changed here."
   },
   "pwa": {
     "updateReady": "A new version of Wishlist is available.",

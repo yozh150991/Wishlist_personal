@@ -50,6 +50,8 @@ $map = @{
   '20260911100000_items_page_fix.sql' = 'supabase\migrations'
   '20260916220000_revoke_default_function_grants.sql' = 'supabase\migrations'
   '20260921100000_item_variants.sql' = 'supabase\migrations'
+  '20260921140000_profile_scheme.sql' = 'supabase\migrations'
+  '20260928090000_schemes_and_contrast.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -58,6 +60,7 @@ $map = @{
   '02_owner_isolation.test.sql' = 'supabase\tests\database'
   '03_sharing_and_reservations.test.sql' = 'supabase\tests\database'
   '04_item_variants.test.sql' = 'supabase\tests\database'
+  '05_appearance.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -131,6 +134,11 @@ $map = @{
   'RoutesV1.tsx' = 'app\src\designs\v1'
   'RoutesV2.tsx' = 'app\src\designs\v2'
   'PlaceholderV2.tsx' = 'app\src\designs\v2\screens'
+
+  # Five taste schemes, high contrast, list appearance (ADR-033).
+  'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'
+  'hue-ramp.d.ts' = 'app\src\lib'; 'Switch.tsx' = 'app\src\components'
+  'appearance.spec.ts' = 'app\tests\e2e'
 
   # parser service
   'requirements.txt' = 'services\parser'; 'requirements-dev.txt' = 'services\parser'

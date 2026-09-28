@@ -5,22 +5,34 @@ import { promptInstall, useInstallState } from '../lib/install';
 import { InstallQr } from '../components/InstallQr';
 import { pendingCount } from '../lib/outbox';
 import type { Design, Scheme, Theme } from '../lib/theme';
+import { Switch } from '../components/Switch';
 
 const LOCALE_LABEL: Record<string, string> = { uk: 'Українська', pl: 'Polski', en: 'English' };
 
 /**
- * Кружечок кольору поруч із назвою схеми — єдине місце в застосунку, де колір
- * показується як колір, а не як роль. Бере акцент **тієї** схеми, а не
- * активної, тому читається з токена сусідньої палітри через data-атрибут:
- * інакше всі три кружечки були б однакові.
+ * Зразок схеми — пара «полотно + акцент» — єдине місце в застосунку, де колір
+ * показується як колір, а не як роль. Бере кольори **тієї** схеми, а не
+ * активної, тому читає окремі токени зразків через data-атрибут: інакше всі
+ * пʼять кружечків були б однакові.
  */
-function SchemeDot({ scheme }: { scheme: Scheme }) {
-  return <span className="scheme-dot" data-scheme-dot={scheme} aria-hidden="true" />;
+function SchemeSwatch({ scheme }: { scheme: Scheme }) {
+  return <span className="scheme-swatch" data-scheme-dot={scheme} aria-hidden="true" />;
 }
 
 export default function Settings() {
   const { t, locale, setLocale } = useI18n();
-  const { theme, scheme, design, setTheme, setScheme, setDesign, suggestsContrast } = useTheme();
+  const {
+    theme,
+    scheme,
+    design,
+    highContrast,
+    systemContrast,
+    setTheme,
+    chooseScheme,
+    setHighContrast,
+    setDesign,
+  } = useTheme();
+  const contrastOn = highContrast || systemContrast;
   const { session, signOut } = useAuth();
   const install = useInstallState();
 
@@ -85,40 +97,53 @@ export default function Settings() {
           <p className="small muted">{t('settings.designHint')}</p>
         </section>
 
-        {/* Кольори стоять першими й окремо від Теми: це дві незалежні осі,
-            і зліплені в один список із шести пунктів вони б лише заплутали. */}
+        {/* Доступність стоїть над кольорами, бо важливіша за смак: тумблер
+            вмикає Вугіль і забороняє будь-якому оформленню його змінювати.
+            Вугля в переліку схем немає — у нього один вхід, цей (ADR-033). */}
+        <section className="settings__card settings__card--a11y" data-testid="a11y">
+          <h2 className="settings__label" id="set-a11y">
+            {t('settings.a11y')}
+          </h2>
+          <Switch
+            checked={contrastOn}
+            disabled={systemContrast}
+            onChange={(on) => setHighContrast(on)}
+            label={t('settings.highContrast')}
+            hint={systemContrast ? t('settings.highContrastSystem') : t('settings.highContrastHint')}
+          />
+        </section>
+
+        {/* Кольори окремо від Теми: це дві незалежні осі, і зліплені в один
+            список вони б лише заплутали. */}
         <section className="settings__card">
           <h2 className="settings__label" id="set-colors">
             {t('settings.colors')}
           </h2>
           {/* aria-labelledby, а не aria-label: інакше зчитувач екрана читає
               «Кольори» двічі — як заголовок і як назву групи. */}
-          <div className="settings__row" role="radiogroup" aria-labelledby="set-colors">
+          <div className="scheme-grid" role="radiogroup" aria-labelledby="set-colors">
             {SCHEMES.map((s) => (
               <button
                 key={s}
                 type="button"
                 role="radio"
                 aria-checked={scheme === s}
-                className={scheme === s ? 'btn btn--primary' : 'btn btn--secondary'}
-                onClick={() => setScheme(s)}
+                className="scheme-tile"
+                onClick={() => chooseScheme(s)}
               >
-                <SchemeDot scheme={s} />
-                {t(`settings.scheme.${s}`)}
+                <SchemeSwatch scheme={s} />
+                <span className="scheme-tile__name">{t(`settings.scheme.${s}`)}</span>
               </button>
             ))}
           </div>
-          <p className="small muted">{t('settings.schemeHint')}</p>
-          {/* Системі вже сказали, що потрібен посилений контраст. Пропонуємо
-              Вугіль, але не вмикаємо за людину: це її екран. */}
-          {suggestsContrast && (
-            <p className="small" role="status">
-              {t('settings.contrastSuggestion')}{' '}
-              <button type="button" className="btn btn--ghost btn--compact" onClick={() => setScheme('vuhil')}>
-                {t('settings.scheme.vuhil')}
-              </button>
+          {/* Смак не зникає, поки діє контраст: тумблер не перезаписує схему,
+              і людина має знати, що її вибір просто чекає. */}
+          {contrastOn && (
+            <p className="small muted" role="status">
+              {t('settings.schemeLocked')}
             </p>
           )}
+          {!contrastOn && scheme === 'nich' && <p className="small muted">{t('settings.nichHint')}</p>}
         </section>
 
         <section className="settings__card">

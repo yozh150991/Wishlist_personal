@@ -29,6 +29,7 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token });
   "title": "Мій день народження",
   "message": null,
   "currency": "PLN",
+  "owner_scheme": "sage",   // схема власника: sage | slyva | polotno | cytrus | nich (ADR-033)
   "hide_prices": false,
   "allow_reservations": true,
   "viewer_is_owner": false,
@@ -46,6 +47,8 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token });
 Показуються лише позиції зі `status = 'active'`. При `hide_prices: true` поле `price` повертається як `null` — ціна не їде на клієнт узагалі, не ховається стилями.
 
 `variants` від `hide_prices` не залежить: розмір і колір — не ціна, і саме заради них гість і дивиться картку.
+
+`owner_scheme` — схема смаку власника: гість бачить список у ній (ADR-033). Висока контрастність власника гостю не віддається — це налаштування глядача, а не списку; свою гість вмикає сам. Схема читається щоразу, а не запікається в токен: власник змінив її — наступне відкриття посилання покаже нову.
 
 ### `register_share_view` — anon + authenticated
 ```ts

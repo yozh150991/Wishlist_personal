@@ -1,70 +1,71 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { isScheme, isTheme, resolveAppearance, SCHEMES, THEMES } from './appearance';
+import type { Resolved, Scheme, Surface, Theme } from './appearance';
+import { OVERLAY_VARS, overlayVars } from './hue-ramp.js';
+
+export { SCHEMES, THEMES };
+export type { Scheme, Theme };
 
 /**
- * Три незалежні осі вигляду.
+ * Осі вигляду й те, що з них виходить на <html>.
  *
- * `theme`  — світла / темна / як у системі.
- * `scheme` — кольорова схема: Шавлія (усталена), Слива, Вугіль.
- * `design` — версія дизайну: v1 (нинішній) або v2 (наступний, ADR-032).
+ * `theme`        — світла / темна / як у системі; завжди глядача.
+ * `scheme`       — схема смаку: Шавлія (усталена), Слива, Полотно, Цитрус, Ніч.
+ * `highContrast` — тумблер доступності, єдиний вхід у Вугіль. Не перезаписує
+ *                  `scheme`: вимкнув — повернувся до свого смаку.
+ * `design`       — версія дизайну: v1 (нинішній) або v2 (наступний, ADR-032).
+ * `surface`      — де глядач зараз: свої екрани, гостьова чи превʼю гостьової.
  *
- * Тема й схема разом дають шість наборів токенів (`styles/tokens.css`).
- * Версія дизайну стоїть над ними: v2 — це інші екрани й інший порядок кроків,
- * а не перефарбована v1. Тому вона розділяється не в компонентах, а по
- * таблиці маршрутів (`designs/`), і кожна версія працює з усіма шістьма
- * наборами токенів — осі не множаться одна на одну.
+ * Що з цього стане атрибутами `data-scheme` / `data-theme` / `data-appearance`,
+ * вирішує одна функція — `resolveAppearance()` (lib/appearance.ts, ADR-033).
+ * Вона викликається тут і більше ніде.
  *
- * Що версія **не** міняє — дані. Усе з `lib/` спільне для обох.
- *
- * Назовні звідси виходить трійка атрибутів `data-theme` / `data-scheme` /
- * `data-design` на <html> (за них чіпляються стилі) і значення `design`, за
- * яким `DesignRoutes` вибирає таблицю маршрутів (ADR-032).
- *
- * Тема й схема дублюються в localStorage навіть у власника, у якого вони
- * їдуть у профіль: інлайновий скрипт у <head> має поставити атрибути до
+ * Тема, схема й контраст дублюються в localStorage навіть у власника, у якого
+ * вони їдуть у профіль: інлайновий скрипт у <head> має поставити атрибути до
  * першого рендера, а профіль на той момент ще не завантажений. Профіль —
  * джерело істини між пристроями, localStorage — щоб не блимало.
  *
- * Версія дизайну в профіль **не** їде і лишається в браузері: поки v2 не
- * готова, вибір її на телефоні не має міняти вигляд на ноутбуці посеред
- * роботи. Коли v2 стане усталеною, це рішення переглядається (ADR-032).
+ * Гість акаунта не має: у нього в localStorage живуть **лише** тема й контраст.
+ * Схеми гість не обирає — він бачить схему власника й оформлення списку, і
+ * жодного ендпоінта, що писав би вигляд від гостя, не існує.
  *
- * Гість акаунта не має: у нього вибір живе тільки в localStorage і на сервер
- * не їде — інакше це був би ще один сигнал про те, що хтось відкрив посилання.
+ * Версія дизайну в профіль не їде і лишається в браузері (ADR-032).
  */
 
-export type Theme = 'light' | 'dark' | 'system';
-export type Scheme = 'sage' | 'slyva' | 'vuhil';
 export type Design = 'v1' | 'v2';
-
-export const THEMES: readonly Theme[] = ['light', 'dark', 'system'];
-export const SCHEMES: readonly Scheme[] = ['sage', 'slyva', 'vuhil'];
 export const DESIGNS: readonly Design[] = ['v1', 'v2'];
 
 const THEME_KEY = 'wl.theme';
 const SCHEME_KEY = 'wl.scheme';
+const CONTRAST_KEY = 'wl.contrast';
 const DESIGN_KEY = 'wl.design';
 
 type Value = {
   theme: Theme;
   scheme: Scheme;
+  highContrast: boolean;
+  /** Система просить посилений контраст — Вугіль увімкнено за неї. */
+  systemContrast: boolean;
   design: Design;
+  /** Що зараз стоїть на <html>. */
+  resolved: Resolved;
   setTheme: (t: Theme) => void;
   setScheme: (s: Scheme) => void;
+  /**
+   * Вибір схеми людиною в Налаштуваннях. Відрізняється від `setScheme` одним:
+   * Ніч — єдина схема, чия типова тема темна. Хто обирає її, не чіпавши тему
+   * («як у системі» — усталене), отримує темну; ручний вибір теми потім її
+   * перекриває. Профіль, що приїхав із сервера, йде через `setScheme` і тему не
+   * рухає.
+   */
+  chooseScheme: (s: Scheme) => void;
+  setHighContrast: (on: boolean) => void;
   setDesign: (d: Design) => void;
-  /** true, якщо система просить посилений контраст, а Вугіль ще не обрано. */
-  suggestsContrast: boolean;
+  setSurface: (s: Surface) => void;
 };
 
 const Ctx = createContext<Value | null>(null);
-
-function isTheme(v: unknown): v is Theme {
-  return v === 'light' || v === 'dark' || v === 'system';
-}
-
-function isScheme(v: unknown): v is Scheme {
-  return v === 'sage' || v === 'slyva' || v === 'vuhil';
-}
 
 function isDesign(v: unknown): v is Design {
   return v === 'v1' || v === 'v2';
@@ -89,16 +90,36 @@ function write(key: string, value: string) {
 }
 
 /**
+ * Схема й контраст на старті.
+ *
+ * До ADR-033 Вугіль був четвертою схемою в тому самому переліку, і в сховищі
+ * міг лишитися `wl.scheme = vuhil`. Людина, яка його обрала, обирала контраст —
+ * тож це стає увімкненим тумблером, а смак повертається до усталеного.
+ */
+function initialSchemeAndContrast(): { scheme: Scheme; highContrast: boolean } {
+  let legacy = false;
+  try {
+    legacy = localStorage.getItem(SCHEME_KEY) === 'vuhil';
+  } catch {
+    /* немає сховища — немає й старого значення */
+  }
+  if (legacy) {
+    write(SCHEME_KEY, 'sage');
+    write(CONTRAST_KEY, '1');
+    return { scheme: 'sage', highContrast: true };
+  }
+  return {
+    scheme: read(SCHEME_KEY, isScheme, 'sage'),
+    highContrast: read(CONTRAST_KEY, (v): v is string => v === '1' || v === '0', '0') === '1',
+  };
+}
+
+/**
  * Версія дизайну на старті: спершу адреса, потім сховище.
  *
- * `?design=v1` — аварійний вихід із v2. Він потрібен тому, що v2 — це інші
- * екрани, а не інші кольори: якщо вона впаде на першому ж рендері або ще не
- * матиме власних Налаштувань, перемкнутися зсередини застосунку буде нічим.
- * Адреса працює завжди, бо її читає інлайновий скрипт у `<head>` ще до React,
- * а цей код лише повторює його вибір для стану (ADR-032).
- *
- * Скрипт у `<head>` прибирає параметр з адреси одразу після читання, тож сюди
- * він доходить лише тоді, коли скрипт не відпрацював.
+ * `?design=v1` — аварійний вихід із v2 (ADR-032). Скрипт у `<head>` прибирає
+ * параметр з адреси одразу після читання, тож сюди він доходить лише тоді,
+ * коли скрипт не відпрацював.
  */
 function initialDesign(): Design {
   try {
@@ -113,24 +134,68 @@ function initialDesign(): Design {
   return read(DESIGN_KEY, isDesign, 'v1');
 }
 
-function prefersDark() {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+/** Живий медіазапит: значення й підписка на зміну. */
+function useMedia(query: string): boolean {
+  const get = () => {
+    try {
+      return window.matchMedia(query).matches;
+    } catch {
+      return false;
+    }
+  };
+  const [value, setValue] = useState(get);
+  useEffect(() => {
+    let mq: MediaQueryList;
+    try {
+      mq = window.matchMedia(query);
+    } catch {
+      return;
+    }
+    const onChange = () => setValue(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [query]);
+  return value;
 }
 
 /**
- * Ставить атрибути на <html> і підганяє колір системних панелей.
+ * Ставить атрибути на <html>, накладає або знімає оформлення і підганяє колір
+ * системних панелей.
  *
- * Колір не задається тут літералом: він читається з уже застосованої палітри,
- * тому лишається рівно одне джерело значень — tokens.css. Без цього кожна нова
- * схема вимагала б правити ще й цей файл, і хтось колись забув би. Версія
- * дизайну ставиться **до** читання `--color-bg`: v2 має право переозначити
- * полотно, і панелі мусять збігтися саме з її значенням.
+ * Оформлення — це змінні акцентної рампи, пораховані з одного відтінку
+ * (lib/hue-ramp.js), а не набір із tokens.css: оформлень може бути скільки
+ * завгодно. Ставляться вони інлайном на <html>, тобто поверх
+ * `[data-scheme][data-theme]`, і знімаються разом, коли відтінку немає.
+ * Змінювати CSS-змінні через CSSOM CSP дозволяє — забороняє лише атрибут
+ * `style` у розмітці.
+ *
+ * Колір панелей не задається тут літералом: він читається з уже застосованої
+ * палітри, тож лишається одне джерело значень — tokens.css. Оформлення полотна
+ * не чіпає, тому панелі від нього не залежать.
  */
-function apply(theme: Theme, scheme: Scheme, design: Design) {
+function apply(r: Resolved, design: Design) {
   const root = document.documentElement;
-  root.dataset.theme = theme === 'system' ? (prefersDark() ? 'dark' : 'light') : theme;
-  root.dataset.scheme = scheme;
+  // Перемикання — без анімації переходу кольорів: інакше кнопки й картки
+  // пів секунди перетікали б зі старої палітри в нову. Переходи вимикаються
+  // на два кадри, поки браузер перераховує стилі.
+  root.classList.add('appearance-switching');
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => root.classList.remove('appearance-switching')),
+  );
+  root.dataset.theme = r.theme;
+  root.dataset.scheme = r.scheme;
   root.dataset.design = design;
+
+  if (r.hue === null) {
+    delete root.dataset.appearance;
+    for (const name of OVERLAY_VARS) root.style.removeProperty(name);
+  } else {
+    root.dataset.appearance = String(r.hue);
+    for (const [name, value] of Object.entries(overlayVars(r.hue, r.theme))) {
+      root.style.setProperty(name, value);
+    }
+  }
 
   const bg = getComputedStyle(root).getPropertyValue('--color-bg').trim();
   if (!bg) return;
@@ -140,19 +205,27 @@ function apply(theme: Theme, scheme: Scheme, design: Design) {
   });
 }
 
+const OWN: Surface = { kind: 'own' };
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => read(THEME_KEY, isTheme, 'system'));
-  const [scheme, setSchemeState] = useState<Scheme>(() => read(SCHEME_KEY, isScheme, 'sage'));
+  const [start] = useState(initialSchemeAndContrast);
+  const [scheme, setSchemeState] = useState<Scheme>(start.scheme);
+  const [highContrast, setContrastState] = useState<boolean>(start.highContrast);
   const [design, setDesignState] = useState<Design>(initialDesign);
+  const [surface, setSurfaceState] = useState<Surface>(OWN);
+
+  const systemDark = useMedia('(prefers-color-scheme: dark)');
+  const systemContrast = useMedia('(prefers-contrast: more)');
+
+  const resolved = useMemo(
+    () => resolveAppearance({ theme, scheme, highContrast, systemContrast, systemDark }, surface),
+    [theme, scheme, highContrast, systemContrast, systemDark, surface],
+  );
 
   useEffect(() => {
-    apply(theme, scheme, design);
-    if (theme !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () => apply('system', scheme, design);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, [theme, scheme, design]);
+    apply(resolved, design);
+  }, [resolved, design]);
 
   const setTheme = useCallback((t: Theme) => {
     write(THEME_KEY, t);
@@ -164,25 +237,58 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setSchemeState(s);
   }, []);
 
+  const chooseScheme = useCallback(
+    (s: Scheme) => {
+      setScheme(s);
+      if (s === 'nich' && theme === 'system') setTheme('dark');
+    },
+    [setScheme, setTheme, theme],
+  );
+
+  const setHighContrast = useCallback((on: boolean) => {
+    write(CONTRAST_KEY, on ? '1' : '0');
+    setContrastState(on);
+  }, []);
+
   const setDesign = useCallback((d: Design) => {
     write(DESIGN_KEY, d);
     setDesignState(d);
   }, []);
 
-  // Людина, якій система вже вмикає посилений контраст, майже напевно хоче
-  // Вугілля. Пропонуємо, але не перемикаємо за неї: це її екран.
-  const suggestsContrast = useMemo(() => {
-    if (scheme === 'vuhil') return false;
-    try {
-      return window.matchMedia('(prefers-contrast: more)').matches;
-    } catch {
-      return false;
-    }
-  }, [scheme]);
+  /** Порівняння за значенням: інакше кожен рендер сторінки давав би новий обʼєкт і цикл. */
+  const setSurface = useCallback((s: Surface) => {
+    setSurfaceState((prev) => (JSON.stringify(prev) === JSON.stringify(s) ? prev : s));
+  }, []);
 
   const value = useMemo(
-    () => ({ theme, scheme, design, setTheme, setScheme, setDesign, suggestsContrast }),
-    [theme, scheme, design, setTheme, setScheme, setDesign, suggestsContrast],
+    () => ({
+      theme,
+      scheme,
+      highContrast,
+      systemContrast,
+      design,
+      resolved,
+      setTheme,
+      setScheme,
+      chooseScheme,
+      setHighContrast,
+      setDesign,
+      setSurface,
+    }),
+    [
+      theme,
+      scheme,
+      highContrast,
+      systemContrast,
+      design,
+      resolved,
+      setTheme,
+      setScheme,
+      chooseScheme,
+      setHighContrast,
+      setDesign,
+      setSurface,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -195,13 +301,28 @@ export function useTheme() {
 }
 
 /**
+ * Сторінка каже, яка вона поверхня. Поки вона змонтована, діє її поверхня;
+ * пішла — застосунок повертається до своїх екранів і своєї схеми.
+ *
+ * `null` — ще нічого не відомо (гостьова вантажиться): лишається поточний
+ * вигляд, щоб не блимнути своєю схемою між двома чужими.
+ */
+export function useSurface(surface: Surface | null) {
+  const { setSurface } = useTheme();
+  const key = surface ? JSON.stringify(surface) : null;
+  useEffect(() => {
+    if (!key) return;
+    setSurface(JSON.parse(key) as Surface);
+  }, [key, setSurface]);
+  useEffect(() => () => setSurface(OWN), [setSurface]);
+}
+
+/**
  * Версія дизайну для того, хто вибирає таблицю маршрутів.
  *
  * Окремий хук, а не поле з `useTheme()`, свідомо: так у коді видно кожне
  * місце, яке залежить від версії. Таких місць має бути рівно одне —
- * `designs/DesignRoutes.tsx`. Гілка `design === 'v2'` всередині екрана
- * означає, що екран належить обом версіям одразу; це борг, а не спосіб
- * писати нове (ADR-032).
+ * `designs/DesignRoutes.tsx` (ADR-032).
  */
 export function useDesign(): Design {
   return useTheme().design;

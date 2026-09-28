@@ -1,5 +1,7 @@
 import { supabase, publicOrigin } from './supabase';
 import type { Currency, ItemPriority, ItemStatus, ItemVariant } from './types';
+import { isScheme } from './appearance';
+import type { Scheme } from './appearance';
 
 export type Share = {
   id: string;
@@ -93,6 +95,8 @@ export type SharedList = {
   title: string;
   message: string | null;
   currency: Currency;
+  /** Схема власника: гість бачить список у ній (resolveAppearance, правило 3). */
+  owner_scheme: Scheme;
   hide_prices: boolean;
   allow_reservations: boolean;
   viewer_is_owner: boolean;
@@ -111,7 +115,9 @@ export async function fetchSharedList(token: string): Promise<SharedList> {
     const match = known.find((k) => code.includes(k));
     throw new Error(match ?? 'unknown');
   }
-  return data as SharedList;
+  const list = data as SharedList & { owner_scheme: unknown };
+  // Старий бекенд або несподіване значення — усталена Шавлія, а не зламана сторінка.
+  return { ...list, owner_scheme: isScheme(list.owner_scheme) ? list.owner_scheme : 'sage' };
 }
 
 export async function registerView(token: string): Promise<void> {

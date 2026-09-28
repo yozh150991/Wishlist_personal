@@ -97,11 +97,17 @@
     "scheme": {
       "sage": "Szałwia",
       "slyva": "Śliwka",
-      "vuhil": "Węgiel"
+      "vuhil": "Węgiel",
+      "polotno": "Płótno",
+      "cytrus": "Cytrus",
+      "nich": "Noc"
     },
-    "schemeHint": "Węgiel — schemat o wzmocnionym kontraście.",
-    "contrastSuggestion": "System prosi o wzmocniony kontrast. Włączyć",
-    "contrastShort": "Wzmocniony kontrast"
+    "a11y": "Dostępność",
+    "highContrast": "Wysoki kontrast",
+    "highContrastHint": "Włącza Węgiel (AAA) i nie pozwala wyglądowi list go zmieniać. Wygrywa ze wszystkim poniżej.",
+    "highContrastSystem": "Włączone przez system: urządzenie prosi o wzmocniony kontrast. Wyłączysz to w ustawieniach urządzenia.",
+    "schemeLocked": "Dopóki włączony jest wysoki kontrast, schemat nie działa. Wybór zostanie zapamiętany na później.",
+    "nichHint": "Noc jest domyślnie ciemna. Jasny motyw wybierzesz w sekcji „Motyw”."
   },
   "design": {
     "emptyTitle": "Design v2 jeszcze nie dotarł",
@@ -422,7 +428,10 @@
     "raceLost": "Tę pozycję właśnie wzięto — twojej rezerwacji tu nie ma. Reszta pozycji jest wolna.",
     "less": "Mniej",
     "more": "Więcej",
-    "appearance": "Wygląd"
+    "appearance": "Wygląd",
+    "forMe": "Dla siebie",
+    "forMeHint": "nie zmienia listy",
+    "appearanceNote": "Wygląd wybrał autor listy. Schematu kolorów nie da się tu zmienić."
   },
   "pwa": {
     "updateReady": "Jest nowa wersja Wishlist.",
