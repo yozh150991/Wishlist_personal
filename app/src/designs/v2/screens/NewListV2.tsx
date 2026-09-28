@@ -118,9 +118,10 @@ export default function NewListV2() {
     setBusy(true);
     setServer(null);
     try {
-      await createList({ title, event_date: draft.date || null, currency }, userId);
+      const created = await createList({ title, event_date: draft.date || null, currency }, userId);
       dropDraft();
-      navigate('/lists', { replace: true });
+      // Решта налаштувань і перша позиція живуть усередині списку (B, C).
+      navigate(`/lists/${created.id}`, { replace: true });
     } catch (e) {
       setServer(errorText(e, t));
       setBusy(false);

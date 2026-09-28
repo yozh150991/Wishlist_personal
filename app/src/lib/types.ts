@@ -79,6 +79,15 @@ export type ItemInput = Pick<Item, 'title'> &
     >
   >;
 
+/** Розділ списку (ADR-036): одна мітка на позицію, порядок задає власник. */
+export type Section = {
+  id: string;
+  list_id: string;
+  title: string;
+  position: number;
+  created_at: string;
+};
+
 export type Totals = {
   items_count: number;
   active_count: number;

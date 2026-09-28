@@ -770,5 +770,173 @@
       "draftKeep": "Save draft",
       "draftDrop": "Delete and leave"
     }
+  },
+  "v2list": {
+    "back": "To my lists",
+    "menu": "List actions",
+    "loading": "Loading items",
+    "itemsLabel": "Items",
+    "add": "Add item",
+    "allDone": "Nothing open left — purchased and gifted items are below.",
+    "errorTitle": "Items didn't load",
+    "errorBody": "The list itself is fine — only its contents couldn't be fetched.",
+    "actionFailed": "The change wasn't saved: {error}",
+    "found": "Found {n} of {m}",
+    "notFound": {
+      "title": "There's no such list",
+      "body": "It may have been deleted, or the address is incomplete. Your other lists are fine.",
+      "cta": "To my lists"
+    },
+    "empty": {
+      "title": "No items yet",
+      "body": "Paste a link to a product — we'll fill in the name and price."
+    },
+    "sum": {
+      "inActive": {
+        "one": "across {n} open item",
+        "few": "across {n} open items",
+        "many": "across {n} open items",
+        "other": "across {n} open items"
+      },
+      "noPrice": "{n} without a price",
+      "purchased": "{n} purchased",
+      "gifted": "{n} gifted"
+    },
+    "search": {
+      "label": "Search items",
+      "placeholder": {
+        "one": "Search {n} item",
+        "few": "Search {n} items",
+        "many": "Search {n} items",
+        "other": "Search {n} items"
+      },
+      "clear": "Clear search"
+    },
+    "filter": {
+      "label": "Show",
+      "all": "All",
+      "noPrice": "No price"
+    },
+    "sort": {
+      "button": "Sort",
+      "title": "Sort by",
+      "manual": "Manual",
+      "manualHint": "What guests see",
+      "priority": "Priority",
+      "priorityHint": "“Really want” first",
+      "priceAsc": "Price · low to high",
+      "priceDesc": "Price · high to low",
+      "recent": "Recently added"
+    },
+    "priority": {
+      "high": "Really want",
+      "medium": "Would be nice",
+      "low": "Just an idea"
+    },
+    "group": {
+      "other": "Other",
+      "done": "Purchased and gifted",
+      "emptySection": "Nothing in this section yet.",
+      "sectionMenu": "Actions for section “{title}”"
+    },
+    "noResults": {
+      "title": "Nothing for “{q}”",
+      "titlePlain": "Nothing found",
+      "alsoNoPrice": "The “No price” filter is on too.",
+      "reset": "Clear filters",
+      "addAsNew": "Add as a new item"
+    },
+    "item": {
+      "menu": "Actions for “{title}”",
+      "noPrice": "No price",
+      "edit": "Edit",
+      "open": "Open in shop",
+      "status": "Status",
+      "delete": "Delete",
+      "deleteFailed": "Couldn't delete.",
+      "retry": "Try again"
+    },
+    "toast": {
+      "added": "Added: {title}",
+      "deleted": "Deleted: {title}",
+      "undo": "Undo"
+    },
+    "menuList": {
+      "newSection": "New section",
+      "laterBody": "Sharing, looks and your own order will show up here soon.",
+      "inV1": "Open this list in the old look"
+    },
+    "section": {
+      "newTitle": "New section",
+      "renameTitle": "Rename section",
+      "name": "Section name",
+      "namePlaceholder": "E.g. Kitchen",
+      "nameEmpty": "Name the section",
+      "create": "Create",
+      "rename": "Rename",
+      "delete": "Delete section"
+    },
+    "untitled": "List"
+  },
+  "v2item": {
+    "newTitle": "New item",
+    "editTitle": "Item",
+    "add": "Add",
+    "link": {
+      "label": "Link",
+      "placeholder": "Paste a shop address",
+      "next": "Next",
+      "paste": "Paste from clipboard",
+      "pasteFailed": "The browser didn't let us read the clipboard — paste the link into the field.",
+      "pasteNoUrl": "There's no link in the clipboard.",
+      "manual": "Type it in",
+      "bad": "This doesn't look like a page address. Check for a missing dot.",
+      "empty": "Paste a link — or type the item in.",
+      "tooLong": "The link is too long — up to 2048 characters.",
+      "withoutLink": "Add without a link",
+      "optional": "Link · optional",
+      "or": "or"
+    },
+    "reading": "Reading the shop page…",
+    "readFailed": "The shop didn't give a description. The link is saved — fill in the rest by hand.",
+    "title": {
+      "label": "Name",
+      "placeholder": "Required",
+      "placeholderReading": "You can type it now",
+      "empty": "Name the item",
+      "same": "A similar one is already here: {title}"
+    },
+    "price": {
+      "label": "Price · optional",
+      "bad": "The price is a number: 1240 or 1240.50."
+    },
+    "quantity": "Quantity",
+    "priority": "Priority",
+    "note": "Note for guests · optional",
+    "variants": {
+      "open": "Size, colour",
+      "legend": "Variant",
+      "size": "Size",
+      "color": "Colour",
+      "model": "Model",
+      "orElse": "Or also fine",
+      "labelAria": "Detail {n}",
+      "valueAria": "Value of detail {n}",
+      "add": "Another detail",
+      "remove": "Remove detail {n}"
+    },
+    "section": {
+      "label": "Section",
+      "none": "No section"
+    },
+    "photo": {
+      "remove": "Remove photo"
+    },
+    "same": {
+      "title": "This is already on the list",
+      "body": "Want two? Better raise the quantity — guests will see how many are needed.",
+      "more": "Quantity: {n}",
+      "open": "Open the existing one"
+    }
   }
 }

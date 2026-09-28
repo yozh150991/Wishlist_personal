@@ -244,12 +244,12 @@ export function IconCircleV2({ icon: Icon, tone }: { icon: LucideIcon; tone: 'ca
   );
 }
 
-/** «або поштою» між Google і формою. */
-export function OrDividerV2() {
+/** «або поштою» між Google і формою; з `label` — будь-яке інше «або». */
+export function OrDividerV2({ label }: { label?: string }) {
   const { t } = useI18n();
   return (
     <p className="v2-or">
-      <span>{t('v2auth.or')}</span>
+      <span>{label ?? t('v2auth.or')}</span>
     </p>
   );
 }

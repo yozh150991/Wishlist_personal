@@ -21,6 +21,26 @@ export function money(
   }).format(n);
 }
 
+/**
+ * Сума без зайвих нулів: «1 240 грн», але «1 240,50 грн». Так ціну пишуть
+ * макети v2 і так її читають люди; копійки лишаються, коли вони є.
+ */
+export function moneyShort(
+  value: number | string | null | undefined,
+  currency: Currency,
+  locale: string,
+): string | null {
+  const n = num(value);
+  if (n === null) return null;
+  const whole = Math.round(n * 100) % 100 === 0;
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
 export function formatDate(iso: string | null, locale: string): string | null {
   if (!iso) return null;
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso));

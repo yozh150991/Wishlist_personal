@@ -42,6 +42,10 @@ test.describe('«Мої списки» v2 з акаунтом', { tag: '@v2' }, 
     await page.locator('input[name="title"]').fill(title);
     await page.locator('input[name="event_date"]').fill(inDays(3));
     await page.locator('button[type="submit"]').click();
+    // Новий список відкривається одразу: перша позиція додається всередині (B, C).
+    await expect(page).toHaveURL(/\/lists\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await page.getByRole('link', { name: /до моїх списків|do moich list|to my lists/i }).first().click();
     await expect(page).toHaveURL(/\/lists$/);
 
     const soon = page.getByRole('region', { name: /найближчі|najbliższe|upcoming/i });

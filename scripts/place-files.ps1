@@ -153,6 +153,12 @@ $map = @{
   'ShellV2.tsx' = 'app\src\designs\v2'; 'CommonV2.tsx' = 'app\src\designs\v2\screens'
   'SoonV2.tsx' = 'app\src\designs\v2\screens'; 'ListsV2.tsx' = 'app\src\designs\v2\screens'
   'NewListV2.tsx' = 'app\src\designs\v2\screens'; 'lists-v2.spec.ts' = 'app\tests\e2e'
+  # Design v2 list page (step 3b-1, ADR-044): shared pure helpers and v2 screens.
+  'itemsView.ts' = 'app\src\lib'; 'order.ts' = 'app\src\lib'
+  'undo.ts' = 'app\src\lib'; 'variants.ts' = 'app\src\lib'
+  'ListV2.tsx' = 'app\src\designs\v2\screens'; 'ItemSheetV2.tsx' = 'app\src\designs\v2\screens'
+  'ListPartsV2.tsx' = 'app\src\designs\v2\screens'; 'list-v2.spec.ts' = 'app\tests\e2e'
+  'items-view.spec.ts' = 'app\tests\e2e'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'

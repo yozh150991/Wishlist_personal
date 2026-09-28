@@ -770,5 +770,173 @@
       "draftKeep": "Zapisz szkic",
       "draftDrop": "Usuń i wyjdź"
     }
+  },
+  "v2list": {
+    "back": "Do moich list",
+    "menu": "Działania na liście",
+    "loading": "Wczytuję pozycje",
+    "itemsLabel": "Pozycje",
+    "add": "Dodaj pozycję",
+    "allDone": "Nic aktualnego nie zostało — poniżej kupione i podarowane.",
+    "errorTitle": "Pozycje się nie wczytały",
+    "errorBody": "Sama lista jest na miejscu — nie udało się pobrać tylko jej zawartości.",
+    "actionFailed": "Zmiana nie została zapisana: {error}",
+    "found": "Znaleziono {n} z {m}",
+    "notFound": {
+      "title": "Nie ma takiej listy",
+      "body": "Może została usunięta albo adres jest niepełny. Pozostałe listy są na miejscu.",
+      "cta": "Do moich list"
+    },
+    "empty": {
+      "title": "Ani jednej pozycji",
+      "body": "Wklej link do produktu — nazwę i cenę pobierzemy sami."
+    },
+    "sum": {
+      "inActive": {
+        "one": "w {n} aktualnej pozycji",
+        "few": "w {n} aktualnych pozycjach",
+        "many": "w {n} aktualnych pozycjach",
+        "other": "w {n} aktualnych pozycjach"
+      },
+      "noPrice": "{n} bez ceny",
+      "purchased": "{n} kupione",
+      "gifted": "{n} podarowane"
+    },
+    "search": {
+      "label": "Szukaj w pozycjach",
+      "placeholder": {
+        "one": "Szukaj w {n} pozycji",
+        "few": "Szukaj w {n} pozycjach",
+        "many": "Szukaj w {n} pozycjach",
+        "other": "Szukaj w {n} pozycjach"
+      },
+      "clear": "Wyczyść wyszukiwanie"
+    },
+    "filter": {
+      "label": "Pokaż",
+      "all": "Wszystkie",
+      "noPrice": "Bez ceny"
+    },
+    "sort": {
+      "button": "Sortowanie",
+      "title": "Sortuj",
+      "manual": "Ręcznie",
+      "manualHint": "Tak widzą goście",
+      "priority": "Priorytet",
+      "priorityHint": "Najpierw „Bardzo chcę”",
+      "priceAsc": "Cena · od najniższej",
+      "priceDesc": "Cena · od najwyższej",
+      "recent": "Ostatnio dodane"
+    },
+    "priority": {
+      "high": "Bardzo chcę",
+      "medium": "Byłoby miło",
+      "low": "Tylko pomysł"
+    },
+    "group": {
+      "other": "Inne",
+      "done": "Kupione i podarowane",
+      "emptySection": "W tym dziale na razie pusto.",
+      "sectionMenu": "Działania na dziale „{title}”"
+    },
+    "noResults": {
+      "title": "Nic dla „{q}”",
+      "titlePlain": "Nic nie znaleziono",
+      "alsoNoPrice": "Filtr „Bez ceny” też jest włączony.",
+      "reset": "Wyczyść filtry",
+      "addAsNew": "Dodaj jako nową pozycję"
+    },
+    "item": {
+      "menu": "Działania na pozycji „{title}”",
+      "noPrice": "Cena nie podana",
+      "edit": "Zmień",
+      "open": "Otwórz w sklepie",
+      "status": "Status",
+      "delete": "Usuń",
+      "deleteFailed": "Nie udało się usunąć.",
+      "retry": "Jeszcze raz"
+    },
+    "toast": {
+      "added": "Dodano: {title}",
+      "deleted": "Usunięto: {title}",
+      "undo": "Cofnij"
+    },
+    "menuList": {
+      "newSection": "Nowy dział",
+      "laterBody": "Udostępnianie, wygląd i własna kolejność pojawią się tu wkrótce.",
+      "inV1": "Otwórz tę listę w starym wyglądzie"
+    },
+    "section": {
+      "newTitle": "Nowy dział",
+      "renameTitle": "Zmień nazwę działu",
+      "name": "Nazwa działu",
+      "namePlaceholder": "Np. Kuchnia",
+      "nameEmpty": "Nazwij dział",
+      "create": "Utwórz",
+      "rename": "Zmień nazwę",
+      "delete": "Usuń dział"
+    },
+    "untitled": "Lista"
+  },
+  "v2item": {
+    "newTitle": "Nowa pozycja",
+    "editTitle": "Pozycja",
+    "add": "Dodaj",
+    "link": {
+      "label": "Link",
+      "placeholder": "Wklej adres ze sklepu",
+      "next": "Dalej",
+      "paste": "Wklej ze schowka",
+      "pasteFailed": "Przeglądarka nie pozwoliła odczytać schowka — wklej link w pole.",
+      "pasteNoUrl": "W schowku nie ma linku.",
+      "manual": "Wpisz ręcznie",
+      "bad": "To nie wygląda na adres strony. Sprawdź, czy nie brakuje kropki.",
+      "empty": "Wklej link — albo wpisz pozycję ręcznie.",
+      "tooLong": "Link jest za długi — do 2048 znaków.",
+      "withoutLink": "Dodaj bez linku",
+      "optional": "Link · opcjonalnie",
+      "or": "albo"
+    },
+    "reading": "Czytam stronę sklepu…",
+    "readFailed": "Sklep nie podał opisu. Link zapisany — resztę uzupełnij ręcznie.",
+    "title": {
+      "label": "Nazwa",
+      "placeholder": "Wymagane",
+      "placeholderReading": "Możesz wpisać już teraz",
+      "empty": "Nazwij pozycję",
+      "same": "Podobna już jest: {title}"
+    },
+    "price": {
+      "label": "Cena · opcjonalnie",
+      "bad": "Cena to liczba: 1240 lub 1240,50."
+    },
+    "quantity": "Ilość",
+    "priority": "Priorytet",
+    "note": "Notatka dla gości · opcjonalnie",
+    "variants": {
+      "open": "Rozmiar, kolor",
+      "legend": "Wariant",
+      "size": "Rozmiar",
+      "color": "Kolor",
+      "model": "Model",
+      "orElse": "Albo może być",
+      "labelAria": "Cecha {n}",
+      "valueAria": "Wartość cechy {n}",
+      "add": "Kolejna cecha",
+      "remove": "Usuń cechę {n}"
+    },
+    "section": {
+      "label": "Dział",
+      "none": "Bez działu"
+    },
+    "photo": {
+      "remove": "Usuń zdjęcie"
+    },
+    "same": {
+      "title": "Ta rzecz już jest na liście",
+      "body": "Chcesz dwie? Lepiej zwiększyć ilość — goście zobaczą, ile potrzeba.",
+      "more": "Ilość: {n}",
+      "open": "Otwórz istniejącą"
+    }
   }
 }

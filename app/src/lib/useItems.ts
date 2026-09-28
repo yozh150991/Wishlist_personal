@@ -178,6 +178,36 @@ export function useItems(
   }, [reload]);
 
   /**
+   * Тихе перечитування цілого списку — після зміни, що дійшла до сервера, коли
+   * екран уже показує її сам (сторінка списку v2). Без скелета й без помилки:
+   * на екрані правильний стан, запит лише звіряє його з базою, а про невдачу
+   * самої зміни викликач уже сказав. Для партій — звичайний `reload`.
+   */
+  const refresh = useCallback(async () => {
+    if (mode !== 'all') return reload();
+    const id = ++runId.current;
+    try {
+      const [all, allTotals] = await Promise.all([fetchAllItems(listId), fetchTotals(listId)]);
+      if (id !== runId.current) return;
+      setItems(all);
+      setTotals(allTotals);
+      setStaleAt(null);
+      setError(null);
+      setDone(true);
+      setLoadedAs('all');
+      if (userId) {
+        void saveSnapshot<ItemsSnapshot>(allItemsKey(listId), userId, { items: all, totals: allTotals });
+      }
+    } catch {
+      /* лишаємо те, що на екрані */
+    } finally {
+      // Тихе перечитування могло перебити перше завантаження — тоді «вантажимо»
+      // мусить згаснути тут, бо перше вже не допише свій результат.
+      if (id === runId.current) setLoading(false);
+    }
+  }, [mode, reload, listId, userId]);
+
+  /**
    * Показати зміну, яка лягла в чергу (етап 6.5).
    *
    * Замість `reload()`: перечитувати нічого, бо мережі немає, а знімок у кеші
@@ -202,6 +232,7 @@ export function useItems(
     error,
     staleAt,
     reload,
+    refresh,
     loadMore,
     applyLocal,
     patchLocal,

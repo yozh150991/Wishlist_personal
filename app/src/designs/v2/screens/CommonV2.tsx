@@ -18,11 +18,20 @@ export function SheetV2({
   open,
   onClose,
   labelledBy,
+  className,
+  closeOnBackdrop = true,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   labelledBy: string;
+  /** Додатковий клас — напр. `v2-sheet--full` для форми позиції на весь екран. */
+  className?: string;
+  /**
+   * Чи закривати кліком повз вікно. Форма, у яку вже щось вписано, не має
+   * зникати від випадкового дотику до затемнення — їй `false`.
+   */
+  closeOnBackdrop?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -35,7 +44,7 @@ export function SheetV2({
   return (
     <dialog
       ref={ref}
-      className="v2-sheet"
+      className={className ? `v2-sheet ${className}` : 'v2-sheet'}
       aria-labelledby={labelledBy}
       // Escape: закриваємо через стан, а не силами браузера, інакше стан і
       // вікно розійдуться.
@@ -45,7 +54,7 @@ export function SheetV2({
       }}
       // Клік по затемненню повз вікно — те саме, що «Скасувати».
       onClick={(e) => {
-        if (e.target === ref.current) onClose();
+        if (closeOnBackdrop && e.target === ref.current) onClose();
       }}
     >
       <div className="v2-sheet__body">{children}</div>
@@ -63,32 +72,38 @@ type Plural = 'one' | 'few' | 'many' | 'other';
 export function useCounts() {
   const { t, locale } = useI18n();
   const rules = new Intl.PluralRules(locale);
-  const form = (n: number) => rules.select(n) as Plural;
+  const pick = (n: number, forms: Record<Plural, string>) => forms[rules.select(n) as Plural] ?? forms.other;
   return {
-    items(n: number) {
-      switch (form(n)) {
-        case 'one':
-          return t('v2app.count.items.one', { n });
-        case 'few':
-          return t('v2app.count.items.few', { n });
-        case 'many':
-          return t('v2app.count.items.many', { n });
-        default:
-          return t('v2app.count.items.other', { n });
-      }
-    },
-    open(n: number) {
-      switch (form(n)) {
-        case 'one':
-          return t('v2app.count.open.one', { n });
-        case 'few':
-          return t('v2app.count.open.few', { n });
-        case 'many':
-          return t('v2app.count.open.many', { n });
-        default:
-          return t('v2app.count.open.other', { n });
-      }
-    },
+    items: (n: number) =>
+      pick(n, {
+        one: t('v2app.count.items.one', { n }),
+        few: t('v2app.count.items.few', { n }),
+        many: t('v2app.count.items.many', { n }),
+        other: t('v2app.count.items.other', { n }),
+      }),
+    open: (n: number) =>
+      pick(n, {
+        one: t('v2app.count.open.one', { n }),
+        few: t('v2app.count.open.few', { n }),
+        many: t('v2app.count.open.many', { n }),
+        other: t('v2app.count.open.other', { n }),
+      }),
+    /** «у 12 актуальних позиціях» — рядок під сумою списку. */
+    inActive: (n: number) =>
+      pick(n, {
+        one: t('v2list.sum.inActive.one', { n }),
+        few: t('v2list.sum.inActive.few', { n }),
+        many: t('v2list.sum.inActive.many', { n }),
+        other: t('v2list.sum.inActive.other', { n }),
+      }),
+    /** «Пошук у 42 позиціях» — підказка в полі пошуку. */
+    searchIn: (n: number) =>
+      pick(n, {
+        one: t('v2list.search.placeholder.one', { n }),
+        few: t('v2list.search.placeholder.few', { n }),
+        many: t('v2list.search.placeholder.many', { n }),
+        other: t('v2list.search.placeholder.other', { n }),
+      }),
   };
 }
 
