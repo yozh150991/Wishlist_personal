@@ -35,9 +35,12 @@ const PANEL_FROM = '(min-width: 56rem)';
 function Groups({
   query,
   onChange,
+  manual,
 }: {
   query: ItemQuery;
   onChange: (patch: Partial<ItemQuery>) => void;
+  /** Режим «Розділи»: порядок ручний, список цілий — сортування й партії немає. */
+  manual: boolean;
 }) {
   const { t } = useI18n();
 
@@ -74,6 +77,7 @@ function Groups({
         </div>
       </div>
 
+      {!manual && (
       <div className="filters__group">
         <label className="filters__label" htmlFor="f-sort">
           {t('toolbar.sort')}
@@ -101,6 +105,7 @@ function Groups({
           </button>
         </div>
       </div>
+      )}
 
       <div className="filters__group">
         <span className="filters__label" id="f-price">
@@ -133,6 +138,7 @@ function Groups({
         </div>
       </div>
 
+      {!manual && (
       <div className="filters__group">
         <label className="filters__label" htmlFor="f-size">
           {t('toolbar.pageSize')}
@@ -152,6 +158,7 @@ function Groups({
           </select>
         </div>
       </div>
+      )}
     </>
   );
 }
@@ -176,6 +183,7 @@ export function Filters({
   open,
   onOpen,
   onClose,
+  manual = false,
 }: {
   query: ItemQuery;
   onChange: (patch: Partial<ItemQuery>) => void;
@@ -183,6 +191,8 @@ export function Filters({
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
+  /** Режим «Розділи» (ADR-036): без сортування й розміру партії. */
+  manual?: boolean;
 }) {
   const { t } = useI18n();
   const sheet = useRef<HTMLDialogElement>(null);
@@ -238,7 +248,7 @@ export function Filters({
       {wide ? (
         /* Десктоп: ті самі групи в один ряд, без листа. */
         <div className="filters__panel">
-          <Groups query={query} onChange={onChange} />
+          <Groups query={query} onChange={onChange} manual={manual} />
           {count > 0 && (
             <button type="button" className="btn btn--ghost" onClick={onReset}>
               {t('toolbar.reset')}
@@ -263,7 +273,7 @@ export function Filters({
             </button>
           </div>
           <div className="dialog__body filters__sheet-body">
-            <Groups query={query} onChange={onChange} />
+            <Groups query={query} onChange={onChange} manual={manual} />
           </div>
           <div className="dialog__foot">
             <button type="button" className="btn btn--primary btn--block" onClick={onClose}>

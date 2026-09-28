@@ -1,9 +1,21 @@
 /* ─────────────────────────────────────────────────────────────
-   Токени кольору. Три схеми × дві теми = шість повних наборів.
+   Токени кольору. Шість схем × дві теми = дванадцять повних наборів.
+
+   П'ять схем смаку — Шавлія (усталена), Слива, Полотно, Цитрус, Ніч —
+   і Вугіль, у який є лише один вхід: тумблер «Висока контрастність»
+   (або системне prefers-contrast: more). У переліку смаку його немає.
 
    Схему й тему ставить інлайновий скрипт у <head> до першого
    рендера: <html data-scheme="sage" data-theme="light">. Жоден
    компонент не знає, яка схема активна, і ніде не звіряє її ім'я.
+   Що саме потрапляє в атрибути, вирішує одна функція —
+   resolveAppearance() у lib/appearance.ts.
+
+   Поверх набору може лягти оформлення списку (data-appearance): воно
+   перевизначає лише акцентну рампу, заливку головної кнопки й смужку
+   «Високий». Ці значення не лежать тут — їх рахує lib/hue-ramp.js з
+   одного відтінку, тож оформлень може бути скільки завгодно, а наборів
+   лишається дванадцять.
 
    ПРАВИЛО: склад палітри повний або ніякий. Пропущений токен не
    ламає сторінку — він тихо падає на значення з :root, тобто на
@@ -11,8 +23,43 @@
    картці. Тому кожен набір оголошує всі 45 змінних, навіть ті,
    якими сьогодні ніхто не користується.
 
-   Кожна зміна тут перевіряється `npm run check:contrast`
-   (22 пари × 6 палітр = 132 перевірки, ADR-031).
+   Кожна зміна тут перевіряється 
+> wishlist-personal-app@0.2.0 check:contrast
+> node scripts/check-contrast.mjs
+
+Пара                                Поріг  Шавлія св.  Шавлія тм.   Слива св.   Слива тм.  Вугіль св.  Вугіль тм.
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Текст на фоні                        4,50       13,95       13,79       16,17       15,29       19,03       21,00
+Текст на поверхні                    4,50       12,40       11,98       17,57       13,95       16,85       18,26
+Приглушений текст на фоні            4,50        5,53        8,45        7,64        9,23       11,37       14,45
+Приглушений текст на поверхні        4,50        4,92        7,34        8,30        8,42       10,07       12,56
+Підпис головної кнопки               4,50        6,46        8,33       11,09        7,71       11,39       11,96
+Кнопка-привид на фоні                4,50        5,43       11,21       10,21       10,28       13,87       14,40
+Кнопка-привид на поверхні            4,50        4,82        9,74       11,09        9,38       12,28       12,53
+Активний пункт навігації             4,50        8,11        9,53       10,29        9,74       10,58       12,52
+Значок «Високий»                     4,50        9,12       11,90       11,47       11,62       12,10       14,54
+Значок «Низький»                     4,50        9,46       12,50        9,43       11,56       11,09       13,86
+Значок нейтральний                   4,50        9,12       10,64       12,15       12,40       13,83       16,02
+Банер небезпеки                      4,50        7,53       11,33        7,99       11,69       10,04       13,75
+«Видалити» на поверхні               4,50        4,74        5,55        6,78        7,19        8,08       10,67
+Шапка режиму вибору                  4,50        8,27       13,52       12,29       13,06       13,87       16,76
+Гостьовий заголовок                  4,50       10,69       13,83       12,30       12,68       13,07       14,01
+Текст на гостьовій картці            4,50       15,98       12,59       17,57       13,38       19,03       17,40
+Приглушений на гостьовій картці      4,50        6,34        7,72        8,30        8,08       11,37       11,97
+Текст на гостьовому фоні             4,50       14,54       14,80       15,36       14,72       16,85       19,44
+Смужка «Високий»                     3,00        4,82        7,24       11,09        7,04       10,09       10,40
+Смужка «Низький»                     3,00        5,09        6,90        8,17        7,09        6,70       10,74
+Підпис кнопки видалення              4,50        5,33        6,38        6,24        7,88        9,13       12,27
+Підпис у тості                       4,50        5,72       10,81        7,52       11,92       10,22       15,07
+Підпис у тості скасування            4,50        8,38       11,61       12,80       13,60       16,48       18,43
+Кільце фокуса                        3,00        5,43       11,21        7,76       10,28       11,39       14,40
+Кільце фокуса на поверхні            3,00        4,82        9,74        8,42        9,38       10,09       12,53
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+мінімум у палітрі                                4,74        5,55        6,24        7,04        6,70       10,40
+
+✓ Пар: 25, палітр: 6, перевірок: 150 — усі проходять.
+  Найтісніше місце — «видалити» на поверхні у палітрі «Шавлія св.»: 4,74:1 проти порога 4,50, запас +0,24.
+   (25 пар × 12 палітр і аудит оверлеїв, ADR-031, ADR-033).
    ───────────────────────────────────────────────────────────── */
 
 /* Усталене — світла Шавлія. Дублює [data-scheme='sage'][data-theme='light']
@@ -216,4 +263,210 @@
   /* Ролі */
   --color-primary-fill: #9dc6ff; --color-primary-ink: #000000; --color-ghost-ink: #bcd8ff;
   --color-prio-high: #9dc6ff; --color-prio-low: #8fd6a8;
+}
+
+/* Полотно · світла */
+[data-scheme='polotno'][data-theme='light'] {
+  /* Полотно */
+  --color-bg: #e6ecfb; --color-surface: #ffffff; --color-text: #131832;
+  --color-divider: #c3cee8;
+  /* Нейтральна рампа */
+  --color-neutral-100: #dde5f7; --color-neutral-200: #d3ddf2; --color-neutral-300: #bfcbe6;
+  --color-neutral-400: #8792b0; --color-neutral-500: #697391; --color-neutral-600: #4d5674;
+  --color-neutral-700: #3a4260; --color-neutral-800: #1f2544; --color-neutral-900: #131832;
+  /* Акцент */
+  --color-accent: #2b3d8f; --color-accent-100: #e3e8fa; --color-accent-200: #d2daf6;
+  --color-accent-300: #9cade2; --color-accent-400: #6a80cc; --color-accent-500: #3d52b5;
+  --color-accent-600: #3447a2; --color-accent-700: #2b3d8f; --color-accent-800: #1f2d6b;
+  --color-accent-900: #16204d;
+  /* Другий акцент */
+  --color-accent-2: #e0687a; --color-accent-2-100: #fde8ea; --color-accent-2-200: #fad6da;
+  --color-accent-2-300: #f0a0a9; --color-accent-2-400: #e0687a; --color-accent-2-500: #c95263;
+  --color-accent-2-600: #b23c4d; --color-accent-2-700: #9c2438; --color-accent-2-800: #7a1a2b;
+  --color-accent-2-900: #5c121f;
+  /* Небезпека */
+  --color-danger: #a83a2e; --color-danger-bg: #f7ded6; --color-danger-ink: #7a2a1c;
+  --color-danger-line: #b5533f;
+  /* Гостьова */
+  --color-guest-bg: #dfe7fa; --color-guest-header: #c9d5f2; --color-guest-card: #ffffff;
+  /* Ролі */
+  --color-primary-fill: #2b3d8f; --color-primary-ink: #ffffff; --color-ghost-ink: #2b3d8f;
+  --color-prio-high: #2b3d8f; --color-prio-low: #9c2438;
+}
+
+/* Полотно · темна */
+[data-scheme='polotno'][data-theme='dark'] {
+  /* Полотно */
+  --color-bg: #101634; --color-surface: #1a2246; --color-text: #e6eafa;
+  --color-divider: rgba(230,234,250,.18);
+  /* Нейтральна рампа */
+  --color-neutral-100: #1a2246; --color-neutral-200: #222b52; --color-neutral-300: #2f3a66;
+  --color-neutral-400: #5a6493; --color-neutral-500: #7d87b1; --color-neutral-600: #a3abcf;
+  --color-neutral-700: #c2c9e6; --color-neutral-800: #dee3f5; --color-neutral-900: #0a0e24;
+  /* Акцент */
+  --color-accent: #9fb2ff; --color-accent-100: #161e44; --color-accent-200: #1f2a5c;
+  --color-accent-300: #46548f; --color-accent-400: #7182c6; --color-accent-500: #9fb2ff;
+  --color-accent-600: #adbdff; --color-accent-700: #bcc8ff; --color-accent-800: #d7deff;
+  --color-accent-900: #ebefff;
+  /* Другий акцент */
+  --color-accent-2: #f08c9b; --color-accent-2-100: #330e18; --color-accent-2-200: #4a1522;
+  --color-accent-2-300: #994d5b; --color-accent-2-400: #f08c9b; --color-accent-2-500: #f39aa7;
+  --color-accent-2-600: #f5a8b4; --color-accent-2-700: #f7b6c0; --color-accent-2-800: #fbd3d9;
+  --color-accent-2-900: #fde8ec;
+  /* Небезпека */
+  --color-danger: #e08b7f; --color-danger-bg: #3d201a; --color-danger-ink: #ffd9d0;
+  --color-danger-line: #a8503f;
+  /* Гостьова */
+  --color-guest-bg: #0c1130; --color-guest-header: #1f2a5c; --color-guest-card: #18204a;
+  /* Ролі */
+  --color-primary-fill: #9fb2ff; --color-primary-ink: #101634; --color-ghost-ink: #bcc8ff;
+  --color-prio-high: #9fb2ff; --color-prio-low: #f08c9b;
+}
+
+/* Цитрус · світла */
+[data-scheme='cytrus'][data-theme='light'] {
+  /* Полотно */
+  --color-bg: #faf9f2; --color-surface: #ffffff; --color-text: #16180d;
+  --color-divider: #dcded0;
+  /* Нейтральна рампа */
+  --color-neutral-100: #f2f1e8; --color-neutral-200: #e9e8dc; --color-neutral-300: #d7d8c7;
+  --color-neutral-400: #9a9c88; --color-neutral-500: #7a7c69; --color-neutral-600: #5c5e4c;
+  --color-neutral-700: #45473a; --color-neutral-800: #23251a; --color-neutral-900: #16180d;
+  /* Акцент */
+  --color-accent: #4d6b00; --color-accent-100: #f0f8d9; --color-accent-200: #e2f2b8;
+  --color-accent-300: #bad286; --color-accent-400: #94b352; --color-accent-500: #6f9400;
+  --color-accent-600: #5e7f00; --color-accent-700: #4d6b00; --color-accent-800: #3a5000;
+  --color-accent-900: #283700;
+  /* Другий акцент */
+  --color-accent-2: #7a5cf0; --color-accent-2-100: #ece8fd; --color-accent-2-200: #dcd6fb;
+  --color-accent-2-300: #a79cf8; --color-accent-2-400: #7a5cf0; --color-accent-2-500: #664bda;
+  --color-accent-2-600: #5439c5; --color-accent-2-700: #4226b0; --color-accent-2-800: #321c85;
+  --color-accent-2-900: #241463;
+  /* Небезпека */
+  --color-danger: #a83a2e; --color-danger-bg: #f7ded6; --color-danger-ink: #7a2a1c;
+  --color-danger-line: #b5533f;
+  /* Гостьова */
+  --color-guest-bg: #f7f9ea; --color-guest-header: #e2f2b8; --color-guest-card: #ffffff;
+  /* Ролі */
+  --color-primary-fill: #b6f000; --color-primary-ink: #16180d; --color-ghost-ink: #4d6b00;
+  --color-prio-high: #4d6b00; --color-prio-low: #4226b0;
+}
+
+/* Цитрус · темна */
+[data-scheme='cytrus'][data-theme='dark'] {
+  /* Полотно */
+  --color-bg: #101207; --color-surface: #1b1e10; --color-text: #f1f4e2;
+  --color-divider: rgba(241,244,226,.18);
+  /* Нейтральна рампа */
+  --color-neutral-100: #1b1e10; --color-neutral-200: #242818; --color-neutral-300: #333823;
+  --color-neutral-400: #5f6547; --color-neutral-500: #838a6c; --color-neutral-600: #a9b094;
+  --color-neutral-700: #c8ceb2; --color-neutral-800: #e4e9d2; --color-neutral-900: #0a0b04;
+  /* Акцент */
+  --color-accent: #c9f24d; --color-accent-100: #1e2708; --color-accent-200: #2c3a0d;
+  --color-accent-300: #5c7221; --color-accent-400: #91b036; --color-accent-500: #c9f24d;
+  --color-accent-600: #d0f567; --color-accent-700: #d8f77c; --color-accent-800: #e6faa8;
+  --color-accent-900: #f1fccd;
+  /* Другий акцент */
+  --color-accent-2: #a68cff; --color-accent-2-100: #1a1338; --color-accent-2-200: #261a52;
+  --color-accent-2-300: #6250a4; --color-accent-2-400: #a68cff; --color-accent-2-500: #af98ff;
+  --color-accent-2-600: #b9a4ff; --color-accent-2-700: #c3b0ff; --color-accent-2-800: #d9ccff;
+  --color-accent-2-900: #eae3ff;
+  /* Небезпека */
+  --color-danger: #e08b7f; --color-danger-bg: #3d201a; --color-danger-ink: #ffd9d0;
+  --color-danger-line: #a8503f;
+  /* Гостьова */
+  --color-guest-bg: #0c0e06; --color-guest-header: #2c3a0d; --color-guest-card: #191c0f;
+  /* Ролі */
+  --color-primary-fill: #c9f24d; --color-primary-ink: #101207; --color-ghost-ink: #d8f77c;
+  --color-prio-high: #c9f24d; --color-prio-low: #a68cff;
+}
+
+/* Ніч · світла */
+[data-scheme='nich'][data-theme='light'] {
+  /* Полотно */
+  --color-bg: #f4f5f7; --color-surface: #ffffff; --color-text: #14171c;
+  --color-divider: #d9dce1;
+  /* Нейтральна рампа */
+  --color-neutral-100: #eef0f3; --color-neutral-200: #e6e8ec; --color-neutral-300: #d3d7dd;
+  --color-neutral-400: #979da7; --color-neutral-500: #767c86; --color-neutral-600: #575d67;
+  --color-neutral-700: #3f454e; --color-neutral-800: #22262c; --color-neutral-900: #14171c;
+  /* Акцент */
+  --color-accent: #8a5a10; --color-accent-100: #fdf2df; --color-accent-200: #f8e3bf;
+  --color-accent-300: #e0bf8d; --color-accent-400: #c89c5b; --color-accent-500: #b07a1c;
+  --color-accent-600: #9d6a16; --color-accent-700: #8a5a10; --color-accent-800: #67410a;
+  --color-accent-900: #492d06;
+  /* Другий акцент */
+  --color-accent-2: #3f908a; --color-accent-2-100: #e4f2f1; --color-accent-2-200: #cfe8e6;
+  --color-accent-2-300: #89bbb7; --color-accent-2-400: #3f908a; --color-accent-2-500: #347e79;
+  --color-accent-2-600: #296c68; --color-accent-2-700: #1f5b57; --color-accent-2-800: #164643;
+  --color-accent-2-900: #103533;
+  /* Небезпека */
+  --color-danger: #a83a2e; --color-danger-bg: #f7ded6; --color-danger-ink: #7a2a1c;
+  --color-danger-line: #b5533f;
+  /* Гостьова */
+  --color-guest-bg: #f2f4f7; --color-guest-header: #f8e3bf; --color-guest-card: #ffffff;
+  /* Ролі */
+  --color-primary-fill: #8a5a10; --color-primary-ink: #ffffff; --color-ghost-ink: #8a5a10;
+  --color-prio-high: #8a5a10; --color-prio-low: #1f5b57;
+}
+
+/* Ніч · темна */
+[data-scheme='nich'][data-theme='dark'] {
+  /* Полотно */
+  --color-bg: #0f1217; --color-surface: #191e26; --color-text: #e9eef5;
+  --color-divider: rgba(233,238,245,.16);
+  /* Нейтральна рампа */
+  --color-neutral-100: #191e26; --color-neutral-200: #222834; --color-neutral-300: #2f3644;
+  --color-neutral-400: #59616f; --color-neutral-500: #7d8594; --color-neutral-600: #a2abba;
+  --color-neutral-700: #c2cad6; --color-neutral-800: #dfe5ee; --color-neutral-900: #080a0d;
+  /* Акцент */
+  --color-accent: #f2b34a; --color-accent-100: #241a08; --color-accent-200: #35260c;
+  --color-accent-300: #6e511f; --color-accent-400: #ae8034; --color-accent-500: #f2b34a;
+  --color-accent-600: #f4be63; --color-accent-700: #f6c979; --color-accent-800: #fadfae;
+  --color-accent-900: #fdeed3;
+  /* Другий акцент */
+  --color-accent-2: #57c4bc; --color-accent-2-100: #06211f; --color-accent-2-200: #0b3230;
+  --color-accent-2-300: #2f7772; --color-accent-2-400: #57c4bc; --color-accent-2-500: #6acbc3;
+  --color-accent-2-600: #7bd1cb; --color-accent-2-700: #8bd8d2; --color-accent-2-800: #b7e7e3;
+  --color-accent-2-900: #d8f2f0;
+  /* Небезпека */
+  --color-danger: #e08b7f; --color-danger-bg: #3d201a; --color-danger-ink: #ffd9d0;
+  --color-danger-line: #a8503f;
+  /* Гостьова */
+  --color-guest-bg: #0b0e12; --color-guest-header: #35260c; --color-guest-card: #171c23;
+  /* Ролі */
+  --color-primary-fill: #f2b34a; --color-primary-ink: #0f1217; --color-ghost-ink: #f6c979;
+  --color-prio-high: #f2b34a; --color-prio-low: #57c4bc;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Зразки схем у налаштуваннях.
+
+   Це єдине місце, де колір показується як колір, а не як роль:
+   плитка має впізнаватись як «Шавлія» незалежно від того, яка
+   схема зараз увімкнена. Тому значення не залежать від схеми —
+   лише від теми: пара «полотно + акцент» тієї самої схеми.
+   Ніч — темна за замовчуванням, тож її зразок темний завжди.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* Полотно QR-коду. Сканери читають темне на світлому, тож воно біле в
+     будь-якій палітрі: інверсія в темній темі ламала б розпізнавання. */
+  --color-qr-paper: #ffffff;
+
+  --color-dot-sage: #56633f;    --color-dot-sage-bg: #f5ead8;
+  --color-dot-slyva: #4a2e6b;   --color-dot-slyva-bg: #f6f5f8;
+  --color-dot-polotno: #2b3d8f; --color-dot-polotno-bg: #e6ecfb;
+  --color-dot-cytrus: #b6f000;  --color-dot-cytrus-bg: #faf9f2;
+  --color-dot-nich: #f2b34a;    --color-dot-nich-bg: #0f1217;
+  --color-dot-vuhil: #123a6b;   --color-dot-vuhil-bg: #ffffff;
+}
+
+[data-theme='dark'] {
+  --color-dot-sage: #aebf92;    --color-dot-sage-bg: #221f1b;
+  --color-dot-slyva: #b79bdb;   --color-dot-slyva-bg: #14121a;
+  --color-dot-polotno: #9fb2ff; --color-dot-polotno-bg: #101634;
+  --color-dot-cytrus: #c9f24d;  --color-dot-cytrus-bg: #101207;
+  --color-dot-nich: #f2b34a;    --color-dot-nich-bg: #0f1217;
+  --color-dot-vuhil: #9dc6ff;   --color-dot-vuhil-bg: #000000;
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchList, updateList } from '../lib/db';
 import type { ItemInput, ListInput } from '../lib/db';
 import { useDebounced, useItems } from '../lib/useItems';
@@ -16,13 +16,28 @@ import { ListDialog } from '../components/ListDialog';
 import { ShareDialog } from '../components/ShareDialog';
 import { EventSummary } from '../components/EventSummary';
 import { ExportDialog } from '../components/ExportDialog';
+import { AppearanceDialog } from '../components/AppearanceDialog';
+import { SectionsView } from '../components/SectionsView';
+import { SectionDialog } from '../components/SectionDialog';
+import {
+  SECTIONS_FROM,
+  createSection,
+  deleteSection,
+  fetchSections,
+  groupItems,
+  matchesQuery,
+  renameSection,
+  reorderItems,
+  reorderSections,
+} from '../lib/sections';
+import type { Section } from '../lib/sections';
 import { useStale } from '../components/Banners';
 import { ConfirmDialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
 import { UndoToast, useUndo } from '../components/UndoToast';
 import { newId, run } from '../lib/outbox';
 import type { Op } from '../lib/outbox';
-import { listKey, readSnapshot, saveSnapshot } from '../lib/cache';
+import { listKey, readSnapshot, saveSnapshot, sectionsKey } from '../lib/cache';
 import { Note } from '../components/ui';
 
 export default function ListDetail() {
@@ -47,6 +62,29 @@ export default function ListDetail() {
   // а вибір треба поставити вже на перезавантажену вибірку.
   const [selectActiveOnLoad, setSelectActiveOnLoad] = useState(false);
   const [exportDialog, setExportDialog] = useState(false);
+  const [appearanceDialog, setAppearanceDialog] = useState(false);
+  const navigate = useNavigate();
+
+  // Розділи й ручний порядок (ADR-036).
+  const [sections, setSections] = useState<Section[]>([]);
+  /** Список і розділи вже відомі — можна вирішувати, у якому режимі показувати. */
+  const [layoutReady, setLayoutReady] = useState(false);
+  /** 'auto' — розділи, якщо вони ввімкнені; інакше — вибір людини. */
+  const [view, setView] = useState<'auto' | 'sections' | 'flat'>('auto');
+  const [sectionDialog, setSectionDialog] = useState<{ open: boolean; section: Section | null }>({
+    open: false,
+    section: null,
+  });
+  const [sectionToDelete, setSectionToDelete] = useState<Section | null>(null);
+  const [deletingSection, setDeletingSection] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [plateHidden, setPlateHidden] = useState(() => {
+    try {
+      return localStorage.getItem('wl.noFreePlate') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const undoDelete = useUndo();
   const [confirmBulk, setConfirmBulk] = useState(false);
@@ -56,8 +94,33 @@ export default function ListDetail() {
   const query = useMemo<ItemQuery>(() => ({ ...draft, search }), [draft, search]);
 
   const userId = session?.user.id;
-  const { items, totals, loading, loadingMore, done, error, staleAt, reload, loadMore, applyLocal } =
-    useItems(id, query, userId);
+
+  /**
+   * Розділи вмикаються від 12 позицій або коли власник створив перший. До
+   * того — плаский список, як і був. У режимі «Розділи» список вантажиться
+   * цілим, бо групування й ручний порядок потребують усіх позицій.
+   */
+  const sectionsEnabled = sections.length > 0 || (list?.item_count ?? 0) >= SECTIONS_FROM;
+  const mode: 'sections' | 'flat' =
+    view === 'flat' || !sectionsEnabled ? 'flat' : 'sections';
+
+  const {
+    items,
+    totals,
+    loading: itemsLoading,
+    loadingMore,
+    done,
+    error,
+    staleAt,
+    reload,
+    loadMore,
+    applyLocal,
+    patchLocal,
+  } = useItems(id, query, userId, mode === 'sections' ? 'all' : 'page');
+  // Перша партія йде паралельно зі списком, як до розділів: плаский список
+  // відкривається за один оберт до сервера. Показуємо, лише коли відомо, у
+  // якому режимі, — інакше великий список блимнув би пласким перед розділами.
+  const loading = itemsLoading || !layoutReady;
 
   /**
    * Одна дорога для всіх змін позицій (етап 6.5).
@@ -72,7 +135,7 @@ export default function ListDetail() {
 
   useEffect(() => {
     let alive = true;
-    fetchList(id)
+    const listLoaded = fetchList(id)
       .then((fresh) => {
         if (!alive) return;
         setList(fresh);
@@ -87,6 +150,20 @@ export default function ListDetail() {
         if (snapshot) setList(snapshot.data);
         else setListError(errorText(e, t));
       });
+    const sectionsLoaded = fetchSections(id)
+      .then((fresh) => {
+        if (!alive) return;
+        setSections(fresh);
+        if (userId) void saveSnapshot(sectionsKey(id), userId, fresh);
+      })
+      .catch(async (e: unknown) => {
+        const snapshot =
+          isNetworkError(e) && userId ? await readSnapshot<Section[]>(sectionsKey(id), userId) : null;
+        if (alive && snapshot) setSections(snapshot.data);
+      });
+    void Promise.allSettled([listLoaded, sectionsLoaded]).then(() => {
+      if (alive) setLayoutReady(true);
+    });
     return () => {
       alive = false;
     };
@@ -108,6 +185,16 @@ export default function ListDetail() {
   }, [loadMore, done]);
 
   const patch = useCallback((p: Partial<ItemQuery>) => setDraft((q) => ({ ...q, ...p })), []);
+
+  /**
+   * Що на екрані. У режимі «Розділи» список завантажено цілим, і фільтри
+   * застосовуються тут — тими самими правилами, що в `list_items_page`.
+   */
+  const visibleItems = useMemo(
+    () => (mode === 'sections' ? items.filter((i) => matchesQuery(i, query)) : items),
+    [mode, items, query],
+  );
+  const groups = useMemo(() => groupItems(visibleItems, sections), [visibleItems, sections]);
   const resetFilters = useCallback(() => setDraft(DEFAULT_QUERY), []);
 
   // Банер про збережену копію живе в оболонці — на екрані завжди один банер.
@@ -142,11 +229,11 @@ export default function ListDetail() {
    */
   useEffect(() => {
     setSelected((prev) => {
-      const visible = new Set(items.map((i) => i.id));
+      const visible = new Set(visibleItems.map((i) => i.id));
       const next = new Set([...prev].filter((id) => visible.has(id)));
       return next.size === prev.size ? prev : next;
     });
-  }, [items]);
+  }, [visibleItems]);
 
   useEffect(() => {
     if (!selecting) return;
@@ -160,11 +247,11 @@ export default function ListDetail() {
 
   useEffect(() => {
     if (!selectActiveOnLoad || loading) return;
-    setSelected(new Set(items.filter((i) => i.status === 'active').map((i) => i.id)));
+    setSelected(new Set(visibleItems.filter((i) => i.status === 'active').map((i) => i.id)));
     setSelectActiveOnLoad(false);
-  }, [selectActiveOnLoad, loading, items]);
+  }, [selectActiveOnLoad, loading, visibleItems]);
 
-  const selectedItems = items.filter((i) => selected.has(i.id));
+  const selectedItems = visibleItems.filter((i) => selected.has(i.id));
   /** Куплене й подароване гостям не показується, тож у посилання йде лише актуальне. */
   const selectedActiveIds = selectedItems.filter((i) => i.status === 'active').map((i) => i.id);
 
@@ -223,9 +310,86 @@ export default function ListDetail() {
     setList(await fetchList(id));
   }
 
+  /* ── Розділи й порядок (ADR-036) ── */
+
+  /** Оптимістично: позиції стають на нові місця одразу, запит — слідом. */
+  async function onReorderItems(sectionId: string | null, ids: string[]) {
+    setOrderError(null);
+    const pos = new Map(ids.map((itemId, i) => [itemId, i + 1]));
+    patchLocal((prev) =>
+      prev.map((i) => (pos.has(i.id) ? { ...i, section_id: sectionId, position: pos.get(i.id)! } : i)),
+    );
+    try {
+      await reorderItems(id, sectionId, ids);
+    } catch {
+      setOrderError(t('sections.saveError'));
+      await reload();
+    }
+  }
+
+  async function onReorderSections(ids: string[]) {
+    setOrderError(null);
+    const before = sections;
+    const pos = new Map(ids.map((sid, i) => [sid, i + 1]));
+    setSections((prev) =>
+      prev.map((sec) => ({ ...sec, position: pos.get(sec.id) ?? sec.position })).sort((a, b) => a.position - b.position),
+    );
+    try {
+      await reorderSections(id, ids);
+    } catch {
+      setOrderError(t('sections.saveError'));
+      setSections(before);
+    }
+  }
+
+  async function saveSection(title: string) {
+    const editing = sectionDialog.section;
+    if (editing) {
+      await renameSection(editing.id, title);
+      setSections((prev) => prev.map((sec) => (sec.id === editing.id ? { ...sec, title } : sec)));
+      return;
+    }
+    const next = Math.max(0, ...sections.map((sec) => sec.position)) + 1;
+    const created = await createSection(id, title, next);
+    setSections((prev) => [...prev, created]);
+    // Перший розділ вмикає групування, навіть якщо позицій менше дванадцяти.
+    setView('auto');
+  }
+
+  async function confirmDeleteSection() {
+    const target = sectionToDelete;
+    if (!target || deletingSection) return;
+    setDeletingSection(true);
+    try {
+      await deleteSection(target.id);
+      setSections((prev) => prev.filter((sec) => sec.id !== target.id));
+      patchLocal((prev) => prev.map((i) => (i.section_id === target.id ? { ...i, section_id: null } : i)));
+      setSectionToDelete(null);
+    } catch (e) {
+      setOrderError(errorText(e, t));
+      setSectionToDelete(null);
+    } finally {
+      setDeletingSection(false);
+    }
+  }
+
+  function hidePlate() {
+    setPlateHidden(true);
+    try {
+      localStorage.setItem('wl.noFreePlate', '1');
+    } catch {
+      /* без сховища плашка просто зʼявиться знову */
+    }
+  }
+
   const currency = list?.currency ?? 'PLN';
 
-  const filtered = isFiltered(query);
+  // У режимі «Розділи» сортування й партії немає, тож «відфільтровано» —
+  // лише пошук, статус і ціна.
+  const filtered =
+    mode === 'sections'
+      ? query.search.trim() !== '' || query.statuses.length > 0 || query.priceMin !== '' || query.priceMax !== ''
+      : isFiltered(query);
   const statusNames = query.statuses.map((x) => t(`item.status.${x}`)).join(', ');
 
   return (
@@ -254,7 +418,7 @@ export default function ListDetail() {
             type="button"
             className="btn select-head__btn"
             disabled={bulkBusy}
-            onClick={() => setSelected(new Set(items.map((i) => i.id)))}
+            onClick={() => setSelected(new Set(visibleItems.map((i) => i.id)))}
           >
             {t('select.selectAll')}
           </button>
@@ -276,6 +440,16 @@ export default function ListDetail() {
             disabled={!list}
           >
             {t('lists.edit')}
+          </button>
+          {/* Оформлення живе в самому списку, а не в Налаштуваннях: це вигляд
+              події, яку бачать гості, а не смак власника (ADR-034). */}
+          <button
+            type="button"
+            className="btn btn--secondary btn--compact"
+            onClick={() => setAppearanceDialog(true)}
+            disabled={!list}
+          >
+            {t('appearance.open')}
           </button>
           <button
             type="button"
@@ -319,7 +493,81 @@ export default function ListDetail() {
         open={filtersOpen}
         onOpen={() => setFiltersOpen(true)}
         onClose={() => setFiltersOpen(false)}
+        manual={mode === 'sections'}
       />
+
+      {/* Рядок вигляду власника (ADR-036). У гостя тут «Вільні · Усі», а
+          в власника «вільних» немає: він не бачить позначок, тож і
+          фільтрувати за ними нічого. Це видно й пояснено плашкою, а не
+          сховано — інакше виглядало б недоробкою. */}
+      {sectionsEnabled && !selecting && (
+        <div className="view-row">
+          <div className="gchips" role="radiogroup" aria-label={t('sections.view')}>
+            <button
+              type="button"
+              role="radio"
+              className="gchip"
+              aria-checked={mode === 'sections'}
+              onClick={() => {
+                setView('sections');
+                patch({ sort: DEFAULT_QUERY.sort, desc: DEFAULT_QUERY.desc, pageSize: DEFAULT_QUERY.pageSize });
+              }}
+            >
+              {t('sections.bySections')}
+            </button>
+            <button
+              type="button"
+              role="radio"
+              className="gchip"
+              aria-checked={mode === 'flat' && query.sort === 'priority'}
+              onClick={() => {
+                setView('flat');
+                patch({ sort: 'priority', desc: true });
+              }}
+            >
+              {t('sections.byPriority')}
+            </button>
+            <button
+              type="button"
+              role="radio"
+              className="gchip"
+              aria-checked={mode === 'flat' && query.sort === 'price'}
+              onClick={() => {
+                setView('flat');
+                patch({ sort: 'price', desc: false });
+              }}
+            >
+              {t('sections.byPrice')}
+            </button>
+          </div>
+          <p className="small muted">
+            {mode === 'flat'
+              ? t('sections.viewOnlyHint')
+              : filtered
+                ? t('sections.filteredNoDrag')
+                : t('sections.orderHint')}
+          </p>
+          {!plateHidden && (
+            <div className="no-free">
+              <strong>{t('sections.noFreeTitle')}</strong>
+              <p className="small">{t('sections.noFreeBody')}</p>
+              <button type="button" className="btn btn--ghost btn--compact" onClick={hidePlate}>
+                {t('sections.dismiss')}
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            className="btn btn--secondary btn--compact"
+            onClick={() => setSectionDialog({ open: true, section: null })}
+          >
+            <Icon name="plus" size={16} />
+            {t('sections.new')}
+          </button>
+        </div>
+      )}
+
+      {orderError && <Note tone="error">{orderError}</Note>}
 
       {/* Постійний рядок під фільтрами: скільки видно з усього списку.
           Без фільтрів він просто називає розмір списку. */}
@@ -327,12 +575,23 @@ export default function ListDetail() {
         <div className="counter">
           <span className="small muted" aria-live="polite">
             {filtered
-              ? t('item.counter', { n: items.length, m: totals.items_count })
+              ? t('item.counter', { n: visibleItems.length, m: totals.items_count })
               : t('item.countAll', { n: totals.items_count })}
           </span>
           {filtered && (
             <button type="button" className="btn btn--ghost btn--compact" onClick={resetFilters}>
               {t('toolbar.reset')}
+            </button>
+          )}
+          {/* Розділи ще не ввімкнені (менше 12 позицій) — перший можна
+              створити й так, і він увімкне групування. */}
+          {!sectionsEnabled && !selecting && items.length > 0 && (
+            <button
+              type="button"
+              className="btn btn--ghost btn--compact"
+              onClick={() => setSectionDialog({ open: true, section: null })}
+            >
+              {t('sections.new')}
             </button>
           )}
         </div>
@@ -371,7 +630,7 @@ export default function ListDetail() {
             {t('common.retry')}
           </button>
         </main>
-      ) : items.length === 0 && filtered ? (
+      ) : visibleItems.length === 0 && filtered ? (
         /* Фільтр нічого не знайшов — це не те саме, що порожній список:
            позиції є, їх просто ховають. Тому чипи активних фільтрів. */
         <main className="empty">
@@ -436,6 +695,31 @@ export default function ListDetail() {
           >
             {t('item.add')}
           </button>
+        </main>
+      ) : mode === 'sections' ? (
+        <main data-stale={staleAt ? 'true' : 'false'}>
+          <h2 className="visually-hidden">{t('item.listLabel')}</h2>
+          <SectionsView
+            groups={groups}
+            // Порядок міняється лише тоді, коли видно всі позиції, мережа є і
+            // людина не вибирає: інакше «перед чим» означало б «перед тим,
+            // чого не видно».
+            canReorder={!filtered && !selecting && !staleAt}
+            handlers={{
+              currency,
+              onEdit: (i) => setItemDialog({ open: true, item: i }),
+              onDelete: (i) => removeItem(i),
+              onSetStatus: (i, st) => void setStatus(i, st),
+              selectable: selecting,
+              selected,
+              onToggleSelect: toggleSelect,
+            }}
+            onReorderItems={(sectionId, ids) => void onReorderItems(sectionId, ids)}
+            onReorderSections={(ids) => void onReorderSections(ids)}
+            onRenameSection={(sec) => setSectionDialog({ open: true, section: sec })}
+            onDeleteSection={(sec) => setSectionToDelete(sec)}
+          />
+          {items.length > 0 && <p className="small muted center">{t('item.end')}</p>}
         </main>
       ) : (
         <main>
@@ -558,6 +842,23 @@ export default function ListDetail() {
         item={itemDialog.item}
         onClose={() => setItemDialog({ open: false, item: null })}
         onSave={saveItem}
+        sections={sections}
+      />
+      <SectionDialog
+        open={sectionDialog.open}
+        section={sectionDialog.section}
+        onClose={() => setSectionDialog({ open: false, section: null })}
+        onSave={saveSection}
+      />
+      <ConfirmDialog
+        open={sectionToDelete !== null}
+        title={t('sections.confirmDeleteTitle', { title: sectionToDelete?.title ?? '' })}
+        body={t('sections.confirmDeleteBody')}
+        confirmLabel={t('sections.confirmDelete')}
+        busyLabel={t('sections.deleting')}
+        busy={deletingSection}
+        onConfirm={() => void confirmDeleteSection()}
+        onClose={() => setSectionToDelete(null)}
       />
       <ListDialog open={listDialog} list={list} onClose={() => setListDialog(false)} onSave={saveList} />
       <ExportDialog
@@ -565,6 +866,14 @@ export default function ListDetail() {
         list={list}
         total={totals?.items_count}
         onClose={() => setExportDialog(false)}
+      />
+
+      <AppearanceDialog
+        open={appearanceDialog}
+        list={list}
+        onClose={() => setAppearanceDialog(false)}
+        onChanged={(appearanceId) => setList((l) => (l ? { ...l, appearance_id: appearanceId } : l))}
+        onPreview={() => navigate(`/lists/${id}/preview`)}
       />
 
       <UndoToast pending={undoDelete.pending} onUndo={undoDelete.undo} />

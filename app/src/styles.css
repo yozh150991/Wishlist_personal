@@ -64,6 +64,14 @@
 
 /* ── База ──────────────────────────────────────────────────── */
 
+/* Зміна схеми, теми чи оформлення — миттєва: ThemeProvider ставить цей клас
+   на два кадри, щоб кольори не перетікали через transition кнопок і карток. */
+.appearance-switching *,
+.appearance-switching *::before,
+.appearance-switching *::after {
+  transition: none !important;
+}
+
 *,
 *::before,
 *::after {
@@ -1144,18 +1152,109 @@ select[multiple].input {
 }
 .settings__row { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
 
-.scheme-dot {
-  width: 15px;
-  height: 15px;
+/* Схеми смаку — плитки у дві колонки: пара «полотно + акцент» і назва.
+   Обрана — рамкою акценту, а не заливкою: заливка акцентом зробила б
+   плитку Цитруса лаймовою, і назва на ній читалась би гірше за решту. */
+.scheme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--sp-3);
+  width: 100%;
+}
+.scheme-tile {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 52px;
+  padding: var(--sp-3) var(--sp-5);
+  font: inherit;
+  font-size: var(--t-body);
+  font-weight: 700;
+  text-align: left;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 2px solid transparent;
+  border-radius: var(--r-field);
+  cursor: pointer;
+}
+.scheme-tile:hover { border-color: var(--color-divider); }
+.scheme-tile[aria-checked='true'] { border-color: var(--color-accent-700); }
+.scheme-tile__name { min-width: 0; overflow-wrap: anywhere; }
+
+.scheme-swatch {
+  width: 28px;
+  height: 28px;
   flex: none;
   border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--color-divider);
 }
-.scheme-dot[data-scheme-dot='sage'] { background: var(--color-dot-sage); }
-.scheme-dot[data-scheme-dot='slyva'] { background: var(--color-dot-slyva); }
-.scheme-dot[data-scheme-dot='vuhil'] { background: var(--color-dot-vuhil); }
-/* На обраній пігулці кружечок лежить на заливці акценту й може з нею злитись —
-   тонке кільце кольором підпису тримає його видимим у всіх шести палітрах. */
-.btn--primary .scheme-dot { box-shadow: 0 0 0 2px var(--color-primary-ink); }
+.scheme-swatch[data-scheme-dot='sage'] {
+  background: linear-gradient(90deg, var(--color-dot-sage-bg) 50%, var(--color-dot-sage) 50%);
+}
+.scheme-swatch[data-scheme-dot='slyva'] {
+  background: linear-gradient(90deg, var(--color-dot-slyva-bg) 50%, var(--color-dot-slyva) 50%);
+}
+.scheme-swatch[data-scheme-dot='polotno'] {
+  background: linear-gradient(90deg, var(--color-dot-polotno-bg) 50%, var(--color-dot-polotno) 50%);
+}
+.scheme-swatch[data-scheme-dot='cytrus'] {
+  background: linear-gradient(90deg, var(--color-dot-cytrus-bg) 50%, var(--color-dot-cytrus) 50%);
+}
+.scheme-swatch[data-scheme-dot='nich'] {
+  background: linear-gradient(90deg, var(--color-dot-nich-bg) 50%, var(--color-dot-nich) 50%);
+}
+
+/* Доступність — перша картка налаштувань, тонована, щоб її не проминали. */
+.settings__card--a11y { background: var(--color-accent-200); }
+.settings__card--a11y .settings__label { color: var(--color-accent-900); }
+.settings__card--a11y .switch-row__label,
+.settings__card--a11y .switch-row__hint { color: var(--color-accent-900); }
+
+/* Тумблер: уся смуга — кнопка role="switch"; повзунок праворуч. */
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--sp-2) 0;
+  font: inherit;
+  text-align: left;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.switch-row:disabled { cursor: not-allowed; }
+.switch-row__text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.switch-row__label { font-size: var(--t-item); font-weight: 700; }
+.switch-row__hint { font-size: var(--t-small); line-height: 1.45; color: var(--color-neutral-700); }
+.switch {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  background: var(--color-neutral-300);
+  box-shadow: inset 0 0 0 1px var(--color-neutral-400);
+}
+.switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-fast) var(--ease);
+}
+.switch-row[aria-checked='true'] .switch { background: var(--color-primary-fill); box-shadow: none; }
+.switch-row[aria-checked='true'] .switch__knob {
+  transform: translateX(22px);
+  background: var(--color-primary-ink);
+}
+.switch-row:disabled .switch { opacity: 0.6; }
 
 /* ── Мої посилання ─────────────────────────────────────────── */
 
@@ -1226,7 +1325,18 @@ select[multiple].input {
   color: var(--color-accent-900);
 }
 .guest__head h1 { font-size: 30px; line-height: 1.05; color: var(--color-accent-900); }
+/* Над заголовком — дата події дрібними капітелями, як на листівці. */
+.guest__kicker {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-900);
+}
 .guest__message { margin-top: var(--sp-3); line-height: 1.5; }
+/* Термін посилання — дрібно й тихо: це довідка, а не попередження. */
+.guest__valid { margin: var(--sp-3) 0 0; font-size: var(--t-meta); color: var(--color-accent-900); }
 
 .guest__body {
   flex: 1;
@@ -1256,7 +1366,17 @@ select[multiple].input {
   border-radius: var(--r-card);
   background: var(--color-guest-card);
 }
-.gcard[data-taken='true'] { opacity: 0.7; }
+/* Чужа позиція приглушена чорнилом, а не заливкою й не прозорістю:
+   --color-neutral-100 на гостьовому полотні дає різницю 2/255, і картка
+   розчиняється, а прозорість провалює контраст тексту. */
+.gcard[data-taken='true'] .gcard__title,
+.gcard[data-taken='true'] .gcard__title a,
+.gcard[data-taken='true'] .gcard__price { color: var(--color-neutral-700); }
+.gcard[data-taken='true'] .gcard__image { filter: grayscale(0.6); }
+/* Програна гонка — рамка, щоб пояснення на місці позиції не загубилось. */
+.gcard[data-lost='true'] { box-shadow: inset 0 0 0 2px var(--color-accent-700); }
+.gcard { position: relative; }
+.gcard__flag { position: absolute; top: var(--sp-3); right: var(--sp-3); }
 .gcard__top { display: flex; gap: var(--sp-5); }
 .gcard__image { width: 64px; height: 64px; flex: none; border-radius: 18px; object-fit: cover; }
 .gcard__text { flex: 1; min-width: 0; display: grid; gap: 3px; align-content: start; }
@@ -1355,43 +1475,23 @@ select[multiple].input {
 .guest__gone-icon { width: 104px; height: 104px; }
 .guest--gone h1 { font-size: 30px; }
 
-/* Лист «Вигляд» у гостя. */
-.scheme-list { display: grid; gap: 2px; }
-.scheme-list__item {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-5);
-  width: 100%;
-  min-height: 56px;
-  padding: 0 var(--sp-5);
-  font: inherit;
-  font-size: var(--t-lead);
-  font-weight: 600;
-  text-align: left;
-  color: var(--color-text);
-  background: transparent;
-  border: 0;
-  border-radius: 18px;
-  cursor: pointer;
-}
-.scheme-list__item[aria-checked='true'] {
-  background: var(--color-accent-200);
-  color: var(--color-accent-900);
-  font-weight: 700;
-}
-.scheme-list__text { flex: 1; display: grid; gap: 1px; }
-.scheme-dot--big { width: 24px; height: 24px; }
+/* Лист «Вигляд» у гостя: лише тема й контраст — «для себе». */
+.for-me { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; margin: 0; }
 
 .booting { min-height: 100%; display: grid; place-items: center; color: var(--color-neutral-700); }
 
 /* Підвал, вкладений у <form> усередині тіла діалога: кнопка submit мусить
-   лишатись у формі, інакше Enter перестане її відправляти. Тому прилипає до
-   низу тільки той підвал, що є прямим нащадком діалога. */
+   лишатись у формі, інакше Enter перестане її відправляти. Але з форми він
+   прилипає до низу прокрутки так само, як прямий нащадок діалога, — інакше
+   в довгій формі на короткому екрані до «Зберегти» треба догортати, і саме
+   так кнопка тікала з-під пальця (і з-під тесту). Від'ємні поля рівно на
+   бічні відступи тіла: смужка йде від краю до краю. */
 .dialog__body .dialog__foot {
-  padding: 0;
-  margin-top: var(--sp-2);
-  border-top: 0;
-  background: transparent;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: var(--sp-2) calc(-1 * var(--sp-6)) calc(-1 * var(--sp-6));
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
 }
 
 /* Лічильник довжини біля довгих полів: межу видно до того, як база
@@ -1520,3 +1620,320 @@ select[multiple].input {
 }
 .qr__code svg { width: 100%; height: auto; display: block; }
 .qr__url { font-size: var(--t-meta); color: var(--color-neutral-700); word-break: break-all; }
+
+/* ── Оформлення списку (ADR-034) ───────────────────────────── */
+
+/* Кружечок відтінку: колір рахує генератор із H, тож тут лише форма. */
+.hue-dot {
+  flex: none;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+.hue-dot--none {
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--color-neutral-400);
+}
+
+.appearance-list { display: grid; gap: var(--sp-3); }
+.appearance-row,
+.appearance-row__pick {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--sp-3) var(--sp-5);
+  font: inherit;
+  font-size: var(--t-item);
+  text-align: left;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  border-radius: var(--r-field);
+  cursor: pointer;
+}
+.appearance-row[aria-checked='true'],
+.appearance-row__pick[aria-checked='true'] { border-color: var(--color-accent-700); }
+.appearance-row:disabled,
+.appearance-row__pick:disabled { cursor: progress; }
+.appearance-row__name { flex: 1; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+/* Своє оформлення: вибір і видалення — дві окремі кнопки в одному рядку. */
+.appearance-row--own { padding: 0; gap: 0; cursor: default; background: transparent; }
+.appearance-row--own .appearance-row__pick { flex: 1; min-width: 0; }
+.appearance-row--own .btn--icon { flex: none; }
+
+.appearance-note {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-5) var(--sp-6);
+  border-radius: var(--r-card);
+  background: var(--color-accent-2-100);
+  color: var(--color-accent-2-900);
+}
+
+.field__label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
+
+/* Відтінки: колір кожної плитки — заливка головної кнопки в цьому відтінку,
+   тобто те, що людина й побачить на «Я візьму це». */
+.hue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: var(--sp-3); }
+.hue-swatch {
+  min-width: var(--tap);
+  min-height: var(--tap);
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-accent-700);
+  cursor: pointer;
+}
+[data-theme='dark'] .hue-swatch { background: var(--color-accent-500); }
+.hue-swatch[aria-checked='true'] {
+  outline: 3px solid var(--color-text);
+  outline-offset: 2px;
+}
+.hue-swatch--custom {
+  display: grid;
+  place-items: center;
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-divider);
+}
+[data-theme='dark'] .hue-swatch--custom { background: var(--color-surface); }
+.hue-slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--sp-4); min-height: var(--tap); }
+.hue-slider input { width: 100%; accent-color: var(--color-text); }
+
+/* Живий приклад у аркуші «Новий вигляд» — шматок гостьової в мініатюрі. */
+.appearance-sample {
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--r-card);
+}
+.appearance-sample .guest__head { padding: var(--sp-5) var(--sp-6); text-align: left; }
+.appearance-sample__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--t-h2);
+  line-height: 1.1;
+  color: var(--color-accent-900);
+  overflow-wrap: anywhere;
+}
+.appearance-sample .gcard { margin: var(--sp-5); }
+
+/* Смуга превʼю «як бачить гість»: пояснення й дорога назад до списку. */
+.preview-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+  margin: 0;
+  padding: var(--sp-4) var(--sp-6);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.preview-bar p { flex: 1; min-width: 14rem; margin: 0; }
+.preview-bar .btn svg { transform: rotate(90deg); }
+/* Посилання в ролі кнопки — без підкреслення, як і решта кнопок. */
+a.btn { text-decoration: none; }
+
+/* ── Гостьова: ключ, стани, фільтри (ADR-035) ──────────────── */
+
+.gcard__race {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-4) 14px;
+  border-radius: var(--r-field);
+  background: var(--color-accent-200);
+  color: var(--color-accent-900);
+}
+
+/* «Забери доступ із собою» — на тлі шапки гостьової: це про листівку, а не
+   про застосунок. */
+.keep {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-6);
+  border-radius: var(--r-card);
+  background: var(--color-guest-header);
+  color: var(--color-text);
+}
+.keep__kicker {
+  margin: 0;
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-900);
+}
+.keep__title { font-size: var(--t-lead); font-family: var(--font-body); font-weight: 800; }
+.keep__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.keep__code {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--color-divider);
+}
+.keep__code-value {
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--r-field);
+  background: var(--color-guest-card);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+/* «Усе вже розібрали» — не помилка, а привід повернутись. */
+.all-taken {
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-6);
+  border-radius: var(--r-card);
+  background: var(--color-guest-card);
+}
+.all-taken h2 { font-size: var(--t-h2); }
+.all-taken__watching { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin: 0; }
+
+.taken-list { display: grid; gap: var(--sp-3); }
+.taken-list__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); margin: 0; }
+.taken-list__rows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
+.taken-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  min-height: 52px;
+  padding: var(--sp-3) var(--sp-6);
+  border-radius: var(--r-field);
+  background: var(--color-guest-card);
+}
+/* Приглушено чорнилом: заливка лишається картковою, інакше рядки розчиняються. */
+.taken-row__title { min-width: 0; font-weight: 700; color: var(--color-neutral-700); overflow-wrap: anywhere; }
+
+/* Фільтри гостя: «Вільні» типово, «Усі» поруч. Пігулки на всю ціль 44 px. */
+.guest-filters { display: grid; gap: var(--sp-3); scroll-margin-top: var(--sp-6); }
+.gchips { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.gchip {
+  min-height: var(--tap);
+  padding: 0 var(--sp-6);
+  font: inherit;
+  font-size: var(--t-body);
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-guest-card);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.gchip[aria-checked='true'],
+.gchip[aria-pressed='true'] {
+  color: var(--color-primary-ink);
+  background: var(--color-primary-fill);
+  border-color: transparent;
+}
+
+.guest__extra { display: grid; justify-items: center; gap: var(--sp-2); text-align: center; }
+
+.code-input {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* «Скинути позицію» у діалозі позиції — тиха панель над кнопками форми. */
+.reset-panel {
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: start;
+  padding: var(--sp-5);
+  border-radius: var(--r-field);
+  border: 1px dashed var(--color-divider);
+}
+
+/* ── Розділи й ручний порядок (ADR-036) ─────────────────────── */
+
+.view-row { display: grid; gap: var(--sp-3); justify-items: start; }
+.view-row > .small { margin: 0; }
+
+/* Плашка «Тут немає фільтра «вільні»»: інваріант, що проступає в
+   інтерфейсі, пояснюється, а не ховається. */
+.no-free {
+  display: grid;
+  gap: var(--sp-2);
+  justify-items: start;
+  padding: var(--sp-5) var(--sp-6);
+  border-radius: var(--r-card);
+  background: var(--color-accent-100);
+  color: var(--color-accent-900);
+}
+.no-free p { margin: 0; }
+
+.section-groups { display: grid; gap: var(--sp-6); }
+.section-group { display: grid; gap: var(--sp-3); }
+.section-group[data-dragging='true'] { position: relative; z-index: 2; opacity: 0.9; }
+.section-group__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  min-height: var(--tap);
+}
+.section-group__title {
+  font-family: var(--font-body);
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+  overflow-wrap: anywhere;
+}
+.section-group__actions { display: inline-flex; gap: var(--sp-1); margin-left: auto; }
+
+/* Ручка — ціль на всю висоту пальця; touch-action: none лише на ній, тож
+   список прокручується пальцем за будь-яке інше місце картки. */
+.drag-handle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--tap);
+  min-height: var(--tap);
+  align-self: stretch;
+  margin-left: calc(-1 * var(--sp-3));
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-neutral-700);
+  cursor: grab;
+  touch-action: none;
+}
+.drag-handle:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.drag-handle:active { cursor: grabbing; }
+.item[data-dragging='true'] { position: relative; z-index: 3; box-shadow: var(--shadow-lg); }
+
+/* Гостьова: розділи й фільтри на довгому списку (ADR-036). */
+.gchips__group { display: contents; }
+.guest-section { display: grid; gap: var(--sp-4); }
+.guest-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin: var(--sp-3) 0 0;
+}
+.guest-section__title {
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-900);
+  overflow-wrap: anywhere;
+}
+.guest-empty { display: grid; justify-items: center; gap: var(--sp-4); }

@@ -35,10 +35,36 @@ export const itemsKey = (listId: string) => `items:${listId}`;
 
 export type ItemsSnapshot = { items: Item[]; totals: Totals | null };
 
+/**
+ * Увесь список цілком — для режиму «Розділи» (ADR-036). Кешується окремо від
+ * першої партії: склад різний, і офлайн кожен режим має показати своє.
+ */
+export const allItemsKey = (listId: string) => `items-all:${listId}`;
+/** Розділи списку — щоб групування пережило відсутність мережі. */
+export const sectionsKey = (listId: string) => `sections:${listId}`;
+
+/**
+ * Чий зараз кеш — ставить `lib/auth.tsx` на кожну зміну сесії.
+ *
+ * Запит, що вийшов до виходу з акаунта, може повернутися вже після того, як
+ * `clearCache` стер сховище, — і його знімок ліг би назад на диск. Тож запис
+ * перевіряє, що людина, для якої він, досі та, що увійшла, — і перед
+ * відкриттям бази, і вже відкривши її, бо між ними може статися вихід.
+ */
+let owner: string | null = null;
+
+export function setCacheOwner(userId: string | null): void {
+  owner = userId;
+}
+
 export async function saveSnapshot<T>(key: string, userId: string, data: T): Promise<void> {
-  if (!userId) return;
+  if (!userId || userId !== owner) return;
   const db = await openDb();
   if (!db) return;
+  if (userId !== owner) {
+    db.close();
+    return;
+  }
   try {
     const tx = db.transaction(SNAPSHOTS, 'readwrite');
     const record: Record_<T> = { key, userId, savedAt: new Date().toISOString(), data };
@@ -107,6 +133,7 @@ export async function patchSnapshot<T>(
  * виходом він попереджає, що зміни ще не відправлені (ADR-029).
  */
 export async function clearCache(): Promise<void> {
+  owner = null;
   const db = await openDb();
   if (!db) return;
   try {

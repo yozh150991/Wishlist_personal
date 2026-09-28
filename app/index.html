@@ -22,7 +22,9 @@
       // Схема, тема й версія дизайну застосовуються до першого рендера, щоб не
       // блимав чужий вигляд. Усі три атрибути ставляться завжди: токени лежать
       // під [data-scheme][data-theme], і без пари селектор не влучить, а шар v2
-      // чіпляється за [data-design].
+      // чіпляється за [data-design]. Це скорочене правило з lib/appearance.ts:
+      // висока контрастність (своя чи системна) дає Вугіль, інакше — свій смак.
+      // Оформлення списку тут не ставиться: його знає лише сторінка списку.
       try {
         var d = document.documentElement.dataset;
         var t = localStorage.getItem('wl.theme') || 'system';
@@ -30,7 +32,10 @@
           (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
         d.theme = dark ? 'dark' : 'light';
         var s = localStorage.getItem('wl.scheme');
-        d.scheme = s === 'slyva' || s === 'vuhil' ? s : 'sage';
+        var hc = localStorage.getItem('wl.contrast') === '1' || s === 'vuhil' ||
+          matchMedia('(prefers-contrast: more)').matches;
+        d.scheme = hc ? 'vuhil'
+          : /^(slyva|polotno|cytrus|nich)$/.test(s || '') ? s : 'sage';
         // ?design=v1 — аварійний вихід із v2. v2 має власні екрани, тож
         // перемкнутися зсередини не буде чим, якщо вона впаде на першому
         // рендері. Тут це працює ще до React. Параметр одразу прибираємо

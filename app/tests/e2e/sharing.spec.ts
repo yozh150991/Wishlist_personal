@@ -59,13 +59,16 @@ test('бронювання видно другому гостю і не видн
   const second = await browser.newContext();
   const secondPage = await second.newPage();
   await secondPage.goto(link);
-  await expect(secondPage.getByText(/уже беруть|już zajęte|already taken/i)).toBeVisible();
+  // Єдину позицію взято — другий гість бачить «Усе вже розібрали», а сама
+  // позиція лишається в списку як «взято».
+  await expect(secondPage.getByRole('heading', { name: /усе вже розібрали|wszystko już rozebrane|everything's been taken/i })).toBeVisible();
+  await expect(secondPage.getByText('Подарунок', { exact: true })).toBeVisible();
 
-  // ІНВАРІАНТ: власник відкриває власне посилання і броней не бачить.
+  // ІНВАРІАНТ: власник відкриває власне посилання і позначок не бачить.
   await page.goto(link);
   await expect(page.getByText(/це твоє посилання|to twój link|this is your own link/i)).toBeVisible();
   await expect(page.getByText('Подарунок', { exact: true })).toBeVisible();
-  await expect(page.getByText(/уже беруть|już zajęte|already taken/i)).toHaveCount(0);
+  await expect(page.getByText(/розібрали|хтось уже взяв|^взято$|rozebrane|ktoś już|wzięte|taken/i)).toHaveCount(0);
 
   await first.close();
   await second.close();

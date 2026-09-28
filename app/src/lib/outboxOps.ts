@@ -57,6 +57,8 @@ function draftItem(op: Extract<Op, { kind: 'create' }>, now: string): Item {
     variants: op.input.variants ?? [],
     image_url: op.input.image_url ?? null,
     status: op.input.status ?? 'active',
+    section_id: op.input.section_id ?? null,
+    position: null,
     source_site: null,
     parsed_at: null,
     created_at: now,

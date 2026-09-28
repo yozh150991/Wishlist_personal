@@ -13,39 +13,65 @@ const { data } = await supabase.rpc('create_share', {
   p_message: null,
   p_hide_prices: false,
   p_allow_reservations: true,
-  p_expires_at: null,
+  p_expires_on: '2026-12-20',       // день або null — «поки не відкличеш»
+  p_expires_tz: 'Europe/Kyiv',      // IANA-зона з браузера власника (ADR-037)
 });
-// → { id, token, title, ... }
+// → { id, token, title, expires_at, expires_tz, ... }
 // URL для гостя: `${origin}/s/${data.token}`
 ```
 Чужі позиції та позиції з іншого списку мовчки відсіюються (RLS). Порожній масив → помилка `22023`.
 
+Термін — **день і зона**, момент рахує база: 23:59:59 того дня за зоною власника (`expires_at`, UTC) плюс сама зона (`expires_tz`). ICU-імена, які дає браузер (`Europe/Kiev`, `Asia/Calcutta`), записуються сучасними. Помилки, обидві `22023`:
+- `bad_time_zone` — день без зони або зона, якої база не знає. Клієнт (`lib/shares.ts`) тоді повторює запит зі старим `p_expires_at` — кінцем дня за годинником пристрою, без зони.
+- `expires_in_past` — момент уже минув: посилання, мертве з народження, не створюється. Форма перевіряє те саме до відправки.
+
+`p_expires_at` (момент без зони) лишився для вкладок зі старою версією застосунку.
+
 ### `get_shared_list` — anon + authenticated
 ```ts
-const { data } = await supabase.rpc('get_shared_list', { p_token: token });
+const { data } = await supabase.rpc('get_shared_list', { p_token: token, p_key: guestKey /* або null */ });
 ```
 ```jsonc
 {
   "title": "Мій день народження",
   "message": null,
   "currency": "PLN",
+  "event_date": "2026-06-14",   // дата події списку або null — для шапки гостьової
+  "expires_at": "2026-12-20T21:59:59+00:00",   // до коли діє посилання або null
+  "expires_tz": "Europe/Kyiv",  // зона власника, у якій показувати термін; null — старе посилання (ADR-037)
+  "owner_scheme": "sage",   // схема власника: sage | slyva | polotno | cytrus | nich (ADR-033)
+  "appearance_hue": 75,     // відтінок оформлення списку або null (ADR-034)
   "hide_prices": false,
   "allow_reservations": true,
   "viewer_is_owner": false,
+  "guest": { "code": "7K4M2" },   // ключ упізнано; null — ключа немає або він чужий
+  "sections": [{ "id": "…", "title": "Кухня" }],   // лише розділи зі спільними позиціями, у порядку власника (ADR-036)
   "items": [{
     "id": "…", "title": "Навушники", "url": "https://…",
     "price": "399.00", "quantity": 1, "priority": "high",
     "note": null, "image_url": "https://…", "status": "active",
     "variants": [{ "label": "Розмір", "value": "M" }],   // до 5 пар, ADR-030
-    "reserved_qty": 1        // null, якщо переглядає власник
+    "section_id": "…",       // розділ або null — «Інше»
+    "taken_qty": 1,          // скільки взяли всі разом; null, якщо дивиться власник
+    "mine_qty": 0            // скільки взяв цей гість; null для власника
   }]
 }
 ```
-Помилки (код `P0002`): `not_found`, `revoked`, `expired`. Фронт показує однакову сторінку «Посилання недоступне» для всіх трьох — щоб не підтверджувати існування токена.
+Помилка одна: `not_found` (код `P0002`) — і для неіснуючого, і для відкликаного, і для протермінованого токена (ADR-035). Відповідь не має підтверджувати, що токен колись існував.
 
 Показуються лише позиції зі `status = 'active'`. При `hide_prices: true` поле `price` повертається як `null` — ціна не їде на клієнт узагалі, не ховається стилями.
 
 `variants` від `hide_prices` не залежить: розмір і колір — не ціна, і саме заради них гість і дивиться картку.
+
+`appearance_hue` — відтінок оформлення списку (ADR-034); назва оформлення приватна й не віддається. Рампу з відтінку рахує клієнт. `event_date` — дата події списку для шапки гостьової: гість і так запрошений саме на цю подію.
+
+`owner_scheme` — схема смаку власника: гість бачить список у ній (ADR-033). Висока контрастність власника гостю не віддається — це налаштування глядача, а не списку; свою гість вмикає сам. Схема читається щоразу, а не запікається в токен: власник змінив її — наступне відкриття посилання покаже нову.
+
+`expires_at` + `expires_tz` — термін живого посилання. Гість бачить його годинником власника: «Діє до 20 грудня, 23:59 за Києвом» (`lib/zones.ts`), хоч сам у Ванкувері, — бо саме тоді посилання згасне для всіх. Мертве посилання терміну не показує: для нього відповідь та сама `not_found`.
+
+Позиції йдуть у **ручному порядку власника** (ADR-036): розділи за порядком, «Інше» в кінці, усередині — `position`, неупорядковані зверху, новіші першими.
+
+Ні хто, ні коли позначив — у відповіді немає: лише скільки. Виклик із ключем оновлює `last_seen` його ідентичності.
 
 ### `register_share_view` — anon + authenticated
 ```ts
@@ -53,14 +79,39 @@ await supabase.rpc('register_share_view', { p_token: token });
 ```
 Викликати один раз на сесію перегляду. Перегляди власника не рахуються.
 
-### `reserve_item` / `unreserve_item` — anon + authenticated
+### `claim_item` / `release_claim` — anon + authenticated
 ```ts
-const { data: reservedQty } = await supabase.rpc('reserve_item', {
-  p_token: token, p_item_id: itemId, p_guest_key: guestKey, p_quantity: 1,
+const { data } = await supabase.rpc('claim_item', {
+  p_token: token, p_item_id: itemId, p_key: guestKey, p_quantity: 1,
 });
+// → { "taken_qty": 1, "mine_qty": 1, "code": "7K4M2" }
+await supabase.rpc('release_claim', { p_token: token, p_item_id: itemId, p_key: guestKey });
 ```
-Повертає нову загальну кількість броні по позиції.
-Помилки: `not_found`, `reservations_disabled`, `owner_cannot_reserve`, `item_not_in_share`, `not_enough_left`.
+Ключ генерує браузер гостя (`lib/guest.ts`) і зберігає **до** виклику: обірвана відповідь не лишить позначку без власника. Перша позначка з новим ключем тихо створює ідентичність і короткий код. `p_quantity` — підсумкова кількість цього гостя, не приріст; позиція блокується на час перевірки, тож двоє одночасних гостей не візьмуть більше, ніж треба.
+
+Помилки `claim_item`: `not_found`, `reservations_disabled`, `owner_cannot_reserve`, `bad_key`, `bad_quantity`, `item_not_in_share`, `not_enough_left` (гонку програно).
+
+`release_claim` повертає `{ "taken_qty": … }` — суму позначок усіх гостей, тож власнику (увійшов і відкрив своє посилання) відповідає `owner_cannot_reserve`, як і `claim_item` (ADR-038). Решта помилок: `not_found`, `item_not_in_share`.
+
+### `redeem_guest_code` — anon + authenticated
+```ts
+const { data } = await supabase.rpc('redeem_guest_code', { p_token: token, p_code: '7K4M2' });
+// → { "key": "…", "code": "N5F9K", "claims": 2 }  або  { "error": "code_not_found" | "too_many_attempts" }
+```
+Код переносить позначки на новий пристрій одноразово: сервер видає новий ключ тієї самої ідентичності, старі ключі лишаються робочими, код змінюється. П'ять спроб на годину на список — зараховуються всі, і після п'ятої не приймається навіть правильний. Невдача — у тілі відповіді, а не винятком: виняток відкотив би запис спроби.
+
+### `release_item_claims` — authenticated
+```ts
+await supabase.rpc('release_item_claims', { p_item_id: itemId });   // 204, без тіла
+```
+Сліпе «скинути позицію» власником: знімає позначки гостей, якщо вони є, і не повертає нічого — ні скільки, ні чи були. Чужа позиція — `not_found`. У інтерфейсі кнопка стоїть на кожній позиції завжди однаково: інакше сама її поява була б індикатором.
+
+### `reorder_items` / `reorder_sections` — authenticated
+```ts
+await supabase.rpc('reorder_items', { p_list_id: listId, p_section_id: sectionId /* або null */, p_item_ids: ids });
+await supabase.rpc('reorder_sections', { p_list_id: listId, p_section_ids: ids });
+```
+Ставлять розділ і `position` = номер у масиві для кожної переданої позиції (розділу). `SECURITY INVOKER`: чужі рядки RLS відсіює мовчки, і виклик просто нічого не змінює.
 
 ### `list_items_page` — authenticated
 ```ts
@@ -91,7 +142,8 @@ const { data } = await supabase.rpc('list_totals', { p_list_id: listId });
 | Функція | Ролі |
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
-| `get_shared_list`, `register_share_view`, `reserve_item`, `unreserve_item` | `anon`, `authenticated` |
+| `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code` | `anon`, `authenticated` |
+| `release_item_claims`, `reorder_items`, `reorder_sections` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
 Права задано міграціями `20260910120300_grants.sql` і `20260916220000_revoke_default_function_grants.sql`. Перша відкликала лише `PUBLIC`, і функції власника лишались доступними `anon` через явні гранти Supabase за замовчуванням; друга це закрила. Кожна нова RPC-функція отримує гранти явно й відкликає їх у конкретних ролей (CLAUDE.md §3.4). Таблицю вище перевіряє `supabase/tests/database/01_schema_guards.test.sql`.
@@ -111,6 +163,22 @@ await supabase.from('items').update({ status: 'gifted' }).in('id', ids);
 await supabase.from('items').delete().in('id', ids);
 ```
 Окремої RPC не потрібно: RLS так само відсіює чужі позиції, як і в одиночних запитах.
+
+Оформлення списку (ADR-034) — теж звичайними запитами, `lib/appearances.ts`:
+```ts
+await supabase.from('appearances').select('id, owner_id, name, hue, source, builtin_key, created_at, lists(count)');
+await supabase.from('appearances').insert({ owner_id, name, hue, source: 'manual' });
+await supabase.from('lists').update({ appearance_id }).eq('id', listId);   // null — без оформлення
+```
+Вбудовані події видно кожному власникові, змінити чи видалити їх не можна. Посилання на чуже оформлення база відхиляє з `42501`.
+
+Розділи (ADR-036), `lib/sections.ts`:
+```ts
+await supabase.from('sections').select('id, list_id, title, position, created_at').eq('list_id', listId);
+await supabase.from('sections').insert({ list_id, title, position });   // owner_id ставить тригер
+await supabase.from('items').update({ section_id, position: null }).eq('id', itemId);
+```
+Розділ іншого списку база відхиляє з `section_not_in_list` (`23514`).
 
 ---
 

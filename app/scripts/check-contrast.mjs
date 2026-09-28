@@ -1,6 +1,12 @@
 /**
  * Аудит палітр: контраст кожної пари «фарба на фарбі», яка реально трапляється
- * в інтерфейсі, у кожній із шести палітр (три схеми × дві теми).
+ * в інтерфейсі, у кожній із дванадцяти палітр (шість схем × дві теми).
+ *
+ * Другий прогін — оформлення списків (ADR-033). Їх може бути скільки завгодно,
+ * тому перевіряються не кольори, а анкери світлості: відтінок H із кроком 15°
+ * у двох темах = 48 рядків, кожен поверх усіх п'яти схем смаку своєї теми.
+ * Рампу рахує той самий `src/lib/hue-ramp.js`, що й застосунок, — зсунутий
+ * анкер валить цей прогін.
  *
  * Числа рахуються з `src/styles/tokens.css`, а не вписані сюди руками: інакше
  * таблиця почала б розходитися з тим, що бачить користувач, і мовчки.
@@ -16,6 +22,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
+import { overlayVars } from '../src/lib/hue-ramp.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SRC = join(here, '..', 'src');
@@ -27,8 +34,37 @@ const PALETTES = [
   { scheme: 'sage', theme: 'dark', short: 'Шавлія тм.' },
   { scheme: 'slyva', theme: 'light', short: 'Слива св.' },
   { scheme: 'slyva', theme: 'dark', short: 'Слива тм.' },
+  { scheme: 'polotno', theme: 'light', short: 'Полотно св.' },
+  { scheme: 'polotno', theme: 'dark', short: 'Полотно тм.' },
+  { scheme: 'cytrus', theme: 'light', short: 'Цитрус св.' },
+  { scheme: 'cytrus', theme: 'dark', short: 'Цитрус тм.' },
+  { scheme: 'nich', theme: 'light', short: 'Ніч св.' },
+  { scheme: 'nich', theme: 'dark', short: 'Ніч тм.' },
   { scheme: 'vuhil', theme: 'light', short: 'Вугіль св.' },
   { scheme: 'vuhil', theme: 'dark', short: 'Вугіль тм.' },
+];
+
+/**
+ * Схеми, поверх яких може лягти оформлення списку. Вугля тут немає: висока
+ * контрастність вимикає оверлей зовсім (resolveAppearance, правило 1).
+ */
+const TASTE = ['sage', 'slyva', 'polotno', 'cytrus', 'nich'];
+
+/**
+ * Пари, які чіпає оверлей: лише те, де з одного боку — акцентна рампа, заливка
+ * чи смужка. Решта пар від оверлею не залежить і вже перевірена вище.
+ */
+const OVERLAY_PAIRS = [
+  ['Посилання на фоні', '--color-accent-700', '--color-bg', 4.5],
+  ['Посилання на поверхні', '--color-accent-700', '--color-surface', 4.5],
+  ['Підпис головної кнопки', '--color-primary-ink', '--color-primary-fill', 4.5],
+  ['Значок «Високий»', '--color-accent-800', '--color-accent-100', 4.5],
+  ['Активний пункт / пігулка', '--color-accent-800', '--color-accent-200', 4.5],
+  ['Гостьовий заголовок', '--color-accent-900', '--color-guest-header', 4.5],
+  ['Пояснення програшу гонки', '--color-accent-900', '--color-accent-200', 4.5],
+  ['Назва розділу на гостьовому фоні', '--color-accent-900', '--color-guest-bg', 4.5],
+  ['Смужка «Високий» на гостьовій картці', '--color-prio-high', '--color-guest-card', 3],
+  ['Кільце фокуса на гостьовому фоні', '--color-accent-700', '--color-guest-bg', 3],
 ];
 
 /**
@@ -68,6 +104,9 @@ const PAIRS = [
   ['Текст на гостьовій картці', '--color-text', '--color-guest-card', 4.5],
   ['Приглушений на гостьовій картці', '--color-neutral-700', '--color-guest-card', 4.5],
   ['Текст на гостьовому фоні', '--color-text', '--color-guest-bg', 4.5],
+  ['Текст на шапці гостьової', '--color-text', '--color-guest-header', 4.5],
+  ['Пояснення програшу гонки', '--color-accent-900', '--color-accent-200', 4.5],
+  ['Назва розділу на гостьовому фоні', '--color-accent-900', '--color-guest-bg', 4.5],
   ['Смужка «Високий»', '--color-prio-high', '--color-surface', 3],
   ['Смужка «Низький»', '--color-prio-low', '--color-surface', 3],
   ['Підпис кнопки видалення', '--color-bg', '--color-danger', 4.5],
@@ -196,14 +235,60 @@ function main() {
       ...sets.map((s) => (worst.has(s.short) ? num(worst.get(s.short)) : '—').padStart(11))].join(' '),
   );
 
-  const total = PAIRS.length * PALETTES.length;
+  // 4. Оформлення списків: 24 відтінки × 2 теми, кожен поверх п'яти схем смаку.
+  const hues = Array.from({ length: 24 }, (_, i) => i * 15);
+  let overlayChecks = 0;
+  let overlayWorst = null;
+  console.log('\nОформлення: мінімальний запас над порогом по всіх парах і схемах смаку');
+  for (const theme of ['light', 'dark']) {
+    const bases = sets.filter((x) => x.theme === theme && TASTE.includes(x.scheme));
+    const line = [];
+    for (const h of hues) {
+      const over = overlayVars(h, theme);
+      let rowMin = Infinity;
+      for (const base of bases) {
+        const pick = (name) => {
+          const v = over[name] ?? base.tokens.get(name);
+          return v === 'var(--color-bg)' ? base.tokens.get('--color-bg') : v;
+        };
+        for (const [label, fg, bg, min] of OVERLAY_PAIRS) {
+          const ink = pick(fg);
+          const back = pick(bg);
+          overlayChecks++;
+          if (!ink?.startsWith('#') || !back?.startsWith('#')) {
+            problems.push(`оформлення H ${h} (${theme}) на «${base.short}»: ${label} — немає значення`);
+            continue;
+          }
+          const r = ratio(ink, back);
+          rowMin = Math.min(rowMin, r - min);
+          if (!overlayWorst || r - min < overlayWorst.margin) {
+            overlayWorst = { margin: r - min, r, min, label, h, theme, short: base.short };
+          }
+          if (r < min) {
+            problems.push(
+              `оформлення H ${h} (${theme}) на «${base.short}»: ${label} — ${num(r)}:1 проти порога ${num(min)}`,
+            );
+          }
+        }
+      }
+      line.push(`H${String(h).padStart(3)} ${rowMin >= 0 ? '+' : ''}${num(rowMin)}`);
+    }
+    console.log(`  ${theme === 'light' ? 'світла' : 'темна '}: ` + line.join('  '));
+  }
+
+  const total = PAIRS.length * PALETTES.length + overlayChecks;
   if (problems.length) {
     console.error(`\n✗ Аудит палітр не пройдено. Проблем: ${problems.length}`);
     for (const p of problems) console.error('  · ' + p);
     process.exit(1);
   }
   console.log(
-    `\n✓ Пар: ${PAIRS.length}, палітр: ${PALETTES.length}, перевірок: ${total} — усі проходять.`,
+    `\n✓ Пар: ${PAIRS.length}, палітр: ${PALETTES.length}; оформлень: 24 відтінки × 2 теми × ` +
+      `${TASTE.length} схем × ${OVERLAY_PAIRS.length} пар. Перевірок: ${total} — усі проходять.`,
+  );
+  console.log(
+    `  Найтісніше в оформленнях — ${overlayWorst.label.toLowerCase()}, H ${overlayWorst.h} ` +
+      `(${overlayWorst.theme}) на «${overlayWorst.short}»: ${num(overlayWorst.r)}:1, запас +${num(overlayWorst.margin)}.`,
   );
   console.log(
     `  Найтісніше місце — ${tight.label.toLowerCase()} у палітрі «${tight.short}»: ` +

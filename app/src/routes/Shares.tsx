@@ -3,7 +3,7 @@ import { deleteShare, fetchShares, revokeShare, shareUrl } from '../lib/shares';
 import type { ShareWithCount } from '../lib/shares';
 import { useI18n } from '../lib/i18n';
 import { errorText } from '../lib/errors';
-import { formatDate } from '../lib/format';
+import { formatDeadline } from '../lib/format';
 import { ConfirmDialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
 
@@ -111,6 +111,7 @@ export default function Shares() {
             {shares.map((s) => {
               const status = state(s);
               const count = s.share_items[0]?.count ?? 0;
+              const deadline = formatDeadline(s.expires_at, s.expires_tz, locale);
               return (
                 <li className="share-card" key={s.id} data-state={status}>
                   <div className="share-card__head">
@@ -127,8 +128,14 @@ export default function Shares() {
                     {t('share.itemCount', { n: count })}
                     {' · '}
                     {t('share.views', { n: s.view_count })}
-                    {s.expires_at &&
-                      ` · ${t('share.until', { date: formatDate(s.expires_at, locale) ?? '' })}`}
+                    {/* День — за зоною, у якій посилання створено (ADR-037):
+                        власник у відрядженні бачить той самий «20 грудня». */}
+                    {deadline &&
+                      ` · ${
+                        status === 'expired'
+                          ? t('share.untilPast', { date: deadline.day })
+                          : t('share.until', { date: deadline.day })
+                      }`}
                   </p>
 
                   <div className="share-card__actions">

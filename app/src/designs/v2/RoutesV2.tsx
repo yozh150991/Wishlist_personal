@@ -25,6 +25,7 @@ export default function DesignV2Routes() {
   return (
     <Routes>
       <Route path="/s/:token" element={<SharedList />} />
+      <Route path="/s/:token/g/:key" element={<SharedList />} />
       <Route path="*" element={<Placeholder />} />
     </Routes>
   );

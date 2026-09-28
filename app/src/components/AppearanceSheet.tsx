@@ -1,15 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { useI18n } from '../lib/i18n';
-import { SCHEMES, THEMES, useTheme } from '../lib/theme';
+import { THEMES, useTheme } from '../lib/theme';
 import type { Theme } from '../lib/theme';
 import { Icon } from './Icon';
+import { Switch } from './Switch';
 
 /**
- * Лист «Вигляд» на гостьовій сторінці.
+ * Лист «Вигляд» на гостьовій сторінці — «для себе».
  *
- * Гість **не успадковує** схему власника й обирає сам. Причина не естетична, а
- * доступнісна: гостю може бути потрібен Вугіль, і чужий вибір не має йому
- * цього забороняти.
+ * Гість керує тим, що справді його: темою й високою контрастністю. Схеми тут
+ * **немає** — не прихована, а не існує: оформлення списку належить власникові,
+ * це його подія (ADR-033). Доступність від цього не страждає — висока
+ * контрастність глядача перемагає будь-яке оформлення (resolveAppearance,
+ * правило 1).
  *
  * Акаунта в гостя немає, тож вибір живе в localStorage його браузера й на
  * сервер не їде — інакше це був би ще один сигнал про те, що хтось відкрив
@@ -17,7 +20,7 @@ import { Icon } from './Icon';
  */
 export function AppearanceSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
-  const { theme, scheme, setTheme, setScheme } = useTheme();
+  const { theme, setTheme, highContrast, systemContrast, setHighContrast } = useTheme();
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -48,32 +51,10 @@ export function AppearanceSheet({ open, onClose }: { open: boolean; onClose: () 
       </div>
 
       <div className="dialog__body">
-        <div className="filters__group">
-          <span className="filters__label" id="g-scheme">
-            {t('settings.colors')}
-          </span>
-          <div className="scheme-list" role="radiogroup" aria-labelledby="g-scheme">
-            {SCHEMES.map((s) => (
-              <button
-                key={s}
-                type="button"
-                role="radio"
-                aria-checked={scheme === s}
-                className="scheme-list__item"
-                onClick={() => setScheme(s)}
-              >
-                <span className="scheme-dot scheme-dot--big" data-scheme-dot={s} aria-hidden="true" />
-                <span className="scheme-list__text">
-                  {t(`settings.scheme.${s}`)}
-                  {s === 'vuhil' && (
-                    <span className="small muted">{t('settings.contrastShort')}</span>
-                  )}
-                </span>
-                {scheme === s && <Icon name="check" size={18} />}
-              </button>
-            ))}
-          </div>
-        </div>
+        <p className="for-me">
+          <span className="settings__label">{t('guest.forMe')}</span>
+          <span className="small muted">{t('guest.forMeHint')}</span>
+        </p>
 
         <div className="filters__group">
           <span className="filters__label" id="g-theme">
@@ -94,6 +75,16 @@ export function AppearanceSheet({ open, onClose }: { open: boolean; onClose: () 
             ))}
           </div>
         </div>
+
+        <Switch
+          checked={highContrast || systemContrast}
+          disabled={systemContrast}
+          onChange={(on) => setHighContrast(on)}
+          label={t('settings.highContrast')}
+          hint={systemContrast ? t('settings.highContrastSystem') : undefined}
+        />
+
+        <p className="small muted">{t('guest.appearanceNote')}</p>
       </div>
     </dialog>
   );
