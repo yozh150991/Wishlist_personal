@@ -35,8 +35,6 @@ export function useItems(
   query: ItemQuery,
   userId: string | undefined,
   mode: 'page' | 'all' = 'page',
-  /** Поки сторінка не знає, у якому режимі показувати, — не вантажити нічого. */
-  skip = false,
 ) {
   const { t } = useI18n();
   // Через ref: зміна мови не має перезавантажувати позиції.
@@ -50,6 +48,13 @@ export function useItems(
   const [error, setError] = useState<string | null>(null);
   /** Час збереження знімка, якщо показано саме його. */
   const [staleAt, setStaleAt] = useState<string | null>(null);
+  /**
+   * Яким способом завантажено те, що зараз у `items`. Сторінка вантажить
+   * першу партію одразу, паралельно зі списком, і лише потім дізнається, що
+   * потрібен цілий список (ADR-036): до того, як прийде він, перша партія —
+   * не те, що треба показувати в розділах.
+   */
+  const [loadedAs, setLoadedAs] = useState<'page' | 'all' | null>(null);
 
   // Номер запиту: відповідь від застарілого запиту ігнорується.
   const runId = useRef(0);
@@ -67,6 +72,7 @@ export function useItems(
       setItems(all);
       setTotals(allTotals);
       setDone(true);
+      setLoadedAs('all');
       if (userId) {
         void saveSnapshot<ItemsSnapshot>(allItemsKey(listId), userId, { items: all, totals: allTotals });
       }
@@ -86,6 +92,7 @@ export function useItems(
         setStaleAt(snapshot.savedAt);
         setDone(true);
         setError(null);
+        setLoadedAs('all');
       } else {
         setError(errorText(e, tRef.current));
       }
@@ -112,6 +119,7 @@ export function useItems(
       setTotals(pageTotals);
       setStaleAt(null);
       setDone(page.length < query.pageSize);
+      setLoadedAs('page');
       const last = page[page.length - 1];
       cursor.current = last ? cursorFrom(last, query.sort) : null;
       if (isPlainQuery(query) && userId) {
@@ -136,6 +144,7 @@ export function useItems(
         // Довантажувати нічого: у знімку лише перша партія.
         setDone(true);
         setError(null);
+        setLoadedAs('page');
       } else {
         setError(errorText(e, tRef.current));
       }
@@ -165,9 +174,8 @@ export function useItems(
   const reload = mode === 'all' ? loadAll : loadFirst;
 
   useEffect(() => {
-    if (skip) return;
     void reload();
-  }, [reload, skip]);
+  }, [reload]);
 
   /**
    * Показати зміну, яка лягла в чергу (етап 6.5).
@@ -187,7 +195,8 @@ export function useItems(
   return {
     items,
     totals,
-    loading,
+    // Перша партія вже тут, а потрібен цілий список, — ще вантажимо.
+    loading: loading || (error === null && loadedAs !== mode),
     loadingMore,
     done,
     error,

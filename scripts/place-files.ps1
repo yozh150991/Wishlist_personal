@@ -56,6 +56,7 @@ $map = @{
   '20260928110000_guest_keys_and_claims.sql' = 'supabase\migrations'
   '20260928120000_sections_and_order.sql' = 'supabase\migrations'
   '20260928130000_share_expiry_zone.sql' = 'supabase\migrations'
+  '20260928140000_owner_side_channels.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -67,6 +68,7 @@ $map = @{
   '05_appearance.test.sql' = 'supabase\tests\database'
   '06_sections.test.sql' = 'supabase\tests\database'
   '07_share_expiry.test.sql' = 'supabase\tests\database'
+  '08_owner_side_channels.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'

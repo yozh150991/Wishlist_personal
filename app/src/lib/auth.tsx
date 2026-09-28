@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { clearCache } from './cache';
+import { clearCache, setCacheOwner } from './cache';
 
 type AuthState = {
   session: Session | null;
@@ -25,11 +25,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
+      setCacheOwner(data.session?.user.id ?? null);
       setSession(data.session);
       setLoading(false);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
+      setCacheOwner(next?.user.id ?? null);
       setSession(next);
       setLoading(false);
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);

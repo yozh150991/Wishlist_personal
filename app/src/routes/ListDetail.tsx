@@ -107,7 +107,7 @@ export default function ListDetail() {
   const {
     items,
     totals,
-    loading,
+    loading: itemsLoading,
     loadingMore,
     done,
     error,
@@ -116,7 +116,11 @@ export default function ListDetail() {
     loadMore,
     applyLocal,
     patchLocal,
-  } = useItems(id, query, userId, mode === 'sections' ? 'all' : 'page', !layoutReady);
+  } = useItems(id, query, userId, mode === 'sections' ? 'all' : 'page');
+  // Перша партія йде паралельно зі списком, як до розділів: плаский список
+  // відкривається за один оберт до сервера. Показуємо, лише коли відомо, у
+  // якому режимі, — інакше великий список блимнув би пласким перед розділами.
+  const loading = itemsLoading || !layoutReady;
 
   /**
    * Одна дорога для всіх змін позицій (етап 6.5).

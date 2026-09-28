@@ -91,6 +91,8 @@ await supabase.rpc('release_claim', { p_token: token, p_item_id: itemId, p_key: 
 
 Помилки `claim_item`: `not_found`, `reservations_disabled`, `owner_cannot_reserve`, `bad_key`, `bad_quantity`, `item_not_in_share`, `not_enough_left` (гонку програно).
 
+`release_claim` повертає `{ "taken_qty": … }` — суму позначок усіх гостей, тож власнику (увійшов і відкрив своє посилання) відповідає `owner_cannot_reserve`, як і `claim_item` (ADR-038). Решта помилок: `not_found`, `item_not_in_share`.
+
 ### `redeem_guest_code` — anon + authenticated
 ```ts
 const { data } = await supabase.rpc('redeem_guest_code', { p_token: token, p_code: '7K4M2' });
