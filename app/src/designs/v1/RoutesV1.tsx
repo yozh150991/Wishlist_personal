@@ -34,6 +34,8 @@ export default function DesignV1Routes() {
       <Route path="/update-password" element={<UpdatePassword />} />
       {/* Гостьовий перегляд: без каркаса застосунку і без входу. */}
       <Route path="/s/:token" element={<SharedList />} />
+      {/* Особисте посилання гостя: ключ ляже в браузер і зникне з адреси (ADR-035). */}
+      <Route path="/s/:token/g/:key" element={<SharedList />} />
 
       {/* «Показати, як бачить гість»: власник, але без каркаса застосунку —
           гість його теж не бачить. */}

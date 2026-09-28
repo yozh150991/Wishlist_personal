@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Dialog } from './Dialog';
+import { ConfirmDialog, Dialog } from './Dialog';
+import { releaseItemClaims } from '../lib/shares';
 import { ParseError, parseUrl, parserConfigured } from '../lib/parser';
 import { Field, Note } from './ui';
 import { VariantsField, cleanVariants, variantsError } from './VariantsField';
@@ -41,6 +42,29 @@ export function ItemDialog({
   const [parsing, setParsing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetNote, setResetNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  /**
+   * Сліпе «скинути позицію» (ADR-035). Сервер нічого не повертає — ні
+   * скільки позначок знято, ні чи були вони. Кнопка стоїть на кожній
+   * позиції завжди однаково: інакше сама її поява підказувала б, що хтось
+   * щось узяв.
+   */
+  async function resetItem() {
+    if (!item || resetting) return;
+    setResetting(true);
+    try {
+      await releaseItemClaims(item.id);
+      setResetNote({ ok: true, text: t('item.resetDone') });
+    } catch (e) {
+      setResetNote({ ok: false, text: errorText(e, t) });
+    } finally {
+      setResetting(false);
+      setConfirmReset(false);
+    }
+  }
 
   // Помилка може опинитись поза видимою частиною прокрученого діалога.
   useEffect(() => {
@@ -51,6 +75,7 @@ export function ItemDialog({
     if (!open) return;
     setError(null);
     setNotice(null);
+    setResetNote(null);
     setForm(
       item
         ? {
@@ -146,6 +171,7 @@ export function ItemDialog({
   }
 
   return (
+    <>
     <Dialog open={open} onClose={onClose} title={item ? t('item.edit') : t('item.add')}>
       {/* <form>: Enter у текстовому полі зберігає (CLAUDE.md §4). */}
       <form
@@ -298,6 +324,24 @@ export function ItemDialog({
           />
         </div>
 
+        {/* Замість фільтра «вільні», якого у власника немає: він не бачить
+            позначок, тож і фільтрувати за ними нічого. Застряглу позначку
+            можна зняти лише наосліп. */}
+        {item && (
+          <div className="reset-panel">
+            {resetNote && <Note tone={resetNote.ok ? undefined : 'error'}>{resetNote.text}</Note>}
+            <p className="small muted">{t('item.resetHint')}</p>
+            <button
+              type="button"
+              className="btn btn--secondary btn--compact"
+              disabled={resetting}
+              onClick={() => setConfirmReset(true)}
+            >
+              {t('item.reset')}
+            </button>
+          </div>
+        )}
+
         <div className="dialog__foot">
           <button type="button" className="btn btn--secondary" onClick={onClose}>
             {t('common.cancel')}
@@ -309,5 +353,16 @@ export function ItemDialog({
         </div>
       </form>
     </Dialog>
+    <ConfirmDialog
+      open={confirmReset}
+      title={t('item.resetConfirmTitle', { title: item?.title ?? '' })}
+      body={t('item.resetConfirmBody')}
+      confirmLabel={t('item.reset')}
+      busyLabel={t('item.resetting')}
+      busy={resetting}
+      onConfirm={() => void resetItem()}
+      onClose={() => setConfirmReset(false)}
+    />
+    </>
   );
 }

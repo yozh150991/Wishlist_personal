@@ -53,6 +53,7 @@ $map = @{
   '20260921140000_profile_scheme.sql' = 'supabase\migrations'
   '20260928090000_schemes_and_contrast.sql' = 'supabase\migrations'
   '20260928100000_list_appearances.sql' = 'supabase\migrations'
+  '20260928110000_guest_keys_and_claims.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -142,6 +143,7 @@ $map = @{
   'appearance.spec.ts' = 'app\tests\e2e'
   'appearances.ts' = 'app\src\lib'; 'AppearanceDialog.tsx' = 'app\src\components'
   'GuestParts.tsx' = 'app\src\components'; 'GuestPreview.tsx' = 'app\src\routes'
+  'guest.spec.ts' = 'app\tests\e2e'
 
   # parser service
   'requirements.txt' = 'services\parser'; 'requirements-dev.txt' = 'services\parser'

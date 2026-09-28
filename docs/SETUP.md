@@ -223,11 +223,11 @@ rollback;
 ```
 
 ```sql
--- ІНВАРІАНТ: власник не читає броні
+-- ІНВАРІАНТ: власник не читає позначки гостей (ADR-035)
 begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"<UUID-A>","role":"authenticated"}';
-select * from reservations;   -- очікуємо: permission denied
+select * from claims;   -- очікуємо: permission denied
 rollback;
 ```
 
@@ -374,10 +374,19 @@ Stop-Process -Id <PID> -Force
 
 | Токен | Стан |
 |---|---|
-| `seed-active-share-token` | активне; навушники заброньовано повністю, келихів — 2 з 6 |
+| `seed-active-share-token` | активне; навушники взяв перший гість, келихів — 2 з 6 другий |
 | `seed-revoked-share-token` | відкликане |
 | `seed-expired-share-token` | прострочене |
 | `seed-no-prices-share-token` | ціни приховано, бронювання вимкнене |
+
+Гості з сіду (ADR-035). Ключ відкриває гостьову очима гостя, код переносить його позначки в інший браузер:
+
+| Гість | Особисте посилання | Код | Що взяв |
+|---|---|---|---|
+| перший | `http://localhost:5173/s/seed-active-share-token/g/seed-guest-key-0000001` | `SEED2` | навушники |
+| другий | `http://localhost:5173/s/seed-active-share-token/g/seed-guest-key-0000002` | `SEED3` | 2 келихи з 6 |
+
+Код одноразовий: після використання він змінюється, а на список діє ліміт 5 спроб на годину. Щоб повернути `SEED2`, потрібен `npx supabase db reset`.
 
 ### Фронтенд проти локальної бази
 

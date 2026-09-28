@@ -1364,7 +1364,17 @@ select[multiple].input {
   border-radius: var(--r-card);
   background: var(--color-guest-card);
 }
-.gcard[data-taken='true'] { opacity: 0.7; }
+/* Чужа позиція приглушена чорнилом, а не заливкою й не прозорістю:
+   --color-neutral-100 на гостьовому полотні дає різницю 2/255, і картка
+   розчиняється, а прозорість провалює контраст тексту. */
+.gcard[data-taken='true'] .gcard__title,
+.gcard[data-taken='true'] .gcard__title a,
+.gcard[data-taken='true'] .gcard__price { color: var(--color-neutral-700); }
+.gcard[data-taken='true'] .gcard__image { filter: grayscale(0.6); }
+/* Програна гонка — рамка, щоб пояснення на місці позиції не загубилось. */
+.gcard[data-lost='true'] { box-shadow: inset 0 0 0 2px var(--color-accent-700); }
+.gcard { position: relative; }
+.gcard__flag { position: absolute; top: var(--sp-3); right: var(--sp-3); }
 .gcard__top { display: flex; gap: var(--sp-5); }
 .gcard__image { width: 64px; height: 64px; flex: none; border-radius: 18px; object-fit: cover; }
 .gcard__text { flex: 1; min-width: 0; display: grid; gap: 3px; align-content: start; }
@@ -1723,3 +1733,123 @@ select[multiple].input {
 .preview-bar .btn svg { transform: rotate(90deg); }
 /* Посилання в ролі кнопки — без підкреслення, як і решта кнопок. */
 a.btn { text-decoration: none; }
+
+/* ── Гостьова: ключ, стани, фільтри (ADR-035) ──────────────── */
+
+.gcard__race {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-4) 14px;
+  border-radius: var(--r-field);
+  background: var(--color-accent-200);
+  color: var(--color-accent-900);
+}
+
+/* «Забери доступ із собою» — на тлі шапки гостьової: це про листівку, а не
+   про застосунок. */
+.keep {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-6);
+  border-radius: var(--r-card);
+  background: var(--color-guest-header);
+  color: var(--color-text);
+}
+.keep__kicker {
+  margin: 0;
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-900);
+}
+.keep__title { font-size: var(--t-lead); font-family: var(--font-body); font-weight: 800; }
+.keep__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.keep__code {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--color-divider);
+}
+.keep__code-value {
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--r-field);
+  background: var(--color-guest-card);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+/* «Усе вже розібрали» — не помилка, а привід повернутись. */
+.all-taken {
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-6);
+  border-radius: var(--r-card);
+  background: var(--color-guest-card);
+}
+.all-taken h2 { font-size: var(--t-h2); }
+.all-taken__watching { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin: 0; }
+
+.taken-list { display: grid; gap: var(--sp-3); }
+.taken-list__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); margin: 0; }
+.taken-list__rows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
+.taken-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  min-height: 52px;
+  padding: var(--sp-3) var(--sp-6);
+  border-radius: var(--r-field);
+  background: var(--color-guest-card);
+}
+/* Приглушено чорнилом: заливка лишається картковою, інакше рядки розчиняються. */
+.taken-row__title { min-width: 0; font-weight: 700; color: var(--color-neutral-700); overflow-wrap: anywhere; }
+
+/* Фільтри гостя: «Вільні» типово, «Усі» поруч. Пігулки на всю ціль 44 px. */
+.guest-filters { display: grid; gap: var(--sp-3); scroll-margin-top: var(--sp-6); }
+.gchips { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.gchip {
+  min-height: var(--tap);
+  padding: 0 var(--sp-6);
+  font: inherit;
+  font-size: var(--t-body);
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-guest-card);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.gchip[aria-checked='true'],
+.gchip[aria-pressed='true'] {
+  color: var(--color-primary-ink);
+  background: var(--color-primary-fill);
+  border-color: transparent;
+}
+
+.guest__extra { display: grid; justify-items: center; gap: var(--sp-2); text-align: center; }
+
+.code-input {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* «Скинути позицію» у діалозі позиції — тиха панель над кнопками форми. */
+.reset-panel {
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: start;
+  padding: var(--sp-5);
+  border-radius: var(--r-field);
+  border: 1px dashed var(--color-divider);
+}

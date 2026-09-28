@@ -46,6 +46,8 @@ export type GuestItemView = {
   note: string | null;
   variants: ItemVariant[];
   image_url: string | null;
+  /** Замість «потрібно N», коли частину вже взяли: «потрібно 6 · лишилось 4». */
+  quantityNote?: string;
 };
 
 /**
@@ -92,7 +94,9 @@ export function GuestItemBody({
                 {t(`item.priority.${item.priority}`)}
               </span>
             )}
-            {item.quantity > 1 && <span className="small muted">{t('guest.needed', { n: item.quantity })}</span>}
+            {item.quantity > 1 && (
+              <span className="small muted">{item.quantityNote ?? t('guest.needed', { n: item.quantity })}</span>
+            )}
           </p>
           {host && <p className="meta muted">{host}</p>}
         </div>

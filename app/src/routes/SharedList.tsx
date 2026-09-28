@@ -1,18 +1,52 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { fetchSharedList, registerView, reserveItem, unreserveItem } from '../lib/shares';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  claimItem,
+  fetchSharedList,
+  GoneError,
+  redeemCode,
+  registerView,
+  releaseClaim,
+} from '../lib/shares';
 import type { SharedItem, SharedList as Shared } from '../lib/shares';
-import { forgetReservation, guestKey, myReservations, rememberReservation } from '../lib/guest';
-import type { MyReservations } from '../lib/guest';
+import {
+  ensureKey,
+  isGuestKey,
+  legacyKey,
+  personalLink,
+  readWatch,
+  rememberKey,
+  saveWatch,
+  stopWatch,
+  storedKey,
+} from '../lib/guest';
 import { useI18n } from '../lib/i18n';
+import { useSurface } from '../lib/theme';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { AppearanceSheet } from '../components/AppearanceSheet';
-import { Icon } from '../components/Icon';
-import { useSurface } from '../lib/theme';
 import { GuestHeader, GuestItemBody } from '../components/GuestParts';
+import { Dialog } from '../components/Dialog';
+import { Icon } from '../components/Icon';
+import { Note } from '../components/ui';
 
 /**
- * Скільки штук гість бере зараз. Живе окремо від броні: поки він крутить
+ * Гостьова сторінка (ADR-035).
+ *
+ * Гість без акаунта й без імені. Його позначки тримає ключ — у цьому браузері
+ * й в особистому посиланні `/s/{токен}/g/{ключ}`, яке він надсилає собі.
+ * Перша позначка нічого не питає; одразу після неї сторінка пропонує забрати
+ * доступ із собою — посиланням або кодом із 5 символів.
+ *
+ * Три стани позиції очима гостя: вільна («Я візьму це»), своя («Ти береш це»
+ * + «Звільнити»), чужа («Хтось уже взяв» — без імені, без дати, без дії).
+ * Ні хто, ні коли — нічого, що видало б гостей одне одному.
+ *
+ * Гість прийшов вибирати, а не читати каталог, тому типово видно лише
+ * вільні (і свої); «Усі» — поруч.
+ */
+
+/**
+ * Скільки штук гість бере зараз. Живе окремо від позначки: поки він крутить
  * лічильник, на сервері ще нічого не змінилось.
  */
 function QuantityPicker({
@@ -54,42 +88,83 @@ function QuantityPicker({
   );
 }
 
+type Filter = 'free' | 'all';
+
+type Changes = { fresh: Set<string>; freed: Set<string> } | null;
+
+const left = (i: SharedItem) => i.quantity - (i.taken_qty ?? 0);
+const mine = (i: SharedItem) => i.mine_qty ?? 0;
+
 export default function SharedList() {
-  const { token = '' } = useParams();
+  const { token = '', key: urlKey } = useParams();
+  const navigate = useNavigate();
   const { t } = useI18n();
 
   const [data, setData] = useState<Shared | null>(null);
   const [loading, setLoading] = useState(true);
   const [gone, setGone] = useState(false);
-  const [mine, setMine] = useState<MyReservations>({});
+  const [key, setKey] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [want, setWant] = useState<Record<string, number>>({});
+  /** Позиції, на яких гість програв гонку: пояснення стоїть на місці картки. */
+  const [lost, setLost] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<Filter>('free');
   const [appearance, setAppearance] = useState(false);
+  const [redeemOpen, setRedeemOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [watching, setWatching] = useState(false);
+  const [changes, setChanges] = useState<Changes>(null);
+  const listTop = useRef<HTMLDivElement>(null);
+  const watchChecked = useRef(false);
+
+  /**
+   * Ключ з особистого посилання лягає в цей браузер, а з адресного рядка
+   * зникає: людина, яка скопіює адресу, щоб переслати список рідним, не має
+   * випадково переслати й доступ до своїх позначок.
+   */
+  useEffect(() => {
+    if (!urlKey) return;
+    if (isGuestKey(urlKey)) rememberKey(token, urlKey);
+    navigate(`/s/${token}`, { replace: true });
+  }, [urlKey, token, navigate]);
 
   const load = useCallback(async () => {
+    // Особисте посилання вже в сховищі — ефект вище спрацював раніше.
+    const own = storedKey(token);
+    const old = own ? null : legacyKey();
     try {
-      setData(await fetchSharedList(token));
-      setMine(myReservations(token));
-    } catch {
+      const fresh = await fetchSharedList(token, own ?? old);
+      // Старий ключ браузера береться лише там, де з ним уже є позначки.
+      if (!own && old && fresh.guest) rememberKey(token, old);
+      setKey(storedKey(token));
+      setData(fresh);
+    } catch (e) {
       // Три причини — одна сторінка: інакше різниця відповідей
       // сама підказувала б, що такий токен колись існував.
-      setGone(true);
+      if (e instanceof GoneError) setGone(true);
+      else setError(t('guest.error'));
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   useEffect(() => {
+    if (urlKey) return; // спершу ключ ляже в сховище й адреса очиститься
     void load();
-  }, [load]);
+  }, [load, urlKey]);
 
   useEffect(() => {
     if (data && !data.viewer_is_owner) void registerView(token);
-  }, [data, token]);
+    // Лише перше завантаження: перечитування після позначки — не новий перегляд.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Boolean(data), token]);
 
-  // Гість — у схемі власника; власник на власному посиланні — у своїй (він і
-  // є власник). Поки дані не приїхали, вигляд не чіпаємо, щоб не блимнути.
+  // Гість — у схемі власника й оформленні списку; власник на власному
+  // посиланні — у своїй схемі з оформленням. Поки дані не приїхали, вигляд не
+  // чіпаємо, щоб не блимнути.
   useSurface(
     data
       ? data.viewer_is_owner
@@ -98,49 +173,130 @@ export default function SharedList() {
       : null,
   );
 
+  const items = data?.items ?? [];
+  const canClaim = Boolean(data?.allow_reservations);
+  const freeItems = items.filter((i) => left(i) > 0);
+  const mineCount = items.filter((i) => mine(i) > 0).length;
+  const allTaken = canClaim && items.length > 0 && freeItems.length === 0;
+
   /**
-   * `p_quantity` в `reserve_item` — це **підсумкова** кількість цього гостя, а
-   * не приріст: RPC робить `on conflict … do update set quantity = excluded`,
-   * а межу рахує як «чужі броні + твоя нова». Тому «Узяти ще» має слати суму,
-   * інакше повторний виклик просто перезаписав би бронь тим самим числом.
+   * «Стежити» живе на пристрої. Наступного разу — різниця: нові позиції й ті,
+   * що звільнились. Знімок одразу оновлюється, а різниця лишається на екрані
+   * до кінця візиту.
    */
+  useEffect(() => {
+    if (!data || data.viewer_is_owner || watchChecked.current) return;
+    watchChecked.current = true;
+    const w = readWatch(token);
+    if (!w) return;
+    setWatching(true);
+    const known = new Set(w.items);
+    const wasFree = new Set(w.free);
+    const fresh = new Set(items.filter((i) => !known.has(i.id)).map((i) => i.id));
+    const freed = new Set(items.filter((i) => known.has(i.id) && !wasFree.has(i.id) && left(i) > 0).map((i) => i.id));
+    setChanges({ fresh, freed });
+    saveWatch(token, items.map((i) => i.id), freeItems.map((i) => i.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, token]);
+
+  function watch() {
+    saveWatch(token, items.map((i) => i.id), freeItems.map((i) => i.id));
+    setWatching(true);
+  }
+
+  function unwatch() {
+    stopWatch(token);
+    setWatching(false);
+    setChanges(null);
+  }
+
   async function take(item: SharedItem, total: number) {
-    if (!data?.allow_reservations || busyId) return;
+    if (!canClaim || busyId) return;
     setBusyId(item.id);
     setError(null);
+    setNotice(null);
+    // Ключ зберігається до запиту: обірвана відповідь не лишить позначку
+    // без власника.
+    const k = ensureKey(token);
+    setKey(k);
     try {
-      await reserveItem(token, item.id, guestKey(), total);
-      rememberReservation(token, item.id, total);
-      setMine(myReservations(token));
-      setData(await fetchSharedList(token));
+      await claimItem(token, item.id, k, total);
+      setData(await fetchSharedList(token, k));
     } catch (e) {
-      // Гонка: поки гість думав, позицію встигли взяти. Це не помилка
-      // застосунку, і сказати про це треба про конкретну позицію.
       const msg = e instanceof Error ? e.message : '';
-      setError(msg.includes('not_enough_left') ? t('guest.raceLost') : t('guest.error'));
-      setData(await fetchSharedList(token));
+      if (msg.includes('not_enough_left')) {
+        // Гонка: поки гість думав, позицію взяли. Це не помилка застосунку, і
+        // пояснити треба на місці позиції, а не смиканням кнопки.
+        setLost((prev) => new Set(prev).add(item.id));
+      } else if (e instanceof GoneError) {
+        setGone(true);
+        return;
+      } else {
+        setError(t('guest.error'));
+      }
+      try {
+        setData(await fetchSharedList(token, k));
+      } catch {
+        /* лишаємо те, що є на екрані */
+      }
     } finally {
       setBusyId(null);
     }
   }
 
   async function giveBack(item: SharedItem) {
-    if (busyId) return;
+    if (busyId || !key) return;
     setBusyId(item.id);
     setError(null);
     try {
-      await unreserveItem(token, item.id, guestKey());
-      forgetReservation(token, item.id);
-      setMine(myReservations(token));
-      setData(await fetchSharedList(token));
-    } catch {
-      setError(t('guest.error'));
+      await releaseClaim(token, item.id, key);
+      setData(await fetchSharedList(token, key));
+    } catch (e) {
+      if (e instanceof GoneError) setGone(true);
+      else setError(t('guest.error'));
     } finally {
       setBusyId(null);
     }
   }
 
-  if (loading) {
+  function showFree() {
+    setLost(new Set());
+    setFilter('free');
+    listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function copyLink() {
+    if (!key) return;
+    try {
+      await navigator.clipboard.writeText(personalLink(token, key));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError(t('guest.error'));
+    }
+  }
+
+  async function sendSelf() {
+    if (!key || !data) return;
+    const url = personalLink(token, key);
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: data.title, url });
+        return;
+      } catch (e) {
+        // Людина закрила системне вікно — це не помилка.
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+      }
+    }
+    await copyLink();
+  }
+
+  const shown = useMemo(() => {
+    if (!canClaim || filter === 'all') return items;
+    return items.filter((i) => left(i) > 0 || mine(i) > 0 || lost.has(i.id));
+  }, [items, canClaim, filter, lost]);
+
+  if (loading || urlKey) {
     return (
       <div className="booting" role="status">
         <span className="spinner" />
@@ -167,6 +323,114 @@ export default function SharedList() {
     );
   }
 
+  /** Блок дії внизу картки. */
+  function action(item: SharedItem) {
+    if (!canClaim) return null;
+    const l = left(item);
+    const m = mine(item);
+    const busy = busyId === item.id;
+
+    // Програш гонки — на місці позиції, з виходом до вільних. Кнопка «Я
+    // візьму це» щезає, а не блокується: disabled тут читається як «спробуй ще».
+    if (lost.has(item.id) && m === 0 && l <= 0) {
+      return (
+        <div className="gcard__action">
+          <div className="gcard__race" role="status">
+            <strong>{t('guest.raceTitle')}</strong>
+            <span className="small">{t('guest.raceBody')}</span>
+          </div>
+          <button type="button" className="btn btn--secondary btn--block" onClick={showFree}>
+            {t('guest.showFree', { n: freeItems.length })}
+          </button>
+        </div>
+      );
+    }
+
+    const wanted = Math.min(want[item.id] ?? 1, Math.max(l, 1));
+    return (
+      <div className="gcard__action">
+        {m > 0 && (
+          <p className="gcard__mine">
+            <Icon name="check" size={16} />
+            <span>{item.quantity > 1 ? t('guest.yoursPartial', { n: m, left: l }) : t('guest.yours')}</span>
+            <button
+              type="button"
+              className="btn btn--ghost btn--compact"
+              disabled={busy}
+              onClick={() => void giveBack(item)}
+            >
+              {t('guest.release')}
+            </button>
+          </p>
+        )}
+
+        {l > 0 ? (
+          <div className="gcard__take">
+            {item.quantity > 1 && l > 1 && (
+              <QuantityPicker
+                value={wanted}
+                max={l}
+                disabled={busy}
+                onChange={(n) => setWant((w) => ({ ...w, [item.id]: n }))}
+              />
+            )}
+            <button
+              type="button"
+              className="btn btn--primary btn--block"
+              disabled={busy}
+              onClick={() => void take(item, m + (item.quantity > 1 ? wanted : 1))}
+            >
+              {busy && <span className="spinner" />}
+              {busy
+                ? t('guest.taking')
+                : m > 0
+                  ? t('guest.takeMore')
+                  : item.quantity > 1
+                    ? t('guest.takeSome', { n: wanted, of: item.quantity })
+                    : t('guest.take')}
+            </button>
+          </div>
+        ) : (
+          m === 0 && (
+            // Чужа: без імені, без дати, без дії.
+            <p className="gcard__taken">
+              {item.quantity > 1 ? t('guest.takenAll', { n: item.quantity }) : t('guest.takenByOther')}
+            </p>
+          )
+        )}
+      </div>
+    );
+  }
+
+  function card(item: SharedItem) {
+    const takenByOthers = canClaim && left(item) <= 0 && mine(item) === 0 && !lost.has(item.id);
+    return (
+      <li className="gcard" key={item.id} data-taken={takenByOthers} data-lost={lost.has(item.id)}>
+        {changes && (changes.fresh.has(item.id) || changes.freed.has(item.id)) && (
+          <span className="tag tag--accent gcard__flag">
+            {changes.fresh.has(item.id) ? t('guest.tagNew') : t('guest.tagFreed')}
+          </span>
+        )}
+        <GuestItemBody
+          item={{
+            ...item,
+            // «лишилось N» — лише коли частину вже взяли: це про позицію, не про людей.
+            quantityNote:
+              canClaim && item.quantity > 1 && (item.taken_qty ?? 0) > 0 && left(item) > 0
+                ? t('guest.neededLeft', { n: item.quantity, left: left(item) })
+                : undefined,
+          }}
+          currency={data!.currency}
+        >
+          {action(item)}
+        </GuestItemBody>
+      </li>
+    );
+  }
+
+  const mineItems = items.filter((i) => mine(i) > 0);
+  const takenRest = items.filter((i) => mine(i) === 0);
+
   return (
     // <main>: гостьову сторінку відкривають сторонні люди, і без орієнтира
     // зчитувач екрана не має куди перейти до головного вмісту.
@@ -182,96 +446,150 @@ export default function SharedList() {
             <span className="banner__text">{t('guest.ownerBanner')}</span>
           </p>
         )}
-        {error && (
-          <p className="banner banner--danger" role="alert">
+        {error && <Note tone="error">{error}</Note>}
+        {notice && <Note>{notice}</Note>}
+
+        {changes && (
+          <div className="banner banner--accent" role="status">
             <span className="banner__icon">
-              <Icon name="alert" size={18} />
+              <Icon name="clock" size={18} />
             </span>
-            <span className="banner__text">{error}</span>
-          </p>
+            <span className="banner__text">
+              {changes.fresh.size || changes.freed.size
+                ? t('guest.changes', { new: changes.fresh.size, freed: changes.freed.size })
+                : t('guest.noChanges')}
+            </span>
+            <button type="button" className="btn btn--ghost btn--compact" onClick={unwatch}>
+              {t('guest.unwatch')}
+            </button>
+          </div>
         )}
 
-        {data.items.length === 0 ? (
+        {/* Одразу після першої позначки: посилання для себе й код — на випадок,
+            коли посилання загубилось. Реєстрації немає ніде. */}
+        {canClaim && mineCount > 0 && key && data.guest && (
+          <section className="keep" aria-labelledby="keep-title">
+            <p className="keep__kicker">{t('guest.keepKicker')}</p>
+            <h2 className="keep__title" id="keep-title">
+              {t('guest.keepTitle')}
+            </h2>
+            <p className="small">{t('guest.keepBody')}</p>
+            <div className="keep__actions">
+              <button type="button" className="btn btn--primary" onClick={() => void sendSelf()}>
+                {t('guest.sendSelf')}
+              </button>
+              <button type="button" className="btn btn--secondary" onClick={() => void copyLink()}>
+                {t('guest.copyLink')}
+              </button>
+            </div>
+            <div className="keep__code">
+              <span className="small">{t('guest.codeHint')}</span>
+              <span className="keep__code-value" aria-label={t('guest.codeLabel', { code: data.guest.code })}>
+                {data.guest.code}
+              </span>
+            </div>
+          </section>
+        )}
+
+        {items.length === 0 ? (
           <div className="empty">
             <h2>{t('guest.emptyTitle')}</h2>
             <p className="lede">{t('guest.emptyBody')}</p>
           </div>
+        ) : allTaken ? (
+          <>
+            {/* «Усе розібрали» — не помилка й не порожнеча, а привід
+                повернутись. Список лишається видимим: гість має побачити, що
+                саме подобається, — це підказка для власного подарунка. */}
+            <section className="all-taken" aria-labelledby="all-taken-title">
+              <h2 id="all-taken-title">
+                {mineCount > 0 ? t('guest.allTakenMine', { n: mineCount }) : t('guest.allTakenTitle')}
+              </h2>
+              <p className="small">{mineCount > 0 ? t('guest.allTakenBodyMine') : t('guest.allTakenBody')}</p>
+              {watching ? (
+                <p className="small all-taken__watching">
+                  <Icon name="check" size={16} />
+                  <span>{t('guest.watching')}</span>
+                  <button type="button" className="btn btn--ghost btn--compact" onClick={unwatch}>
+                    {t('guest.unwatch')}
+                  </button>
+                </p>
+              ) : (
+                <>
+                  <button type="button" className="btn btn--primary btn--block" onClick={watch}>
+                    {t('guest.watch')}
+                  </button>
+                  <p className="small muted">{t('guest.watchHint')}</p>
+                </>
+              )}
+            </section>
+
+            {mineItems.length > 0 && <ul className="guest__grid">{mineItems.map(card)}</ul>}
+
+            {takenRest.length > 0 && (
+              <section className="taken-list" aria-labelledby="taken-list-title">
+                <p className="taken-list__head">
+                  <span className="settings__label" id="taken-list-title">
+                    {t('guest.allTakenList')}
+                  </span>
+                  <span className="small muted">{t('guest.itemsCount', { n: takenRest.length })}</span>
+                </p>
+                <ul className="taken-list__rows">
+                  {takenRest.map((i) => (
+                    <li key={i.id} className="taken-row">
+                      <span className="taken-row__title">{i.title}</span>
+                      <span className="tag tag--neutral">{t('guest.takenPill')}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
         ) : (
-          <ul className="guest__grid">
-            {data.items.map((item) => {
-              const reserved = item.reserved_qty ?? 0;
-              const takenByMe = mine[item.id] ?? 0;
-              const left = item.quantity - reserved;
-              const busy = busyId === item.id;
-              const wanted = Math.min(want[item.id] ?? 1, Math.max(left, 1));
+          <>
+            {canClaim && (
+              <div className="guest-filters" ref={listTop}>
+                <div className="gchips" role="radiogroup" aria-label={t('guest.filterLabel')}>
+                  <button
+                    type="button"
+                    role="radio"
+                    className="gchip"
+                    aria-checked={filter === 'free'}
+                    onClick={() => setFilter('free')}
+                  >
+                    {t('guest.filterFree', { n: freeItems.length })}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    className="gchip"
+                    aria-checked={filter === 'all'}
+                    onClick={() => setFilter('all')}
+                  >
+                    {t('guest.filterAll', { n: items.length })}
+                  </button>
+                </div>
+                <span className="small muted" aria-live="polite">
+                  {t('guest.freeCounter', { n: freeItems.length, m: items.length })}
+                </span>
+              </div>
+            )}
 
-              return (
-                <li className="gcard" key={item.id} data-taken={takenByMe === 0 && left <= 0}>
-                  <GuestItemBody item={item} currency={data.currency}>
+            {shown.length > 0 ? (
+              <ul className="guest__grid">{shown.map(card)}</ul>
+            ) : (
+              <p className="lede center">{t('guest.freeEmpty')}</p>
+            )}
+          </>
+        )}
 
-                  {/* Бронювання вимкнене — блок дії зникає повністю, а не
-                      гасне: сторінка стає суто для читання. */}
-                  {data.allow_reservations && (
-                    <div className="gcard__action">
-                      {takenByMe > 0 && (
-                        <p className="gcard__mine">
-                          <Icon name="check" size={16} />
-                          <span>
-                            {item.quantity > 1
-                              ? t('guest.yoursPartial', { n: takenByMe, left })
-                              : t('guest.yours')}
-                          </span>
-                          <button
-                            type="button"
-                            className="btn btn--ghost btn--compact"
-                            disabled={busy}
-                            onClick={() => void giveBack(item)}
-                          >
-                            {t('guest.cancel')}
-                          </button>
-                        </p>
-                      )}
-
-                      {left > 0 ? (
-                        <div className="gcard__take">
-                          {item.quantity > 1 && left > 1 && (
-                            <QuantityPicker
-                              value={wanted}
-                              max={left}
-                              disabled={busy}
-                              onChange={(n) => setWant((w) => ({ ...w, [item.id]: n }))}
-                            />
-                          )}
-                          <button
-                            type="button"
-                            className="btn btn--primary btn--block"
-                            disabled={busy}
-                            onClick={() => void take(item, takenByMe + (item.quantity > 1 ? wanted : 1))}
-                          >
-                            {busy && <span className="spinner" />}
-                            {busy
-                              ? t('guest.taking')
-                              : takenByMe > 0
-                                ? t('guest.takeMore')
-                                : item.quantity > 1
-                                  ? t('guest.takeSome', { n: wanted, of: item.quantity })
-                                  : t('guest.take')}
-                          </button>
-                        </div>
-                      ) : (
-                        takenByMe === 0 && (
-                          <p className="gcard__taken">
-                            {item.quantity > 1 ? t('guest.allTaken') : t('guest.reserved')}
-                          </p>
-                        )
-                      )}
-                    </div>
-                  )}
-                  </GuestItemBody>
-                </li>
-              );
-            })}
-          </ul>
+        {canClaim && (
+          <div className="guest__extra">
+            <button type="button" className="btn btn--ghost" onClick={() => setRedeemOpen(true)}>
+              {t('guest.haveCode')}
+            </button>
+            <p className="small muted">{t('guest.ownerBlind')}</p>
+          </div>
         )}
 
         <p className="guest__footer">{t('guest.footer')}</p>
@@ -293,6 +611,122 @@ export default function SharedList() {
       </div>
 
       <AppearanceSheet open={appearance} onClose={() => setAppearance(false)} />
+
+      <RedeemDialog
+        open={redeemOpen}
+        token={token}
+        onClose={() => setRedeemOpen(false)}
+        onRedeemed={async (newKey, count) => {
+          rememberKey(token, newKey);
+          setKey(newKey);
+          setRedeemOpen(false);
+          setNotice(t('guest.redeemDone', { n: count }));
+          try {
+            setData(await fetchSharedList(token, newKey));
+          } catch {
+            /* сторінка перечитається при наступній дії */
+          }
+        }}
+      />
+
+      {copied && (
+        <p className="toast" role="status">
+          <Icon name="check" size={16} />
+          {t('guest.copied')}
+        </p>
+      )}
     </main>
+  );
+}
+
+/**
+ * «У мене вже щось відкладено»: код із 5 символів переносить позначки на цей
+ * пристрій і лишає їх на попередньому. Після 5 спроб на годину на список не
+ * приймається навіть правильний — і сторінка каже про це прямо.
+ */
+function RedeemDialog({
+  open,
+  token,
+  onClose,
+  onRedeemed,
+}: {
+  open: boolean;
+  token: string;
+  onClose: () => void;
+  onRedeemed: (key: string, claims: number) => void;
+}) {
+  const { t } = useI18n();
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setCode('');
+      setError(null);
+    }
+  }, [open]);
+
+  async function submit() {
+    if (busy) return;
+    const clean = code.replace(/\s+/g, '').toUpperCase();
+    if (clean.length !== 5) {
+      setError(t('guest.redeemShort'));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await redeemCode(token, clean);
+      if ('error' in res) {
+        setError(res.error === 'too_many_attempts' ? t('guest.redeemTooMany') : t('guest.redeemNotFound'));
+      } else {
+        onRedeemed(res.key, res.claims);
+      }
+    } catch {
+      setError(t('guest.error'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} title={t('guest.haveCode')}>
+      <form
+        className="form-grid"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        <p className="small">{t('guest.redeemBody')}</p>
+        {error && <Note tone="error">{error}</Note>}
+        <div className="field" data-invalid={error ? 'true' : 'false'}>
+          <label htmlFor="guestCode">{t('guest.redeemCode')}</label>
+          <input
+            id="guestCode"
+            className="input code-input"
+            value={code}
+            maxLength={5}
+            autoComplete="one-time-code"
+            autoCapitalize="characters"
+            spellCheck={false}
+            inputMode="text"
+            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ''))}
+          />
+        </div>
+        <div className="appearance-note">
+          <strong>{t('guest.noCodeTitle')}</strong>
+          <p className="small">{t('guest.noCodeBody')}</p>
+        </div>
+        <div className="dialog__foot">
+          <button type="submit" className="btn btn--primary btn--block" disabled={busy}>
+            {busy && <span className="spinner" />}
+            {busy ? t('guest.redeeming') : t('guest.redeem')}
+          </button>
+        </div>
+      </form>
+    </Dialog>
   );
 }

@@ -22,7 +22,7 @@ const { data } = await supabase.rpc('create_share', {
 
 ### `get_shared_list` — anon + authenticated
 ```ts
-const { data } = await supabase.rpc('get_shared_list', { p_token: token });
+const { data } = await supabase.rpc('get_shared_list', { p_token: token, p_key: guestKey /* або null */ });
 ```
 ```jsonc
 {
@@ -35,16 +35,18 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token });
   "hide_prices": false,
   "allow_reservations": true,
   "viewer_is_owner": false,
+  "guest": { "code": "7K4M2" },   // ключ упізнано; null — ключа немає або він чужий
   "items": [{
     "id": "…", "title": "Навушники", "url": "https://…",
     "price": "399.00", "quantity": 1, "priority": "high",
     "note": null, "image_url": "https://…", "status": "active",
     "variants": [{ "label": "Розмір", "value": "M" }],   // до 5 пар, ADR-030
-    "reserved_qty": 1        // null, якщо переглядає власник
+    "taken_qty": 1,          // скільки взяли всі разом; null, якщо дивиться власник
+    "mine_qty": 0            // скільки взяв цей гість; null для власника
   }]
 }
 ```
-Помилки (код `P0002`): `not_found`, `revoked`, `expired`. Фронт показує однакову сторінку «Посилання недоступне» для всіх трьох — щоб не підтверджувати існування токена.
+Помилка одна: `not_found` (код `P0002`) — і для неіснуючого, і для відкликаного, і для протермінованого токена (ADR-035). Відповідь не має підтверджувати, що токен колись існував.
 
 Показуються лише позиції зі `status = 'active'`. При `hide_prices: true` поле `price` повертається як `null` — ціна не їде на клієнт узагалі, не ховається стилями.
 
@@ -54,20 +56,38 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token });
 
 `owner_scheme` — схема смаку власника: гість бачить список у ній (ADR-033). Висока контрастність власника гостю не віддається — це налаштування глядача, а не списку; свою гість вмикає сам. Схема читається щоразу, а не запікається в токен: власник змінив її — наступне відкриття посилання покаже нову.
 
+Ні хто, ні коли позначив — у відповіді немає: лише скільки. Виклик із ключем оновлює `last_seen` його ідентичності.
+
 ### `register_share_view` — anon + authenticated
 ```ts
 await supabase.rpc('register_share_view', { p_token: token });
 ```
 Викликати один раз на сесію перегляду. Перегляди власника не рахуються.
 
-### `reserve_item` / `unreserve_item` — anon + authenticated
+### `claim_item` / `release_claim` — anon + authenticated
 ```ts
-const { data: reservedQty } = await supabase.rpc('reserve_item', {
-  p_token: token, p_item_id: itemId, p_guest_key: guestKey, p_quantity: 1,
+const { data } = await supabase.rpc('claim_item', {
+  p_token: token, p_item_id: itemId, p_key: guestKey, p_quantity: 1,
 });
+// → { "taken_qty": 1, "mine_qty": 1, "code": "7K4M2" }
+await supabase.rpc('release_claim', { p_token: token, p_item_id: itemId, p_key: guestKey });
 ```
-Повертає нову загальну кількість броні по позиції.
-Помилки: `not_found`, `reservations_disabled`, `owner_cannot_reserve`, `item_not_in_share`, `not_enough_left`.
+Ключ генерує браузер гостя (`lib/guest.ts`) і зберігає **до** виклику: обірвана відповідь не лишить позначку без власника. Перша позначка з новим ключем тихо створює ідентичність і короткий код. `p_quantity` — підсумкова кількість цього гостя, не приріст; позиція блокується на час перевірки, тож двоє одночасних гостей не візьмуть більше, ніж треба.
+
+Помилки `claim_item`: `not_found`, `reservations_disabled`, `owner_cannot_reserve`, `bad_key`, `bad_quantity`, `item_not_in_share`, `not_enough_left` (гонку програно).
+
+### `redeem_guest_code` — anon + authenticated
+```ts
+const { data } = await supabase.rpc('redeem_guest_code', { p_token: token, p_code: '7K4M2' });
+// → { "key": "…", "code": "N5F9K", "claims": 2 }  або  { "error": "code_not_found" | "too_many_attempts" }
+```
+Код переносить позначки на новий пристрій одноразово: сервер видає новий ключ тієї самої ідентичності, старі ключі лишаються робочими, код змінюється. П'ять спроб на годину на список — зараховуються всі, і після п'ятої не приймається навіть правильний. Невдача — у тілі відповіді, а не винятком: виняток відкотив би запис спроби.
+
+### `release_item_claims` — authenticated
+```ts
+await supabase.rpc('release_item_claims', { p_item_id: itemId });   // 204, без тіла
+```
+Сліпе «скинути позицію» власником: знімає позначки гостей, якщо вони є, і не повертає нічого — ні скільки, ні чи були. Чужа позиція — `not_found`. У інтерфейсі кнопка стоїть на кожній позиції завжди однаково: інакше сама її поява була б індикатором.
 
 ### `list_items_page` — authenticated
 ```ts
@@ -98,7 +118,8 @@ const { data } = await supabase.rpc('list_totals', { p_list_id: listId });
 | Функція | Ролі |
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
-| `get_shared_list`, `register_share_view`, `reserve_item`, `unreserve_item` | `anon`, `authenticated` |
+| `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code` | `anon`, `authenticated` |
+| `release_item_claims` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
 Права задано міграціями `20260910120300_grants.sql` і `20260916220000_revoke_default_function_grants.sql`. Перша відкликала лише `PUBLIC`, і функції власника лишались доступними `anon` через явні гранти Supabase за замовчуванням; друга це закрила. Кожна нова RPC-функція отримує гранти явно й відкликає їх у конкретних ролей (CLAUDE.md §3.4). Таблицю вище перевіряє `supabase/tests/database/01_schema_guards.test.sql`.

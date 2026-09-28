@@ -41,40 +41,47 @@ select is_empty(
   'жодна RLS-політика не адресована anon чи PUBLIC'
 );
 
--- ── Броні: власник не бачить (§3.2) ──────────
+-- ── Позначки: власник не бачить (§3.2) ───────
+-- Позначки й усе, що про гостя (ідентичність, ключі, спроби коду), закриті
+-- від authenticated повністю: жодного права й жодної політики.
 
 select is_empty(
-  $$ select p.priv
-       from unnest(array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) as p(priv)
-      where has_table_privilege('authenticated', 'public.reservations', p.priv) $$,
-  'authenticated не має жодних прав на reservations'
+  $$ select t.name || ': ' || p.priv
+       from unnest(array['claims', 'guest_identities', 'guest_keys', 'guest_code_attempts']) as t(name)
+      cross join unnest(array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) as p(priv)
+      where has_table_privilege('authenticated', 'public.' || t.name, p.priv) $$,
+  'authenticated не має жодних прав на позначки й дані гостей'
 );
 
 select is(
-  (select count(*)::int from pg_policies where schemaname = 'public' and tablename = 'reservations'),
+  (select count(*)::int from pg_policies where schemaname = 'public'
+      and tablename in ('claims', 'guest_identities', 'guest_keys', 'guest_code_attempts')),
   0,
-  'на reservations немає жодної RLS-політики'
+  'на позначках і даних гостей немає жодної RLS-політики'
 );
 
 select is_empty(
   $$ select schemaname || '.' || viewname from pg_views
-      where schemaname = 'public' and definition ~* '(^|[^_[:alnum:]])reservations([^_[:alnum:]]|$)'
+      where schemaname = 'public'
+        and definition ~* '(^|[^_[:alnum:]])(claims|guest_identities|guest_keys)([^_[:alnum:]]|$)'
      union all
      select schemaname || '.' || matviewname from pg_matviews
-      where schemaname = 'public' and definition ~* '(^|[^_[:alnum:]])reservations([^_[:alnum:]]|$)' $$,
-  'жодна вʼю в public не читає reservations'
+      where schemaname = 'public'
+        and definition ~* '(^|[^_[:alnum:]])(claims|guest_identities|guest_keys)([^_[:alnum:]]|$)' $$,
+  'жодна вʼю в public не читає позначки чи дані гостей'
 );
 
 select set_eq(
   $$ select p.proname::text
        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
-        -- Ціле слово: allow_reservations у create_share — не звернення до таблиці.
-        and p.prosrc ~* '(^|[^_[:alnum:]])reservations([^_[:alnum:]]|$)'
+        -- Ціле слово, окремо або як public.claims: request.jwt.claims у
+        -- помічниках автентифікації — не таблиця позначок.
+        and p.prosrc ~* '(^|[^_.[:alnum:]]|public\.)claims([^_[:alnum:]]|$)'
         and not exists (select 1 from pg_depend d
                          where d.classid = 'pg_proc'::regclass and d.objid = p.oid and d.deptype = 'e') $$,
-  array['get_shared_list', 'reserve_item', 'unreserve_item'],
-  'reservations згадують лише гостьові функції; нова функція над бронями має бути додана сюди свідомо'
+  array['get_shared_list', 'claim_item', 'release_claim', 'redeem_guest_code', 'release_item_claims'],
+  'claims згадують лише гостьові функції й сліпе скидання; нова функція над позначками має бути додана сюди свідомо'
 );
 
 -- ── Функції: гранти явні (§3.4) ──────────────
@@ -89,7 +96,7 @@ select set_eq(
         and not exists (select 1 from pg_depend d
                          where d.classid = 'pg_proc'::regclass and d.objid = p.oid and d.deptype = 'e')
         and has_function_privilege('anon', p.oid, 'EXECUTE') $$,
-  array['get_shared_list', 'register_share_view', 'reserve_item', 'unreserve_item'],
+  array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code'],
   'anon може викликати лише гостьові RPC'
 );
 
@@ -103,8 +110,9 @@ select set_eq(
         and has_function_privilege('authenticated', p.oid, 'EXECUTE') $$,
   -- gen_share_token потрібна authenticated: її викликає create_share,
   -- яка працює з правами викликача (SECURITY INVOKER).
-  array['get_shared_list', 'register_share_view', 'reserve_item', 'unreserve_item',
-        'create_share', 'list_items_page', 'list_totals', 'gen_share_token'],
+  -- release_item_claims — сліпе скидання власником: нічого не повертає.
+  array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
+        'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims'],
   'authenticated може викликати лише гостьові RPC і функції власника'
 );
 

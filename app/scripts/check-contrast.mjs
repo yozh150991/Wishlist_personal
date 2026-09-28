@@ -61,6 +61,7 @@ const OVERLAY_PAIRS = [
   ['Значок «Високий»', '--color-accent-800', '--color-accent-100', 4.5],
   ['Активний пункт / пігулка', '--color-accent-800', '--color-accent-200', 4.5],
   ['Гостьовий заголовок', '--color-accent-900', '--color-guest-header', 4.5],
+  ['Пояснення програшу гонки', '--color-accent-900', '--color-accent-200', 4.5],
   ['Смужка «Високий» на гостьовій картці', '--color-prio-high', '--color-guest-card', 3],
   ['Кільце фокуса на гостьовому фоні', '--color-accent-700', '--color-guest-bg', 3],
 ];
@@ -102,6 +103,8 @@ const PAIRS = [
   ['Текст на гостьовій картці', '--color-text', '--color-guest-card', 4.5],
   ['Приглушений на гостьовій картці', '--color-neutral-700', '--color-guest-card', 4.5],
   ['Текст на гостьовому фоні', '--color-text', '--color-guest-bg', 4.5],
+  ['Текст на шапці гостьової', '--color-text', '--color-guest-header', 4.5],
+  ['Пояснення програшу гонки', '--color-accent-900', '--color-accent-200', 4.5],
   ['Смужка «Високий»', '--color-prio-high', '--color-surface', 3],
   ['Смужка «Низький»', '--color-prio-low', '--color-surface', 3],
   ['Підпис кнопки видалення', '--color-bg', '--color-danger', 4.5],

@@ -87,8 +87,10 @@ export type SharedItem = {
   image_url: string | null;
   status: ItemStatus;
   created_at: string;
-  /** null, коли переглядає власник: броні від нього приховані (ADR-009). */
-  reserved_qty: number | null;
+  /** Скільки штук узяли всі гості разом; null, коли дивиться власник (ADR-009). */
+  taken_qty: number | null;
+  /** Скільки взяв саме цей гість (за ключем); null для власника. */
+  mine_qty: number | null;
 };
 
 export type SharedList = {
@@ -104,21 +106,31 @@ export type SharedList = {
   hide_prices: boolean;
   allow_reservations: boolean;
   viewer_is_owner: boolean;
+  /** Ключ гостя впізнано — ось його короткий код. null — ключа немає або він чужий. */
+  guest: { code: string } | null;
   items: SharedItem[];
 };
 
-export type SharedListError = 'not_found' | 'revoked' | 'expired' | 'unknown';
-
-export async function fetchSharedList(token: string): Promise<SharedList> {
-  const { data, error } = await supabase.rpc('get_shared_list', { p_token: token });
-  if (error) {
-    const code = (error.message || '').toLowerCase();
-    // Гостю показуємо однакову сторінку на всі три випадки: інакше
-    // сама різниця відповідей підтверджувала б існування токена.
-    const known: SharedListError[] = ['not_found', 'revoked', 'expired'];
-    const match = known.find((k) => code.includes(k));
-    throw new Error(match ?? 'unknown');
+/**
+ * Посилання недоступне — одна відповідь на всі три причини (ADR-035): сервер
+ * не каже, чи токен не існував, відкликаний, чи протермінований, і сторінка
+ * теж не має цього підтверджувати.
+ */
+export class GoneError extends Error {
+  constructor() {
+    super('not_found');
   }
+}
+
+function rpcError(error: { message?: string; code?: string } | null): Error {
+  const msg = (error?.message || '').toLowerCase();
+  if (msg.includes('not_found')) return new GoneError();
+  return new Error(error?.message || 'unknown');
+}
+
+export async function fetchSharedList(token: string, key: string | null): Promise<SharedList> {
+  const { data, error } = await supabase.rpc('get_shared_list', { p_token: token, p_key: key });
+  if (error) throw rpcError(error);
   const list = data as SharedList & { owner_scheme: unknown; appearance_hue: unknown };
   // Старий бекенд або несподіване значення — усталена Шавлія без оформлення,
   // а не зламана сторінка.
@@ -127,6 +139,7 @@ export async function fetchSharedList(token: string): Promise<SharedList> {
     owner_scheme: isScheme(list.owner_scheme) ? list.owner_scheme : 'sage',
     appearance_hue: typeof list.appearance_hue === 'number' ? list.appearance_hue : null,
     event_date: list.event_date ?? null,
+    guest: list.guest ?? null,
   };
 }
 
@@ -134,32 +147,58 @@ export async function registerView(token: string): Promise<void> {
   await supabase.rpc('register_share_view', { p_token: token });
 }
 
-export async function reserveItem(
+export type ClaimResult = { taken_qty: number; mine_qty: number; code: string };
+
+/**
+ * «Я візьму це». `quantity` — підсумкова кількість цього гостя, не приріст:
+ * сервер робить upsert і рахує межу як «чужі позначки + твоя нова».
+ * Помилки, які сторінка показує по-людськи: `not_enough_left` (гонку
+ * програно), `reservations_disabled`.
+ */
+export async function claimItem(
   token: string,
   itemId: string,
-  guest: string,
+  key: string,
   quantity = 1,
-): Promise<number> {
-  const { data, error } = await supabase.rpc('reserve_item', {
+): Promise<ClaimResult> {
+  const { data, error } = await supabase.rpc('claim_item', {
     p_token: token,
     p_item_id: itemId,
-    p_guest_key: guest,
+    p_key: key,
     p_quantity: quantity,
   });
-  if (error) throw new Error(error.message);
-  return (data as number) ?? 0;
+  if (error) throw rpcError(error);
+  return data as ClaimResult;
 }
 
-export async function unreserveItem(
-  token: string,
-  itemId: string,
-  guest: string,
-): Promise<number> {
-  const { data, error } = await supabase.rpc('unreserve_item', {
+export async function releaseClaim(token: string, itemId: string, key: string): Promise<void> {
+  const { error } = await supabase.rpc('release_claim', {
     p_token: token,
     p_item_id: itemId,
-    p_guest_key: guest,
+    p_key: key,
   });
-  if (error) throw new Error(error.message);
-  return (data as number) ?? 0;
+  if (error) throw rpcError(error);
+}
+
+export type RedeemResult =
+  | { key: string; code: string; claims: number }
+  | { error: 'code_not_found' | 'too_many_attempts' };
+
+/**
+ * Короткий код переносить позначки на цей пристрій: сервер видає новий ключ
+ * тієї самої ідентичності, старий пристрій лишається робочим, код змінюється.
+ */
+export async function redeemCode(token: string, code: string): Promise<RedeemResult> {
+  const { data, error } = await supabase.rpc('redeem_guest_code', { p_token: token, p_code: code });
+  if (error) throw rpcError(error);
+  return data as RedeemResult;
+}
+
+/**
+ * Сліпе «скинути позицію» власником (ADR-035): знімає позначки гостей, якщо
+ * вони є, і нічого не повертає — ні скільки, ні чи були.
+ */
+export async function releaseItemClaims(itemId: string): Promise<void> {
+  const { error } = await supabase.rpc('release_item_claims', { p_item_id: itemId });
+  if (error) throw error;
 }

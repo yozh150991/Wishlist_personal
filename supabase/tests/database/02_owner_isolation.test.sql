@@ -133,7 +133,7 @@ select throws_ok($$ select * from items $$,        '42501', null, 'anon: items �
 select throws_ok($$ select * from shares $$,       '42501', null, 'anon: shares недоступна');
 select throws_ok($$ select * from share_items $$,  '42501', null, 'anon: share_items недоступна');
 select throws_ok($$ select * from profiles $$,     '42501', null, 'anon: profiles недоступна');
-select throws_ok($$ select * from reservations $$, '42501', null, 'anon: reservations недоступна');
+select throws_ok($$ select * from claims $$, '42501', null, 'anon: claims недоступна');
 select throws_ok(
   $$ select * from list_items_page('aaaaaaaa-0000-4000-8000-00000000000a') $$,
   '42501', null, 'anon не викликає list_items_page'
