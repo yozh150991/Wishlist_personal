@@ -695,6 +695,11 @@
       "deadTitle": "This link has already been used",
       "deadBody": "Or more than an hour has passed, or it was opened in a different browser. Send a new one — your email is already filled in.",
       "deadSubmit": "Send a new link"
+    },
+    "unconfirmed": {
+      "title": "Confirm your email first",
+      "body": "You can sign in once {email} is confirmed: the email with the link went there after you signed up. Can't find it? We'll send it again.",
+      "submit": "Send the email again"
     }
   }
 }

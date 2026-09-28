@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { MailX } from 'lucide-react';
+import { MailWarning, MailX } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
@@ -36,7 +36,12 @@ const PAUSE_MS = 30_000;
 /** Понад стільки очікування під кнопкою з'являється «Скасувати» (A3). */
 const SLOW_MS = 8_000;
 
-type Stage = 'form' | 'expired';
+/**
+ * `expired` — посилання з листа не спрацювало; `unconfirmed` — пароль правильний,
+ * але пошту ще не підтверджено. В обох — повторний лист підтвердження: увійти
+ * може лише акаунт із підтвердженою поштою (ADR-043).
+ */
+type Stage = 'form' | 'expired' | 'unconfirmed';
 
 /**
  * Вхід v2 (потік A).
@@ -130,6 +135,14 @@ export default function LoginV2() {
       return;
     }
     const key = authErrorKey(error);
+    // Непідтверджена пошта — не помилка входу, а крок, який лишився: одразу
+    // пропонуємо лист ще раз. І не рахуємо цю спробу в паузу.
+    if (key === 'errors.emailNotConfirmed') {
+      rememberAuthEmail(email);
+      setResent(false);
+      setStage('unconfirmed');
+      return;
+    }
     if (key === 'errors.invalidCredentials') {
       const n = fails + 1;
       if (n >= MAX_FAILS) {
@@ -177,7 +190,8 @@ export default function LoginV2() {
     setResent(true);
   }
 
-  if (stage === 'expired') {
+  if (stage === 'expired' || stage === 'unconfirmed') {
+    const expired = stage === 'expired';
     return (
       <AuthFrameV2>
         <form
@@ -188,9 +202,11 @@ export default function LoginV2() {
             void resendConfirmation();
           }}
         >
-          <IconCircleV2 icon={MailX} tone="warm" />
-          <h1 className="v2-title">{t('v2auth.expired.title')}</h1>
-          <p className="v2-lede">{t('v2auth.expired.body')}</p>
+          <IconCircleV2 icon={expired ? MailX : MailWarning} tone="warm" />
+          <h1 className="v2-title">{expired ? t('v2auth.expired.title') : t('v2auth.unconfirmed.title')}</h1>
+          <p className="v2-lede">
+            {expired ? t('v2auth.expired.body') : t('v2auth.unconfirmed.body', { email: email.trim() })}
+          </p>
           {server && <NoteV2 tone="error">{server}</NoteV2>}
           {resent ? (
             <NoteV2 tone="info">{t('v2auth.expired.sent', { email: email.trim() })}</NoteV2>
@@ -208,7 +224,11 @@ export default function LoginV2() {
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={() => setEmailTouched(true)}
               />
-              <SubmitV2 busy={busy} label={t('v2auth.expired.submit')} busyLabel={t('v2auth.sending')} />
+              <SubmitV2
+                busy={busy}
+                label={expired ? t('v2auth.expired.submit') : t('v2auth.unconfirmed.submit')}
+                busyLabel={t('v2auth.sending')}
+              />
             </>
           )}
           <button type="button" className="v2-btn v2-btn--ghost" onClick={() => setStage('form')}>

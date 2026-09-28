@@ -695,6 +695,11 @@
       "deadTitle": "Ten link został już użyty",
       "deadBody": "Albo minęła ponad godzina, albo otwarto go w innej przeglądarce. Wyślij nowy — adres jest już wpisany.",
       "deadSubmit": "Wyślij nowy link"
+    },
+    "unconfirmed": {
+      "title": "Najpierw potwierdź e-mail",
+      "body": "Zalogować się można, gdy adres {email} jest potwierdzony: wiadomość z linkiem poszła tam po rejestracji. Nie ma jej — wyślemy ponownie.",
+      "submit": "Wyślij wiadomość ponownie"
     }
   }
 }
