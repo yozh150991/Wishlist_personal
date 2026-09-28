@@ -701,5 +701,74 @@
       "body": "Zalogować się można, gdy adres {email} jest potwierdzony: wiadomość z linkiem poszła tam po rejestracji. Nie ma jej — wyślemy ponownie.",
       "submit": "Wyślij wiadomość ponownie"
     }
+  },
+  "v2app": {
+    "nav": {
+      "label": "Nawigacja główna",
+      "account": "Konto"
+    },
+    "signOut": {
+      "title": "Wylogować się?",
+      "confirm": "Wyloguj mimo to",
+      "stay": "Zostań"
+    },
+    "soon": {
+      "title": "Ten ekran w nowym wyglądzie jest jeszcze w pracy",
+      "body": "Dane są na miejscu — na razie otwórz go w starym wyglądzie.",
+      "openV1": "Otwórz w starym wyglądzie"
+    },
+    "count": {
+      "items": {
+        "one": "{n} pozycja",
+        "few": "{n} pozycje",
+        "many": "{n} pozycji",
+        "other": "{n} pozycji"
+      },
+      "open": {
+        "one": "{n} pozycja do rozliczenia",
+        "few": "{n} pozycje do rozliczenia",
+        "many": "{n} pozycji do rozliczenia",
+        "other": "{n} pozycji do rozliczenia"
+      }
+    },
+    "lists": {
+      "title": "Moje listy",
+      "new": "Nowa lista",
+      "welcome": "Witaj!",
+      "upcoming": "Najbliższe",
+      "past": "Minione",
+      "noDate": "bez daty",
+      "loading": "Wczytuję listy",
+      "errorTitle": "Nie udało się wczytać list",
+      "stale": "Brak połączenia. Pokazano zapisaną kopię z {time}."
+    },
+    "templates": {
+      "title": "Na jaką okazję zbieramy?",
+      "body": "Szablon podstawi tylko nazwę — można ją zmienić.",
+      "own": "Własna lista bez szablonu",
+      "birthday": "Urodziny",
+      "wedding": "Wesele",
+      "newYear": "Nowy Rok",
+      "baby": "Narodziny dziecka",
+      "housewarming": "Parapetówka",
+      "graduation": "Zakończenie szkoły",
+      "anniversary": "Rocznica",
+      "secretSanta": "Tajemniczy Mikołaj"
+    },
+    "newList": {
+      "title": "Nowa lista",
+      "name": "Nazwa",
+      "namePlaceholder": "Np. Parapetówka",
+      "date": "Data wydarzenia · opcjonalnie",
+      "nameEmpty": "Nazwij listę",
+      "duplicate": "Taka lista już jest. Utworzyć drugą o tej samej nazwie?",
+      "pastDate": "Ta data już minęła — lista od razu trafi do minionych.",
+      "submit": "Gotowe",
+      "submitting": "Zapisuję…",
+      "draftTitle": "Zostawić szkic?",
+      "draftBody": "Nazwa jest już wpisana. Możemy ją zapisać i wrócić później.",
+      "draftKeep": "Zapisz szkic",
+      "draftDrop": "Usuń i wyjdź"
+    }
   }
 }

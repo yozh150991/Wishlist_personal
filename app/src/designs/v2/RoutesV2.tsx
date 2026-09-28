@@ -1,9 +1,13 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Placeholder from './screens/PlaceholderV2';
 import LoginV2 from './screens/LoginV2';
 import RegisterV2 from './screens/RegisterV2';
 import ResetV2 from './screens/ResetV2';
 import NewPasswordV2 from './screens/NewPasswordV2';
+import ListsV2 from './screens/ListsV2';
+import NewListV2 from './screens/NewListV2';
+import SoonV2 from './screens/SoonV2';
+import { RequireAuthV2, ShellV2 } from './ShellV2';
 // Стилі форми v2 їдуть разом із цим лінивим модулем (ADR-039, п. 9).
 import './v2.css';
 
@@ -24,8 +28,9 @@ import './v2.css';
  * Гостьових адрес тут немає: `/s/…` і `/l/…` стоять вище, у `App.tsx`, бо
  * їхню версію визначає адреса, а не вибір власника (ADR-039).
  *
- * Крок 2 (ROADMAP): вхід, реєстрація, скидання й новий пароль — свої, без
- * кодів із пошти (ADR-042). Решта адрес — поки що заглушка з дорогою назад.
+ * Готово: вхід, реєстрація, пароль (крок 2); каркас власника, «Мої списки» й
+ * новий список (крок 3а). Екрани, яких ще немає, — `SoonV2` усередині
+ * каркаса з посиланням на той самий екран у v1.
  */
 export default function DesignV2Routes() {
   return (
@@ -34,6 +39,22 @@ export default function DesignV2Routes() {
       <Route path="/register" element={<RegisterV2 />} />
       <Route path="/reset" element={<ResetV2 />} />
       <Route path="/update-password" element={<NewPasswordV2 />} />
+
+      <Route
+        element={
+          <RequireAuthV2>
+            <ShellV2 />
+          </RequireAuthV2>
+        }
+      >
+        <Route path="/lists" element={<ListsV2 />} />
+        <Route path="/lists/new" element={<NewListV2 />} />
+        <Route path="/lists/:id" element={<SoonV2 />} />
+        <Route path="/shares" element={<SoonV2 />} />
+        <Route path="/settings" element={<SoonV2 settings />} />
+      </Route>
+
+      <Route path="/" element={<Navigate to="/lists" replace />} />
       <Route path="*" element={<Placeholder />} />
     </Routes>
   );

@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
-import type { Item, ItemInput, ItemQuery, ItemStatus, List, Totals } from './types';
+import { CURRENCIES } from './types';
+import type { Currency, Item, ItemInput, ItemQuery, ItemStatus, List, Totals } from './types';
+import { isNetworkError } from './errors';
 
 /* ── Списки ─────────────────────────────── */
 
@@ -35,6 +37,44 @@ export async function fetchList(id: string): Promise<List | null> {
   if (!data) return null;
   const { items, ...list } = data as Omit<List, 'item_count'> & { items?: { count: number }[] | null };
   return { ...list, item_count: items?.[0]?.count ?? 0 };
+}
+
+/**
+ * Списки для головної v2: разом із кількістю позицій — скільки з них ще
+ * «актуальні» (`status = active`). Минулий список підписано «4 не розібрано»
+ * (потік U): це статуси самого власника, не позначки гостей, тож інваріант
+ * §3.2 тут ні до чого.
+ *
+ * Два агрегати одного вкладення розрізняє псевдонім, а фільтр на псевдонімі
+ * рахує лише активні. Якщо сервер такого запиту не прийме, картки просто
+ * лишаються без «не розібрано»: помилка мережі йде нагору, решта — у
+ * запасний `fetchLists()`.
+ */
+export async function fetchListsOverview(): Promise<List[]> {
+  const { data, error } = await supabase
+    .from('lists')
+    .select('*, all_items:items(count), active_items:items(count)')
+    .eq('active_items.status', 'active')
+    .order('created_at', { ascending: false });
+  if (error) {
+    if (isNetworkError(error)) throw error;
+    return fetchLists();
+  }
+  type Agg = { count: number }[] | null | undefined;
+  type Row = Omit<List, 'item_count' | 'active_count'> & { all_items?: Agg; active_items?: Agg };
+  return ((data ?? []) as Row[]).map(({ all_items, active_items, ...list }) => ({
+    ...list,
+    item_count: all_items?.[0]?.count ?? 0,
+    active_count: active_items?.[0]?.count ?? 0,
+  }));
+}
+
+/** Валюта нового списку — з профілю, якщо людина її колись задала. */
+export async function fetchDefaultCurrency(userId: string): Promise<Currency | null> {
+  const { data, error } = await supabase.from('profiles').select('default_currency').eq('id', userId).maybeSingle();
+  if (error || !data) return null;
+  const c = (data as { default_currency: string | null }).default_currency;
+  return c && (CURRENCIES as string[]).includes(c) ? (c as Currency) : null;
 }
 
 export type ListInput = Pick<List, 'title'> &

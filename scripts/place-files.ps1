@@ -149,6 +149,10 @@ $map = @{
   'AuthPartsV2.tsx' = 'app\src\designs\v2\screens'; 'LoginV2.tsx' = 'app\src\designs\v2\screens'
   'RegisterV2.tsx' = 'app\src\designs\v2\screens'; 'ResetV2.tsx' = 'app\src\designs\v2\screens'
   'NewPasswordV2.tsx' = 'app\src\designs\v2\screens'; 'auth-v2.spec.ts' = 'app\tests\e2e'
+  # Design v2 owner shell and home (step 3a).
+  'ShellV2.tsx' = 'app\src\designs\v2'; 'CommonV2.tsx' = 'app\src\designs\v2\screens'
+  'SoonV2.tsx' = 'app\src\designs\v2\screens'; 'ListsV2.tsx' = 'app\src\designs\v2\screens'
+  'NewListV2.tsx' = 'app\src\designs\v2\screens'; 'lists-v2.spec.ts' = 'app\tests\e2e'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'

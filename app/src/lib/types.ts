@@ -40,6 +40,8 @@ export type List = {
    * читається як необовʼязковий.
    */
   item_count?: number;
+  /** Скільки з них ще актуальні — лише з `fetchListsOverview` (головна v2). */
+  active_count?: number;
 };
 
 export type Item = {

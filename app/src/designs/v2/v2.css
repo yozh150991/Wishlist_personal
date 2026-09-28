@@ -325,3 +325,294 @@
   border-radius: var(--r-card);
 }
 .v2-card__title { font-size: var(--t-item); }
+
+/* ── Попередження в полі (потік B, дубль назви) ────────────── */
+
+/* Теракота = «зверни увагу», червоний лишається для того, що блокує. */
+.v2-field[data-warn='true'] .v2-input { border-color: var(--color-accent-2-600); }
+.v2-field__warn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--color-accent-2-800);
+}
+.v2-field__warn svg { flex: none; margin-top: 1px; }
+
+.v2-btn--danger { color: var(--color-danger); }
+.v2-btn--danger:hover { background: color-mix(in srgb, var(--color-danger) 10%, transparent); }
+
+/* ── Каркас власника ───────────────────────────────────────── */
+
+.v2-boot { min-height: 100dvh; background: var(--color-bg); }
+
+.v2-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+/* Місце під нижню навігацію, щоб вона не накривала останню картку. */
+.v2-shell__main { flex: 1; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+
+/* Телефон: навігація внизу, під великим пальцем. */
+.v2-nav {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 10;
+  padding: var(--sp-3) var(--sp-5) calc(var(--sp-3) + env(safe-area-inset-bottom));
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-divider);
+}
+.v2-nav__list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.v2-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 52px;
+  font-size: var(--t-meta);
+  font-weight: 700;
+  color: var(--color-neutral-700);
+  text-decoration: none;
+  border-radius: var(--r-field);
+}
+.v2-nav__item:hover { color: var(--color-text); }
+/* NavLink ставить .active — активний пункт тонованою пігулкою. */
+.v2-nav__item.active { color: var(--color-accent-800); background: var(--color-accent-200); }
+
+.v2-nav__brand {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--t-card);
+  padding-inline: var(--sp-6);
+}
+
+.v2-nav__who { display: grid; gap: var(--sp-1); font-size: var(--t-small); }
+.v2-nav__who-label { color: var(--color-neutral-700); }
+.v2-nav__who-email { font-weight: 700; overflow-wrap: anywhere; }
+.v2-nav__signout { justify-self: start; padding-inline: 0; }
+
+/* Десктоп: бічна колонка 232 px — ті самі пункти в тому самому порядку. */
+@media (min-width: 56rem) {
+  .v2-shell { flex-direction: row; }
+  .v2-shell__main { padding-bottom: 0; min-width: 0; }
+  .v2-nav {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-7);
+    width: 232px;
+    height: 100dvh;
+    flex: none;
+    padding: var(--sp-7) var(--sp-5);
+    border-top: 0;
+    border-inline-end: 1px solid var(--color-divider);
+  }
+  .v2-nav__list { grid-template-columns: 1fr; gap: var(--sp-2); }
+  .v2-nav__item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--sp-5);
+    min-height: 48px;
+    padding-inline: var(--sp-6);
+    font-size: var(--t-item);
+    border-radius: var(--r-pill);
+  }
+  .v2-nav__who { margin-top: auto; padding-inline: var(--sp-6); }
+}
+
+/* ── Сторінка ──────────────────────────────────────────────── */
+
+.v2-page {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-6);
+  width: 100%;
+  max-width: 64rem;
+  margin-inline: auto;
+  padding: var(--sp-6);
+}
+.v2-page--narrow { max-width: 30rem; }
+@media (min-width: 40rem) {
+  .v2-page { padding: var(--sp-8); }
+}
+
+.v2-page__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-5); }
+.v2-page__title { font-size: var(--t-h1); line-height: 1.12; }
+@media (min-width: 56rem) {
+  .v2-page__title { font-size: var(--t-display); }
+}
+
+.v2-kicker {
+  margin-bottom: var(--sp-4);
+  font-family: var(--font-body);
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+}
+
+/* Кругла «+» у шапці головної (U1). */
+.v2-fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  color: var(--color-primary-ink);
+  background: var(--color-primary-fill);
+  border-radius: 50%;
+}
+.v2-fab:hover { color: var(--color-primary-ink); filter: brightness(1.12); }
+
+/* Стрічка «Вітаю!» — зникає сама за 4 с (A4). */
+.v2-welcome {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-6);
+  font-weight: 700;
+  color: var(--color-accent-800);
+  background: var(--color-accent-200);
+  border-radius: 20px;
+}
+
+/* ── Картки списків ───────────────────────────────────────── */
+
+.v2-listgrid {
+  display: grid;
+  gap: var(--sp-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 40rem) {
+  .v2-listgrid { grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); }
+}
+
+.v2-listcard {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--sp-5);
+  min-height: 76px;
+  padding: var(--sp-5) var(--sp-6);
+  color: var(--color-text);
+  text-decoration: none;
+  background: var(--color-surface);
+  border-radius: var(--r-card);
+}
+.v2-listcard:hover { color: var(--color-text); background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface)); }
+
+/* Коло: відтінок оформлення списку (--v2-dot), інакше тон блоку. */
+.v2-listcard__dot {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--v2-dot, var(--color-accent-200));
+}
+.v2-listcard[data-tone='undated'] .v2-listcard__dot { background: var(--v2-dot, var(--color-accent-2-200)); }
+.v2-listcard[data-tone='past'] .v2-listcard__dot { background: var(--v2-dot, var(--color-neutral-200)); }
+
+.v2-listcard__text { display: grid; gap: 2px; min-width: 0; }
+.v2-listcard__title {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--t-lead);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.v2-listcard__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-listcard__chevron { color: var(--color-neutral-700); }
+
+/* Скелет — картка точної висоти, пульс зі зсувом (README, «Завантаження»). */
+.v2-listcard--sk { animation: v2-sk 1.4s ease-in-out infinite; }
+@keyframes v2-sk {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-listcard--sk { animation: none; }
+}
+
+/* Копія без мережі — картки на місці, але приглушені. */
+[data-stale='true'] .v2-listcard { opacity: 0.75; }
+
+/* ── Порожньо, помилка, «ще в роботі» ─────────────────────── */
+
+.v2-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-6);
+  padding-block: var(--sp-8);
+  text-align: center;
+}
+.v2-empty__title { font-size: var(--t-h2); }
+
+.v2-soon { max-width: 36rem; }
+.v2-soon > .v2-btn { justify-self: start; }
+
+/* Шаблони свят (U2): пігулки, що переносяться. */
+.v2-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.v2-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: var(--sp-3) var(--sp-6);
+  font-weight: 700;
+  color: var(--color-text);
+  text-decoration: none;
+  background: var(--color-surface);
+  border-radius: var(--r-pill);
+}
+.v2-chip:hover { color: var(--color-text); background: color-mix(in srgb, var(--color-text) 7%, var(--color-surface)); }
+
+/* ── Модальне вікно ───────────────────────────────────────── */
+
+/* Телефон — нижній лист; десктоп — по центру (README, «Діалоги»). */
+.v2-sheet {
+  width: 100%;
+  max-width: none;
+  margin: auto 0 0;
+  padding: 0;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 0;
+  border-radius: 30px 30px 0 0;
+}
+.v2-sheet::backdrop { background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent); }
+.v2-sheet__body {
+  display: grid;
+  gap: var(--sp-6);
+  padding: var(--sp-7) var(--sp-6) calc(var(--sp-7) + env(safe-area-inset-bottom));
+}
+.v2-sheet__title { font-size: var(--t-h2); }
+.v2-sheet__actions { display: grid; gap: var(--sp-3); }
+@media (min-width: 40rem) {
+  .v2-sheet {
+    width: min(28rem, calc(100% - 2 * var(--sp-6)));
+    margin: auto;
+    border-radius: 30px;
+  }
+}

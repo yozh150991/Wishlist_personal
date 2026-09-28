@@ -90,6 +90,8 @@ export default function LoginV2() {
   const [resent, setResent] = useState(false);
   const pause = useCountdown(pausedUntil);
   const attempt = useRef(0);
+  /** Вхід щойно відбувся з цього екрана — головна покаже «Вітаю!» (A4). */
+  const justIn = useRef(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -105,7 +107,7 @@ export default function LoginV2() {
   const problem = emailProblem(email);
   const emailError = useEmailError(problem, emailTouched, submitted);
 
-  if (!loading && session) return <Navigate to={next} replace />;
+  if (!loading && session) return <Navigate to={next} replace state={justIn.current ? { welcome: true } : undefined} />;
 
   const passwordError = submitted && !password ? t('v2auth.passwordEmpty') : null;
 
@@ -131,6 +133,7 @@ export default function LoginV2() {
     setSlow(false);
 
     if (!error) {
+      justIn.current = true;
       forgetAuthEmail();
       return;
     }

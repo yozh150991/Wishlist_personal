@@ -157,16 +157,20 @@ test('перемикач версії на екрані входу веде на
 test.describe('вхід v2 з акаунтом', { tag: '@v2' }, () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
-  test('вхід паролем веде на /lists, заглушка показує акаунт і дає вийти', async ({ page }) => {
+  test('вхід паролем веде на «Мої списки» з «Вітаю!», вихід повертає на вхід', async ({ page }) => {
     await page.goto('/login');
     await emailBox(page).fill(EMAIL!);
     await passwordBox(page).fill(PASSWORD!);
     await submit(page, SIGN_IN).click();
     await expect(page).toHaveURL(/\/lists$/);
     await expect(page.locator('html')).toHaveAttribute('data-design', 'v2');
-    await expect(page.getByText(EMAIL!)).toBeVisible();
-    await page.getByRole('button', { name: /^(вийти|wyloguj się|sign out)$/i }).click();
-    await expect(page.getByRole('link', { name: /^(увійти|zaloguj się|sign in)$/i })).toBeVisible();
+    // Стрічка вітання — лише після входу з екрана входу (A4).
+    await expect(page.getByRole('status').filter({ hasText: /вітаю|witaj|welcome/i })).toBeVisible();
+
+    // Вихід — у Налаштуваннях: на телефоні бічної колонки немає.
+    await page.goto('/settings');
+    await page.getByRole('main').getByRole('button', { name: /^(вийти|wyloguj się|sign out)$/i }).click();
+    await expect(page).toHaveURL(/\/login\?next=/);
   });
 
   test('три невдалі спроби поспіль — пауза з лічильником і порадою скинути пароль', async ({ page }) => {

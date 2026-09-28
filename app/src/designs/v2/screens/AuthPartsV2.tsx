@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useId, useState } from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AlertCircle, Check, ChevronLeft, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Check, ChevronLeft, Eye, EyeOff, TriangleAlert } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useI18n, LOCALES } from '../../../lib/i18n';
 import type { Locale } from '../../../lib/i18n';
@@ -79,6 +79,11 @@ export function BackHeaderV2({ to, state, title }: { to: string; state?: unknown
 type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> & {
   label: string;
   error?: string | null;
+  /**
+   * Попередження — «зверни увагу», а не «так не можна»: теракота, а не
+   * червоний, і дію воно не блокує (потік B, дубль назви).
+   */
+  warning?: string | null;
   /** Кнопка чи інший вміст праворуч у полі (показати пароль). */
   addon?: ReactNode;
   /** Рядок під полем (посилання «Не памʼятаєш пароль?»), і з помилкою теж. */
@@ -93,14 +98,16 @@ type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> & {
  * батьківський екран зі значення, а не зберігає окремо.
  */
 export const FieldV2 = forwardRef<HTMLInputElement, FieldProps>(function FieldV2(
-  { label, error, addon, after, describedBy, ...rest },
+  { label, error, warning, addon, after, describedBy, ...rest },
   ref,
 ) {
   const id = useId();
   const errId = `${id}-err`;
-  const described = [error ? errId : null, describedBy].filter(Boolean).join(' ') || undefined;
+  const warnId = `${id}-warn`;
+  const warn = !error && warning ? warning : null;
+  const described = [error ? errId : null, warn ? warnId : null, describedBy].filter(Boolean).join(' ') || undefined;
   return (
-    <div className="v2-field" data-invalid={error ? 'true' : undefined}>
+    <div className="v2-field" data-invalid={error ? 'true' : undefined} data-warn={warn ? 'true' : undefined}>
       <label className="v2-field__label" htmlFor={id}>
         {label}
       </label>
@@ -119,6 +126,12 @@ export const FieldV2 = forwardRef<HTMLInputElement, FieldProps>(function FieldV2
         <p className="v2-field__error" id={errId}>
           <AlertCircle size={16} strokeWidth={STROKE} aria-hidden="true" />
           {error}
+        </p>
+      )}
+      {warn && (
+        <p className="v2-field__warn" id={warnId}>
+          <TriangleAlert size={16} strokeWidth={STROKE} aria-hidden="true" />
+          {warn}
         </p>
       )}
       {/* «Не пам'ятаєш пароль?» лишається й поруч із помилкою: саме тоді він

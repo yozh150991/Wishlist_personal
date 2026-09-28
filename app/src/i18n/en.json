@@ -701,5 +701,74 @@
       "body": "You can sign in once {email} is confirmed: the email with the link went there after you signed up. Can't find it? We'll send it again.",
       "submit": "Send the email again"
     }
+  },
+  "v2app": {
+    "nav": {
+      "label": "Main navigation",
+      "account": "Account"
+    },
+    "signOut": {
+      "title": "Sign out?",
+      "confirm": "Sign out anyway",
+      "stay": "Stay"
+    },
+    "soon": {
+      "title": "This screen is still being built in the new look",
+      "body": "Your data is all here — for now, open it in the old look.",
+      "openV1": "Open in the old look"
+    },
+    "count": {
+      "items": {
+        "one": "{n} item",
+        "few": "{n} items",
+        "many": "{n} items",
+        "other": "{n} items"
+      },
+      "open": {
+        "one": "{n} item to sort out",
+        "few": "{n} items to sort out",
+        "many": "{n} items to sort out",
+        "other": "{n} items to sort out"
+      }
+    },
+    "lists": {
+      "title": "My lists",
+      "new": "New list",
+      "welcome": "Welcome!",
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "noDate": "no date",
+      "loading": "Loading lists",
+      "errorTitle": "Lists didn't load",
+      "stale": "No connection. Showing a saved copy from {time}."
+    },
+    "templates": {
+      "title": "What occasion are we collecting for?",
+      "body": "A template only fills in the name — you can change it.",
+      "own": "My own list, no template",
+      "birthday": "Birthday",
+      "wedding": "Wedding",
+      "newYear": "New Year",
+      "baby": "New baby",
+      "housewarming": "Housewarming",
+      "graduation": "Graduation",
+      "anniversary": "Anniversary",
+      "secretSanta": "Secret Santa"
+    },
+    "newList": {
+      "title": "New list",
+      "name": "Name",
+      "namePlaceholder": "E.g. Housewarming",
+      "date": "Event date · optional",
+      "nameEmpty": "Name the list",
+      "duplicate": "You already have a list with this name. Create another one?",
+      "pastDate": "This date has already passed — the list will go straight to Past.",
+      "submit": "Done",
+      "submitting": "Saving…",
+      "draftTitle": "Keep the draft?",
+      "draftBody": "The name is already filled in. We can save it and you can come back later.",
+      "draftKeep": "Save draft",
+      "draftDrop": "Delete and leave"
+    }
   }
 }
