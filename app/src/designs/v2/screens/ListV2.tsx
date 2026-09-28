@@ -1,18 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowDownUp,
   ChevronLeft,
+  Eye,
   FolderPlus,
+  ListOrdered,
   ListPlus,
   MoreHorizontal,
+  Palette,
   Plus,
   Search,
   SearchX,
+  Settings2,
+  Share2,
   X,
 } from 'lucide-react';
-import { fetchList } from '../../../lib/db';
+import { deleteList, fetchList, updateList } from '../../../lib/db';
+import type { ListInput } from '../../../lib/db';
+import { fetchListViews } from '../../../lib/shares';
 import { useItems } from '../../../lib/useItems';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
@@ -23,7 +30,15 @@ import { newId, run } from '../../../lib/outbox';
 import type { Op } from '../../../lib/outbox';
 import { useUndo } from '../../../lib/undo';
 import { designSwitchHref } from '../../../lib/authFlow';
-import { createSection, deleteSection, fetchSections, renameSection } from '../../../lib/sections';
+import {
+  createSection,
+  deleteSection,
+  fetchSections,
+  manualOrder,
+  renameSection,
+  reorderItems,
+  reorderSections,
+} from '../../../lib/sections';
 import type { Section } from '../../../lib/sections';
 import {
   ITEM_QTY_MAX,
@@ -40,6 +55,13 @@ import type { Item, ItemInput, ItemStatus, List } from '../../../lib/types';
 import { NoteV2 } from './AuthPartsV2';
 import { SheetV2, useCounts } from './CommonV2';
 import { ItemSheetV2 } from './ItemSheetV2';
+import { AppearanceSheetV2 } from './AppearanceSheetV2';
+import { DeleteListSheetV2, ListSettingsV2 } from './ListSettingsV2';
+import { PreviewSheetV2, useAppearanceHue } from './PreviewV2';
+import type { PreviewGroup } from './PreviewV2';
+import { ReorderV2 } from './ReorderV2';
+import type { OrderGroup } from './ReorderV2';
+import { ShareSheetV2 } from './ShareSheetV2';
 import {
   ConfirmSheetV2,
   ItemCardV2,
@@ -94,7 +116,7 @@ function isBadId(e: unknown): boolean {
 type ListState = 'loading' | 'ready' | 'missing';
 
 /**
- * Сторінка списку v2 (потоки C, F, O, V; ROADMAP «Дизайн v2», крок 3б-1).
+ * Сторінка списку v2 (потоки C, D, F, O, V, W1; ROADMAP «Дизайн v2», кроки 3б-1 і 3б-2).
  *
  * Згори вниз: назва й кількість → сума актуального → [від 20 позицій: пошук,
  * сортування, «Усі / Без ціни»] → позиції → «Куплене й подароване».
@@ -108,7 +130,14 @@ type ListState = 'loading' | 'ready' | 'missing';
  *
  * Видалення позиції — тостом «Відмінити», без діалогу (F1). Запит іде, коли
  * відлік скінчився: так відкат миттєвий і не знімає позначок гостей, які
- * зникли б разом із позицією (ADR-044).
+ * зникли б разом із позицією (ADR-044). Свайп ліворуч — прискорювач того
+ * самого видалення.
+ *
+ * З меню списку: «Поділитися» (вибір видимих позицій і превʼю до створення
+ * посилання), «Показати, як бачить гість», «Змінити порядок» — окремий режим
+ * із перетягуванням і «Вище / Нижче», оформлення, розділи, налаштування й
+ * видалення списку: тостом, якщо список ніхто не відкривав, і з введенням
+ * назви, якщо відкривали (F3).
  */
 export default function ListV2() {
   const { id = '' } = useParams();
@@ -118,13 +147,15 @@ export default function ListV2() {
   const sortLabel = useSortLabel();
   const priorityLabel = usePriorityLabel();
   const userId = session?.user.id ?? '';
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [list, setList] = useState<List | null>(null);
   const [listState, setListState] = useState<ListState>('loading');
   const [listError, setListError] = useState<string | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
 
-  const { items, loading, error, staleAt, reload, refresh, applyLocal } = useItems(
+  const { items, loading, error, staleAt, reload, refresh, applyLocal, patchLocal } = useItems(
     id,
     DEFAULT_QUERY,
     userId || undefined,
@@ -156,6 +187,15 @@ export default function ListV2() {
   const [sectionMenu, setSectionMenu] = useState<Section | null>(null);
   const [sectionToDelete, setSectionToDelete] = useState<Section | null>(null);
   const [deletingSection, setDeletingSection] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  /** Видалення списку, який відкривали: скільки разів (null — невідомо). */
+  const [deleteAsk, setDeleteAsk] = useState<{ views: number | null } | null>(null);
+  /** «Змінити порядок» (V3): окремий режим, щоб перетягування не заважало свайпу. */
+  const [ordering, setOrdering] = useState(false);
+  const hue = useAppearanceHue(list?.appearance_id);
 
   const undo = useUndo(UNDO_MS);
 
@@ -165,6 +205,16 @@ export default function ListV2() {
     setFilter('all');
     setHidden(new Set());
     setFailed(new Map());
+    setOrdering(false);
+  }, [id]);
+
+  // Перший запуск «Вставити посилання на річ» (Q2) веде сюди з одразу
+  // відкритою формою позиції. Стан історії чистимо, щоб F5 не відкривав її знову.
+  useEffect(() => {
+    if (!(location.state as { add?: boolean } | null)?.add) return;
+    navigate(location.pathname, { replace: true, state: null });
+    setSheet({ open: true, item: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Список і розділи — окремо від позицій: якщо впали лише позиції, шапка
@@ -249,6 +299,27 @@ export default function ListV2() {
     [shown, viewSort],
   );
   const activeShown = groups.reduce((n, g) => n + g.items.length, 0);
+
+  /** Актуальні позиції в порядку гостя — для «Поділитися», превʼю й «Змінити порядок». */
+  const activeLive = useMemo(() => live.filter((i) => i.status === 'active'), [live]);
+  const guestGroups = useMemo<PreviewGroup[]>(
+    () =>
+      viewGroups(activeLive, 'manual', sections, { keepEmpty: false }).map((g) => ({
+        key: g.key,
+        title: g.kind === 'section' ? g.section.title : null,
+        items: g.items,
+      })),
+    [activeLive, sections],
+  );
+  const orderGroups = useMemo<OrderGroup[]>(
+    () =>
+      viewGroups(activeLive, 'manual', sections, { keepEmpty: true }).map((g) => ({
+        key: g.key,
+        section: g.kind === 'section' ? g.section : null,
+        items: g.items,
+      })),
+    [activeLive, sections],
+  );
 
   const currency = list?.currency ?? 'PLN';
 
@@ -395,6 +466,92 @@ export default function ListV2() {
     }
   }
 
+  /* ── Порядок (V3, ADR-036) ── */
+
+  /**
+   * Новий порядок позицій розділу. Куплене й подароване гостям не видно, тож
+   * у режимі його немає, — але воно стає слідом за актуальним, щоб місця в
+   * розділі лишались унікальними й v1 показувала той самий порядок.
+   */
+  async function moveItems(sectionId: string | null, activeIds: string[]) {
+    const known = new Set(sections.map((s) => s.id));
+    const inGroup = (i: Item) =>
+      sectionId ? i.section_id === sectionId : !i.section_id || !known.has(i.section_id);
+    const doneIds = items
+      .filter((i) => i.status !== 'active' && inGroup(i))
+      .sort(manualOrder)
+      .map((i) => i.id);
+    const ids = [...activeIds, ...doneIds];
+    const pos = new Map(ids.map((itemId, i) => [itemId, i + 1]));
+    setActionError(null);
+    patchLocal((prev) =>
+      prev.map((i) => (pos.has(i.id) ? { ...i, section_id: sectionId, position: pos.get(i.id)! } : i)),
+    );
+    try {
+      await reorderItems(id, sectionId, ids);
+    } catch {
+      setActionError(t('sections.saveError'));
+      void refresh();
+    }
+  }
+
+  async function moveSections(ids: string[]) {
+    const before = sections;
+    const pos = new Map(ids.map((sid, i) => [sid, i + 1]));
+    setActionError(null);
+    setSections((prev) =>
+      prev.map((s) => ({ ...s, position: pos.get(s.id) ?? s.position })).sort((a, b) => a.position - b.position),
+    );
+    try {
+      await reorderSections(id, ids);
+    } catch {
+      setActionError(t('sections.saveError'));
+      setSections(before);
+    }
+  }
+
+  function startOrdering() {
+    setListMenu(false);
+    setSearch('');
+    setFilter('all');
+    // Після «Готово» людина бачить той порядок, який щойно склала.
+    changeSort('manual');
+    setOrdering(true);
+  }
+
+  /* ── Список: налаштування й видалення ── */
+
+  async function saveList(input: ListInput) {
+    await updateList(id, input);
+    const fresh = await fetchList(id);
+    if (fresh) setList(fresh);
+  }
+
+  /**
+   * Видалення списку (F3): три ваги — три захисти. Список, який ніхто не
+   * відкривав, іде тостом «Відмінити» на головній; відкривали — вводимо назву
+   * рукою. Не вдалося дізнатися — теж вводимо: безпечніше спитати зайвий раз.
+   */
+  async function askDelete() {
+    setSettingsOpen(false);
+    let views: number | null = null;
+    try {
+      views = await fetchListViews(id);
+    } catch {
+      views = null;
+    }
+    if (views === 0 && list) {
+      navigate('/lists', { replace: true, state: { deleteList: { id, title: list.title } } });
+      return;
+    }
+    setDeleteAsk({ views });
+  }
+
+  async function deleteNow() {
+    await deleteList(id);
+    navigate('/lists', { replace: true, state: { deletedTitle: list?.title ?? '' } });
+  }
+
   function changeSort(next: ViewSort) {
     setSort(next);
     writeSort(id, next);
@@ -465,6 +622,7 @@ export default function ListV2() {
         onOpen={openEdit}
         onMenu={setMenuItem}
         onRetry={removeItem}
+        onDelete={removeItem}
       />
     );
   }
@@ -488,19 +646,44 @@ export default function ListV2() {
               </>
             )}
           </h1>
-          {ready && (
-            <p className="v2-listhead__meta">{[counts.items(live.length), eventDay].filter(Boolean).join(' · ')}</p>
+          {ordering ? (
+            <p className="v2-listhead__meta">{t('v2list.reorder.subtitle')}</p>
+          ) : (
+            ready && (
+              <p className="v2-listhead__meta">{[counts.items(live.length), eventDay].filter(Boolean).join(' · ')}</p>
+            )
           )}
         </div>
-        <button
-          type="button"
-          className="v2-iconbtn"
-          aria-label={t('v2list.menu')}
-          onClick={() => setListMenu(true)}
-          disabled={!list}
-        >
-          <MoreHorizontal size={24} strokeWidth={STROKE} aria-hidden="true" />
-        </button>
+        {ordering ? (
+          <button type="button" className="v2-btn v2-btn--primary v2-btn--small" onClick={() => setOrdering(false)}>
+            {t('common.done')}
+          </button>
+        ) : (
+          <span className="v2-listhead__actions">
+            {/* Поділитися — головна дія зі списком, тож не лише в меню. Без
+                актуальних позицій ділитися нічим: посилання на порожнє не буває. */}
+            {ready && activeLive.length > 0 && (
+              <button
+                type="button"
+                className="v2-iconbtn"
+                aria-label={t('v2list.share')}
+                onClick={() => setShareOpen(true)}
+                disabled={!list}
+              >
+                <Share2 size={22} strokeWidth={STROKE} aria-hidden="true" />
+              </button>
+            )}
+            <button
+              type="button"
+              className="v2-iconbtn"
+              aria-label={t('v2list.menu')}
+              onClick={() => setListMenu(true)}
+              disabled={!list}
+            >
+              <MoreHorizontal size={24} strokeWidth={STROKE} aria-hidden="true" />
+            </button>
+          </span>
+        )}
       </div>
 
       {listError && <NoteV2 tone="error">{listError}</NoteV2>}
@@ -509,14 +692,14 @@ export default function ListV2() {
       )}
       {actionError && <NoteV2 tone="error">{actionError}</NoteV2>}
 
-      {ready && live.length > 0 && (
+      {ready && live.length > 0 && !ordering && (
         <p className="v2-sum">
           {activePriced && <strong className="v2-sum__value">{moneyShort(totals.active_price, currency, locale)}</strong>}
           {sumParts.length > 0 && <span className="v2-sum__line">{sumParts.join(' · ')}</span>}
         </p>
       )}
 
-      {ready && tools && (
+      {ready && tools && !ordering && (
         <div className="v2-tools">
           <div className="v2-search">
             <Search className="v2-search__icon" size={20} strokeWidth={STROKE} aria-hidden="true" />
@@ -576,7 +759,14 @@ export default function ListV2() {
         </div>
       )}
 
-      {loading ? (
+      {ordering && ready ? (
+        <ReorderV2
+          groups={orderGroups}
+          currency={currency}
+          onMoveItems={(sectionId, ids) => void moveItems(sectionId, ids)}
+          onMoveSections={(ids) => void moveSections(ids)}
+        />
+      ) : loading ? (
         <ItemSkeletonsV2 label={t('v2list.loading')} />
       ) : error ? (
         <div className="v2-empty">
@@ -662,7 +852,7 @@ export default function ListV2() {
 
       {/* Плаваюча «+» — під великим пальцем. Поки видно тост, її немає: вони
           ділять одне місце, а «Відмінити» важливіше ці шість секунд. */}
-      {ready && live.length > 0 && !undo.pending && (
+      {ready && live.length > 0 && !undo.pending && !ordering && (
         <button type="button" className="v2-fab v2-fab--float" aria-label={t('v2list.add')} onClick={() => openNew()}>
           <Plus size={26} strokeWidth={STROKE} aria-hidden="true" />
         </button>
@@ -701,6 +891,55 @@ export default function ListV2() {
           <button
             type="button"
             className="v2-menu__item"
+            aria-disabled={activeLive.length === 0 || undefined}
+            aria-describedby={activeLive.length === 0 ? 'v2-share-empty' : undefined}
+            onClick={() => {
+              if (activeLive.length === 0) return;
+              setListMenu(false);
+              setShareOpen(true);
+            }}
+          >
+            <Share2 size={20} strokeWidth={STROKE} aria-hidden="true" />
+            {t('v2list.share')}
+          </button>
+          <button
+            type="button"
+            className="v2-menu__item"
+            onClick={() => {
+              setListMenu(false);
+              setPreviewOpen(true);
+            }}
+          >
+            <Eye size={20} strokeWidth={STROKE} aria-hidden="true" />
+            {t('appearance.preview')}
+          </button>
+          <button
+            type="button"
+            className="v2-menu__item"
+            aria-disabled={activeLive.length < 2 || Boolean(staleAt) || undefined}
+            aria-describedby={staleAt ? 'v2-order-offline' : undefined}
+            onClick={() => {
+              if (activeLive.length < 2 || staleAt) return;
+              startOrdering();
+            }}
+          >
+            <ListOrdered size={20} strokeWidth={STROKE} aria-hidden="true" />
+            {t('v2list.reorder.cta')}
+          </button>
+          <button
+            type="button"
+            className="v2-menu__item"
+            onClick={() => {
+              setListMenu(false);
+              setAppearanceOpen(true);
+            }}
+          >
+            <Palette size={20} strokeWidth={STROKE} aria-hidden="true" />
+            {t('appearance.title')}
+          </button>
+          <button
+            type="button"
+            className="v2-menu__item"
             onClick={() => {
               setListMenu(false);
               setSectionSheet({ open: true, section: null });
@@ -709,15 +948,77 @@ export default function ListV2() {
             <FolderPlus size={20} strokeWidth={STROKE} aria-hidden="true" />
             {t('v2list.menuList.newSection')}
           </button>
+          <button
+            type="button"
+            className="v2-menu__item"
+            onClick={() => {
+              setListMenu(false);
+              setSettingsOpen(true);
+            }}
+          >
+            <Settings2 size={20} strokeWidth={STROKE} aria-hidden="true" />
+            {t('v2list.settings.title')}
+          </button>
         </div>
-        {/* Поділитися, оформлення й решта — крок 3б-2; поки дорога до v1 з тим самим списком. */}
+        {activeLive.length === 0 && (
+          <p className="v2-hint v2-hint--start" id="v2-share-empty">
+            {t('v2list.menuList.shareEmpty')}
+          </p>
+        )}
+        {staleAt && (
+          <p className="v2-hint v2-hint--start" id="v2-order-offline">
+            {t('v2list.reorder.offline')}
+          </p>
+        )}
+        {/* Експорт у файл — поки лише у v1; дорога туди з тим самим списком. */}
         <p className="v2-hint v2-hint--start">
-          {t('v2list.menuList.laterBody')}{' '}
+          {t('v2list.menuList.exportBody')}{' '}
           <a href={designSwitchHref(`/lists/${id}`, '', 'v1')} className="v2-link">
             {t('v2list.menuList.inV1')}
           </a>
         </p>
       </SheetV2>
+
+      <ShareSheetV2 open={shareOpen} list={list} groups={guestGroups} onClose={() => setShareOpen(false)} />
+
+      <PreviewSheetV2
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title={list?.title ?? ''}
+        eventDate={list?.event_date ?? null}
+        message={list?.description ?? null}
+        groups={guestGroups}
+        currency={currency}
+        hue={hue}
+      />
+
+      <AppearanceSheetV2
+        open={appearanceOpen}
+        list={list}
+        onClose={() => setAppearanceOpen(false)}
+        onChanged={(appearanceId) => setList((l) => (l ? { ...l, appearance_id: appearanceId } : l))}
+        onPreview={() => {
+          setAppearanceOpen(false);
+          setPreviewOpen(true);
+        }}
+      />
+
+      <ListSettingsV2
+        open={settingsOpen}
+        list={list}
+        onClose={() => setSettingsOpen(false)}
+        onSave={saveList}
+        onDelete={() => void askDelete()}
+      />
+
+      <DeleteListSheetV2
+        open={deleteAsk !== null}
+        list={list}
+        itemCount={live.length}
+        views={deleteAsk?.views ?? null}
+        onClose={() => setDeleteAsk(null)}
+        onConfirm={deleteNow}
+      />
 
       <SheetV2 open={sectionMenu !== null} onClose={() => setSectionMenu(null)} labelledBy="v2-section-menu-title">
         <h2 className="v2-sheet__title v2-sheet__title--item" id="v2-section-menu-title">

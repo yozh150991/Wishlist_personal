@@ -727,7 +727,45 @@ div.v2-chips { gap: var(--sp-3); }
   border-radius: var(--r-card);
   transition: border-color var(--dur) var(--ease), background var(--dur-fast) var(--ease);
 }
-.v2-item:has(.v2-item__main:hover) { background: color-mix(in srgb, var(--color-text) 4%, var(--color-surface)); }
+/* Картка ріже свайп-підкладку своїми кутами; тло — на передньому шарі,
+   щоб «Видалити» за ним не просвічувало. */
+.v2-item { overflow: hidden; }
+.v2-item__row { position: relative; }
+.v2-item__front {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  background: var(--color-surface);
+  touch-action: pan-y;
+  transition: transform var(--dur) var(--ease), background var(--dur-fast) var(--ease);
+}
+.v2-item__front[data-dragging='true'] { transition: none; }
+.v2-item__front:has(.v2-item__main:hover) { background: color-mix(in srgb, var(--color-text) 4%, var(--color-surface)); }
+@media (prefers-reduced-motion: reduce) {
+  .v2-item__front { transition: none; }
+}
+/* «Видалити» за карткою — відкриває свайп ліворуч (F1). */
+.v2-item__swipe {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  width: 96px;
+  padding: 0;
+  font: inherit;
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--color-bg);
+  background: var(--color-danger);
+  border: 0;
+  cursor: pointer;
+}
 .v2-item[data-new='true'] { border-color: var(--color-accent-700); }
 .v2-item[data-failed='true'] { border-color: var(--color-danger-line); }
 
@@ -1122,3 +1160,249 @@ div.v2-chips { gap: var(--sp-3); }
 
 .v2-reset { display: grid; gap: var(--sp-3); padding-top: var(--sp-6); border-top: 1px solid var(--color-divider); }
 .v2-reset__hint { font-size: var(--t-small); color: var(--color-neutral-700); }
+
+/* ── Сторінка списку, крок 3б-2 ─────────────────────────── */
+
+.v2-listhead__actions { display: inline-flex; align-items: center; }
+.v2-btn--small { min-height: 40px; padding: 0 var(--sp-5); font-size: var(--t-body); }
+.v2-btn--primary.v2-btn--small { min-height: 40px; font-size: var(--t-body); }
+
+/* «Змінити порядок» (V3): ручка, фото, назва, «Вище / Нижче». */
+.v2-order {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 72px;
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-2);
+  background: var(--color-surface);
+  border-radius: var(--r-card);
+}
+.v2-order .v2-item__text { flex: 1; }
+.v2-order[data-dragging='true'] { position: relative; z-index: 2; box-shadow: var(--shadow-lg); }
+.v2-order__grip { cursor: grab; touch-action: none; color: var(--color-neutral-700); }
+.v2-order__grip:active { cursor: grabbing; }
+.v2-order__arrows { display: inline-flex; flex: none; }
+.v2-order__arrows .v2-iconbtn:disabled { opacity: 0.35; cursor: default; }
+.v2-order__arrows .v2-iconbtn:disabled:hover { background: transparent; }
+
+/* ── Превʼю гостя (D, H, W1) ── */
+
+/* Гостьові токени — тепліше за застосунок, «як листівка». Оформлення списку
+   лягає поверх через змінні в style (overlayVars). */
+.v2-gprev {
+  overflow: hidden;
+  color: var(--color-text);
+  background: var(--color-guest-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-card);
+}
+.v2-gprev__head { display: grid; gap: var(--sp-2); padding: var(--sp-6); background: var(--color-guest-header); }
+.v2-gprev__kicker {
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.v2-gprev__title {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--t-h2);
+  line-height: 1.15;
+  color: var(--color-accent-900);
+  overflow-wrap: anywhere;
+}
+.v2-gprev__message { font-size: var(--t-body); overflow-wrap: anywhere; }
+.v2-gprev__body { display: grid; gap: var(--sp-5); padding: var(--sp-5); }
+.v2-gprev__group { display: grid; gap: var(--sp-3); }
+.v2-gprev__section { font-weight: 800; color: var(--color-accent-900); }
+.v2-gprev__items { display: grid; gap: var(--sp-3); margin: 0; padding: 0; list-style: none; }
+.v2-gprev__card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--color-guest-card);
+  border-radius: 20px;
+}
+.v2-gprev__img { width: 48px; height: 48px; flex: none; object-fit: cover; border-radius: 14px; }
+.v2-gprev__text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.v2-gprev__name { font-weight: 700; overflow-wrap: anywhere; }
+.v2-gprev__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-gprev__take {
+  flex: none;
+  padding: var(--sp-2) var(--sp-5);
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--color-primary-ink);
+  background: var(--color-primary-fill);
+  border-radius: var(--r-pill);
+}
+.v2-gprev__empty { padding: var(--sp-4); text-align: center; }
+
+/* ── Поділитися ── */
+
+@media (min-width: 40rem) {
+  .v2-sheet--wide { width: min(64rem, calc(100% - 2 * var(--sp-6))); }
+}
+.v2-share__cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-7); align-items: start; }
+.v2-share__aside { position: sticky; top: calc(64px + var(--sp-5)); display: grid; gap: var(--sp-4); }
+.v2-share__summary { display: grid; gap: 2px; }
+.v2-share__summary-label { font-weight: 800; }
+.v2-share__summary-count { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-share__pickrow { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
+.v2-share__wait {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-4);
+  padding-block: 20vh;
+  text-align: center;
+}
+.v2-share__wait-title { font-size: var(--t-card); font-weight: 700; }
+.v2-spinner--big { width: 40px; height: 40px; border-width: 3px; }
+.v2-share__done { justify-items: stretch; }
+.v2-share__done > .v2-circle { justify-self: center; }
+.v2-title--sm { font-size: var(--t-h2); text-align: center; }
+
+.v2-pick { display: grid; gap: var(--sp-3); min-width: 0; margin: 0; padding: 0; border: 0; }
+.v2-pick__bulk { display: flex; gap: var(--sp-2); }
+.v2-pick__bulk .v2-btn { padding-inline: var(--sp-4); }
+.v2-pick__list { display: grid; gap: var(--sp-3); margin: 0; padding: 0; list-style: none; }
+.v2-pick__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  min-height: 64px;
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.v2-pick__row[data-on='true'] { border-color: var(--color-accent-700); }
+.v2-pick__row input { width: 22px; height: 22px; flex: none; margin: 0; accent-color: var(--color-accent-700); }
+.v2-pick__text { display: grid; gap: 2px; min-width: 0; }
+.v2-pick__name { font-weight: 700; overflow-wrap: anywhere; }
+.v2-pick__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
+
+/* Перемикач на всю смугу: role="switch", стан каже і повзунок, і зчитувач. */
+.v2-switches { display: grid; gap: var(--sp-2); }
+.v2-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-5);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--sp-3) var(--sp-5);
+  font: inherit;
+  color: var(--color-text);
+  text-align: start;
+  background: var(--color-surface);
+  border: 0;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.v2-switch-row__text { display: grid; gap: 2px; }
+.v2-switch-row__label { font-weight: 700; }
+.v2-switch-row__hint { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex: none;
+  border: 2px solid var(--color-neutral-700);
+  border-radius: var(--r-pill);
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.v2-switch__knob {
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 20px;
+  height: 20px;
+  background: var(--color-neutral-700);
+  border-radius: 50%;
+  transition: transform var(--dur-fast) var(--ease);
+}
+/* Увімкнений — акцент-700: заливка головної кнопки в Цитрусі світла на
+   поверхні дає 1,36:1, а стан перемикача мусить читатися (3:1). */
+.v2-switch-row[aria-checked='true'] .v2-switch { background: var(--color-accent-700); border-color: var(--color-accent-700); }
+.v2-switch-row[aria-checked='true'] .v2-switch__knob { background: var(--color-surface); transform: translateX(20px); }
+[dir='rtl'] .v2-switch-row[aria-checked='true'] .v2-switch__knob { transform: translateX(-20px); }
+
+/* ── Оформлення ── */
+
+.v2-looks { display: grid; gap: var(--sp-2); min-width: 0; margin: 0; padding: 0; border: 0; }
+.v2-looks > legend { margin-bottom: var(--sp-3); padding: 0; }
+.v2-looks__own { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--sp-2); }
+.v2-look {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  min-height: 56px;
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.v2-look[data-on='true'] { border-color: var(--color-accent-700); }
+.v2-look input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.v2-look:has(input:focus-visible) { outline: 2px solid var(--color-accent-700); outline-offset: 2px; }
+.v2-look__text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.v2-look__name { font-weight: 700; }
+.v2-look__hint { font-size: var(--t-small); color: var(--color-neutral-700); }
+
+.v2-hue { width: 24px; height: 24px; flex: none; border-radius: 50%; }
+.v2-hue--none { background: transparent; border: 2px dashed var(--color-neutral-700); }
+
+.v2-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tap), 1fr)); gap: var(--sp-3); }
+.v2-swatch {
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  background: var(--color-accent-700);
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+}
+[data-theme='dark'] .v2-swatch { background: var(--color-accent-500); }
+.v2-swatch[aria-checked='true'] { outline: 3px solid var(--color-text); outline-offset: 2px; }
+.v2-swatch--custom,
+[data-theme='dark'] .v2-swatch--custom {
+  display: grid;
+  place-items: center;
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-divider);
+}
+.v2-slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--sp-4); min-height: var(--tap); }
+.v2-slider input { width: 100%; accent-color: var(--color-text); }
+
+.v2-row--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+/* ── Перший запуск «З чого почнемо?» (Q2) ── */
+
+.v2-first { display: grid; gap: var(--sp-5); padding-top: var(--sp-7); }
+.v2-first__choice {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  width: 100%;
+  min-height: 88px;
+  padding: var(--sp-5) var(--sp-6);
+  font: inherit;
+  color: var(--color-text);
+  text-align: start;
+  background: var(--color-surface);
+  border: 0;
+  border-radius: var(--r-card);
+  cursor: pointer;
+}
+.v2-first__choice:hover { background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface)); }
+.v2-first__choice[aria-disabled='true'] { cursor: progress; }
+.v2-first__icon { width: 56px; height: 56px; flex: none; }
+.v2-first__text { display: grid; gap: 2px; }
+.v2-first__label { font-size: var(--t-lead); font-weight: 800; }
+.v2-first__hint { font-size: var(--t-small); color: var(--color-neutral-700); }

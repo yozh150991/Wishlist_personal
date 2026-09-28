@@ -740,7 +740,8 @@
       "noDate": "no date",
       "loading": "Loading lists",
       "errorTitle": "Lists didn't load",
-      "stale": "No connection. Showing a saved copy from {time}."
+      "stale": "No connection. Showing a saved copy from {time}.",
+      "deleted": "List “{title}” deleted."
     },
     "templates": {
       "title": "What occasion are we collecting for?",
@@ -769,6 +770,16 @@
       "draftBody": "The name is already filled in. We can save it and you can come back later.",
       "draftKeep": "Save draft",
       "draftDrop": "Delete and leave"
+    },
+    "firstRun": {
+      "title": "Where shall we start?",
+      "body": "You can name the list later — what matters is adding the first thing.",
+      "defaultTitle": "My wishes",
+      "withItem": "Paste a link to a thing",
+      "withItemHint": "We'll pull the name and price from the shop.",
+      "withList": "Create a list for an occasion",
+      "withListHint": "Birthday, wedding, housewarming…",
+      "skip": "Skip"
     }
   },
   "v2list": {
@@ -863,8 +874,9 @@
     },
     "menuList": {
       "newSection": "New section",
-      "laterBody": "Sharing, looks and your own order will show up here soon.",
-      "inV1": "Open this list in the old look"
+      "inV1": "Open this list in the old look",
+      "shareEmpty": "Nothing to share yet: the list has no open items.",
+      "exportBody": "Export to a file is only in the old look for now."
     },
     "section": {
       "newTitle": "New section",
@@ -876,7 +888,39 @@
       "rename": "Rename",
       "delete": "Delete section"
     },
-    "untitled": "List"
+    "untitled": "List",
+    "share": "Share",
+    "preview": {
+      "title": "What guests see"
+    },
+    "settings": {
+      "title": "List settings",
+      "description": "Message to guests · optional"
+    },
+    "reorder": {
+      "cta": "Change order",
+      "subtitle": "Your own order — what guests see",
+      "up": "Move “{title}” up",
+      "down": "Move “{title}” down",
+      "sectionUp": "Move section “{title}” up",
+      "sectionDown": "Move section “{title}” down",
+      "offline": "The order can be changed when you are online."
+    },
+    "delete": {
+      "cta": "Delete list",
+      "title": "Delete “{title}”?",
+      "body": "Its items will be gone for good along with the list: {items}.",
+      "viewed": {
+        "one": "Its links have been opened {n} time — they will stop working.",
+        "few": "Its links have been opened {n} times — they will stop working.",
+        "many": "Its links have been opened {n} times — they will stop working.",
+        "other": "Its links have been opened {n} times — they will stop working."
+      },
+      "viewedUnknown": "Its links will stop working.",
+      "typeLabel": "Type the list name to confirm",
+      "typeMismatch": "The name doesn't match.",
+      "confirm": "Delete for good"
+    }
   },
   "v2item": {
     "newTitle": "New item",
@@ -938,5 +982,38 @@
       "more": "Quantity: {n}",
       "open": "Open the existing one"
     }
+  },
+  "v2share": {
+    "title": "Share",
+    "message": "Message to guests · optional",
+    "showPrices": "Show prices",
+    "showPricesHint": "Guests see the amounts.",
+    "allowClaims": "Guests can mark what they're taking",
+    "allowClaimsHint": "So nobody buys twice. You won't see it — the gift stays a surprise.",
+    "expires": "Valid until · optional",
+    "whatGuestsSee": "What guests will see",
+    "chosen": "{n} of {m}",
+    "hiddenShort": "hidden: {n}",
+    "pick": "Choose",
+    "all": "All",
+    "none": "None",
+    "notIncluded": "Won't be in the link",
+    "previewCta": "View as a guest",
+    "previewTitle": "What a guest will see",
+    "previewOf": "This is how guests will see the link “{title}”.",
+    "previewNote": "The preview updates with every tick. There are no guest marks here — you don't see them anywhere.",
+    "hidden": "Hidden for this link: {items}",
+    "creating": "Preparing the link…",
+    "creatingHint": "Usually under a second.",
+    "copied": "Link copied.",
+    "linkHint": "Anyone with this link sees the chosen items. No sign-up needed.",
+    "shareOut": "Share",
+    "revoke": "Revoke access",
+    "revokeTitle": "Revoke access?",
+    "revokeBody": "The link will stop working for everyone who got it. Guests' marks stay — a new link will show them the same way.",
+    "revokeConfirm": "Revoke",
+    "revoking": "Revoking…",
+    "revokedTitle": "Access revoked",
+    "revokedBody": "The link no longer opens. You can create a new one any time."
   }
 }

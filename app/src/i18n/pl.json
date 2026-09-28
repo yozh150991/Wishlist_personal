@@ -740,7 +740,8 @@
       "noDate": "bez daty",
       "loading": "Wczytuję listy",
       "errorTitle": "Nie udało się wczytać list",
-      "stale": "Brak połączenia. Pokazano zapisaną kopię z {time}."
+      "stale": "Brak połączenia. Pokazano zapisaną kopię z {time}.",
+      "deleted": "Lista „{title}” usunięta."
     },
     "templates": {
       "title": "Na jaką okazję zbieramy?",
@@ -769,6 +770,16 @@
       "draftBody": "Nazwa jest już wpisana. Możemy ją zapisać i wrócić później.",
       "draftKeep": "Zapisz szkic",
       "draftDrop": "Usuń i wyjdź"
+    },
+    "firstRun": {
+      "title": "Od czego zaczniemy?",
+      "body": "Listę można nazwać później — najważniejsze to dodać pierwszą rzecz.",
+      "defaultTitle": "Moje życzenia",
+      "withItem": "Wklej link do rzeczy",
+      "withItemHint": "Nazwę i cenę pobierzemy ze sklepu.",
+      "withList": "Utwórz listę na okazję",
+      "withListHint": "Urodziny, ślub, parapetówka…",
+      "skip": "Pomiń"
     }
   },
   "v2list": {
@@ -863,8 +874,9 @@
     },
     "menuList": {
       "newSection": "Nowy dział",
-      "laterBody": "Udostępnianie, wygląd i własna kolejność pojawią się tu wkrótce.",
-      "inV1": "Otwórz tę listę w starym wyglądzie"
+      "inV1": "Otwórz tę listę w starym wyglądzie",
+      "shareEmpty": "Na razie nie ma czym się dzielić: na liście nie ma aktualnych pozycji.",
+      "exportBody": "Eksport do pliku jest na razie tylko w starym wyglądzie."
     },
     "section": {
       "newTitle": "Nowy dział",
@@ -876,7 +888,39 @@
       "rename": "Zmień nazwę",
       "delete": "Usuń dział"
     },
-    "untitled": "Lista"
+    "untitled": "Lista",
+    "share": "Udostępnij",
+    "preview": {
+      "title": "Jak widzą goście"
+    },
+    "settings": {
+      "title": "Ustawienia listy",
+      "description": "Wiadomość dla gości · opcjonalnie"
+    },
+    "reorder": {
+      "cta": "Zmień kolejność",
+      "subtitle": "Własna kolejność — tak widzą goście",
+      "up": "„{title}” wyżej",
+      "down": "„{title}” niżej",
+      "sectionUp": "Dział „{title}” wyżej",
+      "sectionDown": "Dział „{title}” niżej",
+      "offline": "Kolejność zmienia się, gdy jest połączenie."
+    },
+    "delete": {
+      "cta": "Usuń listę",
+      "title": "Usunąć „{title}”?",
+      "body": "Razem z listą na zawsze znikną jej pozycje: {items}.",
+      "viewed": {
+        "one": "Link do niej otwierano już {n} raz — przestanie działać.",
+        "few": "Linki do niej otwierano już {n} razy — przestaną działać.",
+        "many": "Linki do niej otwierano już {n} razy — przestaną działać.",
+        "other": "Linki do niej otwierano już {n} razy — przestaną działać."
+      },
+      "viewedUnknown": "Linki do niej przestaną działać.",
+      "typeLabel": "Wpisz nazwę listy, aby potwierdzić",
+      "typeMismatch": "Nazwa się nie zgadza.",
+      "confirm": "Usuń na zawsze"
+    }
   },
   "v2item": {
     "newTitle": "Nowa pozycja",
@@ -938,5 +982,38 @@
       "more": "Ilość: {n}",
       "open": "Otwórz istniejącą"
     }
+  },
+  "v2share": {
+    "title": "Udostępnij",
+    "message": "Wiadomość dla gości · opcjonalnie",
+    "showPrices": "Pokazuj ceny",
+    "showPricesHint": "Goście widzą kwoty.",
+    "allowClaims": "Goście mogą oznaczać, co biorą",
+    "allowClaimsHint": "Żeby nikt nie kupił dwa razy. Ty tego nie zobaczysz — prezent zostanie niespodzianką.",
+    "expires": "Ważny do · opcjonalnie",
+    "whatGuestsSee": "Co zobaczą goście",
+    "chosen": "{n} z {m}",
+    "hiddenShort": "ukryto: {n}",
+    "pick": "Wybierz",
+    "all": "Wszystkie",
+    "none": "Żadnej",
+    "notIncluded": "Nie trafi do linku",
+    "previewCta": "Zobacz jako gość",
+    "previewTitle": "Jak zobaczy gość",
+    "previewOf": "Tak goście zobaczą link „{title}”.",
+    "previewNote": "Podgląd odświeża się z każdym zaznaczeniem. Nie ma tu oznaczeń gości — nie widzisz ich nigdzie.",
+    "hidden": "Ukryto w tym linku: {items}",
+    "creating": "Przygotowuję link…",
+    "creatingHint": "Zwykle mniej niż sekunda.",
+    "copied": "Link skopiowany.",
+    "linkHint": "Kto ma ten link, widzi wybrane pozycje. Rejestracja nie jest potrzebna.",
+    "shareOut": "Udostępnij",
+    "revoke": "Cofnij dostęp",
+    "revokeTitle": "Cofnąć dostęp?",
+    "revokeBody": "Link przestanie działać u wszystkich, którzy go dostali. Oznaczenia gości zostaną — nowy link pokaże je tak samo.",
+    "revokeConfirm": "Cofnij",
+    "revoking": "Cofam…",
+    "revokedTitle": "Dostęp cofnięty",
+    "revokedBody": "Link już się nie otwiera. Nowy można utworzyć w każdej chwili."
   }
 }

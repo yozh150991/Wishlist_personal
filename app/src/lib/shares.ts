@@ -98,6 +98,19 @@ export async function deleteShare(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Скільки разів відкривали посилання на цей список — усі, зокрема відкликані й
+ * протерміновані. Потрібно видаленню списку в v2 (потік F3): назву рукою
+ * просимо ввести, щойно список хтось бачив, — а не за позначками, щоб діалог
+ * не видав сюрприз. Це лічильник переглядів самих посилань: його власник і
+ * так бачить у «Моїх посиланнях», позначок гостей він не торкається.
+ */
+export async function fetchListViews(listId: string): Promise<number> {
+  const { data, error } = await supabase.from('shares').select('view_count').eq('source_list_id', listId);
+  if (error) throw error;
+  return ((data ?? []) as { view_count: number | null }[]).reduce((n, r) => n + (r.view_count ?? 0), 0);
+}
+
 /* ── Гостьова частина ───────────────────────── */
 
 export type SharedItem = {

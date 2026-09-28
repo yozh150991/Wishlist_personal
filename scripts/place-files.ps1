@@ -159,6 +159,10 @@ $map = @{
   'ListV2.tsx' = 'app\src\designs\v2\screens'; 'ItemSheetV2.tsx' = 'app\src\designs\v2\screens'
   'ListPartsV2.tsx' = 'app\src\designs\v2\screens'; 'list-v2.spec.ts' = 'app\tests\e2e'
   'items-view.spec.ts' = 'app\tests\e2e'
+  # Design v2 list actions (step 3b-2): share, preview, appearance, settings, order.
+  'ShareSheetV2.tsx' = 'app\src\designs\v2\screens'; 'PreviewV2.tsx' = 'app\src\designs\v2\screens'
+  'AppearanceSheetV2.tsx' = 'app\src\designs\v2\screens'; 'ListSettingsV2.tsx' = 'app\src\designs\v2\screens'
+  'ReorderV2.tsx' = 'app\src\designs\v2\screens'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'

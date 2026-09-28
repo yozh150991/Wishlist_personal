@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AlertCircle, Check, ChevronRight, Plus } from 'lucide-react';
-import { fetchListsOverview } from '../../../lib/db';
+import { AlertCircle, Check, ChevronRight, Link2, ListPlus, Plus } from 'lucide-react';
+import { createList, deleteList, fetchDefaultCurrency, fetchListsOverview } from '../../../lib/db';
 import { fetchAppearances } from '../../../lib/appearances';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
@@ -11,12 +11,43 @@ import { errorText, isNetworkError } from '../../../lib/errors';
 import { formatDateTime, formatDay, localToday } from '../../../lib/format';
 import { LISTS_KEY, readSnapshot, saveSnapshot } from '../../../lib/cache';
 import { overlayVars } from '../../../lib/hue-ramp.js';
+import { useUndo } from '../../../lib/undo';
 import type { List } from '../../../lib/types';
 import { NoteV2 } from './AuthPartsV2';
 import { useCounts } from './CommonV2';
+import { UndoToastV2 } from './ListPartsV2';
 
 /** Стрічка «Вітаю!» після входу живе стільки (A4). */
 const WELCOME_MS = 4000;
+/** Тост «Відмінити» — шість секунд, як і на сторінці списку. */
+const UNDO_MS = 6000;
+/** Перший запуск «З чого почнемо?» показано — більше не питаємо (Q2). */
+const FIRST_RUN_KEY = 'wl.v2.firstRunDone';
+
+function firstRunDone(): boolean {
+  try {
+    return localStorage.getItem(FIRST_RUN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markFirstRun() {
+  try {
+    localStorage.setItem(FIRST_RUN_KEY, '1');
+  } catch {
+    /* без сховища спитаємо ще раз — не біда */
+  }
+}
+
+/** З чим сюди прийшли: після входу, з видаленням списку, після видалення. */
+type Arrival = {
+  welcome?: boolean;
+  /** Список, який ніхто не відкривав: видаляється тостом «Відмінити» (F3). */
+  deleteList?: { id: string; title: string };
+  /** Список видалено остаточно — назву кажемо один раз. */
+  deletedTitle?: string;
+} | null;
 
 type Tone = 'soon' | 'undated' | 'past';
 
@@ -40,7 +71,12 @@ function day(iso: string): Date {
  * Жодного слова про позначки гостей — ні числа, ні «сюрпризу до…» (ADR-040).
  * «Не розібрано» — це статуси самого власника.
  *
- * Порожня головна — шаблони свят (U2): вони лише підставляють назву.
+ * Порожня головна — шаблони свят (U2): вони лише підставляють назву. Уперше
+ * порожня — «З чого почнемо?» (Q2): одразу річ, список до свята чи пропустити.
+ *
+ * Сюди ж повертається видалення списку зі сторінки списку: той, посилання на
+ * який ніхто не відкривав, зникає одразу й видаляється після тосту
+ * «Відмінити» (F3); видалений остаточно — рядок «Список … видалено».
  */
 export default function ListsV2() {
   const { t, locale } = useI18n();
@@ -56,14 +92,65 @@ export default function ListsV2() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [staleAt, setStaleAt] = useState<string | null>(null);
-  const [welcome, setWelcome] = useState(() => Boolean((location.state as { welcome?: boolean } | null)?.welcome));
+  const [arrival] = useState<Arrival>(() => (location.state as Arrival) ?? null);
+  const [welcome, setWelcome] = useState(() => Boolean(arrival?.welcome));
+  const [flash, setFlash] = useState<string | null>(() => arrival?.deletedTitle ?? null);
+  /** Списки, чиє видалення ще відлічує тост. */
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set(arrival?.deleteList ? [arrival.deleteList.id] : []));
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [firstRun, setFirstRun] = useState(() => !firstRunDone());
+  const [starting, setStarting] = useState(false);
+  const undo = useUndo(UNDO_MS);
 
-  // «Вітаю!» — раз: стан історії чистимо одразу, інакше F5 показав би знову.
+  // Стан історії — раз: чистимо одразу, інакше F5 показав би «Вітаю!» знову.
+  useEffect(() => {
+    if (arrival) navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!welcome) return;
-    navigate(location.pathname, { replace: true, state: null });
     const id = window.setTimeout(() => setWelcome(false), WELCOME_MS);
     return () => window.clearTimeout(id);
+  }, [welcome]);
+
+  useEffect(() => {
+    if (!flash) return;
+    const id = window.setTimeout(() => setFlash(null), WELCOME_MS);
+    return () => window.clearTimeout(id);
+  }, [flash]);
+
+  // Список, який ніхто не відкривав, видаляється тут — тостом «Відмінити».
+  // Відлік ставимо таймером, а не прямо в ефекті: у StrictMode ефект
+  // проганяється двічі, і прибирання першого проходу довело б видалення до
+  // кінця без жодного відліку.
+  useEffect(() => {
+    const target = arrival?.deleteList;
+    if (!target) return;
+    const timer = window.setTimeout(() => {
+      undo.schedule({
+        label: t('v2list.toast.deleted', { title: target.title }),
+        commit: () => {
+          deleteList(target.id)
+            .then(() => setLists((prev) => prev.filter((l) => l.id !== target.id)))
+            .catch((e: unknown) => {
+              setDeleteError(errorText(e, t));
+              setHidden((prev) => {
+                const next = new Set(prev);
+                next.delete(target.id);
+                return next;
+              });
+            });
+        },
+        revert: () =>
+          setHidden((prev) => {
+            const next = new Set(prev);
+            next.delete(target.id);
+            return next;
+          }),
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -103,16 +190,17 @@ export default function ListsV2() {
   }, [load]);
 
   const today = localToday();
+  const visible = useMemo(() => lists.filter((l) => !hidden.has(l.id)), [lists, hidden]);
   const groups = useMemo(() => {
-    const soon = lists
+    const soon = visible
       .filter((l) => l.event_date && l.event_date.slice(0, 10) >= today)
       .sort((a, b) => a.event_date!.localeCompare(b.event_date!));
-    const undated = lists.filter((l) => !l.event_date);
-    const past = lists
+    const undated = visible.filter((l) => !l.event_date);
+    const past = visible
       .filter((l) => l.event_date && l.event_date.slice(0, 10) < today)
       .sort((a, b) => b.event_date!.localeCompare(a.event_date!));
     return { soon, undated, past };
-  }, [lists, today]);
+  }, [visible, today]);
 
   const relative = useMemo(() => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }), [locale]);
 
@@ -151,7 +239,42 @@ export default function ListsV2() {
     );
   }
 
-  const empty = !loading && !error && lists.length === 0;
+  const empty = !loading && !error && visible.length === 0;
+
+  /**
+   * «Вставити посилання на річ» (Q2): список створюється з назвою «Мої
+   * бажання» — назвати інакше можна пізніше, у налаштуваннях списку, — і
+   * одразу відкривається форма позиції. Чернеток без назви ще немає (крок 4).
+   */
+  async function startWithItem() {
+    if (starting) return;
+    setStarting(true);
+    setDeleteError(null);
+    try {
+      const currency = (userId ? await fetchDefaultCurrency(userId).catch(() => null) : null) ?? 'PLN';
+      const created = await createList({ title: t('v2app.firstRun.defaultTitle'), currency }, userId);
+      markFirstRun();
+      navigate(`/lists/${created.id}`, { state: { add: true } });
+    } catch (e) {
+      setDeleteError(errorText(e, t));
+      setStarting(false);
+    }
+  }
+
+  function finishFirstRun(to?: string) {
+    markFirstRun();
+    setFirstRun(false);
+    if (to) navigate(to);
+  }
+
+  const notes = (
+    <>
+      {welcome && <Welcome />}
+      {flash && <Flash text={t('v2app.lists.deleted', { title: flash })} />}
+      {deleteError && <NoteV2 tone="error">{deleteError}</NoteV2>}
+    </>
+  );
+  const toast = <UndoToastV2 pending={undo.pending} until={undo.until} onUndo={undo.undo} />;
 
   const template = (key: (typeof TEMPLATES)[number]) => {
     switch (key) {
@@ -174,10 +297,51 @@ export default function ListsV2() {
     }
   };
 
+  if (empty && firstRun) {
+    return (
+      <main className="v2-page v2-page--narrow">
+        {notes}
+        <div className="v2-first">
+          <div className="v2-head">
+            <h1 className="v2-page__title">{t('v2app.firstRun.title')}</h1>
+            <p className="v2-lede">{t('v2app.firstRun.body')}</p>
+          </div>
+          <button
+            type="button"
+            className="v2-first__choice"
+            aria-disabled={starting || undefined}
+            onClick={() => void startWithItem()}
+          >
+            <span className="v2-circle v2-circle--calm v2-first__icon" aria-hidden="true">
+              {starting ? <span className="v2-spinner" /> : <Link2 size={24} strokeWidth={2.75} />}
+            </span>
+            <span className="v2-first__text">
+              <span className="v2-first__label">{t('v2app.firstRun.withItem')}</span>
+              <span className="v2-first__hint">{t('v2app.firstRun.withItemHint')}</span>
+            </span>
+          </button>
+          <button type="button" className="v2-first__choice" onClick={() => finishFirstRun('/lists/new')}>
+            <span className="v2-circle v2-circle--warm v2-first__icon" aria-hidden="true">
+              <ListPlus size={24} strokeWidth={2.75} />
+            </span>
+            <span className="v2-first__text">
+              <span className="v2-first__label">{t('v2app.firstRun.withList')}</span>
+              <span className="v2-first__hint">{t('v2app.firstRun.withListHint')}</span>
+            </span>
+          </button>
+          <button type="button" className="v2-btn v2-btn--ghost" onClick={() => finishFirstRun()}>
+            {t('v2app.firstRun.skip')}
+          </button>
+        </div>
+        {toast}
+      </main>
+    );
+  }
+
   if (empty) {
     return (
       <main className="v2-page">
-        {welcome && <Welcome />}
+        {notes}
         <div className="v2-head">
           <h1 className="v2-page__title">{t('v2app.templates.title')}</h1>
           <p className="v2-lede">{t('v2app.templates.body')}</p>
@@ -194,13 +358,14 @@ export default function ListsV2() {
         <Link to="/lists/new" className="v2-btn v2-btn--ghost">
           {t('v2app.templates.own')}
         </Link>
+        {toast}
       </main>
     );
   }
 
   return (
     <main className="v2-page" aria-busy={loading || undefined}>
-      {welcome && <Welcome />}
+      {notes}
       <div className="v2-page__head">
         <h1 className="v2-page__title">{t('v2app.lists.title')}</h1>
         {!error && (
@@ -259,7 +424,18 @@ export default function ListsV2() {
           )}
         </div>
       )}
+      {toast}
     </main>
+  );
+}
+
+/** Одноразова стрічка про те, що сталося, — як «Вітаю!», але з текстом. */
+function Flash({ text }: { text: string }) {
+  return (
+    <p className="v2-welcome" role="status">
+      <Check size={18} strokeWidth={2.75} aria-hidden="true" />
+      {text}
+    </p>
   );
 }
 

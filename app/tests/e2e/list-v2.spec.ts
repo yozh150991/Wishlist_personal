@@ -3,11 +3,13 @@ import type { Page } from '@playwright/test';
 import { EMAIL, PASSWORD, hasAccount, unique } from './helpers';
 
 /**
- * Сторінка списку дизайну v2 (ROADMAP, «Дизайн v2», крок 3б-1; потоки C, F, O, R).
+ * Сторінка списку дизайну v2 (ROADMAP, «Дизайн v2», кроки 3б-1 і 3б-2; потоки
+ * C, D, F, O, R, V3).
  *
  * Тег `@v2` — лише у v2-проєктах. Правила вигляду (сортування, групи, сума,
  * посилання, ціна) перевіряє без браузера items-view.spec.ts; тут — те, що
- * бачить людина: додати, відмінити, змінити статус, видалити з «Відмінити».
+ * бачить людина: додати, відмінити, змінити статус, видалити з «Відмінити»,
+ * поділитися вибраним, змінити порядок, видалити список.
  */
 
 async function signInV2(page: Page) {
@@ -30,6 +32,12 @@ async function newList(page: Page, title: string) {
 /** Запит видалення позиції дійшов до бази — перезавантажувати сторінку раніше не можна. */
 const itemDeleted = (page: Page) =>
   page.waitForResponse((r) => r.url().includes('/rest/v1/items') && r.request().method() === 'DELETE', {
+    timeout: 15_000,
+  });
+
+/** Запит видалення списку дійшов до бази. */
+const listDeleted = (page: Page) =>
+  page.waitForResponse((r) => r.url().includes('/rest/v1/lists') && r.request().method() === 'DELETE', {
     timeout: 15_000,
   });
 
@@ -146,5 +154,131 @@ test.describe('сторінка списку v2 з акаунтом', { tag: '@v
     await sheet.getByRole('button', { name: /^(додати|dodaj|add)$/i }).click();
     await expect(sheet.getByText(/назви позицію|nazwij pozycję|name the item/i)).toBeVisible();
     await expect(sheet.locator('input[name="title"]')).toBeFocused();
+  });
+});
+
+/** Пункт меню «⋯» списку. */
+async function listMenu(page: Page, item: RegExp) {
+  await page.getByRole('button', { name: /^(дії зі списком|działania na liście|list actions)$/i }).click();
+  await page.getByRole('dialog').getByRole('button', { name: item }).click();
+}
+
+test.describe('сторінка списку v2: поділитися, порядок, видалення', { tag: '@v2' }, () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('«Поділитися»: прихована позиція не доходить до гостя; відкритий список видаляється лише з назвою', async ({
+    page,
+    browser,
+  }) => {
+    await signInV2(page);
+    const listTitle = unique('V2 share');
+    await newList(page, listTitle);
+    const shown = unique('Лампа');
+    const secret = unique('Сюрприз');
+    await addManual(page, shown);
+    await addManual(page, secret);
+
+    await page.getByRole('button', { name: /^(поділитися|udostępnij|share)$/i }).first().click();
+    const sheet = page.getByRole('dialog');
+    // На телефоні вибір — окремий крок «Обрати», на десктопі — поруч із превʼю.
+    const box = sheet.getByRole('checkbox', { name: new RegExp(escape(secret)) });
+    if (!(await box.isVisible())) await sheet.getByRole('button', { name: /^(обрати|wybierz|choose)$/i }).click();
+    await box.uncheck();
+    await expect(sheet.getByText(/1 з 2|1 z 2|1 of 2/)).toBeVisible();
+    const done = sheet.getByRole('button', { name: /^(готово|gotowe|done)$/i });
+    if (await done.isVisible()) await done.click();
+    await sheet.getByRole('button', { name: /^(створити посилання|utwórz link|create link)$/i }).click();
+
+    await expect(sheet.getByRole('heading', { name: /посилання готове|link gotowy|link is ready/i })).toBeVisible();
+    const link = await sheet.locator('input[readonly]').inputValue();
+    expect(link).toMatch(/\/s\/[A-Za-z0-9_-]{16,}$/);
+
+    // Гість без сесії бачить лише вибране. Перегляд реєструється — список «відкривали».
+    const guestContext = await browser.newContext();
+    const guest = await guestContext.newPage();
+    const viewed = guest.waitForResponse((r) => r.url().includes('/rpc/register_share_view'));
+    await guest.goto(link);
+    await expect(guest.getByText(shown)).toBeVisible();
+    await expect(guest.getByText(secret)).toHaveCount(0);
+    await viewed;
+
+    // «Відкликати доступ» — з підтвердженням; посилання гасне.
+    await sheet.getByRole('button', { name: /^(відкликати доступ|cofnij dostęp|revoke access)$/i }).click();
+    await page
+      .getByRole('dialog', { name: /відкликати доступ|cofnąć dostęp|revoke access/i })
+      .getByRole('button', { name: /^(відкликати|cofnij|revoke)$/i })
+      .click();
+    await expect(sheet.getByRole('heading', { name: /доступ відкликано|dostęp cofnięty|access revoked/i })).toBeVisible();
+    await guest.reload();
+    await expect(guest.getByText(shown)).toHaveCount(0);
+    await guestContext.close();
+    await sheet.getByRole('button', { name: /^(готово|gotowe|done)$/i }).first().click();
+
+    // Список відкривали — видалити можна, лише вписавши назву (F3).
+    await listMenu(page, /^(налаштування списку|ustawienia listy|list settings)$/i);
+    await page.getByRole('dialog').getByRole('button', { name: /^(видалити список|usuń listę|delete list)$/i }).click();
+    const confirm = page.getByRole('dialog', { name: new RegExp(escape(listTitle)) });
+    await expect(confirm.getByText(/відкривали|otwierano|opened/i)).toBeVisible();
+    // Кнопка приглушена, поки назву не вписано; вписали — ожила.
+    const forGood = confirm.getByRole('button', { name: /видалити назавжди|usuń na zawsze|delete for good/i });
+    await expect(forGood).toHaveAttribute('aria-disabled', 'true');
+    await confirm.locator('input[name="confirm_title"]').fill(listTitle);
+    await expect(forGood).not.toHaveAttribute('aria-disabled', 'true');
+    await forGood.click();
+    await expect(page).toHaveURL(/\/lists$/);
+    await expect(page.getByRole('status').filter({ hasText: /видалено|usunięta|deleted/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: new RegExp(escape(listTitle)) })).toHaveCount(0);
+  });
+
+  test('«Змінити порядок»: «Вище» переставляє позицію, і порядок переживає F5', async ({ page }) => {
+    await signInV2(page);
+    await newList(page, unique('V2 order'));
+    const first = unique('Перша');
+    const second = unique('Друга');
+    await addManual(page, first);
+    await addManual(page, second);
+    // Щойно додані — зверху, новіші першими: «Друга», потім «Перша».
+    const titles = () => page.locator('.v2-item__title, .v2-order .v2-item__title').allTextContents();
+    await expect.poll(titles).toEqual([second, first]);
+
+    await listMenu(page, /^(змінити порядок|zmień kolejność|change order)$/i);
+    // «Перша» вище / „Перша” wyżej / Move “Перша” up.
+    await page.getByRole('button', { name: new RegExp(`${escape(first)}.*(вище|wyżej|up)$`, 'i') }).click();
+    await expect.poll(titles).toEqual([first, second]);
+    await page.getByRole('button', { name: /^(готово|gotowe|done)$/i }).click();
+
+    await page.reload();
+    await expect.poll(titles).toEqual([first, second]);
+  });
+
+  test('список, який ніхто не відкривав, видаляється тостом «Відмінити» на головній', async ({ page }) => {
+    await signInV2(page);
+    const listTitle = unique('V2 delete');
+    await newList(page, listTitle);
+
+    // Налаштування: нова назва зберігається.
+    const renamed = `${listTitle} ✓`;
+    await listMenu(page, /^(налаштування списку|ustawienia listy|list settings)$/i);
+    await page.getByRole('dialog').locator('input[name="list_title"]').fill(renamed);
+    await page.getByRole('dialog').getByRole('button', { name: /^(зберегти|zapisz|save)$/i }).click();
+    await expect(page.getByRole('heading', { level: 1, name: renamed })).toBeVisible();
+
+    await listMenu(page, /^(налаштування списку|ustawienia listy|list settings)$/i);
+    await page.getByRole('dialog').getByRole('button', { name: /^(видалити список|usuń listę|delete list)$/i }).click();
+    await expect(page).toHaveURL(/\/lists$/);
+    await expect(page.getByRole('link', { name: new RegExp(escape(renamed)) })).toHaveCount(0);
+
+    // «Відмінити» повертає список, а без відкату він зникає після відліку.
+    await undoButton(page).click();
+    await expect(page.getByRole('link', { name: new RegExp(escape(renamed)) })).toBeVisible();
+
+    await page.getByRole('link', { name: new RegExp(escape(renamed)) }).click();
+    const deleted = listDeleted(page);
+    await listMenu(page, /^(налаштування списку|ustawienia listy|list settings)$/i);
+    await page.getByRole('dialog').getByRole('button', { name: /^(видалити список|usuń listę|delete list)$/i }).click();
+    await expect(page).toHaveURL(/\/lists$/);
+    await deleted;
+    await page.reload();
+    await expect(page.getByRole('link', { name: new RegExp(escape(renamed)) })).toHaveCount(0);
   });
 });

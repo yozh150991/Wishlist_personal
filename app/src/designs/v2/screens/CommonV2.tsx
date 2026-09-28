@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
@@ -96,6 +96,14 @@ export function useCounts() {
         many: t('v2list.sum.inActive.many', { n }),
         other: t('v2list.sum.inActive.other', { n }),
       }),
+    /** «Посилання на нього вже відкривали 7 разів…» — у видаленні списку (F3). */
+    opened: (n: number) =>
+      pick(n, {
+        one: t('v2list.delete.viewed.one', { n }),
+        few: t('v2list.delete.viewed.few', { n }),
+        many: t('v2list.delete.viewed.many', { n }),
+        other: t('v2list.delete.viewed.other', { n }),
+      }),
     /** «Пошук у 42 позиціях» — підказка в полі пошуку. */
     searchIn: (n: number) =>
       pick(n, {
@@ -151,5 +159,47 @@ export function SignOutV2({ className = 'v2-btn v2-btn--ghost' }: { className?: 
         </div>
       </SheetV2>
     </>
+  );
+}
+
+/**
+ * Перемикач на всю смугу: підпис і пояснення ліворуч, повзунок праворуч.
+ * `role="switch"` з `aria-checked` — зчитувач каже «увімкнено / вимкнено»,
+ * а натиск будь-де на смузі перемикає. Кнопка, а не прихований чекбокс:
+ * так її не можна відправити як поле форми.
+ */
+export function SwitchV2({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  const hintId = useId();
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-describedby={hint ? hintId : undefined}
+      className="v2-switch-row"
+      onClick={() => onChange(!checked)}
+    >
+      <span className="v2-switch-row__text">
+        <span className="v2-switch-row__label">{label}</span>
+        {hint && (
+          <span className="v2-switch-row__hint" id={hintId}>
+            {hint}
+          </span>
+        )}
+      </span>
+      <span className="v2-switch" aria-hidden="true">
+        <span className="v2-switch__knob" />
+      </span>
+    </button>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { PointerEvent, ReactNode, MouseEvent as ReactMouseEvent } from 'react';
 import { ExternalLink, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { hostOf, moneyShort } from '../../../lib/format';
@@ -55,12 +55,97 @@ export function useSortLabel() {
 
 /* ── Картка позиції ────────────────────────────────────────── */
 
+/** Скільки відкриває свайп: рівно кнопка «Видалити». */
+const REVEAL = 96;
+
+/**
+ * Свайп ліворуч відкриває «Видалити» за карткою (F1). Лише дотик і перо:
+ * миша має «⋯». Вертикальний рух віддаємо прокрутці (`touch-action: pan-y`),
+ * горизонтальний — картці; рух, що став свайпом, не відкриває позицію.
+ */
+function useSwipe(enabled: boolean) {
+  const [open, setOpen] = useState(false);
+  const [drag, setDrag] = useState<number | null>(null);
+  const start = useRef<{ x: number; y: number; base: number; axis: 'x' | null } | null>(null);
+  const swiped = useRef(false);
+  // Останній зсув — у ref: події дотику можуть прийти пачкою між двома
+  // рендерами, і відпускання мусить бачити справжнє положення, а не старе.
+  const last = useRef(0);
+
+  useEffect(() => {
+    if (!enabled) setOpen(false);
+  }, [enabled]);
+
+  const handlers = enabled
+    ? {
+        onPointerDown(e: PointerEvent<HTMLDivElement>) {
+          if (e.pointerType === 'mouse') return;
+          start.current = { x: e.clientX, y: e.clientY, base: open ? -REVEAL : 0, axis: null };
+          swiped.current = false;
+        },
+        onPointerMove(e: PointerEvent<HTMLDivElement>) {
+          const s = start.current;
+          if (!s) return;
+          const dx = e.clientX - s.x;
+          const dy = e.clientY - s.y;
+          if (!s.axis) {
+            if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+              s.axis = 'x';
+              swiped.current = true;
+              try {
+                e.currentTarget.setPointerCapture(e.pointerId);
+              } catch {
+                /* без захоплення свайп просто коротший */
+              }
+            } else if (Math.abs(dy) > 10) {
+              start.current = null;
+              return;
+            } else return;
+          }
+          last.current = Math.max(-REVEAL * 1.4, Math.min(0, s.base + dx));
+          setDrag(last.current);
+        },
+        onPointerUp() {
+          const s = start.current;
+          start.current = null;
+          if (s?.axis === 'x') setOpen(last.current < -REVEAL / 2);
+          setDrag(null);
+        },
+        onPointerCancel() {
+          start.current = null;
+          setDrag(null);
+        },
+        // Свайп — не дотик: картка не відкривається. Дотик по відкритій — закриває.
+        onClickCapture(e: ReactMouseEvent<HTMLDivElement>) {
+          if (swiped.current) {
+            swiped.current = false;
+            e.preventDefault();
+            e.stopPropagation();
+          } else if (open) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+          }
+        },
+      }
+    : {};
+
+  return {
+    handlers,
+    offset: drag ?? (open ? -REVEAL : 0),
+    revealed: open || (drag ?? 0) < 0,
+    dragging: drag !== null,
+    close: () => setOpen(false),
+  };
+}
+
 /**
  * Картка: фото (лише якщо воно є) → назва й ціна → «⋯».
  *
  * Уся картка — кнопка «Змінити»: це найчастіша дія з позицією. Решта — у
  * меню «⋯», яке є на кожній картці однаково (F1): зчитувач екрана знаходить
- * «Видалити» там, де його знаходить палець.
+ * «Видалити» там, де його знаходить палець. Свайп ліворуч — прискорювач
+ * того самого «Видалити», не єдиний шлях.
  *
  * На картці немає нічого про позначки гостей — ні пігулки, ні лічильника
  * (ADR-040). Статус «Куплено» / «Подаровано» — власний, його ставить власник.
@@ -74,6 +159,7 @@ export function ItemCardV2({
   onOpen,
   onMenu,
   onRetry,
+  onDelete,
 }: {
   item: Item;
   currency: Currency;
@@ -86,10 +172,13 @@ export function ItemCardV2({
   onOpen: (item: Item) => void;
   onMenu: (item: Item) => void;
   onRetry: (item: Item) => void;
+  /** Є — свайп ліворуч відкриває «Видалити». */
+  onDelete?: (item: Item) => void;
 }) {
   const { t, locale } = useI18n();
   const priority = usePriorityLabel();
   const status = useStatusLabel();
+  const swipe = useSwipe(Boolean(onDelete));
   const price = moneyShort(item.price, currency, locale);
   const host = hostOf(item.url);
   const variants = item.variants.map((v) => v.value).join(' · ');
@@ -103,40 +192,62 @@ export function ItemCardV2({
       data-new={highlight || undefined}
       data-failed={failed ? 'true' : undefined}
     >
-      <button type="button" className="v2-item__main" onClick={() => onOpen(item)}>
-        {item.image_url && <img className="v2-item__img" src={item.image_url} alt="" loading="lazy" />}
-        <span className="v2-item__text">
-          <span className="v2-item__title">{item.title}</span>
-          <span className="v2-item__meta">
-            {price ? <span className="v2-item__price">{price}</span> : t('v2list.item.noPrice')}
-            {item.quantity > 1 && ` · × ${item.quantity}`}
-            {host && ` · ${host}`}
-          </span>
-          {variants && <span className="v2-item__meta">{variants}</span>}
-          {(tagPriority || item.status !== 'active') && (
-            <span className="v2-item__tags">
-              {tagPriority && (
-                <span className="v2-tag" data-tone={item.priority === 'high' ? 'accent' : 'warm'}>
-                  {priority(item.priority)}
-                </span>
-              )}
-              {item.status !== 'active' && (
-                <span className="v2-tag" data-tone="neutral">
-                  {status(item.status)}
+      <div className="v2-item__row">
+        {swipe.revealed && onDelete && (
+          <button
+            type="button"
+            className="v2-item__swipe"
+            onClick={() => {
+              swipe.close();
+              onDelete(item);
+            }}
+          >
+            <Trash2 size={20} strokeWidth={STROKE} aria-hidden="true" />
+            {t('v2list.item.delete')}
+          </button>
+        )}
+        <div
+          className="v2-item__front"
+          data-dragging={swipe.dragging || undefined}
+          style={swipe.offset ? { transform: `translateX(${swipe.offset}px)` } : undefined}
+          {...swipe.handlers}
+        >
+          <button type="button" className="v2-item__main" onClick={() => onOpen(item)}>
+            {item.image_url && <img className="v2-item__img" src={item.image_url} alt="" loading="lazy" />}
+            <span className="v2-item__text">
+              <span className="v2-item__title">{item.title}</span>
+              <span className="v2-item__meta">
+                {price ? <span className="v2-item__price">{price}</span> : t('v2list.item.noPrice')}
+                {item.quantity > 1 && ` · × ${item.quantity}`}
+                {host && ` · ${host}`}
+              </span>
+              {variants && <span className="v2-item__meta">{variants}</span>}
+              {(tagPriority || item.status !== 'active') && (
+                <span className="v2-item__tags">
+                  {tagPriority && (
+                    <span className="v2-tag" data-tone={item.priority === 'high' ? 'accent' : 'warm'}>
+                      {priority(item.priority)}
+                    </span>
+                  )}
+                  {item.status !== 'active' && (
+                    <span className="v2-tag" data-tone="neutral">
+                      {status(item.status)}
+                    </span>
+                  )}
                 </span>
               )}
             </span>
-          )}
-        </span>
-      </button>
-      <button
-        type="button"
-        className="v2-iconbtn v2-item__more"
-        aria-label={t('v2list.item.menu', { title: item.title })}
-        onClick={() => onMenu(item)}
-      >
-        <MoreHorizontal size={22} strokeWidth={STROKE} aria-hidden="true" />
-      </button>
+          </button>
+          <button
+            type="button"
+            className="v2-iconbtn v2-item__more"
+            aria-label={t('v2list.item.menu', { title: item.title })}
+            onClick={() => onMenu(item)}
+          >
+            <MoreHorizontal size={22} strokeWidth={STROKE} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
       {failed && (
         <p className="v2-item__failed" role="alert">
           <span>
