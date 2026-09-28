@@ -1101,6 +1101,15 @@
       "done": "Repeated from “{title}”."
     }
   },
+  "v2yearly": {
+    "label": "Repeat every year",
+    "hint": "We'll remind you a month before {date} — no new lists are created on their own.",
+    "needsDate": "Needs an event date — otherwise there's nothing to remind you about.",
+    "kicker": "Every year",
+    "title": "Repeat “{title}” for {year}?",
+    "body": "We'll carry over what wasn't gifted, the settings and sections. Guests' picks and links — never.",
+    "notNow": "Not this time"
+  },
   "v2add": {
     "title": "Add to Wishlist",
     "list": "To list",

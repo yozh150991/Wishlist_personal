@@ -3,12 +3,16 @@ import {
   addDays,
   afterEventDue,
   copyInput,
+  daysBetween,
   eventYear,
   isPastEvent,
+  nextOccurrence,
   nextYear,
   openItems,
+  repeatTarget,
   repeatTitle,
   snoozeNext,
+  yearlyDue,
 } from '../../src/lib/afterEvent';
 import type { Item } from '../../src/lib/types';
 
@@ -153,5 +157,50 @@ test.describe('копії позицій', () => {
       item({ id: 'c', status: 'purchased' }),
     ];
     expect(openItems(items).map((i) => i.id)).toEqual(['a']);
+  });
+});
+
+test.describe('щорічні свята (ADR-047)', () => {
+  test('найближча річниця: наступного дня після свята — через рік, давній список — цьогорічна дата', () => {
+    expect(nextOccurrence('2026-10-18', '2026-10-19')).toBe('2027-10-18');
+    expect(nextOccurrence('2024-10-18', '2026-09-28')).toBe('2026-10-18');
+    expect(nextOccurrence('2024-10-18', '2026-10-18')).toBe('2026-10-18');
+    expect(nextOccurrence('2026-10-18', '2026-09-28')).toBe('2027-10-18');
+  });
+
+  test('29 лютого повертається у високосні роки, а в інші — 28-ме', () => {
+    expect(nextOccurrence('2024-02-29', '2025-01-01')).toBe('2025-02-28');
+    expect(nextOccurrence('2024-02-29', '2027-03-01')).toBe('2028-02-29');
+  });
+
+  test('daysBetween — календарні дні, навіть через перехід на літній час', () => {
+    expect(daysBetween('2026-03-28', '2026-03-30')).toBe(2);
+    expect(daysBetween('2026-09-28', '2026-10-18')).toBe(20);
+    expect(daysBetween('2026-10-18', '2026-10-18')).toBe(0);
+  });
+
+  test('повтор давнього списку — на найближчу річницю, рік у назві — той самий', () => {
+    expect(repeatTarget({ event_date: '2024-10-18' }, '2026-09-28')).toEqual({ date: '2026-10-18', year: 2026 });
+    expect(repeatTitle('День народження 2024', 2024, 2026)).toBe('День народження 2026');
+    expect(repeatTarget({ event_date: null }, '2026-09-28')).toEqual({ date: null, year: null });
+  });
+
+  test('нагадування — за місяць до річниці, лише для щорічного', () => {
+    const list = { event_date: '2025-10-18', repeats_yearly: true };
+    expect(yearlyDue(list, '2026-09-17', null)).toBeNull();
+    expect(yearlyDue(list, '2026-09-18', null)).toEqual({ date: '2026-10-18', days: 30 });
+    expect(yearlyDue(list, '2026-10-18', null)).toEqual({ date: '2026-10-18', days: 0 });
+    expect(yearlyDue({ ...list, repeats_yearly: false }, '2026-10-01', null)).toBeNull();
+    expect(yearlyDue({ event_date: null, repeats_yearly: true }, '2026-10-01', null)).toBeNull();
+  });
+
+  test('список, день якого ще попереду, не нагадує — його річниця наступного року', () => {
+    expect(yearlyDue({ event_date: '2026-10-18', repeats_yearly: true }, '2026-10-01', null)).toBeNull();
+  });
+
+  test('«Не цього разу» ховає саме цю річницю, а наступної — нагадає знову', () => {
+    const list = { event_date: '2025-10-18', repeats_yearly: true };
+    expect(yearlyDue(list, '2026-10-01', '2026-10-18')).toBeNull();
+    expect(yearlyDue(list, '2027-10-01', '2026-10-18')).toEqual({ date: '2027-10-18', days: 17 });
   });
 });

@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
 import { pendingCount } from '../../../lib/outbox';
+import { nextOccurrence } from '../../../lib/afterEvent';
+import { formatDay, localToday } from '../../../lib/format';
 
 /**
  * Частини екранів власника v2, спільні для кількох екранів: модальне вікно,
@@ -215,5 +217,33 @@ export function SwitchV2({
         <span className="v2-switch__knob" />
       </span>
     </button>
+  );
+}
+
+/**
+ * «Повторювати щороку» (U3, ADR-047) — у новому списку, налаштуваннях і
+ * повторі. Під перемикачем — коли саме нагадаємо; без дати нагадувати нема
+ * про що, тож перемикач приглушений і каже чому.
+ */
+export function YearlySwitchV2({
+  date,
+  checked,
+  onChange,
+}: {
+  /** Дата події з поля форми, `YYYY-MM-DD` або порожньо. */
+  date: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  const { t, locale } = useI18n();
+  const next = date ? nextOccurrence(date, localToday()) : null;
+  return (
+    <SwitchV2
+      label={t('v2yearly.label')}
+      hint={next ? t('v2yearly.hint', { date: formatDay(next, locale) ?? next }) : t('v2yearly.needsDate')}
+      checked={Boolean(next) && checked}
+      disabled={!next}
+      onChange={onChange}
+    />
   );
 }

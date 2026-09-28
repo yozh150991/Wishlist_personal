@@ -79,7 +79,7 @@ export async function fetchDefaultCurrency(userId: string): Promise<Currency | n
 }
 
 export type ListInput = Pick<List, 'title'> &
-  Partial<Pick<List, 'description' | 'currency' | 'event_date' | 'is_archived'>>;
+  Partial<Pick<List, 'description' | 'currency' | 'event_date' | 'is_archived' | 'repeats_yearly'>>;
 
 export async function createList(input: ListInput, ownerId: string): Promise<List> {
   const { data, error } = await supabase
@@ -254,7 +254,7 @@ export async function copyItems(listId: string, items: ItemInput[]): Promise<voi
  */
 export async function repeatList(
   source: { list: List; sections: { id: string; title: string; position: number }[]; items: Item[] },
-  next: { title: string; event_date: string | null },
+  next: { title: string; event_date: string | null; repeats_yearly: boolean },
   ownerId: string,
 ): Promise<List> {
   const { data, error } = await supabase
@@ -266,6 +266,7 @@ export async function repeatList(
       description: source.list.description,
       currency: source.list.currency,
       appearance_id: source.list.appearance_id ?? null,
+      repeats_yearly: next.repeats_yearly,
     })
     .select()
     .single();
@@ -293,6 +294,19 @@ export async function repeatList(
   } catch (e) {
     await deleteList(list.id).catch(() => {});
     throw e;
+  }
+  // Щорічна позначка переходить до нового списку «ряду» (ADR-047): інакше
+  // старий нагадав би про ту саму дату ще раз. Не вдалося — не біда, новий
+  // список уже є, а зайве нагадування закривається «Не цього разу».
+  if (source.list.repeats_yearly) {
+    await supabase
+      .from('lists')
+      .update({ repeats_yearly: false })
+      .eq('id', source.list.id)
+      .then(
+        () => undefined,
+        () => undefined,
+      );
   }
   return list;
 }

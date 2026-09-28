@@ -58,6 +58,7 @@ $map = @{
   '20260928130000_share_expiry_zone.sql' = 'supabase\migrations'
   '20260928140000_owner_side_channels.sql' = 'supabase\migrations'
   '20260928160000_item_drafts.sql' = 'supabase\migrations'
+  '20260928170000_yearly_lists.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -71,6 +72,7 @@ $map = @{
   '07_share_expiry.test.sql' = 'supabase\tests\database'
   '08_owner_side_channels.test.sql' = 'supabase\tests\database'
   '09_item_drafts.test.sql' = 'supabase\tests\database'
+  '10_yearly_lists.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'

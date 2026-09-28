@@ -5,15 +5,15 @@ import { CURRENCIES } from '../../../lib/types';
 import type { Currency, List } from '../../../lib/types';
 import type { ListInput } from '../../../lib/db';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
-import { SheetV2, useCounts } from './CommonV2';
+import { SheetV2, YearlySwitchV2, useCounts } from './CommonV2';
 
 /** Межі з `lists` (README, «Обмеження полів»). */
 const TITLE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 
 /**
- * Налаштування списку v2: назва, повідомлення гостям, дата, валюта — і вхід у
- * видалення. Решта вигляду (оформлення) — окремим вікном з меню списку.
+ * Налаштування списку v2: назва, повідомлення гостям, дата, валюта,
+ * «Повторювати щороку» (ADR-047) — і вхід у видалення. Решта вигляду (оформлення) — окремим вікном з меню списку.
  */
 export function ListSettingsV2({
   open,
@@ -36,6 +36,7 @@ export function ListSettingsV2({
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
   const [currency, setCurrency] = useState<Currency>('PLN');
+  const [yearly, setYearly] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [server, setServer] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export function ListSettingsV2({
     setDescription(list?.description ?? '');
     setDate(list?.event_date ?? '');
     setCurrency(list?.currency ?? 'PLN');
+    setYearly(Boolean(list?.repeats_yearly));
     setSubmitted(false);
     setServer(null);
     setBusy(false);
@@ -64,6 +66,8 @@ export function ListSettingsV2({
         description: description.trim() || null,
         currency,
         event_date: date || null,
+        // Без дати нагадувати нема про що — позначка знімається разом із датою.
+        repeats_yearly: Boolean(date) && yearly,
       });
       onClose();
     } catch (e) {
@@ -143,6 +147,7 @@ export function ListSettingsV2({
               </select>
             </div>
           </div>
+          <YearlySwitchV2 date={date} checked={yearly} onChange={setYearly} />
           <SubmitV2 busy={busy} label={t('common.save')} busyLabel={t('common.saving')} />
           <div className="v2-reset">
             <button type="button" className="v2-btn v2-btn--danger v2-btn--start" onClick={onDelete}>

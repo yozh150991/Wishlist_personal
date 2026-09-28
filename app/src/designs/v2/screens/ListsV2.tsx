@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AlertCircle, Check, ChevronRight, Link2, ListPlus, Plus } from 'lucide-react';
+import { AlertCircle, Check, ChevronRight, Link2, ListPlus, Plus, Repeat } from 'lucide-react';
 import { createList, deleteList, fetchDefaultCurrency, fetchListsOverview } from '../../../lib/db';
 import { fetchAppearances } from '../../../lib/appearances';
 import { useAuth } from '../../../lib/auth';
@@ -12,6 +12,7 @@ import { formatDateTime, formatDay, localToday } from '../../../lib/format';
 import { LISTS_KEY, readSnapshot, saveSnapshot } from '../../../lib/cache';
 import { overlayVars } from '../../../lib/hue-ramp.js';
 import { useUndo } from '../../../lib/undo';
+import { readYearlyDismissed, writeYearlyDismissed, yearlyDue } from '../../../lib/afterEvent';
 import type { List } from '../../../lib/types';
 import { NoteV2 } from './AuthPartsV2';
 import { useCounts } from './CommonV2';
@@ -53,6 +54,8 @@ type Tone = 'soon' | 'undated' | 'past' | 'archived';
 
 /** Шаблони свят для порожньої головної (U2): лише назва, решта — всередині. */
 const TEMPLATES = ['birthday', 'wedding', 'newYear', 'baby', 'housewarming', 'graduation', 'anniversary', 'secretSanta'] as const;
+/** Шаблони, що пропонують «Повторювати щороку» (U2, ADR-047). */
+const YEARLY_TEMPLATES = new Set<(typeof TEMPLATES)[number]>(['birthday', 'newYear']);
 
 /** Календарний день `YYYY-MM-DD` як місцева північ. */
 function day(iso: string): Date {
@@ -74,6 +77,10 @@ function day(iso: string): Date {
  *
  * Порожня головна — шаблони свят (U2): вони лише підставляють назву. Уперше
  * порожня — «З чого почнемо?» (Q2): одразу річ, список до свята чи пропустити.
+ *
+ * Згори — нагадування про щорічні свята (U3, ADR-047): за місяць до річниці
+ * «Повторити на 2027» веде в список із відкритим повтором, «Не цього разу»
+ * ховає нагадування до наступної річниці.
  *
  * Сюди ж повертається видалення списку зі сторінки списку: той, посилання на
  * який ніхто не відкривав, зникає одразу й видаляється після тосту
@@ -101,6 +108,8 @@ export default function ListsV2() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [firstRun, setFirstRun] = useState(() => !firstRunDone());
   const [starting, setStarting] = useState(false);
+  /** «Не цього разу» в цьому відкритті — щоб картка зникла одразу, без перечитування сховища. */
+  const [notNow, setNotNow] = useState<Set<string>>(new Set());
   const undo = useUndo(UNDO_MS);
 
   // Стан історії — раз: чистимо одразу, інакше F5 показав би «Вітаю!» знову.
@@ -210,6 +219,22 @@ export default function ListsV2() {
   }, [visible, today]);
 
   const relative = useMemo(() => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }), [locale]);
+
+  /** Щорічні свята, до річниці яких не більше місяця (U3). Архівні теж: саме з архіву й повторюють. */
+  const reminders = useMemo(
+    () =>
+      visible
+        .filter((l) => !notNow.has(l.id))
+        .map((l) => ({ list: l, due: yearlyDue(l, today, readYearlyDismissed(l.id)) }))
+        .filter((r): r is { list: List; due: { date: string; days: number } } => r.due !== null)
+        .sort((a, b) => a.due.date.localeCompare(b.due.date)),
+    [visible, today, notNow],
+  );
+
+  function skipYear(l: List, date: string) {
+    writeYearlyDismissed(l.id, date);
+    setNotNow((prev) => new Set(prev).add(l.id));
+  }
 
   function meta(l: List, tone: Tone): string {
     const n = l.item_count ?? 0;
@@ -357,7 +382,7 @@ export default function ListsV2() {
         <ul className="v2-chips">
           {TEMPLATES.map((k) => (
             <li key={k}>
-              <Link to="/lists/new" state={{ title: template(k) }} className="v2-chip">
+              <Link to="/lists/new" state={{ title: template(k), yearly: YEARLY_TEMPLATES.has(k) }} className="v2-chip">
                 {template(k)}
               </Link>
             </li>
@@ -411,6 +436,29 @@ export default function ListsV2() {
         </div>
       ) : (
         <div className="v2-stack" data-stale={staleAt ? 'true' : undefined}>
+          {reminders.map(({ list: l, due }) => {
+            const year = Number(due.date.slice(0, 4));
+            return (
+              <section key={l.id} className="v2-after v2-yearly" aria-labelledby={`v2-yearly-${l.id}`}>
+                <p className="v2-kicker">
+                  {t('v2yearly.kicker')} · {formatDay(due.date, locale)} · {relative.format(due.days, 'day')}
+                </p>
+                <h2 className="v2-after__title" id={`v2-yearly-${l.id}`}>
+                  {t('v2yearly.title', { title: l.title, year })}
+                </h2>
+                <p className="v2-hint v2-hint--start">{t('v2yearly.body')}</p>
+                <div className="v2-yearly__actions">
+                  <Link to={`/lists/${l.id}`} state={{ repeat: true }} className="v2-btn v2-btn--primary">
+                    <Repeat size={20} strokeWidth={2.75} aria-hidden="true" />
+                    {t('v2after.card.repeat', { year })}
+                  </Link>
+                  <button type="button" className="v2-btn v2-btn--ghost" onClick={() => skipYear(l, due.date)}>
+                    {t('v2yearly.notNow')}
+                  </button>
+                </div>
+              </section>
+            );
+          })}
           {(groups.soon.length > 0 || groups.undated.length > 0) && (
             <section aria-labelledby="v2-soon">
               <h2 className="v2-kicker" id="v2-soon">

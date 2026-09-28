@@ -3,8 +3,8 @@ import type { Page } from '@playwright/test';
 import { EMAIL, PASSWORD, hasAccount, unique } from './helpers';
 
 /**
- * «Після події» й архів дизайну v2 (ROADMAP, «Дизайн v2», крок 4а; потоки M,
- * S3, U; ADR-045).
+ * «Після події», архів і щорічні свята дизайну v2 (ROADMAP, «Дизайн v2»,
+ * кроки 4а і 4в; потоки M, S3, U; ADR-045, ADR-047).
  *
  * Тег `@v2` — лише у v2-проєктах. Правила дат, «Пізніше» й копій перевіряє без
  * браузера after-event.spec.ts; тут — те, що бачить людина, на справжній базі.
@@ -157,7 +157,10 @@ test.describe('після свята й архів v2', { tag: '@v2' }, () => {
     const repeat = page.getByRole('dialog', { name: new RegExp(String(year + 1)) });
     const nextTitle = title.replace(String(year), String(year + 1));
     await expect(repeat.locator('input[name="repeat_title"]')).toHaveValue(nextTitle);
-    await expect(repeat.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    await expect(repeat.getByRole('switch', { name: /неподаровані|niepodarowane|not yet gifted/i })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
     await repeat.getByRole('button', { name: /^(створити|utwórz|create)$/i }).click();
     await expect(page.getByRole('heading', { level: 1, name: nextTitle })).toBeVisible();
     await expect(page.getByRole('status').filter({ hasText: title })).toBeVisible();
@@ -182,5 +185,90 @@ test.describe('після свята й архів v2', { tag: '@v2' }, () => {
     await page.getByRole('button', { name: /створити як архів|utwórz jako archiwum|create as archive/i }).click();
     await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
     await expect(archivedNote(page)).toBeVisible();
+  });
+});
+
+test.describe('щорічні свята v2', { tag: '@v2' }, () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  const yearly = (page: Page) => page.getByRole('switch', { name: /повторювати щороку|powtarzaj co roku|repeat every year/i });
+
+  test('«Повторювати щороку» — лише з датою; позначка зберігається й видна в налаштуваннях', async ({ page }) => {
+    await signInV2(page);
+    await page.goto('/lists/new');
+    const title = unique('V2 yearly new');
+    await page.locator('input[name="title"]').fill(title);
+    await expect(yearly(page)).toHaveAttribute('aria-disabled', 'true');
+    await page.locator('input[name="event_date"]').fill(inDays(40));
+    await expect(yearly(page)).not.toHaveAttribute('aria-disabled', 'true');
+    await yearly(page).click();
+    await expect(yearly(page)).toHaveAttribute('aria-checked', 'true');
+    await page.getByRole('button', { name: /^(готово|gotowe|done)$/i }).click();
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+
+    await listMenu(page).click();
+    await page.getByRole('dialog').getByRole('button', { name: /налаштування списку|ustawienia listy|list settings/i }).click();
+    const settings = page.getByRole('dialog', { name: /налаштування списку|ustawienia listy|list settings/i });
+    await expect(settings.getByRole('switch', { name: /повторювати щороку|powtarzaj co roku|repeat every year/i })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+  });
+
+  test('за місяць до річниці — нагадування на головній; «Повторити» веде в повтор, і нагадування переходить до нового списку', async ({
+    page,
+  }) => {
+    await signInV2(page);
+    // Свято було 340 днів тому: річниця — за місяць.
+    const eventDate = inDays(-340);
+    const fromYear = Number(eventDate.slice(0, 4));
+    const toYear = fromYear + 1;
+    const title = unique(`V2 yearly ${fromYear}`);
+    await page.goto('/lists/new');
+    await page.locator('input[name="title"]').fill(title);
+    await page.locator('input[name="event_date"]').fill(eventDate);
+    await yearly(page).click();
+    // Минула дата — одразу в архів (ADR-045); нагадування про архівний теж приходить.
+    await page.getByRole('button', { name: /створити як архів|utwórz jako archiwum|create as archive/i }).click();
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+
+    await page.goto('/lists');
+    const reminder = page.getByRole('region', { name: new RegExp(title) });
+    await expect(reminder).toBeVisible();
+    await reminder.getByRole('link', { name: new RegExp(String(toYear)) }).click();
+
+    const repeat = page.getByRole('dialog', { name: new RegExp(String(toYear)) });
+    const nextTitle = title.replace(String(fromYear), String(toYear));
+    await expect(repeat.locator('input[name="repeat_title"]')).toHaveValue(nextTitle);
+    await expect(repeat.getByRole('switch', { name: /повторювати щороку|powtarzaj co roku|repeat every year/i })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await repeat.getByRole('button', { name: /^(створити|utwórz|create)$/i }).click();
+    await expect(page.getByRole('heading', { level: 1, name: nextTitle })).toBeVisible();
+
+    // Позначка тепер у нового списку, чия дата ще попереду, — нагадування немає.
+    await page.goto('/lists');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('region', { name: new RegExp(title) })).toHaveCount(0);
+  });
+
+  test('«Не цього разу» ховає нагадування до наступної річниці', async ({ page }) => {
+    await signInV2(page);
+    const title = unique('V2 yearly skip');
+    await page.goto('/lists/new');
+    await page.locator('input[name="title"]').fill(title);
+    await page.locator('input[name="event_date"]').fill(inDays(-350));
+    await yearly(page).click();
+    await page.getByRole('button', { name: /створити як архів|utwórz jako archiwum|create as archive/i }).click();
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+
+    await page.goto('/lists');
+    const reminder = page.getByRole('region', { name: new RegExp(title) });
+    await reminder.getByRole('button', { name: /не цього разу|nie tym razem|not this time/i }).click();
+    await expect(reminder).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('region', { name: new RegExp(title) })).toHaveCount(0);
   });
 });

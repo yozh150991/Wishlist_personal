@@ -29,12 +29,38 @@ export function addDays(day: string, n: number): string {
   return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
 }
 
-/** Та сама дата наступного року; 29 лютого стає 28-м. */
-export function nextYear(day: string): string {
-  const [y, m, d] = day.slice(0, 10).split('-').map(Number);
-  const year = y! + 1;
+/** Той самий день і місяць у вказаному році; 29 лютого в невисокосному — 28-ме. */
+export function sameDayIn(day: string, year: number): string {
+  const [, m, d] = day.slice(0, 10).split('-').map(Number);
   const last = new Date(Date.UTC(year, m!, 0)).getUTCDate();
   return `${year}-${pad(m!)}-${pad(Math.min(d!, last))}`;
+}
+
+/** Та сама дата наступного року; 29 лютого стає 28-м. */
+export function nextYear(day: string): string {
+  return sameDayIn(day, Number(day.slice(0, 4)) + 1);
+}
+
+/**
+ * Найближча річниця події, не раніше сьогодні: наступного дня після свята —
+ * через рік, а список, який два роки не повторювали, — цьогорічна дата.
+ * Рахується від самої дати, а не від попередньої річниці, щоб 29 лютого
+ * поверталось у високосні роки.
+ */
+export function nextOccurrence(eventDate: string, today: string): string {
+  for (let year = Number(eventDate.slice(0, 4)) + 1; ; year++) {
+    const candidate = sameDayIn(eventDate, year);
+    if (candidate >= today) return candidate;
+  }
+}
+
+/** Скільки календарних днів від `from` до `to`. */
+export function daysBetween(from: string, to: string): number {
+  const utc = (day: string) => {
+    const [y, m, d] = day.slice(0, 10).split('-').map(Number);
+    return Date.UTC(y!, m! - 1, d!);
+  };
+  return Math.round((utc(to) - utc(from)) / 86_400_000);
 }
 
 /** Рік події або `null`, якщо дати немає. */
@@ -73,12 +99,44 @@ export function snoozeNext(prev: Snooze | null, eventDate: string, today: string
 }
 
 /**
- * Назва на наступний рік: рік події, якщо він є в назві окремим числом,
- * посувається («Новий рік 2026» → «Новий рік 2027»). Решта назви — як була.
+ * Назва для повтору: рік події, якщо він є в назві окремим числом,
+ * замінюється на рік нової дати («Новий рік 2026» → «Новий рік 2027»).
+ * Решта назви — як була.
  */
-export function repeatTitle(title: string, fromYear: number | null): string {
+export function repeatTitle(title: string, fromYear: number | null, toYear: number | null = null): string {
   if (fromYear === null) return title;
-  return title.replace(new RegExp(`(^|\\D)${fromYear}(?!\\d)`, 'g'), (_m, pre: string) => `${pre}${fromYear + 1}`);
+  const to = toYear ?? fromYear + 1;
+  return title.replace(new RegExp(`(^|\\D)${fromYear}(?!\\d)`, 'g'), (_m, pre: string) => `${pre}${to}`);
+}
+
+/**
+ * Куди повторювати (S3): найближча річниця й її рік. Без дати — дати немає,
+ * а назва лишається як була.
+ */
+export function repeatTarget(list: Pick<List, 'event_date'>, today: string): { date: string | null; year: number | null } {
+  if (!list.event_date) return { date: null, year: null };
+  const date = nextOccurrence(list.event_date, today);
+  return { date, year: Number(date.slice(0, 4)) };
+}
+
+/** Нагадування про щорічне свято — за місяць (U3). */
+export const YEARLY_REMIND_DAYS = 30;
+
+/**
+ * Чи нагадати про щорічне свято (U3, ADR-047): до найближчої річниці не
+ * більше місяця, і людина не сказала «Не цього разу» саме для неї. Список,
+ * день якого ще попереду, нагадування не має: його річниця — наступного року.
+ */
+export function yearlyDue(
+  list: Pick<List, 'event_date' | 'repeats_yearly'>,
+  today: string,
+  dismissed: string | null,
+): { date: string; days: number } | null {
+  if (!list.repeats_yearly || !list.event_date) return null;
+  const date = nextOccurrence(list.event_date, today);
+  const days = daysBetween(today, date);
+  if (days > YEARLY_REMIND_DAYS || dismissed === date) return null;
+  return { date, days };
 }
 
 /**
@@ -113,6 +171,26 @@ export function copyInput(
 /** Що ще не розібрано: актуальні позиції — лише їх пропонуємо перенести (M4, S3). */
 export function openItems(items: Item[]): Item[] {
   return items.filter((i) => i.status === 'active');
+}
+
+/* ── «Не цього разу» для щорічного — на цьому пристрої ── */
+
+const yearlyKey = (listId: string) => `wl.v2.yearly.${listId}`;
+
+export function readYearlyDismissed(listId: string): string | null {
+  try {
+    return localStorage.getItem(yearlyKey(listId));
+  } catch {
+    return null;
+  }
+}
+
+export function writeYearlyDismissed(listId: string, date: string) {
+  try {
+    localStorage.setItem(yearlyKey(listId), date);
+  } catch {
+    /* приватний режим — нагадування повернеться наступного разу */
+  }
 }
 
 /* ── «Пізніше» на цьому пристрої ─────────── */

@@ -33,7 +33,7 @@ import { newId, run } from '../../../lib/outbox';
 import type { Op } from '../../../lib/outbox';
 import { useUndo } from '../../../lib/undo';
 import { designSwitchHref } from '../../../lib/authFlow';
-import { afterEventDue, eventYear, isPastEvent, readSnooze, snoozeNext, writeSnooze } from '../../../lib/afterEvent';
+import { afterEventDue, isPastEvent, readSnooze, repeatTarget, snoozeNext, writeSnooze } from '../../../lib/afterEvent';
 import type { Snooze } from '../../../lib/afterEvent';
 import {
   createSection,
@@ -219,6 +219,8 @@ export default function ListV2() {
   const [carried, setCarried] = useState<{ id: string; title: string; n: number } | null>(null);
   /** Одноразовий рядок, з яким сюди прийшли (напр. «Повторено з …»). */
   const [flash, setFlash] = useState<string | null>(null);
+  /** З нагадування про щорічне свято — «Повторити» відкриється, щойно позиції завантажаться. */
+  const [repeatAsked, setRepeatAsked] = useState(false);
 
   const undo = useUndo(UNDO_MS);
 
@@ -238,14 +240,15 @@ export default function ListV2() {
   // Перший запуск «Вставити посилання на річ» (Q2) веде сюди з одразу
   // відкритою формою позиції. Стан історії чистимо, щоб F5 не відкривав її знову.
   useEffect(() => {
-    const state = location.state as { add?: boolean; flash?: string } | null;
-    if (!state?.add && !state?.flash) {
+    const state = location.state as { add?: boolean; flash?: string; repeat?: boolean } | null;
+    if (!state?.add && !state?.flash && !state?.repeat) {
       setFlash(null);
       return;
     }
     navigate(location.pathname, { replace: true, state: null });
     if (state.add) setSheet({ open: true, item: null });
     setFlash(state.flash ?? null);
+    setRepeatAsked(Boolean(state.repeat));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -634,6 +637,15 @@ export default function ListV2() {
     writeSort(id, next);
   }
 
+  // Нагадування про щорічне свято привело сюди з «Повторити» (U3): вікно — коли
+  // вже відомо, що переносити, інакше перемикач «Неподаровані позиції» показав би нуль.
+  const itemsReady = !loading && !error;
+  useEffect(() => {
+    if (!repeatAsked || !list || !itemsReady) return;
+    setRepeatAsked(false);
+    setAfterStep('repeat');
+  }, [repeatAsked, list, itemsReady]);
+
   /* ── Розмітка ── */
 
   if (listState === 'missing') {
@@ -665,7 +677,7 @@ export default function ListV2() {
   const today = localToday();
   const archived = Boolean(list?.is_archived);
   const past = list ? isPastEvent(list, today) : false;
-  const listYear = list ? eventYear(list) : null;
+  const repeatYear = list ? repeatTarget(list, today).year : null;
   const afterDue = list !== null && ready && !ordering && afterEventDue(list, today, snooze);
 
   function groupHeading(g: ViewGroup, index: number) {
@@ -1083,7 +1095,7 @@ export default function ListV2() {
               }}
             >
               <Repeat size={20} strokeWidth={STROKE} aria-hidden="true" />
-              {listYear !== null ? t('v2after.card.repeat', { year: listYear + 1 }) : t('v2after.repeat.titlePlain')}
+              {repeatYear !== null ? t('v2after.card.repeat', { year: repeatYear }) : t('v2after.repeat.titlePlain')}
             </button>
           )}
           <button

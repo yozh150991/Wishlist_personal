@@ -1,13 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Archive, ArchiveRestore, Check, CopyPlus, Gift, Repeat } from 'lucide-react';
 import { copyItems, createListWithItems, fetchListsOverview, repeatList } from '../../../lib/db';
-import { copyInput, eventYear, nextYear, repeatTitle } from '../../../lib/afterEvent';
+import { copyInput, eventYear, repeatTarget, repeatTitle } from '../../../lib/afterEvent';
 import { useI18n } from '../../../lib/i18n';
 import { errorText } from '../../../lib/errors';
-import { formatDay, moneyShort } from '../../../lib/format';
+import { formatDay, localToday, moneyShort } from '../../../lib/format';
 import type { Item, List, Section } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
-import { SheetV2, SwitchV2 } from './CommonV2';
+import { SheetV2, SwitchV2, YearlySwitchV2 } from './CommonV2';
 
 const STROKE = 2.75;
 /** Межа з БД (`lists.title`) — і тут, до відправки. */
@@ -46,7 +46,7 @@ export function AfterEventCardV2({
 }) {
   const { t, locale } = useI18n();
   const headingId = useId();
-  const year = (eventYear(list) ?? new Date().getFullYear()) + 1;
+  const year = repeatTarget(list, localToday()).year ?? new Date().getFullYear() + 1;
   const mark = (step: AfterStep) =>
     done.has(step) ? (
       <span className="v2-after__done">
@@ -484,17 +484,22 @@ export function RepeatSheetV2({
   const [name, setName] = useState('');
   const [date, setDate] = useState('');
   const [carry, setCarry] = useState(true);
+  const [yearly, setYearly] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [server, setServer] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const from = eventYear(list);
+  // Найближча річниця: наступного дня після свята — через рік, а давній
+  // список — цьогорічна дата, а не минула (ADR-047).
+  const target = repeatTarget(list, localToday());
 
   useEffect(() => {
     if (!open) return;
-    setName(repeatTitle(list.title, from));
-    setDate(list.event_date ? nextYear(list.event_date) : '');
+    setName(repeatTitle(list.title, from, target.year));
+    setDate(target.date ?? '');
     setCarry(items.length > 0);
+    setYearly(Boolean(list.repeats_yearly));
     setSubmitted(false);
     setBusy(false);
     setServer(null);
@@ -510,7 +515,7 @@ export function RepeatSheetV2({
     try {
       const created = await repeatList(
         { list, sections, items: carry ? items : [] },
-        { title: name.trim(), event_date: date || null },
+        { title: name.trim(), event_date: date || null, repeats_yearly: Boolean(date) && yearly },
         userId,
       );
       onCreated(created);
@@ -520,7 +525,7 @@ export function RepeatSheetV2({
     }
   }
 
-  const title = from !== null ? t('v2after.card.repeat', { year: from + 1 }) : t('v2after.repeat.titlePlain');
+  const title = target.year !== null ? t('v2after.card.repeat', { year: target.year }) : t('v2after.repeat.titlePlain');
 
   return (
     <SheetV2 open={open} onClose={onClose} labelledBy={titleId} className="v2-sheet--full" closeOnBackdrop={false}>
@@ -562,6 +567,7 @@ export function RepeatSheetV2({
           ) : (
             <p className="v2-hint v2-hint--start">{t('v2after.repeat.noItems')}</p>
           )}
+          <YearlySwitchV2 date={date} checked={yearly} onChange={setYearly} />
           <p className="v2-hint v2-hint--start">{t('v2after.repeat.links')}</p>
           <SubmitV2 busy={busy} label={t('v2after.repeat.submit')} busyLabel={t('v2after.repeat.submitting')} />
         </div>

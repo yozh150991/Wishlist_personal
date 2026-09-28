@@ -1639,3 +1639,8 @@ div.v2-chips { gap: var(--sp-3); }
 
 /* «Додати в Wishlist» (крок 4б): результат — заголовок і примітка одним повідомленням. */
 .v2-add__result { display: grid; justify-items: center; gap: var(--sp-4); }
+
+/* ── Щорічні свята (крок 4в, потік U3; ADR-047) ── */
+
+/* Нагадування на головній — та сама картка, що й «Як минуло свято?». */
+.v2-yearly__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }

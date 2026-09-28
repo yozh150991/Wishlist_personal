@@ -8,7 +8,7 @@ import { errorText } from '../../../lib/errors';
 import { localToday } from '../../../lib/format';
 import type { Currency } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
-import { SheetV2 } from './CommonV2';
+import { SheetV2, YearlySwitchV2 } from './CommonV2';
 
 /** Межа з БД (`lists.title`, README «Обмеження полів») — і тут, до відправки. */
 const TITLE_MAX = 120;
@@ -16,14 +16,18 @@ const DRAFT_KEY = 'wl.v2.listDraft';
 /** Валюта, якщо в профілі її не задано, — та сама, що в v1. */
 const FALLBACK_CURRENCY: Currency = 'PLN';
 
-type Draft = { title: string; date: string };
+type Draft = { title: string; date: string; yearly: boolean };
 
 function readDraft(): Draft | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return null;
     const d = JSON.parse(raw) as Partial<Draft>;
-    return { title: typeof d.title === 'string' ? d.title : '', date: typeof d.date === 'string' ? d.date : '' };
+    return {
+      title: typeof d.title === 'string' ? d.title : '',
+      date: typeof d.date === 'string' ? d.date : '',
+      yearly: d.yearly === true,
+    };
   } catch {
     return null;
   }
@@ -58,8 +62,8 @@ function dropDraft() {
  *   якщо щось уже вписано — питаємо «Лишити чернетку?», порожню форму
  *   закриваємо мовчки.
  *
- * Тип події й «Повторювати щороку» потребують нових полів у базі — це
- * наступні частини кроку 4 (ROADMAP).
+ * «Повторювати щороку» (U3, ADR-047): шаблони «День народження» й «Новий
+ * рік» вмикають його самі; нагадування — за місяць до річниці.
  */
 export default function NewListV2() {
   const { t } = useI18n();
@@ -67,12 +71,14 @@ export default function NewListV2() {
   const navigate = useNavigate();
   const location = useLocation();
   const userId = session?.user.id ?? '';
-  const template = (location.state as { title?: string } | null)?.title;
+  const template = location.state as { title?: string; yearly?: boolean } | null;
 
   const [draft, setDraft] = useState<Draft>(() => {
     const saved = readDraft();
     // Шаблон свята важить більше за стару чернетку: людина щойно його обрала.
-    return template ? { title: template, date: saved?.date ?? '' } : (saved ?? { title: '', date: '' });
+    return template?.title
+      ? { title: template.title, date: saved?.date ?? '', yearly: Boolean(template.yearly) }
+      : (saved ?? { title: '', date: '', yearly: false });
   });
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -122,7 +128,13 @@ export default function NewListV2() {
     try {
       // Минула дата — одразу в архів (ADR-045): так кнопка й обіцяла.
       const created = await createList(
-        { title, event_date: draft.date || null, currency, ...(past ? { is_archived: true } : {}) },
+        {
+          title,
+          event_date: draft.date || null,
+          currency,
+          repeats_yearly: Boolean(draft.date) && draft.yearly,
+          ...(past ? { is_archived: true } : {}),
+        },
         userId,
       );
       dropDraft();
@@ -173,6 +185,11 @@ export default function NewListV2() {
           value={draft.date}
           warning={past ? t('v2app.newList.pastDate') : null}
           onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))}
+        />
+        <YearlySwitchV2
+          date={draft.date}
+          checked={draft.yearly}
+          onChange={(yearly) => setDraft((d) => ({ ...d, yearly }))}
         />
 
         <SubmitV2

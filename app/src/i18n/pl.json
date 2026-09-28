@@ -1101,6 +1101,15 @@
       "done": "Powtórzono z listy „{title}”."
     }
   },
+  "v2yearly": {
+    "label": "Powtarzaj co roku",
+    "hint": "Przypomnimy miesiąc przed {date} — nowych list sami nie tworzymy.",
+    "needsDate": "Potrzebna data wydarzenia — inaczej nie ma o czym przypominać.",
+    "kicker": "Coroczne święto",
+    "title": "Powtórzyć „{title}” na {year}?",
+    "body": "Przeniesiemy niepodarowane, ustawienia i sekcje. Oznaczeń gości i linków — nigdy.",
+    "notNow": "Nie tym razem"
+  },
   "v2add": {
     "title": "Dodaj do Wishlist",
     "list": "Do listy",

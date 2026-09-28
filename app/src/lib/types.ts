@@ -32,6 +32,8 @@ export type List = {
   /** Оформлення списку (ADR-034); null — без оформлення. Старий офлайн-знімок його не має. */
   appearance_id?: string | null;
   is_archived: boolean;
+  /** Щорічне свято (ADR-047): за місяць до дати v2 пропонує повторити список. Старий знімок поля не має. */
+  repeats_yearly?: boolean;
   created_at: string;
   updated_at: string;
   /**
