@@ -160,7 +160,9 @@
       "priority": "Priority",
       "status": "Status",
       "imageUrl": "Image link",
-      "note": "Note"
+      "note": "Note",
+      "section": "Section",
+      "sectionNone": "No section (Other)"
     },
     "variants": {
       "legend": "Product details",
@@ -481,7 +483,14 @@
     "redeemTooMany": "Too many attempts for this list. Try again in an hour — until then even the right code won't work.",
     "redeemDone": "Picks restored: {n}. They're on this device now too.",
     "noCodeTitle": "No code?",
-    "noCodeBody": "Then your picks stay anonymous: only the list's author can release them — without seeing what they release. Just pick again and save the link this time."
+    "noCodeBody": "Then your picks stay anonymous: only the list's author can release them — without seeing what they release. Just pick again and save the link this time.",
+    "sectionFree": "{n} of {m} available",
+    "priceUpTo": "up to {price}",
+    "freeSum": "worth {sum}",
+    "filterPrice": "Price",
+    "filterEmpty": "Nothing matches these filters.",
+    "filterReset": "Clear filters",
+    "filterPriority": "High priority only"
   },
   "pwa": {
     "updateReady": "A new version of Wishlist is available.",
@@ -543,5 +552,41 @@
     "previewBanner": "This is how guests see the list. No reservations here — you never see them, so the gift stays a surprise.",
     "previewBack": "Back to the list",
     "previewEmpty": "No current items yet — there's nothing to share with guests."
+  },
+  "sections": {
+    "view": "List view",
+    "bySections": "Sections",
+    "byPriority": "By priority",
+    "byPrice": "By price",
+    "new": "New section",
+    "other": "Other",
+    "count": "items: {n}",
+    "noFreeTitle": "There's no “available” filter here",
+    "noFreeBody": "You can't see guests' picks, so there's nothing to filter by. Instead there's “Reset item” in the item dialog if you need to start over.",
+    "dismiss": "Got it",
+    "name": "Section name",
+    "nameRequired": "Give the section a name so guests can find their part of the list.",
+    "create": "Create section",
+    "creating": "Creating…",
+    "renameTitle": "Rename section",
+    "rename": "Rename section “{title}”",
+    "delete": "Delete section “{title}”",
+    "confirmDeleteTitle": "Delete section “{title}”?",
+    "confirmDeleteBody": "Its items won't disappear — they move to “Other”. The section itself and its place in the order can't be restored.",
+    "confirmDelete": "Delete section",
+    "deleting": "Deleting…",
+    "dragItem": "Drag “{title}”",
+    "dragSection": "Drag section “{title}”",
+    "dnd": {
+      "instructions": "To move, press Space or Enter, choose a place with the up and down arrows, press Space or Enter again to drop, or Escape to cancel.",
+      "picked": "Picked up “{title}”.",
+      "over": "“{title}” at position {n}.",
+      "dropped": "“{title}” dropped at position {n}.",
+      "cancelled": "Move cancelled."
+    },
+    "filteredNoDrag": "The order can only change without filters: some items are hidden right now.",
+    "orderHint": "Guests see exactly this order. Drag by the handle to change it.",
+    "viewOnlyHint": "This is only your view — guests see the order from “Sections”.",
+    "saveError": "The order wasn't saved. Try again when you're back online."
   }
 }

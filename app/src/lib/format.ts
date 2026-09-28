@@ -63,3 +63,30 @@ export function hostOf(url: string | null): string | null {
     return null;
   }
 }
+
+/**
+ * Поріг ціни «до …» для гостя — з даних, а не фіксований (ADR-036): на
+ * списку з цінами 2–20 тис. «до 500» марне. Терцилі цін, округлені вгору до
+ * «круглого» числа, щоб на кнопці стояло «до 500», а не «до 487,35».
+ */
+export function priceThresholds(prices: number[]): number[] {
+  const sorted = prices.filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+  if (sorted.length < 6) return [];
+  const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))]!;
+  const out: number[] = [];
+  for (const q of [1 / 3, 2 / 3]) {
+    const v = niceCeil(at(q));
+    // Поріг, під який не підпадає нічого або підпадає все, — не поріг.
+    if (v >= sorted[sorted.length - 1]!) continue;
+    if (!out.includes(v)) out.push(v);
+  }
+  return out;
+}
+
+function niceCeil(x: number): number {
+  const p = 10 ** Math.floor(Math.log10(x));
+  for (const f of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 8, 10]) {
+    if (f * p >= x) return Math.round(f * p * 100) / 100;
+  }
+  return 10 * p;
+}

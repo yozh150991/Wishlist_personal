@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { cursorFrom, fetchItemsPage, fetchTotals } from './db';
+import { cursorFrom, fetchAllItems, fetchItemsPage, fetchTotals } from './db';
 import type { Cursor } from './db';
 import type { Item, ItemQuery, Totals } from './types';
 import { useI18n } from './i18n';
 import { errorText, isNetworkError } from './errors';
 import { applyToItems } from './outboxOps';
 import type { Op } from './outboxOps';
-import { itemsKey, readSnapshot, saveSnapshot } from './cache';
+import { allItemsKey, itemsKey, readSnapshot, saveSnapshot } from './cache';
 import type { ItemsSnapshot } from './cache';
 
 /**
@@ -24,7 +24,20 @@ function isPlainQuery(q: ItemQuery): boolean {
   return q.search.trim() === '' && q.statuses.length === 0 && q.priceMin === '' && q.priceMax === '';
 }
 
-export function useItems(listId: string, query: ItemQuery, userId: string | undefined) {
+/**
+ * `mode = 'all'` — увесь список одним запитом, для режиму «Розділи»
+ * (ADR-036): групування й ручний порядок потребують усіх позицій, а фільтри
+ * тоді застосовуються на клієнті (`matchesQuery`). Список у такому режимі від
+ * запиту не залежить і не перечитується на кожну літеру пошуку.
+ */
+export function useItems(
+  listId: string,
+  query: ItemQuery,
+  userId: string | undefined,
+  mode: 'page' | 'all' = 'page',
+  /** Поки сторінка не знає, у якому режимі показувати, — не вантажити нічого. */
+  skip = false,
+) {
   const { t } = useI18n();
   // Через ref: зміна мови не має перезавантажувати позиції.
   const tRef = useRef(t);
@@ -41,6 +54,45 @@ export function useItems(listId: string, query: ItemQuery, userId: string | unde
   // Номер запиту: відповідь від застарілого запиту ігнорується.
   const runId = useRef(0);
   const cursor = useRef<Cursor>(null);
+
+  const loadAll = useCallback(async () => {
+    const id = ++runId.current;
+    setLoading(true);
+    setError(null);
+    setStaleAt(null);
+    cursor.current = null;
+    try {
+      const [all, allTotals] = await Promise.all([fetchAllItems(listId), fetchTotals(listId)]);
+      if (id !== runId.current) return;
+      setItems(all);
+      setTotals(allTotals);
+      setDone(true);
+      if (userId) {
+        void saveSnapshot<ItemsSnapshot>(allItemsKey(listId), userId, { items: all, totals: allTotals });
+      }
+    } catch (e) {
+      if (id !== runId.current) return;
+      // Офлайн — знімок усього списку, а якщо його ще не було, то хоча б
+      // перша партія: краще частина з позначкою копії, ніж порожній екран.
+      const snapshot =
+        isNetworkError(e) && userId
+          ? ((await readSnapshot<ItemsSnapshot>(allItemsKey(listId), userId)) ??
+            (await readSnapshot<ItemsSnapshot>(itemsKey(listId), userId)))
+          : null;
+      if (id !== runId.current) return;
+      if (snapshot) {
+        setItems(snapshot.data.items);
+        setTotals(snapshot.data.totals);
+        setStaleAt(snapshot.savedAt);
+        setDone(true);
+        setError(null);
+      } else {
+        setError(errorText(e, tRef.current));
+      }
+    } finally {
+      if (id === runId.current) setLoading(false);
+    }
+  }, [listId, userId]);
 
   const loadFirst = useCallback(async () => {
     const id = ++runId.current;
@@ -93,7 +145,7 @@ export function useItems(listId: string, query: ItemQuery, userId: string | unde
   }, [listId, query, userId]);
 
   const loadMore = useCallback(async () => {
-    if (loading || loadingMore || done || !cursor.current) return;
+    if (mode === 'all' || loading || loadingMore || done || !cursor.current) return;
     const id = runId.current;
     setLoadingMore(true);
     try {
@@ -108,11 +160,14 @@ export function useItems(listId: string, query: ItemQuery, userId: string | unde
     } finally {
       if (id === runId.current) setLoadingMore(false);
     }
-  }, [listId, query, loading, loadingMore, done]);
+  }, [listId, query, loading, loadingMore, done, mode]);
+
+  const reload = mode === 'all' ? loadAll : loadFirst;
 
   useEffect(() => {
-    void loadFirst();
-  }, [loadFirst]);
+    if (skip) return;
+    void reload();
+  }, [reload, skip]);
 
   /**
    * Показати зміну, яка лягла в чергу (етап 6.5).
@@ -124,6 +179,11 @@ export function useItems(listId: string, query: ItemQuery, userId: string | unde
     setItems((prev) => applyToItems(prev, op));
   }, []);
 
+  /** Локальна правка без запиту — для оптимістичного перетягування (ADR-036). */
+  const patchLocal = useCallback((change: (items: Item[]) => Item[]) => {
+    setItems((prev) => change(prev));
+  }, []);
+
   return {
     items,
     totals,
@@ -132,9 +192,10 @@ export function useItems(listId: string, query: ItemQuery, userId: string | unde
     done,
     error,
     staleAt,
-    reload: loadFirst,
+    reload,
     loadMore,
     applyLocal,
+    patchLocal,
   };
 }
 

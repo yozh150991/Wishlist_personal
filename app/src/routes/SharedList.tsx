@@ -21,6 +21,7 @@ import {
   storedKey,
 } from '../lib/guest';
 import { useI18n } from '../lib/i18n';
+import { money, num, priceThresholds } from '../lib/format';
 import { useSurface } from '../lib/theme';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { AppearanceSheet } from '../components/AppearanceSheet';
@@ -98,7 +99,7 @@ const mine = (i: SharedItem) => i.mine_qty ?? 0;
 export default function SharedList() {
   const { token = '', key: urlKey } = useParams();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const [data, setData] = useState<Shared | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,6 +111,9 @@ export default function SharedList() {
   /** Позиції, на яких гість програв гонку: пояснення стоїть на місці картки. */
   const [lost, setLost] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<Filter>('free');
+  /** Поріг «до …» із терцилів цін або null (ADR-036). */
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
+  const [highOnly, setHighOnly] = useState(false);
   const [appearance, setAppearance] = useState(false);
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -261,7 +265,7 @@ export default function SharedList() {
 
   function showFree() {
     setLost(new Set());
-    setFilter('free');
+    resetFilters();
     listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -291,10 +295,61 @@ export default function SharedList() {
     await copyLink();
   }
 
-  const shown = useMemo(() => {
-    if (!canClaim || filter === 'all') return items;
-    return items.filter((i) => left(i) > 0 || mine(i) > 0 || lost.has(i.id));
-  }, [items, canClaim, filter, lost]);
+  const thresholds = useMemo(
+    () => priceThresholds(items.map((i) => num(i.price)).filter((p): p is number => p !== null)),
+    [items],
+  );
+  const hasHigh = items.some((i) => i.priority === 'high');
+
+  /**
+   * Гість типово бачить вільні (і свої, і ту, на якій щойно програв гонку).
+   * Поруч — «Усі», поріг ціни з даних і «Високий». Порядок — той, що задав
+   * власник: сервер уже віддає позиції в ньому.
+   */
+  const shown = useMemo(
+    () =>
+      items.filter((i) => {
+        if (canClaim && filter === 'free' && !(left(i) > 0 || mine(i) > 0 || lost.has(i.id))) return false;
+        if (maxPrice !== null) {
+          const p = num(i.price);
+          if (p === null || p > maxPrice) return false;
+        }
+        if (highOnly && i.priority !== 'high') return false;
+        return true;
+      }),
+    [items, canClaim, filter, lost, maxPrice, highOnly],
+  );
+
+  /** Розділи з позиціями, що лишились після фільтрів; «Інше» — в кінці. */
+  const shownGroups = useMemo(() => {
+    const sections = data?.sections ?? [];
+    if (sections.length === 0) return [{ id: null as string | null, title: null as string | null, items: shown }];
+    const known = new Set(sections.map((s) => s.id));
+    const groups = sections.map((s) => ({
+      id: s.id as string | null,
+      title: s.title as string | null,
+      items: shown.filter((i) => i.section_id === s.id),
+    }));
+    groups.push({ id: null, title: t('sections.other'), items: shown.filter((i) => !i.section_id || !known.has(i.section_id)) });
+    return groups.filter((g) => g.items.length > 0);
+  }, [shown, data, t]);
+
+  const freeSum = useMemo(() => {
+    if (!data || data.hide_prices) return null;
+    let cents = 0;
+    for (const i of freeItems) {
+      const p = num(i.price);
+      if (p !== null) cents += Math.round(p * 100) * left(i);
+    }
+    return cents > 0 ? money(cents / 100, data.currency, locale) : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, items, locale]);
+
+  function resetFilters() {
+    setFilter('free');
+    setMaxPrice(null);
+    setHighOnly(false);
+  }
 
   if (loading || urlKey) {
     return (
@@ -547,38 +602,100 @@ export default function SharedList() {
           </>
         ) : (
           <>
-            {canClaim && (
+            {(canClaim || thresholds.length > 0 || hasHigh) && (
               <div className="guest-filters" ref={listTop}>
-                <div className="gchips" role="radiogroup" aria-label={t('guest.filterLabel')}>
-                  <button
-                    type="button"
-                    role="radio"
-                    className="gchip"
-                    aria-checked={filter === 'free'}
-                    onClick={() => setFilter('free')}
-                  >
-                    {t('guest.filterFree', { n: freeItems.length })}
-                  </button>
-                  <button
-                    type="button"
-                    role="radio"
-                    className="gchip"
-                    aria-checked={filter === 'all'}
-                    onClick={() => setFilter('all')}
-                  >
-                    {t('guest.filterAll', { n: items.length })}
-                  </button>
+                <div className="gchips">
+                  {canClaim && (
+                    <span className="gchips__group" role="radiogroup" aria-label={t('guest.filterLabel')}>
+                      <button
+                        type="button"
+                        role="radio"
+                        className="gchip"
+                        aria-checked={filter === 'free'}
+                        onClick={() => setFilter('free')}
+                      >
+                        {t('guest.filterFree', { n: freeItems.length })}
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        className="gchip"
+                        aria-checked={filter === 'all'}
+                        onClick={() => setFilter('all')}
+                      >
+                        {t('guest.filterAll', { n: items.length })}
+                      </button>
+                    </span>
+                  )}
+                  {thresholds.length > 0 && (
+                    <span className="gchips__group" role="group" aria-label={t('guest.filterPrice')}>
+                      {thresholds.map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          className="gchip"
+                          aria-pressed={maxPrice === v}
+                          onClick={() => setMaxPrice(maxPrice === v ? null : v)}
+                        >
+                          {t('guest.priceUpTo', { price: money(v, data.currency, locale) ?? String(v) })}
+                        </button>
+                      ))}
+                    </span>
+                  )}
+                  {hasHigh && (
+                    <button
+                      type="button"
+                      className="gchip"
+                      aria-pressed={highOnly}
+                      aria-label={t('guest.filterPriority')}
+                      onClick={() => setHighOnly(!highOnly)}
+                    >
+                      {t('item.priority.high')}
+                    </button>
+                  )}
                 </div>
-                <span className="small muted" aria-live="polite">
-                  {t('guest.freeCounter', { n: freeItems.length, m: items.length })}
-                </span>
+                {canClaim && (
+                  <span className="small muted" aria-live="polite">
+                    {t('guest.freeCounter', { n: freeItems.length, m: items.length })}
+                    {freeSum && ` · ${t('guest.freeSum', { sum: freeSum })}`}
+                  </span>
+                )}
               </div>
             )}
 
             {shown.length > 0 ? (
-              <ul className="guest__grid">{shown.map(card)}</ul>
+              shownGroups.map((g) => (
+                <section key={g.id ?? '__other'} className="guest-section" aria-label={g.title ?? undefined}>
+                  {g.title && (
+                    <p className="guest-section__head">
+                      <span className="guest-section__title">{g.title}</span>
+                      {canClaim && (
+                        <span className="small muted">
+                          {t('guest.sectionFree', {
+                            n: items.filter((i) => (g.id ? i.section_id === g.id : !data.sections.some((s) => s.id === i.section_id)) && left(i) > 0).length,
+                            m: items.filter((i) => (g.id ? i.section_id === g.id : !data.sections.some((s) => s.id === i.section_id))).length,
+                          })}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  <ul className="guest__grid">{g.items.map(card)}</ul>
+                </section>
+              ))
             ) : (
-              <p className="lede center">{t('guest.freeEmpty')}</p>
+              <div className="guest-empty">
+                <p className="lede center">
+                  {maxPrice !== null || highOnly ? t('guest.filterEmpty') : t('guest.freeEmpty')}
+                </p>
+                {(maxPrice !== null || highOnly || filter === 'free') && (
+                  <button type="button" className="btn btn--secondary" onClick={() => {
+                    resetFilters();
+                    if (maxPrice === null && !highOnly) setFilter('all');
+                  }}>
+                    {t('guest.filterReset')}
+                  </button>
+                )}
+              </div>
             )}
           </>
         )}

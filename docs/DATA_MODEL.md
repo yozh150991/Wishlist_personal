@@ -14,6 +14,7 @@
 | `20260921140000_profile_scheme.sql` | `profiles.scheme` — кольорова схема інтерфейсу власника (ADR-031) |
 | `20260928090000_schemes_and_contrast.sql` | ще три схеми смаку, `profiles.high_contrast`; Вугіль — лише з тумблера; `get_shared_list` віддає схему власника (ADR-033) |
 | `20260928100000_list_appearances.sql` | `appearances` і `lists.appearance_id` — оформлення списку; `get_shared_list` віддає відтінок і дату події (ADR-034) |
+| `20260928120000_sections_and_order.sql` | `sections`, `items.section_id` і `items.position`; `reorder_items` / `reorder_sections`; гість отримує розділи й ручний порядок (ADR-036) |
 | `20260928110000_guest_keys_and_claims.sql` | `reservations` → `claims` на рівні списку; ідентичність і ключі гостя, короткий код, ліміт спроб; однакова відповідь на мертве посилання; сліпе скидання (ADR-035) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
@@ -30,8 +31,11 @@ auth.users
     │            │ appearance_id (on delete set null)
     └──1:N── lists             (title, description, currency, event_date, appearance_id, is_archived)
                  │
+                 ├──1:N── sections    (title, position) ← section_id у items, on delete set null
+                 │
                  ├──1:N── items       (title, url?, price?, quantity,
-                 │           │         priority, note, variants, image_url, status)
+                 │           │         priority, note, variants, image_url, status,
+                 │           │         section_id?, position?)
                  │           │
                  │           ├──N:M── share_items ──N:1── shares
                  │           │
@@ -95,6 +99,13 @@ RLS: власник бачить свої й вбудовані, змінює й
 
 Форму перевіряє `check`-обмеження `items_variants_shape` на вбудованих операторах jsonpath, **без власної SQL-функції**: кожна функція в `public` тягне за собою явні гранти і запис у білий список `01_schema_guards.test.sql` (CLAUDE.md §3.4). Перший рядок обмеження обовʼязково в режимі `strict` — у `lax` вираз `$[*]` розгортає вкладені масиви, і `[[{…}]]` пройшло б як обʼєкт. Матриця значень — `supabase/tests/database/04_item_variants.test.sql`.
 
+### `sections` і ручний порядок
+Розділ — одна мітка на позицію (ADR-036): «Кухня», «Спальня». `owner_id` денормалізовано з `lists` так само, як в `items` (тригер `sections_sync_owner`), RLS — лише власник, `anon` прав не має.
+
+`items.section_id` — розділ або `null` («Інше», у кінці). Тригер `items_check_section` не дає причепити розділ іншого списку. Видалення розділу ставить позиціям `null`.
+
+`sections.position` і `items.position` — ручний порядок, **який бачить гість**. Позиції без `position` (щойно додані) стоять у своєму розділі зверху, новіші першими. Сортування власника за ціною чи пріоритетом у базу не пишеться — це лише вигляд. Перестановка — `reorder_items(list, section, ids[])` і `reorder_sections(list, ids[])`, обидві `SECURITY INVOKER`: RLS відсіює чуже.
+
 ### `shares`
 `token` — 16 байтів із `gen_random_uuid()` у base64url, 22 символи і 122 біти випадковості (ADR-014: шість бітів UUIDv4 зайнято під версію і варіант). Перебір нереальний, тому окремого пароля не треба.
 
@@ -145,6 +156,8 @@ RLS: власник бачить свої й вбудовані, змінює й
 | `items_list_status_idx` | фільтр по статусу |
 | `items_title_trgm_idx` (GIN trgm) | пошук `ILIKE '%...%'` без seq scan |
 | `shares.token` (unique) | пошук за токеном |
+| `sections_list_idx (list_id, position)` | розділи списку в порядку власника |
+| `items_section_idx (section_id)` (частковий) | позиції розділу |
 | `guest_keys.key_hash` (PK) | ключ гостя → ідентичність |
 | `claims (item_id, identity_id)` (PK) | скільки взято позиції; позначка цього гостя |
 | `guest_identities (list_id, short_code)` (unique) | код у межах списку |

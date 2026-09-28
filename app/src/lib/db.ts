@@ -24,10 +24,17 @@ export async function fetchLists(): Promise<List[]> {
   }));
 }
 
+/**
+ * Список із кількістю позицій: від неї залежить, чи вмикати розділи ще до
+ * того, як приїдуть самі позиції (ADR-036) — інакше сторінка спершу
+ * вантажила б першу партію, а потім увесь список удруге.
+ */
 export async function fetchList(id: string): Promise<List | null> {
-  const { data, error } = await supabase.from('lists').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await supabase.from('lists').select('*, items(count)').eq('id', id).maybeSingle();
   if (error) throw error;
-  return (data as List | null) ?? null;
+  if (!data) return null;
+  const { items, ...list } = data as Omit<List, 'item_count'> & { items?: { count: number }[] | null };
+  return { ...list, item_count: items?.[0]?.count ?? 0 };
 }
 
 export type ListInput = Pick<List, 'title'> &

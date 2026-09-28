@@ -1853,3 +1853,85 @@ a.btn { text-decoration: none; }
   border-radius: var(--r-field);
   border: 1px dashed var(--color-divider);
 }
+
+/* ── Розділи й ручний порядок (ADR-036) ─────────────────────── */
+
+.view-row { display: grid; gap: var(--sp-3); justify-items: start; }
+.view-row > .small { margin: 0; }
+
+/* Плашка «Тут немає фільтра «вільні»»: інваріант, що проступає в
+   інтерфейсі, пояснюється, а не ховається. */
+.no-free {
+  display: grid;
+  gap: var(--sp-2);
+  justify-items: start;
+  padding: var(--sp-5) var(--sp-6);
+  border-radius: var(--r-card);
+  background: var(--color-accent-100);
+  color: var(--color-accent-900);
+}
+.no-free p { margin: 0; }
+
+.section-groups { display: grid; gap: var(--sp-6); }
+.section-group { display: grid; gap: var(--sp-3); }
+.section-group[data-dragging='true'] { position: relative; z-index: 2; opacity: 0.9; }
+.section-group__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  min-height: var(--tap);
+}
+.section-group__title {
+  font-family: var(--font-body);
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+  overflow-wrap: anywhere;
+}
+.section-group__actions { display: inline-flex; gap: var(--sp-1); margin-left: auto; }
+
+/* Ручка — ціль на всю висоту пальця; touch-action: none лише на ній, тож
+   список прокручується пальцем за будь-яке інше місце картки. */
+.drag-handle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--tap);
+  min-height: var(--tap);
+  align-self: stretch;
+  margin-left: calc(-1 * var(--sp-3));
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-neutral-700);
+  cursor: grab;
+  touch-action: none;
+}
+.drag-handle:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.drag-handle:active { cursor: grabbing; }
+.item[data-dragging='true'] { position: relative; z-index: 3; box-shadow: var(--shadow-lg); }
+
+/* Гостьова: розділи й фільтри на довгому списку (ADR-036). */
+.gchips__group { display: contents; }
+.guest-section { display: grid; gap: var(--sp-4); }
+.guest-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin: var(--sp-3) 0 0;
+}
+.guest-section__title {
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-900);
+  overflow-wrap: anywhere;
+}
+.guest-empty { display: grid; justify-items: center; gap: var(--sp-4); }

@@ -35,6 +35,14 @@ export const itemsKey = (listId: string) => `items:${listId}`;
 
 export type ItemsSnapshot = { items: Item[]; totals: Totals | null };
 
+/**
+ * Увесь список цілком — для режиму «Розділи» (ADR-036). Кешується окремо від
+ * першої партії: склад різний, і офлайн кожен режим має показати своє.
+ */
+export const allItemsKey = (listId: string) => `items-all:${listId}`;
+/** Розділи списку — щоб групування пережило відсутність мережі. */
+export const sectionsKey = (listId: string) => `sections:${listId}`;
+
 export async function saveSnapshot<T>(key: string, userId: string, data: T): Promise<void> {
   if (!userId) return;
   const db = await openDb();

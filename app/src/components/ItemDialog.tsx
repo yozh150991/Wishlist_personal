@@ -9,6 +9,7 @@ import { errorText } from '../lib/errors';
 import { PRIORITIES, STATUSES } from '../lib/types';
 import type { Item, ItemPriority, ItemStatus, ItemVariant } from '../lib/types';
 import type { ItemInput } from '../lib/db';
+import type { Section } from '../lib/sections';
 
 const EMPTY = {
   title: '',
@@ -26,17 +27,21 @@ export function ItemDialog({
   item,
   onClose,
   onSave,
+  sections = [],
 }: {
   open: boolean;
   item: Item | null;
   onClose: () => void;
   onSave: (input: ItemInput) => Promise<void>;
+  /** Розділи списку (ADR-036). Порожньо — поля «Розділ» немає. */
+  sections?: Section[];
 }) {
   const { t } = useI18n();
   const [form, setForm] = useState(EMPTY);
   // Пари живуть окремо від решти полів: у `form` усе — рядки, і масив у тому
   // самому об'єкті зламав би типізацію `set()`.
   const [variants, setVariants] = useState<ItemVariant[]>([]);
+  const [sectionId, setSectionId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [parsing, setParsing] = useState(false);
@@ -93,6 +98,7 @@ export function ItemDialog({
     // Копія, а не посилання: інакше редагування правило б масив у списку
     // ще до збереження.
     setVariants(item ? item.variants.map((v) => ({ ...v })) : []);
+    setSectionId(item?.section_id ?? '');
   }, [open, item]);
 
   function set<K extends keyof typeof EMPTY>(key: K, value: (typeof EMPTY)[K]) {
@@ -161,6 +167,11 @@ export function ItemDialog({
         variants: cleanVariants(variants),
         image_url: form.image_url.trim() || null,
         status: form.status,
+        // Розділ шлемо лише тоді, коли поле є: інакше редагування позиції в
+        // списку без розділів мовчки стирало б їй розділ.
+        ...(sections.length > 0 ? { section_id: sectionId || null } : {}),
+        // У новому розділі позиція стає зверху, поки власник її не пересуне.
+        ...(sections.length > 0 && (item?.section_id ?? '') !== sectionId ? { position: null } : {}),
       });
       onClose();
     } catch (e) {
@@ -300,6 +311,25 @@ export function ItemDialog({
             </select>
           </div>
         </div>
+
+        {sections.length > 0 && (
+          <div className="field">
+            <label htmlFor="section">{t('item.fields.section')}</label>
+            <select
+              className="input"
+              id="section"
+              value={sectionId}
+              onChange={(e) => setSectionId(e.target.value)}
+            >
+              <option value="">{t('item.fields.sectionNone')}</option>
+              {sections.map((sec) => (
+                <option key={sec.id} value={sec.id}>
+                  {sec.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <VariantsField variants={variants} onChange={setVariants} />
 

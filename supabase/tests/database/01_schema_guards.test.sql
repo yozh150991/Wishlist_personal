@@ -111,8 +111,10 @@ select set_eq(
   -- gen_share_token потрібна authenticated: її викликає create_share,
   -- яка працює з правами викликача (SECURITY INVOKER).
   -- release_item_claims — сліпе скидання власником: нічого не повертає.
+  -- reorder_items / reorder_sections — SECURITY INVOKER, RLS відсіює чуже.
   array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
-        'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims'],
+        'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
+        'reorder_items', 'reorder_sections'],
   'authenticated може викликати лише гостьові RPC і функції власника'
 );
 

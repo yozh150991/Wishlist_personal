@@ -87,6 +87,8 @@ export type SharedItem = {
   image_url: string | null;
   status: ItemStatus;
   created_at: string;
+  /** Розділ (ADR-036); null — «Інше». */
+  section_id: string | null;
   /** Скільки штук узяли всі гості разом; null, коли дивиться власник (ADR-009). */
   taken_qty: number | null;
   /** Скільки взяв саме цей гість (за ключем); null для власника. */
@@ -108,6 +110,9 @@ export type SharedList = {
   viewer_is_owner: boolean;
   /** Ключ гостя впізнано — ось його короткий код. null — ключа немає або він чужий. */
   guest: { code: string } | null;
+  /** Розділи зі спільними позиціями, у порядку власника (ADR-036). */
+  sections: { id: string; title: string }[];
+  /** У ручному порядку власника: розділи, усередині — його порядок, «Інше» в кінці. */
   items: SharedItem[];
 };
 
@@ -140,6 +145,8 @@ export async function fetchSharedList(token: string, key: string | null): Promis
     appearance_hue: typeof list.appearance_hue === 'number' ? list.appearance_hue : null,
     event_date: list.event_date ?? null,
     guest: list.guest ?? null,
+    sections: Array.isArray(list.sections) ? list.sections : [],
+    items: list.items.map((i) => ({ ...i, section_id: i.section_id ?? null })),
   };
 }
 

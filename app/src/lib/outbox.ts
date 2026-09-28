@@ -24,7 +24,7 @@
 import { OUTBOX, openDb, req, txDone } from './idb';
 import { createItem, deleteItems, setItemsStatus, updateItem } from './db';
 import { isNetworkError } from './errors';
-import { itemsKey, patchSnapshot } from './cache';
+import { allItemsKey, itemsKey, patchSnapshot } from './cache';
 import type { ItemsSnapshot } from './cache';
 import { applyToItems } from './outboxOps';
 export type { Op } from './outboxOps';
@@ -59,10 +59,13 @@ export async function enqueue(userId: string, op: Op): Promise<void> {
     tx.objectStore(OUTBOX).add({ userId, queuedAt: new Date().toISOString(), op });
     await txDone(tx);
     // Знімок підправляємо, щоб зміна пережила перезавантаження сторінки.
-    await patchSnapshot<ItemsSnapshot>(itemsKey(op.listId), userId, (snap) => ({
-      ...snap,
-      items: applyToItems(snap.items, op),
-    }));
+    // Обидва знімки: першу партію (плаский вигляд) і весь список (розділи).
+    for (const key of [itemsKey(op.listId), allItemsKey(op.listId)]) {
+      await patchSnapshot<ItemsSnapshot>(key, userId, (snap) => ({
+        ...snap,
+        items: applyToItems(snap.items, op),
+      }));
+    }
   } catch {
     // Сховище недоступне: зміна втрачена, і викликач уже показав помилку.
   } finally {

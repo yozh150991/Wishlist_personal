@@ -160,7 +160,9 @@
       "priority": "Priorytet",
       "status": "Status",
       "imageUrl": "Link do zdjęcia",
-      "note": "Notatka"
+      "note": "Notatka",
+      "section": "Dział",
+      "sectionNone": "Bez działu (Inne)"
     },
     "variants": {
       "legend": "Cechy produktu",
@@ -481,7 +483,14 @@
     "redeemTooMany": "Za dużo prób dla tej listy. Spróbuj za godzinę — do tego czasu nie przyjmiemy nawet poprawnego kodu.",
     "redeemDone": "Przywrócono rezerwacje: {n}. Teraz są też na tym urządzeniu.",
     "noCodeTitle": "Nie masz kodu?",
-    "noCodeBody": "Wtedy twoje rezerwacje zostaną anonimowe: zwolnić je może tylko autor listy — nie widząc, co zwalnia. Po prostu zarezerwuj ponownie i tym razem zapisz link."
+    "noCodeBody": "Wtedy twoje rezerwacje zostaną anonimowe: zwolnić je może tylko autor listy — nie widząc, co zwalnia. Po prostu zarezerwuj ponownie i tym razem zapisz link.",
+    "sectionFree": "wolnych {n} z {m}",
+    "priceUpTo": "do {price}",
+    "freeSum": "za {sum}",
+    "filterPrice": "Cena",
+    "filterEmpty": "Nic nie pasuje do tych filtrów.",
+    "filterReset": "Wyczyść filtry",
+    "filterPriority": "Tylko z wysokim priorytetem"
   },
   "pwa": {
     "updateReady": "Jest nowa wersja Wishlist.",
@@ -543,5 +552,41 @@
     "previewBanner": "Tak tę listę widzą goście. Rezerwacji tu nie ma — nie widzisz ich nigdzie, żeby prezent został niespodzianką.",
     "previewBack": "Do listy",
     "previewEmpty": "Nie ma jeszcze aktualnych pozycji — nie będzie czym się dzielić."
+  },
+  "sections": {
+    "view": "Widok listy",
+    "bySections": "Działy",
+    "byPriority": "Według priorytetu",
+    "byPrice": "Według ceny",
+    "new": "Nowy dział",
+    "other": "Inne",
+    "count": "pozycji: {n}",
+    "noFreeTitle": "Tu nie ma filtra „wolne”",
+    "noFreeBody": "Nie widzisz rezerwacji gości — więc nie ma po czym filtrować. Zamiast tego jest „Zresetuj pozycję” w oknie pozycji, jeśli trzeba zacząć od nowa.",
+    "dismiss": "Rozumiem",
+    "name": "Nazwa działu",
+    "nameRequired": "Nadaj działowi nazwę — po niej goście znajdą swoją część listy.",
+    "create": "Utwórz dział",
+    "creating": "Tworzę…",
+    "renameTitle": "Zmień nazwę działu",
+    "rename": "Zmień nazwę działu „{title}”",
+    "delete": "Usuń dział „{title}”",
+    "confirmDeleteTitle": "Usunąć dział „{title}”?",
+    "confirmDeleteBody": "Pozycje z niego nie znikną — trafią do „Inne”. Samego działu i jego miejsca w kolejności nie da się przywrócić.",
+    "confirmDelete": "Usuń dział",
+    "deleting": "Usuwam…",
+    "dragItem": "Przeciągnij „{title}”",
+    "dragSection": "Przeciągnij dział „{title}”",
+    "dnd": {
+      "instructions": "Aby przenieść, naciśnij spację lub Enter, strzałkami w górę i w dół wybierz miejsce, ponownie spacja lub Enter — upuść, Escape — anuluj.",
+      "picked": "Podniesiono „{title}”.",
+      "over": "„{title}” na miejscu {n}.",
+      "dropped": "„{title}” upuszczono na miejscu {n}.",
+      "cancelled": "Przenoszenie anulowane."
+    },
+    "filteredNoDrag": "Kolejność zmienia się bez filtrów: teraz część pozycji jest ukryta.",
+    "orderHint": "Goście widzą właśnie tę kolejność. Przeciągnij za uchwyt, aby zmienić.",
+    "viewOnlyHint": "To tylko widok na twoim ekranie — goście widzą kolejność z „Działów”.",
+    "saveError": "Kolejność nie została zapisana. Spróbuj ponownie, gdy będzie połączenie."
   }
 }

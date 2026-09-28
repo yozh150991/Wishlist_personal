@@ -36,11 +36,13 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token, p_key: 
   "allow_reservations": true,
   "viewer_is_owner": false,
   "guest": { "code": "7K4M2" },   // ключ упізнано; null — ключа немає або він чужий
+  "sections": [{ "id": "…", "title": "Кухня" }],   // лише розділи зі спільними позиціями, у порядку власника (ADR-036)
   "items": [{
     "id": "…", "title": "Навушники", "url": "https://…",
     "price": "399.00", "quantity": 1, "priority": "high",
     "note": null, "image_url": "https://…", "status": "active",
     "variants": [{ "label": "Розмір", "value": "M" }],   // до 5 пар, ADR-030
+    "section_id": "…",       // розділ або null — «Інше»
     "taken_qty": 1,          // скільки взяли всі разом; null, якщо дивиться власник
     "mine_qty": 0            // скільки взяв цей гість; null для власника
   }]
@@ -55,6 +57,8 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token, p_key: 
 `appearance_hue` — відтінок оформлення списку (ADR-034); назва оформлення приватна й не віддається. Рампу з відтінку рахує клієнт. `event_date` — дата події списку для шапки гостьової: гість і так запрошений саме на цю подію.
 
 `owner_scheme` — схема смаку власника: гість бачить список у ній (ADR-033). Висока контрастність власника гостю не віддається — це налаштування глядача, а не списку; свою гість вмикає сам. Схема читається щоразу, а не запікається в токен: власник змінив її — наступне відкриття посилання покаже нову.
+
+Позиції йдуть у **ручному порядку власника** (ADR-036): розділи за порядком, «Інше» в кінці, усередині — `position`, неупорядковані зверху, новіші першими.
 
 Ні хто, ні коли позначив — у відповіді немає: лише скільки. Виклик із ключем оновлює `last_seen` його ідентичності.
 
@@ -89,6 +93,13 @@ await supabase.rpc('release_item_claims', { p_item_id: itemId });   // 204, бе
 ```
 Сліпе «скинути позицію» власником: знімає позначки гостей, якщо вони є, і не повертає нічого — ні скільки, ні чи були. Чужа позиція — `not_found`. У інтерфейсі кнопка стоїть на кожній позиції завжди однаково: інакше сама її поява була б індикатором.
 
+### `reorder_items` / `reorder_sections` — authenticated
+```ts
+await supabase.rpc('reorder_items', { p_list_id: listId, p_section_id: sectionId /* або null */, p_item_ids: ids });
+await supabase.rpc('reorder_sections', { p_list_id: listId, p_section_ids: ids });
+```
+Ставлять розділ і `position` = номер у масиві для кожної переданої позиції (розділу). `SECURITY INVOKER`: чужі рядки RLS відсіює мовчки, і виклик просто нічого не змінює.
+
 ### `list_items_page` — authenticated
 ```ts
 const { data } = await supabase.rpc('list_items_page', {
@@ -119,7 +130,7 @@ const { data } = await supabase.rpc('list_totals', { p_list_id: listId });
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code` | `anon`, `authenticated` |
-| `release_item_claims` | `authenticated` |
+| `release_item_claims`, `reorder_items`, `reorder_sections` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
 Права задано міграціями `20260910120300_grants.sql` і `20260916220000_revoke_default_function_grants.sql`. Перша відкликала лише `PUBLIC`, і функції власника лишались доступними `anon` через явні гранти Supabase за замовчуванням; друга це закрила. Кожна нова RPC-функція отримує гранти явно й відкликає їх у конкретних ролей (CLAUDE.md §3.4). Таблицю вище перевіряє `supabase/tests/database/01_schema_guards.test.sql`.
@@ -147,6 +158,14 @@ await supabase.from('appearances').insert({ owner_id, name, hue, source: 'manual
 await supabase.from('lists').update({ appearance_id }).eq('id', listId);   // null — без оформлення
 ```
 Вбудовані події видно кожному власникові, змінити чи видалити їх не можна. Посилання на чуже оформлення база відхиляє з `42501`.
+
+Розділи (ADR-036), `lib/sections.ts`:
+```ts
+await supabase.from('sections').select('id, list_id, title, position, created_at').eq('list_id', listId);
+await supabase.from('sections').insert({ list_id, title, position });   // owner_id ставить тригер
+await supabase.from('items').update({ section_id, position: null }).eq('id', itemId);
+```
+Розділ іншого списку база відхиляє з `section_not_in_list` (`23514`).
 
 ---
 

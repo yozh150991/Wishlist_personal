@@ -1,3 +1,4 @@
+import type { CSSProperties, ReactNode, Ref } from 'react';
 import { hostOf, money } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { STATUSES } from '../lib/types';
@@ -22,6 +23,10 @@ export function ItemCard({
   selectable = false,
   selected = false,
   onToggleSelect,
+  handle,
+  nodeRef,
+  nodeStyle,
+  dragging = false,
 }: {
   item: Item;
   currency: Currency;
@@ -31,6 +36,11 @@ export function ItemCard({
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: (item: Item) => void;
+  /** Ручка перетягування в режимі «Розділи» (ADR-036). */
+  handle?: ReactNode;
+  nodeRef?: Ref<HTMLLIElement>;
+  nodeStyle?: CSSProperties;
+  dragging?: boolean;
 }) {
   const { t, locale } = useI18n();
   const price = money(item.price, currency, locale);
@@ -38,7 +48,15 @@ export function ItemCard({
   const statusLabel = t(`item.status.${item.status}`);
 
   return (
-    <li className="item" data-status={item.status} data-selected={selectable && selected}>
+    <li
+      className="item"
+      data-status={item.status}
+      data-selected={selectable && selected}
+      data-dragging={dragging}
+      ref={nodeRef}
+      style={nodeStyle}
+    >
+      {handle}
       {selectable && (
         <label className="item__pick">
           <input

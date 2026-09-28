@@ -57,6 +57,10 @@ export type Item = {
   status: ItemStatus;
   source_site: string | null;
   parsed_at: string | null;
+  /** Розділ (ADR-036); null — «Інше». Старий офлайн-знімок поля не має. */
+  section_id?: string | null;
+  /** Ручний порядок у розділі; null — ще не впорядковано. */
+  position?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -67,7 +71,10 @@ export type Item = {
  */
 export type ItemInput = Pick<Item, 'title'> &
   Partial<
-    Pick<Item, 'url' | 'price' | 'quantity' | 'priority' | 'note' | 'variants' | 'image_url' | 'status'>
+    Pick<
+      Item,
+      'url' | 'price' | 'quantity' | 'priority' | 'note' | 'variants' | 'image_url' | 'status' | 'section_id' | 'position'
+    >
   >;
 
 export type Totals = {
