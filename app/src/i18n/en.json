@@ -85,7 +85,7 @@
       "v1": "v1 — current",
       "v2": "v2 — new"
     },
-    "designHint": "v2 has its own screens and its own flow, not just different colors. Switching reopens the app from the start; lists, links and reservations are shared by both versions.",
+    "designHint": "v2 has its own screens and its own flow, not just different colors. Switching reopens the app from the start; lists, links and guests' picks are shared by both versions.",
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
@@ -712,11 +712,6 @@
       "confirm": "Sign out anyway",
       "stay": "Stay"
     },
-    "soon": {
-      "title": "This screen is still being built in the new look",
-      "body": "Your data is all here — for now, open it in the old look.",
-      "openV1": "Open in the old look"
-    },
     "count": {
       "items": {
         "one": "{n} item",
@@ -1015,5 +1010,33 @@
     "revoking": "Revoking…",
     "revokedTitle": "Access revoked",
     "revokedBody": "The link no longer opens. You can create a new one any time."
+  },
+  "v2shares": {
+    "live": "Active",
+    "dead": "No longer active",
+    "fromList": "From the list “{title}”",
+    "views": {
+      "one": "{n} view",
+      "few": "{n} views",
+      "many": "{n} views",
+      "other": "{n} views"
+    },
+    "deleteLabel": "Delete the link “{title}”",
+    "emptyBody": "Open a list, tap “{share}”, pick the items and tap “{create}”. Guests will see only those.",
+    "copyManual": "The browser didn't let us copy automatically — select the address and copy it.",
+    "subtitle": "Each link shows only the items chosen for it. The main list stays private."
+  },
+  "v2settings": {
+    "looksHint": "Your own event looks are set on a particular list — in the list menu, “List style”.",
+    "data": {
+      "title": "My data",
+      "body": "The file holds all your lists, items and a description of your links. It has no link addresses and no guest marks.",
+      "cta": "Download my data",
+      "starting": "Preparing…",
+      "progress": "Exporting… {n} of {m}",
+      "cancel": "Cancel",
+      "saved": "File saved."
+    },
+    "deleteLater": "Deleting your account will be available here later."
   }
 }

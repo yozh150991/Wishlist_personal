@@ -7,7 +7,8 @@ import NewPasswordV2 from './screens/NewPasswordV2';
 import ListsV2 from './screens/ListsV2';
 import NewListV2 from './screens/NewListV2';
 import ListV2 from './screens/ListV2';
-import SoonV2 from './screens/SoonV2';
+import SharesV2 from './screens/SharesV2';
+import SettingsV2 from './screens/SettingsV2';
 import { RequireAuthV2, ShellV2 } from './ShellV2';
 // Стилі форми v2 їдуть разом із цим лінивим модулем (ADR-039, п. 9).
 import './v2.css';
@@ -31,9 +32,9 @@ import './v2.css';
  *
  * Готово: вхід, реєстрація, пароль (крок 2); каркас власника, «Мої списки» й
  * новий список (крок 3а); сторінка списку з позиціями, «Поділитися», порядком,
- * оформленням і налаштуваннями (крок 3б). Екрани,
- * яких ще немає, — `SoonV2` усередині каркаса з посиланням на той самий
- * екран у v1.
+ * оформленням і налаштуваннями (крок 3б); «Мої посилання» й «Налаштування»
+ * (крок 3в). Усі екрани власника v1 мають пару у v2; невідома адреса —
+ * заглушка з дорогою назад.
  */
 export default function DesignV2Routes() {
   return (
@@ -53,8 +54,8 @@ export default function DesignV2Routes() {
         <Route path="/lists" element={<ListsV2 />} />
         <Route path="/lists/new" element={<NewListV2 />} />
         <Route path="/lists/:id" element={<ListV2 />} />
-        <Route path="/shares" element={<SoonV2 />} />
-        <Route path="/settings" element={<SoonV2 settings />} />
+        <Route path="/shares" element={<SharesV2 />} />
+        <Route path="/settings" element={<SettingsV2 />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/lists" replace />} />

@@ -3,7 +3,8 @@ import type { Page } from '@playwright/test';
 import { EMAIL, PASSWORD, hasAccount, unique } from './helpers';
 
 /**
- * Каркас власника й «Мої списки» дизайну v2 (ROADMAP, «Дизайн v2», крок 3а).
+ * Каркас власника, «Мої списки», «Мої посилання» й «Налаштування» дизайну v2
+ * (ROADMAP, «Дизайн v2», кроки 3а і 3в).
  *
  * Тег `@v2` — лише у v2-проєктах. Захист маршрутів перевіряється без акаунта;
  * решта — з акаунтом, бо головна показує справжні списки.
@@ -88,14 +89,106 @@ test.describe('«Мої списки» v2 з акаунтом', { tag: '@v2' }, 
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('навігація: «Посилання» — екран «ще в роботі» з дорогою до v1', async ({ page }) => {
+  test('навігація: «Посилання» і «Налаштування» — екрани v2, пункт підсвічено', async ({ page }) => {
     await signInV2(page);
-    await page.getByRole('navigation').getByRole('link', { name: /посилання|linki|links/i }).click();
+    const nav = page.getByRole('navigation');
+    await nav.getByRole('link', { name: /посилання|linki|links/i }).click();
     await expect(page).toHaveURL(/\/shares$/);
-    const v1 = page.getByRole('link', { name: /старому вигляді|starym wyglądzie|old look/i });
-    await expect(v1).toHaveAttribute('href', /\/shares\?design=v1$/);
-    await v1.click();
-    await expect(page.locator('html')).toHaveAttribute('data-design', 'v1');
-    await expect(page).toHaveURL(/\/shares$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/мої посилання|moje linki|my links/i);
+    await expect(nav.getByRole('link', { name: /посилання|linki|links/i })).toHaveAttribute('aria-current', 'page');
+
+    await nav.getByRole('link', { name: /налаштування|ustawienia|settings/i }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/налаштування|ustawienia|settings/i);
+    await expect(page.locator('html')).toHaveAttribute('data-design', 'v2');
+  });
+});
+
+test.describe('«Мої посилання» й «Налаштування» v2 з акаунтом', { tag: '@v2' }, () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('посилання, створене зі списку, є в «Моїх посиланнях»; відкликане переходить у «Уже не діють»; видалене зникає', async ({
+    page,
+  }) => {
+    await signInV2(page);
+    const listTitle = unique('V2 links');
+    await page.goto('/lists/new');
+    await page.locator('input[name="title"]').fill(listTitle);
+    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/\/lists\/[0-9a-f-]{36}$/);
+
+    // Одна позиція вручну — ділитися порожнім списком не можна.
+    await page.getByRole('button', { name: /^(додати позицію|dodaj pozycję|add item)$/i }).first().click();
+    const sheet = page.getByRole('dialog');
+    await sheet.getByRole('button', { name: /вписати вручну|wpisz ręcznie|type it in/i }).click();
+    await sheet.locator('input[name="title"]').fill(unique('Річ'));
+    await sheet.getByRole('button', { name: /^(додати|dodaj|add)$/i }).click();
+    await expect(sheet).toHaveCount(0);
+
+    const linkTitle = unique('Для друзів');
+    await page.getByRole('button', { name: /^(поділитися|udostępnij|share)$/i }).first().click();
+    const share = page.getByRole('dialog');
+    await share.locator('input[name="share_title"]').fill(linkTitle);
+    await share.getByRole('button', { name: /^(створити посилання|utwórz link|create link)$/i }).click();
+    await expect(share.getByRole('heading', { name: /посилання готове|link gotowy|link is ready/i })).toBeVisible();
+    await share.getByRole('button', { name: /^(готово|gotowe|done)$/i }).first().click();
+
+    await page.goto('/shares');
+    const live = page.getByRole('region', { name: /діють|aktywne|active/i }).first();
+    const card = page.getByRole('listitem').filter({ hasText: linkTitle });
+    await expect(live.getByRole('listitem').filter({ hasText: linkTitle })).toBeVisible();
+    await expect(card).toContainText(listTitle);
+    // Перегляди — не позначки: число є, а слова про позначки немає.
+    await expect(card).toContainText(/перегляд|wyświetle|view/i);
+
+    await card.getByRole('button', { name: /^(відкликати|cofnij|revoke)$/i }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /^(відкликати|cofnij|revoke)$/i }).click();
+    await expect(card).toContainText(/відкликано|cofnięty|odwołany|revoked/i);
+    await expect(card.getByRole('button', { name: /копіювати|kopiuj|copy/i })).toHaveCount(0);
+
+    await card.getByRole('button', { name: /видалити посилання|usuń link|delete the link/i }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /^(видалити|usuń|delete)$/i }).click();
+    await expect(card).toHaveCount(0);
+  });
+
+  test('налаштування застосовуються одразу: тема, висока контрастність, мова; «Мої дані» — файл без адрес посилань', async ({
+    page,
+  }) => {
+    await signInV2(page);
+    await page.goto('/settings');
+    const html = page.locator('html');
+    const scheme = await html.getAttribute('data-scheme');
+    const theme = await html.getAttribute('data-theme');
+    const lang = (await html.getAttribute('lang')) ?? 'uk';
+
+    await page.getByRole('radio', { name: /^(темна|ciemny|ciemna|dark)$/i }).click();
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+
+    const contrast = page.getByRole('switch', { name: /висока контрастність|wysoki kontrast|high contrast/i });
+    await contrast.click();
+    await expect(html).toHaveAttribute('data-scheme', 'vuhil');
+    await contrast.click();
+    await expect(html).toHaveAttribute('data-scheme', scheme!);
+
+    await page.getByRole('radio', { name: 'English' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings');
+    await page.getByRole('radio', { name: 'Українська' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Налаштування');
+
+    const downloading = page.waitForEvent('download');
+    await page.getByRole('button', { name: /завантажити мої дані|pobierz moje dane|download my data/i }).click();
+    const file = await downloading;
+    expect(file.suggestedFilename()).toMatch(/^wishlist-\d{4}-\d{2}-\d{2}\.json$/);
+    const path = await file.path();
+    const { readFile } = await import('node:fs/promises');
+    const text = await readFile(path!, 'utf8');
+    expect(JSON.parse(text).format).toBe('wishlist-personal-account');
+    expect(text).not.toMatch(/"token"/);
+
+    // Тему й мову повертаємо, як були: акаунт тестовий, але вигляд і мова їдуть у профіль.
+    const back = theme === 'dark' ? /^(темна|dark)$/i : /^(як у системі|jak w systemie|match system)$/i;
+    await page.getByRole('radio', { name: back }).click();
+    const language: Record<string, string> = { uk: 'Українська', pl: 'Polski', en: 'English' };
+    await page.getByRole('radio', { name: language[lang] ?? 'Українська' }).click();
   });
 });

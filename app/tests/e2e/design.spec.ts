@@ -19,8 +19,15 @@ import { hasAccount, signIn } from './helpers';
  * тести починають зі стану «людина ще нічого не перемикала».
  */
 
-const backButton = (page: import('@playwright/test').Page) =>
+/** Кнопка заглушки v2 «Повернутися на v1» — на гостьовій її бути не може. */
+const placeholderBack = (page: import('@playwright/test').Page) =>
   page.getByRole('button', { name: /v1/i });
+
+/** Дорога назад із v2 — її власні Налаштування з тим самим перемикачем версії. */
+async function backToV1(page: import('@playwright/test').Page) {
+  await page.goto('/settings');
+  await page.getByTestId('design').getByRole('radio', { name: /v1/i }).click();
+}
 
 /**
  * Аварійний вихід не потребує акаунта — і це його суть: він має працювати
@@ -58,8 +65,8 @@ test.describe('з акаунтом', () => {
     await page.reload();
     await expect(html).toHaveAttribute('data-design', 'v2');
 
-    // З v2 завжди є дорога назад, навіть поки в неї немає власних Налаштувань.
-    await backButton(page).click();
+    // З v2 дорога назад — її власні Налаштування з тим самим перемикачем.
+    await backToV1(page);
     await expect(html).toHaveAttribute('data-design', 'v1');
     await page.reload();
     await expect(html).toHaveAttribute('data-design', 'v1');
@@ -78,7 +85,7 @@ test.describe('з акаунтом', () => {
     await expect(html).toHaveAttribute('data-scheme', scheme!);
     await expect(html).toHaveAttribute('data-theme', theme!);
 
-    await backButton(page).click();
+    await backToV1(page);
     await expect(html).toHaveAttribute('data-design', 'v1');
   });
 });
@@ -110,7 +117,7 @@ test.describe('гостьова адреса визначає версію', { t
       // адресу вибором зі сховища.
       await page.waitForLoadState('networkidle');
       await expect(html).toHaveAttribute('data-design', version);
-      await expect(backButton(page)).toHaveCount(0);
+      await expect(placeholderBack(page)).toHaveCount(0);
 
       // Звичайна адреса повертає вибір людини.
       const mine = await chosen(page);

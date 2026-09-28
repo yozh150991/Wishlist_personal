@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { useI18n } from '../../lib/i18n';
 import { useMediaQuery } from '../../lib/media';
+import { useOutbox } from '../../lib/useOutbox';
 import { SignOutV2 } from './screens/CommonV2';
 
 /**
@@ -87,8 +88,49 @@ export function ShellV2() {
         )}
       </nav>
       <div className="v2-shell__main">
+        <OutboxNoteV2 />
         <Outlet />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Черга офлайн-змін (ADR-029) — один рядок над екраном, найважливіше одне:
+ * відхилені сервером зміни (червоним, доки не закриєш), інакше — скільки
+ * чекає мережі, з «Надіслати зараз». Відправку при появі мережі й при відкритті
+ * робить спільний `useOutbox` — той самий, що в банерах v1.
+ */
+function OutboxNoteV2() {
+  const { t } = useI18n();
+  const { count, busy, dropped, send, clearDropped } = useOutbox();
+  if (dropped.length > 0) {
+    return (
+      <div className="v2-outbox v2-outbox--danger" role="alert">
+        <span className="v2-outbox__text">{t('outbox.dropped', { n: dropped.length })}</span>
+        <button type="button" className="v2-outbox__btn" onClick={clearDropped}>
+          {t('common.close')}
+        </button>
+      </div>
+    );
+  }
+  if (count === 0) return null;
+  return (
+    <div className="v2-outbox" role="status">
+      <span className="v2-outbox__text">
+        <strong>{t('outbox.pendingTitle', { n: count })}</strong> {t('outbox.pendingBody')}
+      </span>
+      <button
+        type="button"
+        className="v2-outbox__btn"
+        aria-disabled={busy || undefined}
+        onClick={() => {
+          if (!busy) void send();
+        }}
+      >
+        {busy && <span className="v2-spinner" aria-hidden="true" />}
+        {busy ? t('outbox.sending') : t('outbox.retry')}
+      </button>
     </div>
   );
 }

@@ -104,6 +104,14 @@ export function useCounts() {
         many: t('v2list.delete.viewed.many', { n }),
         other: t('v2list.delete.viewed.other', { n }),
       }),
+    /** «23 перегляди» — на картці посилання (перегляди, не позначки). */
+    views: (n: number) =>
+      pick(n, {
+        one: t('v2shares.views.one', { n }),
+        few: t('v2shares.views.few', { n }),
+        many: t('v2shares.views.many', { n }),
+        other: t('v2shares.views.other', { n }),
+      }),
     /** «Пошук у 42 позиціях» — підказка в полі пошуку. */
     searchIn: (n: number) =>
       pick(n, {
@@ -173,11 +181,14 @@ export function SwitchV2({
   hint,
   checked,
   onChange,
+  disabled = false,
 }: {
   label: string;
   hint?: string;
   checked: boolean;
   onChange: (next: boolean) => void;
+  /** Стан задає не людина (напр. система просить контраст) — видно, але не міняється. */
+  disabled?: boolean;
 }) {
   const hintId = useId();
   return (
@@ -185,9 +196,12 @@ export function SwitchV2({
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-disabled={disabled || undefined}
       aria-describedby={hint ? hintId : undefined}
       className="v2-switch-row"
-      onClick={() => onChange(!checked)}
+      onClick={() => {
+        if (!disabled) onChange(!checked);
+      }}
     >
       <span className="v2-switch-row__text">
         <span className="v2-switch-row__label">{label}</span>

@@ -563,9 +563,6 @@
 }
 .v2-empty__title { font-size: var(--t-h2); }
 
-.v2-soon { max-width: 36rem; }
-.v2-soon > .v2-btn { justify-self: start; }
-
 /* Шаблони свят (U2): пігулки, що переносяться. */
 .v2-chips {
   display: flex;
@@ -1406,3 +1403,187 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-first__text { display: grid; gap: 2px; }
 .v2-first__label { font-size: var(--t-lead); font-weight: 800; }
 .v2-first__hint { font-size: var(--t-small); color: var(--color-neutral-700); }
+
+/* ── Черга офлайн-змін над екраном (крок 3в) ─────────────── */
+
+.v2-outbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3) var(--sp-5);
+  max-width: 64rem;
+  margin: var(--sp-5) var(--sp-6) 0;
+  padding: var(--sp-4) var(--sp-5);
+  font-size: var(--t-body);
+  color: var(--color-accent-2-800);
+  background: var(--color-accent-2-100);
+  border-radius: 20px;
+}
+@media (min-width: 40rem) {
+  .v2-outbox { margin: var(--sp-6) auto 0; width: calc(100% - 2 * var(--sp-8)); }
+}
+.v2-outbox--danger { color: var(--color-danger-ink); background: var(--color-danger-bg); }
+.v2-outbox__text { flex: 1 1 16rem; }
+.v2-outbox__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 40px;
+  padding: 0 var(--sp-5);
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+
+/* ── Мої посилання ────────────────────────────────────────── */
+
+/* Десктоп — дві колонки, не три: рядок дій довший за картку списку. */
+.v2-sharegrid { display: grid; gap: var(--sp-4); margin: 0; padding: 0; list-style: none; }
+@media (min-width: 56rem) {
+  .v2-sharegrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.v2-sharecard {
+  display: grid;
+  gap: var(--sp-3);
+  align-content: start;
+  padding: var(--sp-5) var(--sp-6);
+  background: var(--color-surface);
+  border-radius: var(--r-card);
+}
+.v2-sharecard__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
+.v2-sharecard__title {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--t-card);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.v2-sharecard__list { font-size: var(--t-small); font-weight: 700; overflow-wrap: anywhere; }
+.v2-sharecard__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-sharecard__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-2); }
+/* «Видалити» — окремо від корисних дій, у кінці рядка. */
+.v2-sharecard__actions > .v2-btn--danger { margin-inline-start: auto; }
+/* Вузька картка (телефон, дві колонки на планшеті): три кнопки в рядок не
+   влазять — «Копіювати» й «Відкликати» ділять рядок навпіл, «Видалити» під
+   ними на всю ширину, як «Відкликати доступ» у макеті. Міряємо картку, а не
+   вікно: ширину картки задає сітка. */
+.v2-sharecard { container-type: inline-size; }
+@container (max-width: 22.5rem) {
+  .v2-sharecard__actions > .v2-btn { flex: 1 1 0; }
+  .v2-sharecard__actions > .v2-btn--danger { flex-basis: 100%; margin-inline-start: 0; }
+}
+.v2-sharecard--sk { min-height: 150px; animation: v2-sk 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .v2-sharecard--sk { animation: none; }
+}
+
+/* «Скопійовано» — пігулка знизу по центру на 2 с (README, «Мої посилання»). */
+.v2-pill {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-6);
+  font-weight: 700;
+  color: var(--color-bg);
+  background: var(--color-accent-2-700);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-md);
+  transform: translateX(-50%);
+}
+@media (min-width: 56rem) {
+  .v2-pill { bottom: var(--sp-8); }
+}
+
+/* ── Налаштування ─────────────────────────────────────────── */
+
+/* Десктоп — дві колонки карток по 420 px, не на всю ширину (README, розділ 6). */
+.v2-settings { display: grid; gap: var(--sp-5); }
+@media (min-width: 56rem) {
+  .v2-settings { grid-template-columns: repeat(2, minmax(0, 26.25rem)); align-items: start; }
+  .v2-settings__card--wide { grid-column: 1 / -1; max-width: calc(2 * 26.25rem + var(--sp-5)); }
+}
+.v2-settings__card {
+  display: grid;
+  gap: var(--sp-4);
+  align-content: start;
+  padding: var(--sp-6);
+  background: var(--color-surface);
+  border-radius: var(--r-card);
+}
+/* Доступність — тонована, щоб її не проминали; тумблер лишається на поверхні. */
+.v2-settings__card--a11y { background: var(--color-accent-200); }
+.v2-settings__card--a11y .v2-settings__label { color: var(--color-accent-900); }
+.v2-settings__label {
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+}
+.v2-settings__card .v2-seg > legend { margin-bottom: var(--sp-4); }
+.v2-settings__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+
+.v2-profile { display: flex; align-items: center; gap: var(--sp-5); min-width: 0; }
+.v2-profile__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--t-h2);
+  color: var(--color-accent-800);
+  background: var(--color-accent-200);
+  border-radius: 50%;
+}
+.v2-profile__email { font-weight: 700; overflow-wrap: anywhere; }
+
+/* Схеми смаку — плитка «полотно + акцент»: єдине місце, де колір показано як колір. */
+.v2-schemes { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: var(--sp-3); }
+.v2-scheme {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 52px;
+  padding: var(--sp-3) var(--sp-4);
+  font-weight: 700;
+  background: var(--color-bg);
+  border: 2px solid transparent;
+  border-radius: 16px;
+  cursor: pointer;
+}
+.v2-scheme[data-on='true'] { border-color: var(--color-accent-700); }
+.v2-scheme input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.v2-scheme:has(input:focus-visible) { outline: 2px solid var(--color-accent-700); outline-offset: 2px; }
+.v2-scheme__name { min-width: 0; overflow-wrap: anywhere; }
+.v2-scheme__dot {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--color-divider);
+}
+.v2-scheme__dot[data-dot='sage'] { background: linear-gradient(90deg, var(--color-dot-sage-bg) 50%, var(--color-dot-sage) 50%); }
+.v2-scheme__dot[data-dot='slyva'] { background: linear-gradient(90deg, var(--color-dot-slyva-bg) 50%, var(--color-dot-slyva) 50%); }
+.v2-scheme__dot[data-dot='polotno'] { background: linear-gradient(90deg, var(--color-dot-polotno-bg) 50%, var(--color-dot-polotno) 50%); }
+.v2-scheme__dot[data-dot='cytrus'] { background: linear-gradient(90deg, var(--color-dot-cytrus-bg) 50%, var(--color-dot-cytrus) 50%); }
+.v2-scheme__dot[data-dot='nich'] { background: linear-gradient(90deg, var(--color-dot-nich-bg) 50%, var(--color-dot-nich) 50%); }
+
+.v2-qr { display: grid; gap: var(--sp-3); justify-items: start; }
+.v2-qr__code { width: 176px; padding: var(--sp-3); background: var(--color-qr-paper); border-radius: 16px; }
+.v2-qr__code svg { display: block; width: 100%; height: auto; }
+.v2-qr__url { font-size: var(--t-small); overflow-wrap: anywhere; }

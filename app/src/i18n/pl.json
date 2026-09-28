@@ -712,11 +712,6 @@
       "confirm": "Wyloguj mimo to",
       "stay": "Zostań"
     },
-    "soon": {
-      "title": "Ten ekran w nowym wyglądzie jest jeszcze w pracy",
-      "body": "Dane są na miejscu — na razie otwórz go w starym wyglądzie.",
-      "openV1": "Otwórz w starym wyglądzie"
-    },
     "count": {
       "items": {
         "one": "{n} pozycja",
@@ -1015,5 +1010,33 @@
     "revoking": "Cofam…",
     "revokedTitle": "Dostęp cofnięty",
     "revokedBody": "Link już się nie otwiera. Nowy można utworzyć w każdej chwili."
+  },
+  "v2shares": {
+    "live": "Aktywne",
+    "dead": "Już nieaktywne",
+    "fromList": "Z listy „{title}”",
+    "views": {
+      "one": "{n} wyświetlenie",
+      "few": "{n} wyświetlenia",
+      "many": "{n} wyświetleń",
+      "other": "{n} wyświetlenia"
+    },
+    "deleteLabel": "Usuń link „{title}”",
+    "emptyBody": "Otwórz listę, naciśnij „{share}”, wybierz pozycje i naciśnij „{create}”. Goście zobaczą tylko je.",
+    "copyManual": "Przeglądarka nie pozwoliła skopiować automatycznie — zaznacz adres i skopiuj.",
+    "subtitle": "Każdy link pokazuje tylko wybrane dla niego pozycje. Główna lista pozostaje prywatna."
+  },
+  "v2settings": {
+    "looksHint": "Własne wyglądy wydarzeń ustawia się na konkretnej liście — w menu listy, „Wygląd listy”.",
+    "data": {
+      "title": "Moje dane",
+      "body": "Plik zawiera wszystkie listy, pozycje i opis linków. Nie ma w nim adresów linków ani oznaczeń gości.",
+      "cta": "Pobierz moje dane",
+      "starting": "Przygotowuję…",
+      "progress": "Eksportuję… {n} z {m}",
+      "cancel": "Anuluj",
+      "saved": "Plik zapisany."
+    },
+    "deleteLater": "Usuwanie konta pojawi się tu później."
   }
 }

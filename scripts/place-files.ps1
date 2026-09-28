@@ -151,7 +151,7 @@ $map = @{
   'NewPasswordV2.tsx' = 'app\src\designs\v2\screens'; 'auth-v2.spec.ts' = 'app\tests\e2e'
   # Design v2 owner shell and home (step 3a).
   'ShellV2.tsx' = 'app\src\designs\v2'; 'CommonV2.tsx' = 'app\src\designs\v2\screens'
-  'SoonV2.tsx' = 'app\src\designs\v2\screens'; 'ListsV2.tsx' = 'app\src\designs\v2\screens'
+  'ListsV2.tsx' = 'app\src\designs\v2\screens'
   'NewListV2.tsx' = 'app\src\designs\v2\screens'; 'lists-v2.spec.ts' = 'app\tests\e2e'
   # Design v2 list page (step 3b-1, ADR-044): shared pure helpers and v2 screens.
   'itemsView.ts' = 'app\src\lib'; 'order.ts' = 'app\src\lib'
@@ -163,6 +163,9 @@ $map = @{
   'ShareSheetV2.tsx' = 'app\src\designs\v2\screens'; 'PreviewV2.tsx' = 'app\src\designs\v2\screens'
   'AppearanceSheetV2.tsx' = 'app\src\designs\v2\screens'; 'ListSettingsV2.tsx' = 'app\src\designs\v2\screens'
   'ReorderV2.tsx' = 'app\src\designs\v2\screens'
+  # Design v2 step 3c: my links, settings; outbox flushing shared by both designs.
+  'SharesV2.tsx' = 'app\src\designs\v2\screens'; 'SettingsV2.tsx' = 'app\src\designs\v2\screens'
+  'useOutbox.ts' = 'app\src\lib'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'
