@@ -137,11 +137,13 @@ $map = @{
   # Design version switch (ADR-032). File names here are unique across the
   # whole repository on purpose: this table maps by file name alone, so two
   # files both called Routes.tsx could not be placed.
-  'design-v2.css' = 'app\src\styles'; 'design.spec.ts' = 'app\tests\e2e'
+  'design.spec.ts' = 'app\tests\e2e'
   'DesignRoutes.tsx' = 'app\src\designs'
   'RoutesV1.tsx' = 'app\src\designs\v1'
   'RoutesV2.tsx' = 'app\src\designs\v2'
   'PlaceholderV2.tsx' = 'app\src\designs\v2\screens'
+  # Design v2 foundation (ADR-039): lazy v2 styles, /l/ guest route.
+  'v2.css' = 'app\src\designs\v2'; 'GuestV2.tsx' = 'app\src\designs\v2\screens'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'

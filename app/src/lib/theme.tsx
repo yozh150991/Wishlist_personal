@@ -14,7 +14,10 @@ export type { Scheme, Theme };
  * `scheme`       — схема смаку: Шавлія (усталена), Слива, Полотно, Цитрус, Ніч.
  * `highContrast` — тумблер доступності, єдиний вхід у Вугіль. Не перезаписує
  *                  `scheme`: вимкнув — повернувся до свого смаку.
- * `design`       — версія дизайну: v1 (нинішній) або v2 (наступний, ADR-032).
+ * `design`       — версія дизайну, яку обрала людина: v1 або v2 (ADR-032).
+ *                  Гостьова адреса її перекриває: `/s/…` — завжди v1, `/l/…` —
+ *                  завжди v2 (ADR-039). Тому `data-design` на <html> — це
+ *                  версія екрана, що зараз показаний, а не вибір у сховищі.
  * `surface`      — де глядач зараз: свої екрани, гостьова чи превʼю гостьової.
  *
  * Що з цього стане атрибутами `data-scheme` / `data-theme` / `data-appearance`,
@@ -63,6 +66,8 @@ type Value = {
   setHighContrast: (on: boolean) => void;
   setDesign: (d: Design) => void;
   setSurface: (s: Surface) => void;
+  /** Версія, яку диктує адреса (`useRouteDesign`), або null — тоді діє вибір. */
+  setRouteDesign: (d: Design | null) => void;
 };
 
 const Ctx = createContext<Value | null>(null);
@@ -132,6 +137,28 @@ function initialDesign(): Design {
     /* адреса без параметрів або заборонене сховище — просто йдемо далі */
   }
   return read(DESIGN_KEY, isDesign, 'v1');
+}
+
+/**
+ * Гостьова адреса сама каже, чия вона: `/s/…` — v1, `/l/…` — v2 (ADR-039,
+ * п. 2–3). Для решти адрес — null, і діє вибір людини.
+ *
+ * Те саме правило повторює інлайновий скрипт у `index.html` — до першого
+ * рендера, щоб гостьова не блимнула чужою версією. Змінюєш тут — зміни й там.
+ */
+export function designOfPath(pathname: string): Design | null {
+  if (/^\/s\//.test(pathname)) return 'v1';
+  if (/^\/l\//.test(pathname)) return 'v2';
+  return null;
+}
+
+/** Адреса на старті. Без `window` (не буває в застосунку, але буває в тестах) — нічого. */
+function initialRouteDesign(): Design | null {
+  try {
+    return designOfPath(window.location.pathname);
+  } catch {
+    return null;
+  }
 }
 
 /** Живий медіазапит: значення й підписка на зміну. */
@@ -213,6 +240,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [scheme, setSchemeState] = useState<Scheme>(start.scheme);
   const [highContrast, setContrastState] = useState<boolean>(start.highContrast);
   const [design, setDesignState] = useState<Design>(initialDesign);
+  const [routeDesign, setRouteDesignState] = useState<Design | null>(initialRouteDesign);
   const [surface, setSurfaceState] = useState<Surface>(OWN);
 
   const systemDark = useMedia('(prefers-color-scheme: dark)');
@@ -223,9 +251,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [theme, scheme, highContrast, systemContrast, systemDark, surface],
   );
 
+  // На <html> — версія показаного екрана: гостьова адреса перемагає вибір.
+  const shown = routeDesign ?? design;
+
   useEffect(() => {
-    apply(resolved, design);
-  }, [resolved, design]);
+    apply(resolved, shown);
+  }, [resolved, shown]);
 
   const setTheme = useCallback((t: Theme) => {
     write(THEME_KEY, t);
@@ -260,6 +291,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setSurfaceState((prev) => (JSON.stringify(prev) === JSON.stringify(s) ? prev : s));
   }, []);
 
+  const setRouteDesign = useCallback((d: Design | null) => setRouteDesignState(d), []);
+
   const value = useMemo(
     () => ({
       theme,
@@ -274,6 +307,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setHighContrast,
       setDesign,
       setSurface,
+      setRouteDesign,
     }),
     [
       theme,
@@ -288,6 +322,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setHighContrast,
       setDesign,
       setSurface,
+      setRouteDesign,
     ],
   );
 
@@ -318,11 +353,24 @@ export function useSurface(surface: Surface | null) {
 }
 
 /**
+ * Каже провайдеру, яку версію диктує поточна адреса (`designOfPath`).
+ * Викликається рівно в одному місці — у верхній таблиці маршрутів `App.tsx`,
+ * яка бачить адресу при кожному переході.
+ */
+export function useRouteDesign(design: Design | null) {
+  const { setRouteDesign } = useTheme();
+  useEffect(() => {
+    setRouteDesign(design);
+  }, [design, setRouteDesign]);
+}
+
+/**
  * Версія дизайну для того, хто вибирає таблицю маршрутів.
  *
  * Окремий хук, а не поле з `useTheme()`, свідомо: так у коді видно кожне
  * місце, яке залежить від версії. Таких місць має бути рівно одне —
- * `designs/DesignRoutes.tsx` (ADR-032).
+ * `designs/DesignRoutes.tsx` (ADR-032). Це вибір людини; гостьових адрес він
+ * не стосується — їх розводить `App.tsx` за префіксом (ADR-039).
  */
 export function useDesign(): Design {
   return useTheme().design;

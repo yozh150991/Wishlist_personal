@@ -17,26 +17,42 @@ import DesignV1Routes from './v1/RoutesV1';
  * міняється на протилежний — це один рядок.
  *
  * Спільне для обох версій лишається вище за це місце: провайдери, сесія,
- * мова, синхронізація вигляду — усе в `App.tsx`. Версія міняє екрани, а не
- * те, звідки застосунок бере дані.
+ * мова, синхронізація вигляду й гостьові адреси — усе в `App.tsx`. Версія
+ * міняє екрани, а не те, звідки застосунок бере дані.
  */
 const DesignV2Routes = lazy(() => import('./v2/RoutesV2'));
+const GuestV2 = lazy(() => import('./v2/screens/GuestV2'));
+
+/** Поки лінивий модуль v2 вантажиться. */
+function Loading() {
+  const { t } = useI18n();
+  return (
+    <div className="booting" role="status" aria-live="polite">
+      {t('common.loading')}…
+    </div>
+  );
+}
 
 export function DesignRoutes() {
   const design = useDesign();
-  const { t } = useI18n();
 
   if (design === 'v1') return <DesignV1Routes />;
 
   return (
-    <Suspense
-      fallback={
-        <div className="booting" role="status" aria-live="polite">
-          {t('common.loading')}…
-        </div>
-      }
-    >
+    <Suspense fallback={<Loading />}>
       <DesignV2Routes />
+    </Suspense>
+  );
+}
+
+/**
+ * Гостьова v2 (`/l/…`) — ліниво, як і решта v2, але поза вибором версії:
+ * її показує адреса, а не `wl.design` (ADR-039). Маршрут стоїть в `App.tsx`.
+ */
+export function GuestV2Screen() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <GuestV2 />
     </Suspense>
   );
 }

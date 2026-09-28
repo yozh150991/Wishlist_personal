@@ -55,9 +55,10 @@ export default defineConfig({
         // Будь-яка адреса застосунку відкривається з кешованого index.html,
         // навіть без мережі.
         navigateFallback: '/index.html',
-        // Крім гостьових сторінок: відповідь на /s/<токен> не має лягати
-        // в кеш пристрою разом із токеном (ARCHITECTURE.md, «Офлайн-режим»).
-        navigateFallbackDenylist: [/^\/s\//],
+        // Крім гостьових сторінок: відповідь на /s/<токен> (гостьова v1) чи
+        // /l/<токен> (гостьова v2, ADR-041) не має лягати в кеш пристрою разом
+        // із токеном і ключем гостя (ARCHITECTURE.md, «Офлайн-режим»).
+        navigateFallbackDenylist: [/^\/s\//, /^\/l\//],
         cleanupOutdatedCaches: true,
         // Запити до Supabase і парсера — завжди в мережу.
         runtimeCaching: [],

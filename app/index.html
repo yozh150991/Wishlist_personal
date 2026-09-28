@@ -47,11 +47,17 @@
           u.searchParams.delete('design');
           history.replaceState(null, '', u.pathname + u.search + u.hash);
         }
-        d.design = localStorage.getItem('wl.design') === 'v2' ? 'v2' : 'v1';
+        // Гостьова адреса сама каже, чия вона: /s/… — v1, /l/… — v2. Вибір
+        // власника в сховищі тут не діє — у гостя цього сховища немає
+        // (ADR-039). Те саме правило — designOfPath() у lib/theme.tsx.
+        d.design = /^\/s\//.test(location.pathname) ? 'v1'
+          : /^\/l\//.test(location.pathname) ? 'v2'
+          : localStorage.getItem('wl.design') === 'v2' ? 'v2' : 'v1';
       } catch (_) {
         document.documentElement.dataset.theme = 'light';
         document.documentElement.dataset.scheme = 'sage';
-        document.documentElement.dataset.design = 'v1';
+        document.documentElement.dataset.design =
+          /^\/l\//.test(location.pathname) ? 'v2' : 'v1';
       }
     </script>
   </head>

@@ -73,6 +73,49 @@ test('особисте посилання й код переносять поз�
   await expect(again.getByText(/такого коду|takiego kodu|that code isn't/i)).toBeVisible();
 });
 
+/**
+ * Гостьова v2 живе під `/l/…` (ADR-041): той самий токен і той самий ключ.
+ * Поки її екрани не намальовані, під `/l/` стоїть та сама сторінка — і вже
+ * зараз важливо, що ключ з особистого посилання прибирається на `/l/`, а не
+ * перекидає гостя на `/s/`, і що «Забери доступ із собою» дає посилання
+ * під тим самим префіксом.
+ */
+test('/l/ — та сама позначка за тим самим ключем, особисте посилання лишається під /l/', async ({ page, browser }) => {
+  const { link, token } = await setup(page, ['Глечик']);
+
+  const first = await guest(browser, link);
+  await first.getByRole('button', { name: take }).click();
+  await expect(first.getByText(yours)).toBeVisible();
+  const key = await first.evaluate((tk) => localStorage.getItem(`wl.gk.${tk}`), token);
+  expect(key).toMatch(/^[A-Za-z0-9_-]{22,64}$/);
+
+  // Буфер обміну в тестовому профілі потребує дозволу. Підміняємо запис,
+  // щоб прочитати, що саме сторінка скопіювала б.
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(() => {
+    const w = window as unknown as { __copied: string[] };
+    w.__copied = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          w.__copied.push(text);
+        },
+      },
+    });
+  });
+  const v2 = await ctx.newPage();
+  await v2.goto(`${link.replace('/s/', '/l/')}/g/${key}`);
+  await expect(v2).toHaveURL(new RegExp(`/l/${token}$`));
+  await expect(v2.locator('html')).toHaveAttribute('data-design', 'v2');
+  await expect(v2.getByText(yours)).toBeVisible();
+
+  await v2.getByRole('button', { name: /^(скопіювати|skopiuj|copy)$/i }).click();
+  const copied = await v2.evaluate(() => (window as unknown as { __copied: string[] }).__copied);
+  expect(copied).toHaveLength(1);
+  expect(copied[0]).toMatch(new RegExp(`/l/${token}/g/${key}$`));
+});
+
 test('програш гонки пояснюється на місці позиції, кнопка зникає', async ({ page, browser }) => {
   const { link } = await setup(page, ['Кавомолка', 'Дошка']);
 

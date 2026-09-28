@@ -20,6 +20,7 @@ import {
   stopWatch,
   storedKey,
 } from '../lib/guest';
+import type { GuestBase } from '../lib/guest';
 import { useI18n } from '../lib/i18n';
 import { money, num, priceThresholds } from '../lib/format';
 import { validUntilText } from '../lib/zones';
@@ -36,6 +37,11 @@ import { Note } from '../components/ui';
  *
  * Гість без акаунта й без імені. Його позначки тримає ключ — у цьому браузері
  * й в особистому посиланні `/s/{токен}/g/{ключ}`, яке він надсилає собі.
+ *
+ * `base` — префікс адреси, під якою сторінку відкрито. До того, як з'явиться
+ * гостьова v2, ця ж сторінка стоїть і під `/l/…` (designs/v2/screens/GuestV2):
+ * ключ з адреси прибирається на той самий префікс, і особисте посилання
+ * будується з нього ж — гість не перескакує між версіями.
  * Перша позначка нічого не питає; одразу після неї сторінка пропонує забрати
  * доступ із собою — посиланням або кодом із 5 символів.
  *
@@ -97,7 +103,7 @@ type Changes = { fresh: Set<string>; freed: Set<string> } | null;
 const left = (i: SharedItem) => i.quantity - (i.taken_qty ?? 0);
 const mine = (i: SharedItem) => i.mine_qty ?? 0;
 
-export default function SharedList() {
+export default function SharedList({ base = '/s' }: { base?: GuestBase }) {
   const { token = '', key: urlKey } = useParams();
   const navigate = useNavigate();
   const { t, locale } = useI18n();
@@ -132,8 +138,8 @@ export default function SharedList() {
   useEffect(() => {
     if (!urlKey) return;
     if (isGuestKey(urlKey)) rememberKey(token, urlKey);
-    navigate(`/s/${token}`, { replace: true });
-  }, [urlKey, token, navigate]);
+    navigate(`${base}/${token}`, { replace: true });
+  }, [urlKey, token, base, navigate]);
 
   const load = useCallback(async () => {
     // Особисте посилання вже в сховищі — ефект вище спрацював раніше.
@@ -273,7 +279,7 @@ export default function SharedList() {
   async function copyLink() {
     if (!key) return;
     try {
-      await navigator.clipboard.writeText(personalLink(token, key));
+      await navigator.clipboard.writeText(personalLink(token, key, base));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -283,7 +289,7 @@ export default function SharedList() {
 
   async function sendSelf() {
     if (!key || !data) return;
-    const url = personalLink(token, key);
+    const url = personalLink(token, key, base);
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({ title: data.title, url });

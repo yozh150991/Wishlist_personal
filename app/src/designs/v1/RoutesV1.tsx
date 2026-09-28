@@ -8,7 +8,6 @@ import UpdatePassword from '../../routes/UpdatePassword';
 import Lists from '../../routes/Lists';
 import ListDetail from '../../routes/ListDetail';
 import Shares from '../../routes/Shares';
-import SharedList from '../../routes/SharedList';
 import GuestPreview from '../../routes/GuestPreview';
 import Settings from '../../routes/Settings';
 import NotFound from '../../routes/NotFound';
@@ -23,6 +22,9 @@ import NotFound from '../../routes/NotFound';
  *
  * v2 не переозначує окремі екрани цієї таблиці — у неї своя, повна. Саме тому
  * вона може мати інші адреси, інший порядок кроків і інший каркас.
+ *
+ * Гостьової `/s/…` тут немає: вона стоїть вище, у `App.tsx`, бо її версію
+ * визначає адреса, а не вибір власника (ADR-039).
  */
 export default function DesignV1Routes() {
   return (
@@ -32,10 +34,6 @@ export default function DesignV1Routes() {
       <Route path="/register" element={<Register />} />
       <Route path="/reset" element={<ResetPassword />} />
       <Route path="/update-password" element={<UpdatePassword />} />
-      {/* Гостьовий перегляд: без каркаса застосунку і без входу. */}
-      <Route path="/s/:token" element={<SharedList />} />
-      {/* Особисте посилання гостя: ключ ляже в браузер і зникне з адреси (ADR-035). */}
-      <Route path="/s/:token/g/:key" element={<SharedList />} />
 
       {/* «Показати, як бачить гість»: власник, але без каркаса застосунку —
           гість його теж не бачить. */}
