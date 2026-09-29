@@ -634,17 +634,22 @@ gcloud scheduler jobs create http wishlist-check-links `
 
 ### 9.9. Ключі для наступного кроку (сповіщення, 4г-2)
 
-Поки не потрібні — їх підключить наступний крок. Але якщо зручно, підготуй зараз: процедура та сама.
+Поки не потрібні — їх підключить наступний крок. VAPID-пару можна згенерувати й зараз. **Ключ Brevo — ні: створюй його в день деплою 4г-2.** Brevo вимикає API-ключ, яким 90 днів не зроблено жодного успішного виклику, незалежно від обраного терміну дії. Ключ, створений заздалегідь і не використаний, може згаснути ще до того, як знадобиться.
 
-**Brevo API-ключ** — для листів (не плутай із паролем SMTP з розділу 5: це інша річ).
-1. [app.brevo.com](https://app.brevo.com) → праворуч угорі ім'я профілю → **SMTP & API**.
-2. Вкладка **API Keys** → **Generate a new API key** → назва `wishlist-jobs` → **Generate**.
-3. Скопіюй `xkeysib-…` — Brevo покаже його **один раз**.
-4. Secret Manager → **Create secret** `wishlist-brevo-key` зі значенням ключа, далі:
+**Brevo API-ключ** — для листів (не плутай із ключем SMTP з розділу 5: це інша річ).
+1. [app.brevo.com/settings/keys/api](https://app.brevo.com/settings/keys/api) — це **Settings → SMTP & API**, сторінка **API keys & MCP**. Відкрити її й створювати ключі може лише власник акаунта Brevo або користувач із правом **API keys**.
+2. **Generate a new API key**:
+   - **Key name** — `wishlist-jobs`;
+   - **Expiry** — **1 year**, і одразу нагадування в календар за тиждень до кінця: після цієї дати листи перестануть іти. Brevo теж нагадає листом за 3 дні. «Без терміну» теж можна, але тоді ротація — лише з твоєї ініціативи (як у 9.8).
+3. **Generate** → Brevo надсилає на пошту акаунта шестизначний код → вписати → **Verify**.
+4. Скопіюй `xkeysib-…` — Brevo покаже його **один раз**; загубив — лише новий ключ.
+5. Secret Manager → **Create secret** `wishlist-brevo-key` зі значенням ключа, далі:
    ```powershell
    gcloud secrets add-iam-policy-binding wishlist-brevo-key --member "serviceAccount:$JOBS_SA" --role roles/secretmanager.secretAccessor
    ```
 Адреса відправника — та сама, що вже підтверджена в Brevo для листів Supabase (розділ 5).
+
+Якщо **Generate** відповідає «Your request could not be processed at this time. Try again later.» — це збій на боці Brevo, а не помилка у формі. Перезавантаж сторінку (сесія могла застаріти), вимкни блокувальник реклами для `app.brevo.com` і спробуй ще раз; не допомогло — через кілька годин. Лист із кодом має прийти на пошту акаунта Brevo, не на адресу відправника.
 
 **VAPID-ключі** — для push у браузері. Це пара, яку генеруєш сам, нікому не платячи:
 ```powershell
