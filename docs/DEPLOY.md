@@ -105,7 +105,7 @@ gcloud run deploy wishlist-parser `
 
 **`--max-instances 2`** — страховка від рахунку. Навіть якщо хтось почне бомбардувати сервіс запитами, більше двох копій не запуститься.
 
-Перша збірка триває 3–5 хвилин. У кінці отримаєш адресу виду `https://wishlist-parser-xxxxx.europe-central2.run.app`.
+Перша збірка триває 3–5 хвилин. У кінці отримаєш адресу виду `https://wishlist-parser-xxxxx.europe-central2.run.app` — тут і далі `xxxxx` означає твою частину адреси. Забув її — `gcloud run services describe wishlist-parser --region europe-central2 --format="value(status.url)"`.
 
 ### 2.3. Перевірка
 
@@ -613,9 +613,10 @@ gcloud scheduler jobs create http wishlist-check-links `
    Після першого запуску частина позицій переходить з `unknown` в `ok`, `out` чи `gone`. Магазини за антиботом лишаються `unknown`, але з `last_checked`.
 4. **Парсер без ключа** — після передеплою парсера з новим кодом (розділ 7):
    ```powershell
-   curl.exe https://wishlist-parser-xxxxx.europe-central2.run.app/health
+   $PARSER_URL = gcloud run services describe wishlist-parser --region europe-central2 --format="value(status.url)"
+   curl.exe "$PARSER_URL/health"
    ```
-   Має бути `"secret_key_present": false`. `true` означає, що ключ бази випадково опинився в парсері: прибери його (`gcloud run services update wishlist-parser --region $REGION --remove-env-vars SUPABASE_SECRET_KEY`).
+   Адресу парсера бери саме так, а не вписуй `xxxxx` із прикладів: на вигадану адресу Google відповідає `404 Page not found`. Має бути `"secret_key_present": false`. `true` означає, що ключ бази випадково опинився в парсері: прибери його (`gcloud run services update wishlist-parser --region $REGION --remove-env-vars SUPABASE_SECRET_KEY`).
 5. **У застосунку v2** наступного ранку в позицій із посиланням з'являються мітки «Сторінки немає», «Немає в наявності» чи «Ціна змінилась», якщо є що сказати. Здебільшого їх немає — і це нормально.
 
 ### 9.8. Якщо ключ треба замінити
