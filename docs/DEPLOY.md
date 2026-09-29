@@ -576,9 +576,9 @@ gcloud scheduler jobs create http wishlist-check-links `
 
 1. **Сервіс закритий** — запит без токена Google відхиляє:
    ```powershell
-   curl.exe -i -X POST "$JOBS_URL/jobs/check-links"
+   curl.exe -i -X POST -H "Content-Length: 0" "$JOBS_URL/jobs/check-links"
    ```
-   Очікуємо `403 Forbidden` (сторінка Google, не наша відповідь).
+   Очікуємо `403 Forbidden` (сторінка Google, не наша відповідь). Без `Content-Length: 0` фронтенд Google відповідає `411 Length Required` ще до перевірки доступу — це про форму запиту, а не про закритість сервісу. `-d ""` замість заголовка не підходить: Windows PowerShell 5.1 викидає порожній аргумент, і curl відправить адресу як тіло.
 2. **Сервіс налаштований** — з твоїм токеном (власник проєкту має право виклику):
    ```powershell
    curl.exe -H "Authorization: Bearer $(gcloud auth print-identity-token)" "$JOBS_URL/health"
