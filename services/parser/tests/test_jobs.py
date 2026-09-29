@@ -284,6 +284,15 @@ class TestApp:
         finally:
             job_settings.cache_clear()
 
+    def test_run_summary_reaches_the_log_but_shop_addresses_do_not(self):
+        import logging
+
+        jobs_log = logging.getLogger("jobs")
+        assert jobs_log.handlers and not jobs_log.propagate
+        assert logging.getLogger("jobs.links").isEnabledFor(logging.INFO)
+        # httpx на INFO пише кожну адресу запиту — лишається тихим.
+        assert not logging.getLogger("httpx").isEnabledFor(logging.INFO)
+
     def test_public_parser_does_not_ship_the_jobs_app(self):
         from app import main as parser_main
 

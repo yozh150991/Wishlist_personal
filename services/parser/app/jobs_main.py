@@ -18,6 +18,26 @@ from .jobs_store import Store
 
 log = logging.getLogger("jobs")
 
+
+def _log_counts_at_info() -> None:
+    """
+    Uvicorn налаштовує лише свої журнали, тож `log.info` задач ішов у нікуди,
+    і підсумок запуску в журналі Cloud Run не було видно. Обробник — лише для
+    журналу `jobs` (і `jobs.links`, `jobs.store` під ним), а не для кореня:
+    `httpx` на рівні INFO писав би кожну адресу магазину, а в журнал задач
+    ідуть тільки лічильники (ADR-048).
+    """
+    if log.handlers:
+        return
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(levelname)s: %(name)s %(message)s"))
+    log.addHandler(handler)
+    log.setLevel(logging.INFO)
+    log.propagate = False
+
+
+_log_counts_at_info()
+
 app = FastAPI(title="Wishlist jobs", version="0.1.0", docs_url=None, redoc_url=None)
 
 

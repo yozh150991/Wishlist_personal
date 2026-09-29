@@ -602,7 +602,15 @@ gcloud scheduler jobs create http wishlist-check-links `
    Start-Sleep 60
    gcloud run services logs read wishlist-jobs --region $REGION --limit 20
    ```
-   У журналі має бути рядок `check-links {'ok': …, 'checked': …}` — лише лічильники, адрес товарів там немає. `PostgREST відхилив ключ` — у секреті не той ключ (9.1). `400` від бази — не застосована міграція (9.0).
+   У журналі мають бути `POST 200 …/jobs/check-links` і рядок `INFO: jobs.links check-links {'ok': …, 'checked': …}` — лише лічильники, адрес товарів там немає. `{'checked': 0}` — перевіряти нема чого: жодної актуальної позиції з посиланням у неархівних списках, або всі вже перевірені за останні 20 годин. `POST 500` і `PostgREST відхилив ключ` — у секреті не той ключ (9.1). `POST 500` з `400` від бази — не застосована міграція (9.0). `POST 503` — `configured: false`, див. пункт 2.
+
+   Той самий підсумок видно й у базі — Supabase → **SQL Editor**:
+   ```sql
+   select link_status, count(*), max(link_checked_at) as last_checked
+     from items where url is not null
+    group by link_status;
+   ```
+   Після першого запуску частина позицій переходить з `unknown` в `ok`, `out` чи `gone`. Магазини за антиботом лишаються `unknown`, але з `last_checked`.
 4. **Парсер без ключа** — після передеплою парсера з новим кодом (розділ 7):
    ```powershell
    curl.exe https://wishlist-parser-xxxxx.europe-central2.run.app/health
