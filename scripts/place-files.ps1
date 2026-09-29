@@ -60,6 +60,7 @@ $map = @{
   '20260928160000_item_drafts.sql' = 'supabase\migrations'
   '20260928170000_yearly_lists.sql' = 'supabase\migrations'
   '20260929090000_link_checks.sql' = 'supabase\migrations'
+  '20260930090000_notifications.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -75,6 +76,7 @@ $map = @{
   '09_item_drafts.test.sql' = 'supabase\tests\database'
   '10_yearly_lists.test.sql' = 'supabase\tests\database'
   '11_link_checks.test.sql' = 'supabase\tests\database'
+  '12_notifications.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -178,6 +180,11 @@ $map = @{
   # Design v2 step 4b: drafts, share target (/add), v1 bridge.
   'AddV2.tsx' = 'app\src\designs\v2\screens'; 'AddBridgeV1.tsx' = 'app\src\designs\v1'
   'shareTarget.ts' = 'app\src\lib'; 'share-target.spec.ts' = 'app\tests\e2e'
+  # notifications v2, step 4g-2 (ADR-049)
+  'NotifyV2.tsx' = 'app\src\designs\v2\screens'
+  'notifications.ts' = 'app\src\lib'; 'notifyRules.ts' = 'app\src\lib'
+  'notify-rules.spec.ts' = 'app\tests\e2e'; 'notify-v2.spec.ts' = 'app\tests\e2e'
+  'push-sw.js' = 'app\public'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'
@@ -203,9 +210,12 @@ $map = @{
   # closed background jobs service wishlist-jobs (ADR-048), same image
   'jobs_main.py' = 'services\parser\app';  'jobs_config.py' = 'services\parser\app'
   'jobs_store.py' = 'services\parser\app'; 'jobs_links.py' = 'services\parser\app'
+  # owner notifications (ADR-049)
+  'jobs_notify.py' = 'services\parser\app'; 'jobs_push.py' = 'services\parser\app'
+  'jobs_mail.py' = 'services\parser\app';   'jobs_texts.py' = 'services\parser\app'
   'test_extract.py' = 'services\parser\tests'; 'test_ssrf.py' = 'services\parser\tests'
   'test_auth.py' = 'services\parser\tests'; 'test_fetch_pinning.py' = 'services\parser\tests'
-  'test_jobs.py' = 'services\parser\tests'
+  'test_jobs.py' = 'services\parser\tests'; 'test_notify.py' = 'services\parser\tests'
   'jsonld.html' = 'services\parser\tests\fixtures'; 'og.html' = 'services\parser\tests\fixtures'
   'microdata.html' = 'services\parser\tests\fixtures'; 'bare.html' = 'services\parser\tests\fixtures'
   'price_in_text.html' = 'services\parser\tests\fixtures'

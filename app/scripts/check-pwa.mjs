@@ -124,6 +124,15 @@ for (const p of GUEST_PREFIXES) {
 }
 check(!/\.map"/.test(sw), 'sw.js: у кеш потрапили карти коду (.map)');
 
+// Push-сповіщення (ADR-049): без обробника push браузер покаже «сайт оновився
+// у фоні» замість сповіщення, а натиск нікуди не поведе.
+check(/importScripts\(\s*"push-sw\.js"\s*\)/.test(sw), 'sw.js: не підключено push-sw.js (workbox.importScripts)');
+const pushSw = await readFile(join(dist, 'push-sw.js'), 'utf8').catch(() => '');
+check(
+  pushSw.includes("addEventListener('push'") && pushSw.includes("addEventListener('notificationclick'"),
+  'push-sw.js: немає обробників push і notificationclick',
+);
+
 if (failures.length) {
   console.error('PWA: знайдено проблеми:\n- ' + failures.join('\n- '));
   process.exit(1);

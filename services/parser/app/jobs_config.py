@@ -1,3 +1,4 @@
+import re
 from functools import lru_cache
 
 from pydantic import field_validator
@@ -27,7 +28,16 @@ class JobSettings(BaseSettings):
     jobs_host_delay_seconds: float = 2.0
     jobs_concurrency: int = 4
 
-    @field_validator("supabase_url", "supabase_secret_key")
+    # Сповіщення (P, ADR-049). Ключі — із Secret Manager, адреси — звичайні
+    # змінні. Без них перевірка посилань працює, а сповіщення — ні.
+    brevo_api_key: str = ""
+    vapid_private_key: str = ""
+    mail_from: str = ""
+    app_origin: str = ""
+
+    @field_validator(
+        "supabase_url", "supabase_secret_key", "brevo_api_key", "vapid_private_key", "mail_from", "app_origin"
+    )
     @classmethod
     def _strip(cls, value: str) -> str:
         # Секрет, покладений у Secret Manager через `echo`, несе перенос рядка
@@ -49,6 +59,26 @@ class JobSettings(BaseSettings):
     @property
     def ready(self) -> bool:
         return not self.problems
+
+    @property
+    def notify_problems(self) -> list[str]:
+        """Чого бракує сповіщенням — назви змінних, без значень."""
+        out: list[str] = []
+        if not self.brevo_api_key.startswith("xkeysib-"):
+            out.append("BREVO_API_KEY")
+        # Сирий приватний ключ P-256 у base64url — 43 символи.
+        if not re.fullmatch(r"[A-Za-z0-9_-]{43}=?", self.vapid_private_key):
+            out.append("VAPID_PRIVATE_KEY")
+        if not re.fullmatch(r"[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+", self.mail_from):
+            out.append("MAIL_FROM")
+        origin = self.app_origin.rstrip("/")
+        if not re.fullmatch(r"https://[A-Za-z0-9.-]+(:\d+)?", origin):
+            out.append("APP_ORIGIN")
+        return out
+
+    @property
+    def notify_ready(self) -> bool:
+        return self.ready and not self.notify_problems
 
 
 @lru_cache

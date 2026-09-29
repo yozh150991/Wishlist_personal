@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { clearCache, setCacheOwner } from './cache';
+import { forgetPushOnThisDevice } from './notifications';
 
 type AuthState = {
   session: Session | null;
@@ -41,6 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // і з іншої вкладки, і через протухлу сесію. На спільному компʼютері
         // чужі списки не мають лишатися в IndexedDB (ADR-028).
         void clearCache();
+        // І сповіщення цього власника на пристрій більше не приходять (ADR-049).
+        // Сесії вже немає, тож лише підписка браузера — рядок прибере сервіс.
+        void forgetPushOnThisDevice(false);
       }
     });
 
@@ -56,6 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       recovery,
       signOut: async () => {
+        // Поки сесія жива — прибрати й рядок пристрою на сервері.
+        await forgetPushOnThisDevice(true);
         await supabase.auth.signOut();
       },
     }),

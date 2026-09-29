@@ -13,8 +13,11 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request, status
 
 from . import jobs_links as links
+from . import jobs_notify as notify
 from .jobs_config import job_settings
-from .jobs_store import Store
+from .jobs_mail import Mailer
+from .jobs_push import Pusher
+from .jobs_store import NotifyStore, Store
 
 log = logging.getLogger("jobs")
 
@@ -57,7 +60,20 @@ def _require_invoker(request: Request) -> None:
 async def health() -> dict[str, object]:
     # Лише назви змінних, яких бракує, — без значень. /health теж за IAM.
     cfg = job_settings()
-    return {"status": "ok", "service": "wishlist-jobs", "configured": cfg.ready, "problems": cfg.problems}
+    brevo = "not_configured"
+    if "BREVO_API_KEY" not in cfg.notify_problems:
+        # Живий виклик: заодно рахується Brevo як успішне використання ключа.
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            brevo = await Mailer(cfg.brevo_api_key, cfg.mail_from, client).ping()
+    return {
+        "status": "ok",
+        "service": "wishlist-jobs",
+        "configured": cfg.ready,
+        "problems": cfg.problems,
+        "notify_configured": cfg.notify_ready,
+        "notify_problems": cfg.notify_problems,
+        "brevo": brevo,
+    }
 
 
 @app.post("/jobs/check-links")
@@ -76,4 +92,21 @@ async def check_links(request: Request) -> dict[str, int]:
             recheck_hours=cfg.jobs_recheck_hours,
             host_delay=cfg.jobs_host_delay_seconds,
             concurrency=cfg.jobs_concurrency,
+        )
+
+
+@app.post("/jobs/notify")
+async def send_notifications(request: Request) -> dict[str, int]:
+    """Сповіщення власника (ADR-049): раз на годину з Cloud Scheduler."""
+    _require_invoker(request)
+    cfg = job_settings()
+    if not cfg.notify_ready:
+        log.error("Сповіщенням бракує налаштувань: %s", ", ".join(cfg.problems + cfg.notify_problems))
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "notify_not_configured")
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        return await notify.run(
+            NotifyStore(cfg.supabase_url, cfg.supabase_secret_key, client),
+            Pusher(cfg.vapid_private_key, cfg.mail_from, client),
+            Mailer(cfg.brevo_api_key, cfg.mail_from, client),
+            origin=cfg.app_origin.rstrip("/"),
         )

@@ -14,6 +14,7 @@ import { downloadText } from '../../../lib/download';
 import { DESKTOP } from '../ShellV2';
 import { NoteV2 } from './AuthPartsV2';
 import { SignOutV2, SwitchV2 } from './CommonV2';
+import { NotifyCardV2 } from './NotifyV2';
 
 const LANGUAGE: Record<Locale, string> = { uk: 'Українська', pl: 'Polski', en: 'English' };
 
@@ -53,8 +54,8 @@ function Choice<T extends string>({
  *
  * Кожен вибір застосовується одразу — кнопки «Зберегти» немає. Порядок:
  * акаунт → доступність (висока контрастність над кольорами, бо важливіша за
- * смак) → кольори → тема → мова → застосунок на телефоні → мої дані → вигляд
- * застосунку → вихід. Тема, схема й контраст їдуть у профіль (`AppearanceSync`)
+ * смак) → кольори → тема → мова → сповіщення (P, ADR-049) → застосунок на
+ * телефоні → мої дані → вигляд застосунку → вихід. Тема, схема й контраст їдуть у профіль (`AppearanceSync`)
  * — для обох версій однаково; вигляд події — властивість окремого списку,
  * тут його немає (ADR-034).
  *
@@ -171,6 +172,8 @@ export default function SettingsV2() {
             onChange={setLocale}
           />
         </section>
+
+        <NotifyCardV2 />
 
         <section className="v2-settings__card" aria-labelledby="v2-set-install" data-testid="install">
           <h2 className="v2-settings__label" id="v2-set-install">

@@ -12,7 +12,8 @@
 5. Пошта для листів
 6. Перевірка
 ...
-9. Фонові задачі (wishlist-jobs) -> щоденна перевірка посилань (ADR-048)
+9. Фонові задачі (wishlist-jobs) -> щоденна перевірка посилань (ADR-048),
+                                     сповіщення push і листом (ADR-049, 9.9 і 9.11)
 ```
 
 ---
@@ -632,9 +633,9 @@ gcloud scheduler jobs create http wishlist-check-links `
    ```
 4. Supabase → API Keys → старий ключ → **Delete**. Від цієї миті він не працює ніде.
 
-### 9.9. Ключі для наступного кроку (сповіщення, 4г-2)
+### 9.9. Ключі для сповіщень: Brevo і VAPID
 
-Поки не потрібні — їх підключить наступний крок. VAPID-пару можна згенерувати й зараз. **Ключ Brevo — ні: створюй його в день деплою 4г-2.** Brevo вимикає API-ключ, яким 90 днів не зроблено жодного успішного виклику, незалежно від обраного терміну дії. Ключ, створений заздалегідь і не використаний, може згаснути ще до того, як знадобиться.
+Потрібні для 9.11. **Ключ Brevo створюй незадовго до деплою сповіщень:** Brevo вимикає API-ключ, яким 90 днів не зроблено жодного успішного виклику, незалежно від обраного терміну дії. Після деплою сервіс сам раз на добу робить легкий виклик, і ключ не згасає.
 
 **Brevo API-ключ** — для листів (не плутай із ключем SMTP з розділу 5: це інша річ).
 1. [app.brevo.com/settings/keys/api](https://app.brevo.com/settings/keys/api) — це **Settings → SMTP & API**, сторінка **API keys & MCP**. Відкрити її й створювати ключі може лише власник акаунта Brevo або користувач із правом **API keys**.
@@ -643,36 +644,122 @@ gcloud scheduler jobs create http wishlist-check-links `
    - **Expiry** — **1 year**, і одразу нагадування в календар за тиждень до кінця: після цієї дати листи перестануть іти. Brevo теж нагадає листом за 3 дні. «Без терміну» теж можна, але тоді ротація — лише з твоєї ініціативи (як у 9.8).
 3. **Generate** → Brevo надсилає на пошту акаунта шестизначний код → вписати → **Verify**.
 4. Скопіюй `xkeysib-…` — Brevo покаже його **один раз**; загубив — лише новий ключ.
-5. Secret Manager → **Create secret** `wishlist-brevo-key` зі значенням ключа, далі:
+5. Одразу в Secret Manager, без переносу рядка й без сліду в історії PowerShell:
    ```powershell
+   $key = Read-Host "Встав xkeysib- і натисни Enter"
+   [IO.File]::WriteAllText("$env:TEMP\wl-brevo.txt", $key.Trim())
+   gcloud secrets create wishlist-brevo-key --replication-policy=automatic --data-file="$env:TEMP\wl-brevo.txt"
+   Remove-Item "$env:TEMP\wl-brevo.txt"
+   Remove-Variable key
    gcloud secrets add-iam-policy-binding wishlist-brevo-key --member "serviceAccount:$JOBS_SA" --role roles/secretmanager.secretAccessor
    ```
-**Адреса відправника** зараз ніде не вказується. У 4г-2 вона стане звичайною змінною сервісу `wishlist-jobs` (не секретом, бо адреса не таємниця), і той крок дасть готову команду `gcloud run services update wishlist-jobs --update-env-vars …`. Сама адреса — та сама, що вже шле листи Supabase (розділ 5):
-- Brevo → **Settings → Senders, domains, IPs → Senders** — адреса з позначкою підтвердження;
-- вона ж у Supabase → **Authentication → Emails → SMTP Settings → Sender email**.
-
-Не плутай її з логіном SMTP `…@smtp-brevo.com`: це не адреса відправника. Блокування невідомих IP у Brevo вже вимкнене з розділу 5 (крок 3) — воно діє й на API-ключ, тож виклики з Cloud Run, у якого немає постійної адреси, не відсікатимуться.
+   Новий ключ замість старого — те саме, але `gcloud secrets versions add wishlist-brevo-key --data-file=…` замість `create`; права лишаються.
+6. Перевірка, що Brevo ключ приймає (ключ на екран не виводиться):
+   ```powershell
+   $k = gcloud secrets versions access latest --secret wishlist-brevo-key
+   $k.StartsWith("xkeysib-"); $k.Length
+   curl.exe -s -o NUL -w "%{http_code}`n" -H "api-key: $k" https://api.brevo.com/v3/account
+   Remove-Variable k
+   ```
+   Має бути `True`, близько 89 символів і `200`. `401` — прибери `-o NUL` і глянь пояснення Brevo: не той ключ (`xsmtpsib-…` — це SMTP), обрізаний ключ чи блокування невідомих IP (**Settings → Security → Authorized IPs** — вимкнути, а не додавати свою адресу: у Cloud Run постійної адреси немає).
 
 Якщо **Generate** відповідає «Your request could not be processed at this time. Try again later.» — це збій на боці Brevo, а не помилка у формі. Перезавантаж сторінку (сесія могла застаріти), вимкни блокувальник реклами для `app.brevo.com` і спробуй ще раз; не допомогло — через кілька годин. Лист із кодом має прийти на пошту акаунта Brevo, не на адресу відправника.
 
-**VAPID-ключі** — для push у браузері. Це пара, яку генеруєш сам, нікому не платячи:
-```powershell
-npx web-push generate-vapid-keys --json
-```
-- `publicKey` — не секрет: піде у Vercel як `VITE_VAPID_PUBLIC_KEY` (наступний крок скаже, коли).
-- `privateKey` — секрет: Secret Manager `wishlist-vapid-private` і такий самий `add-iam-policy-binding` для `$JOBS_SA`.
+**Адреса відправника** — не секрет, у 9.11 вона стане змінною `MAIL_FROM`. Це та сама адреса, що вже шле листи Supabase (розділ 5):
+- Brevo → **Settings → Senders, domains, IPs → Senders** — адреса з позначкою підтвердження;
+- вона ж у Supabase → **Authentication → Emails → SMTP Settings → Sender email**.
 
-Пару генеруй **один раз**. Нова пара робить недійсними всі підписки на push, і людям доведеться вмикати сповіщення знову.
+Не плутай її з логіном SMTP `…@smtp-brevo.com`: це не адреса відправника.
+
+**VAPID-ключі** — для push у браузері. Це пара, яку генеруєш сам, нікому не платячи. Одна команда створює пару й кладе приватний ключ у Secret Manager, не показуючи його:
+```powershell
+$v = npx --yes web-push generate-vapid-keys --json | ConvertFrom-Json
+[IO.File]::WriteAllText("$env:TEMP\wl-vapid.txt", $v.privateKey)
+gcloud secrets create wishlist-vapid-private --replication-policy=automatic --data-file="$env:TEMP\wl-vapid.txt"
+Remove-Item "$env:TEMP\wl-vapid.txt"
+gcloud secrets add-iam-policy-binding wishlist-vapid-private --member "serviceAccount:$JOBS_SA" --role roles/secretmanager.secretAccessor
+$v.publicKey
+Remove-Variable v
+```
+- `publicKey` (його покаже передостанній рядок) — не секрет: у 9.11 піде у Vercel як `VITE_VAPID_PUBLIC_KEY`. Збережи будь-де.
+- `privateKey` — лише в секреті `wishlist-vapid-private`.
+
+Пару генеруй **один раз**. Нова пара робить недійсними всі підписки на push, і людям доведеться вмикати сповіщення знову. Повторний `gcloud secrets create` відмовить, бо секрет уже є, — це й захист.
 
 ### 9.10. Скільки коштує
 
 | Що | Безкоштовно | У нас |
 |---|---|---|
-| Cloud Scheduler | 3 задачі на платіжний акаунт | 1 |
-| Secret Manager | 6 активних версій, 10 000 звернень на місяць | 1–3 версії, ~30 звернень |
-| Cloud Run | 180 000 vCPU-секунд на місяць | ≤ 5 хвилин на добу |
+| Cloud Scheduler | 3 задачі на платіжний акаунт | 2 (`wishlist-check-links`, `wishlist-notify`) |
+| Secret Manager | 6 активних версій, 10 000 звернень на місяць | 3 версії, кілька десятків звернень |
+| Cloud Run | 180 000 vCPU-секунд на місяць | ≤ 5 хвилин на добу й 24 короткі запуски сповіщень |
+| Brevo | 300 листів на день | кілька на тиждень |
+
+Три безкоштовні задачі Cloud Scheduler — на весь платіжний акаунт, не на проєкт. Якщо інші твої проєкти вже мають задачі, кожна понад три коштує близько $0,10 на місяць.
 
 Бюджетне сповіщення з розділу 2.4 покриває й цей сервіс.
+
+### 9.11. Сповіщення: деплой і розклад (ADR-049)
+
+Сповіщення надсилає той самий `wishlist-jobs`: раз на годину він дивиться, кому що пора сказати, і шле push і листи. Потрібні ключі з 9.9 і міграція.
+
+1. **Міграція** — `20260930090000_notifications.sql`:
+   ```powershell
+   npx supabase db push
+   ```
+2. **Деплой сервісу з новим кодом, адресами й ключами** — з теки `services\parser`, у сесії PowerShell зі змінними з 9.0:
+   ```powershell
+   cd services\parser
+   gcloud run deploy wishlist-jobs `
+     --source . `
+     --region $REGION `
+     --update-env-vars "MAIL_FROM=<адреса з Brevo Senders>,APP_ORIGIN=https://wishlist-personal.vercel.app" `
+     --update-secrets "BREVO_API_KEY=wishlist-brevo-key:latest,VAPID_PRIVATE_KEY=wishlist-vapid-private:latest"
+   cd ..\..
+   ```
+   `--update-*`, а не `--set-*`: наявні `APP_MODULE`, `SUPABASE_URL` і секрет Supabase лишаються. `APP_ORIGIN` — адреса застосунку без `/` у кінці: з неї листи будують посилання.
+3. **Перевірка налаштувань:**
+   ```powershell
+   curl.exe -H "Authorization: Bearer $(gcloud auth print-identity-token)" "$JOBS_URL/health"
+   ```
+   Має бути `"notify_configured":true`, `"notify_problems":[]` і `"brevo":"ok"`. Назва в `notify_problems` каже, яку змінну виправити (API.md, `GET /health`). `"brevo":"refused"` — ключ не той або блокування IP (9.9, крок 6).
+4. **Розклад — щогодини о :05:**
+   ```powershell
+   gcloud scheduler jobs create http wishlist-notify `
+     --location $REGION `
+     --schedule "5 * * * *" `
+     --time-zone "Etc/UTC" `
+     --http-method POST `
+     --uri "$JOBS_URL/jobs/notify" `
+     --oidc-service-account-email $SCHED_SA `
+     --oidc-token-audience $JOBS_URL `
+     --attempt-deadline 300s
+   ```
+   Пояс розкладу тут не важливий: тишу 22:00–9:00 сервіс рахує за поясом кожного власника. Якщо для першої задачі знадобився `--location europe-west1`, постав його й тут.
+5. **Публічний ключ VAPID у Vercel** — **Settings → Environment Variables**:
+
+   | Name | Value | Environments |
+   |---|---|---|
+   | `VITE_VAPID_PUBLIC_KEY` | `publicKey` з 9.9 (`B…`, 87 символів) | Production (і Preview, якщо перевіряєш там) |
+
+   Потім **Deployments → останній → Redeploy**: змінні `VITE_*` вшиваються під час збірки. Без цієї змінної push у застосунку прихований, а сповіщення приходять лише листом.
+6. **Перевірка наживо:**
+   1. На телефоні відкрий застосунок. На iPhone — обов'язково встановлений на екран «Додому»: у Safari push не приходить.
+   2. v2 → **Налаштування → Сповіщення → Увімкнути сповіщення** → дозволити. «Push на цьому пристрої» має бути ввімкнено.
+   3. Створи список із датою **вчора**.
+   4. Поза 22:00–9:00 за твоїм часом:
+      ```powershell
+      gcloud scheduler jobs run wishlist-notify --location $REGION
+      Start-Sleep 30
+      gcloud run services logs read wishlist-jobs --region $REGION --limit 10
+      ```
+      У журналі — `INFO: jobs.notify notify {'events': 1, 'push': 1, …}`, на телефоні — «Як минуло свято?». Натиск відкриває цей список.
+   5. Повтор за хвилину нічого не надішле: та сама подія не повторюється, а між сповіщеннями — щонайменше 3 години. Так і має бути.
+   6. Видали тестовий список.
+
+   `'dropped': 1` замість `'push': 1` — push нікуди надсилати: на пристрої його не ввімкнено, або у Vercel немає `VITE_VAPID_PUBLIC_KEY` (крок 5). `'quiet': 1` — зараз 22:00–9:00 за твоїм поясом.
+
+**Після зміни коду** `services/parser` — передеплой `wishlist-jobs` звичайною командою з розділу 7: змінні й секрети зберігаються.
 
 ---
 
@@ -681,7 +768,7 @@ npx web-push generate-vapid-keys --json
 | Що | Тариф | Реально |
 |---|---|---|
 | Vercel | Hobby | 0 |
-| Cloud Run | безкоштовний рівень | 0 при кількох викликах на день; `wishlist-jobs` — кілька хвилин на добу |
+| Cloud Run | безкоштовний рівень | 0 при кількох викликах на день; `wishlist-jobs` — кілька хвилин на добу й запуски сповіщень щогодини |
 | Cloud Scheduler, Secret Manager | безкоштовні квоти | 0 (розділ 9.10) |
 | Supabase | Free | 0; проєкт засинає після тижня бездіяльності |
 | Brevo | безкоштовний | 0 |
