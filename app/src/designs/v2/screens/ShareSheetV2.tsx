@@ -9,6 +9,7 @@ import type { List } from '../../../lib/types';
 import { FieldV2, IconCircleV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { SheetV2, SwitchV2, useCounts } from './CommonV2';
 import { ConfirmSheetV2 } from './ListPartsV2';
+import { NotifyAskV2 } from './NotifyV2';
 import { GuestPreviewV2, useAppearanceHue } from './PreviewV2';
 import type { PreviewGroup } from './PreviewV2';
 import { DESKTOP } from '../ShellV2';
@@ -358,6 +359,8 @@ export function ShareSheetV2({
               {t('v2share.revoke')}
             </button>
           </div>
+          {/* Після посилання вже є чого чекати — тоді й питаємо про сповіщення (P1). */}
+          <NotifyAskV2 />
         </div>
       );
   } else if (step === 'pick' && !desktop) {

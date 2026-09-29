@@ -1141,5 +1141,53 @@
     "title": "Dodawanie z innych aplikacji — w nowym wyglądzie",
     "body": "Aby dodać udostępnione, przełącz się na nowy wygląd aplikacji. Wrócić możesz w Ustawieniach.",
     "switch": "Przełącz i dodaj"
+  },
+  "v2notify": {
+    "title": "Powiadomienia",
+    "intro": "Przypomnimy o ważnych rzeczach: po święcie, miesiąc przed corocznym, gdy produkt zniknie ze sklepu albo link zaraz wygaśnie. Żadnych reklam.",
+    "enable": "Włącz powiadomienia",
+    "enabling": "Włączam…",
+    "enabled": "Powiadomienia są włączone.",
+    "enabledEmail": "Push nie działa na tym urządzeniu, więc ważne rzeczy przyjdą e-mailem na {email}.",
+    "ask": {
+      "title": "Powiedzieć, kiedy nadejdzie czas?",
+      "body": "Dzień po święcie przypomnimy o domknięciu listy, a jeśli produkt zniknie ze sklepu — damy znać. Żadnych reklam.",
+      "later": "Nie teraz",
+      "settings": "Ustawienia powiadomień"
+    },
+    "channel": {
+      "push": "Push",
+      "email": "E-mail"
+    },
+    "kind": {
+      "afterEvent": "Po święcie",
+      "afterEventHint": "Przypomnienie o domknięciu listy",
+      "yearly": "Coroczne święto",
+      "yearlyHint": "Miesiąc przed datą",
+      "link": "Produkt niedostępny",
+      "linkHint": "Strona zniknęła albo brak towaru",
+      "price": "Cena się zmieniła",
+      "priceHint": "O więcej niż 15%",
+      "share": "Link wygasa",
+      "shareHint": "3 dni przed końcem ważności"
+    },
+    "device": {
+      "label": "Push na tym urządzeniu",
+      "on": "Powiadomienia przychodzą tutaj.",
+      "off": "Tutaj powiadomienia nie przychodzą.",
+      "count": "Urządzenia z push: {n}",
+      "nowhere": "Push nie ma dokąd trafić: włącz go na urządzeniu, na którym chcesz je dostawać.",
+      "denied": "Push jest wyłączony w ustawieniach przeglądarki. E-maile przychodzą jak zwykle.",
+      "unsupported": "Ta przeglądarka nie obsługuje push. E-maile przychodzą jak zwykle.",
+      "ios": "Na iPhonie i iPadzie push działa tylko w zainstalowanej aplikacji: „Udostępnij” → „Do ekranu początkowego”.",
+      "failed": "Nie udało się włączyć push w tej przeglądarce. E-maile możesz włączyć poniżej."
+    },
+    "security": "Bezpieczeństwo konta",
+    "securityHint": "Zmiana hasła",
+    "securityAlways": "E-mail · zawsze",
+    "quiet": "Od 22:00 do 9:00 Twojego czasu nie przeszkadzamy, a kilka zdarzeń w ciągu 3 godzin przychodzi jednym powiadomieniem.",
+    "email": "E-maile na adres {email}.",
+    "guests": "Nie ma powiadomień o tym, co wzięli goście: to niespodzianka także dla Ciebie.",
+    "off": "Wyłącz wszystkie powiadomienia"
   }
 }

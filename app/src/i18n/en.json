@@ -1141,5 +1141,53 @@
     "title": "Adding from other apps is in the new design",
     "body": "To add what you shared, switch to the new design. You can switch back in Settings.",
     "switch": "Switch and add"
+  },
+  "v2notify": {
+    "title": "Notifications",
+    "intro": "We'll remind you of what matters: after the celebration, a month before a yearly one, when a product disappears from the shop or a link is about to expire. Nothing promotional.",
+    "enable": "Turn on notifications",
+    "enabling": "Turning on…",
+    "enabled": "Notifications are on.",
+    "enabledEmail": "Push isn't available here, so important things will come by email to {email}.",
+    "ask": {
+      "title": "Want a heads-up when it's time?",
+      "body": "The day after the celebration we'll remind you to wrap up the list, and if a product disappears from the shop, we'll tell you. Nothing promotional.",
+      "later": "Not now",
+      "settings": "Notification settings"
+    },
+    "channel": {
+      "push": "Push",
+      "email": "Email"
+    },
+    "kind": {
+      "afterEvent": "After the celebration",
+      "afterEventHint": "A reminder to wrap up the list",
+      "yearly": "Yearly celebration",
+      "yearlyHint": "A month before the date",
+      "link": "Product unavailable",
+      "linkHint": "The page is gone or it's out of stock",
+      "price": "Price changed",
+      "priceHint": "By more than 15%",
+      "share": "Link expiring",
+      "shareHint": "3 days before it expires"
+    },
+    "device": {
+      "label": "Push on this device",
+      "on": "Notifications come here.",
+      "off": "Notifications don't come here.",
+      "count": "Devices with push: {n}",
+      "nowhere": "Push has nowhere to go yet: turn it on on the device where you want it.",
+      "denied": "Push is blocked in your browser settings. Emails arrive as usual.",
+      "unsupported": "This browser can't do push. Emails arrive as usual.",
+      "ios": "On iPhone and iPad, push only works in the installed app: Share → Add to Home Screen.",
+      "failed": "Couldn't turn on push in this browser. You can turn on emails below."
+    },
+    "security": "Account security",
+    "securityHint": "Password change",
+    "securityAlways": "Email · always",
+    "quiet": "We stay quiet from 22:00 to 9:00 your time, and several events within 3 hours arrive as one notification.",
+    "email": "Emails go to {email}.",
+    "guests": "There are no notifications about what guests took: it's a surprise for you too.",
+    "off": "Turn off all notifications"
   }
 }

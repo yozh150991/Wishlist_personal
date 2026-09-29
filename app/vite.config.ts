@@ -69,6 +69,9 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         // Запити до Supabase і парсера — завжди в мережу.
         runtimeCaching: [],
+        // Push-сповіщення власника (ADR-049): обробники push і натиску на
+        // сповіщення. Перевіряє `npm run check:pwa`.
+        importScripts: ['push-sw.js'],
       },
       devOptions: { enabled: false },
     }),

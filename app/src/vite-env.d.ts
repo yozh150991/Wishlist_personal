@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_PUBLIC_ORIGIN?: string;
   /** '1' — показувати вхід через Google (провайдер налаштовано в Supabase). */
   readonly VITE_AUTH_GOOGLE?: string;
+  /** Публічний ключ VAPID для push (ADR-049). Без нього push вимкнений, лишається пошта. */
+  readonly VITE_VAPID_PUBLIC_KEY?: string;
 }
 
 interface ImportMeta {

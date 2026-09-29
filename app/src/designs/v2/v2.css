@@ -1660,3 +1660,35 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-linkcheck__line { font-size: var(--t-body); }
 .v2-linkcheck__line[data-tone='danger'] { color: var(--color-danger-ink); font-weight: 700; }
 .v2-linkcheck__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+
+/* ── Сповіщення (крок 4г-2, потік P; ADR-049) ── */
+
+/* Подія × канал: назва й підказка ліворуч, пігулки Push / Пошта праворуч. */
+.v2-notify__rows { display: grid; }
+.v2-notify__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3) var(--sp-5);
+  padding-block: var(--sp-4);
+  border-top: 1px solid var(--color-divider);
+}
+.v2-notify__text { display: grid; gap: 2px; min-width: 12rem; flex: 1 1 14rem; }
+.v2-notify__name { font-weight: 700; }
+.v2-notify__hint { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-notify__chips { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.v2-notify__chip { background: var(--color-bg); }
+/* Push заборонено — пігулка приглушена, але видно, що вона є (P, гілка). */
+.v2-notify__chip[aria-disabled='true'] { opacity: 0.55; cursor: not-allowed; }
+.v2-notify__static { font-size: var(--t-small); font-weight: 700; color: var(--color-neutral-700); }
+.v2-notify__device { display: grid; gap: var(--sp-3); }
+
+/* Запит після посилання (P1): тихий блок під діями за рискою, не ще одне вікно. */
+.v2-notify-ask {
+  display: grid;
+  gap: var(--sp-3);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--color-divider);
+}
+.v2-notify-ask__title { font-size: var(--t-item); }

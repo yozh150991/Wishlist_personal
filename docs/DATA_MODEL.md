@@ -21,6 +21,7 @@
 | `20260928160000_item_drafts.sql` | `items.needs_title` — чернетка без назви; тригери `items_draft_guard` і `share_items_skip_drafts` (ADR-046) |
 | `20260928170000_yearly_lists.sql` | `lists.repeats_yearly` — щорічне свято (ADR-047) |
 | `20260929090000_link_checks.sql` | `items.link_status`, `link_checked_at`, `link_price`, `link_currency` — перевірка посилань; індекс черги й тригер `items_link_reset` (ADR-048) |
+| `20260930090000_notifications.sql` | `notification_settings`, `push_subscriptions`, `notification_log` — сповіщення власника; `save_push_subscription`, `forget_push_subscription` (ADR-049) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 
@@ -30,6 +31,10 @@
 auth.users
     │
     ├──1:1── profiles          (locale, theme, scheme, high_contrast, default_currency)
+    │
+    ├──1:1── notification_settings (time_zone, подія × канал, last_sent_at)   ADR-049
+    ├──1:N── push_subscriptions    (endpoint, p256dh, auth)                   ADR-049
+    ├──1:N── notification_log      (kind, subject_id, occurrence) ← лише сервіс
     │
     ├──1:N── appearances       (name, hue, source) ← ще три вбудовані з owner_id = null
     │            ▲
@@ -57,6 +62,8 @@ auth.users
 `auth.users.raw_user_meta_data.locale` — `uk`, `pl` або `en`. Пише застосунок (`LocaleSync`, реєстрація), читають шаблони листів Supabase як `.Data.locale` (ADR-024). Це єдине джерело мови, яке бачать листи: колонка `profiles.locale` шаблонам недоступна і застосунком поки не використовується.
 
 `user_metadata` користувач може змінити сам через API, тож на це поле не спирається жодна перевірка доступу — лише вибір мови листа.
+
+Сповіщення (ADR-049) беруть мову звідти ж: сервіс `wishlist-jobs` читає `user_metadata.locale` через admin API Supabase Auth. Так питання ADR-024 «яке з двох полів головне» закрито на користь `user_metadata`; `profiles.locale` лишається невикористаною.
 
 ## Вигляд інтерфейсу
 
@@ -171,6 +178,21 @@ RLS: власник бачить свої й вбудовані, змінює й
 
 **Побічні канали (ADR-038).** `lists.id` і `items.id` незмінні (тригер `keep_columns`): інакше зміна ключа позиції падала б на зовнішньому ключі `claims` лише тоді, коли позначки є. Відома й прийнята межа — службова колонка `xmax`: блокування рядка позиції гостьовою дією лишає в ній номер транзакції гостя, а PostgREST дає власнику прочитати `?select=xmax`. Це навмисне підглядання тієї самої сили, що й інкогніто (ADR-009), а не випадкове; закрити його можна колонковими правами на `items` і `lists` — див. ADR-038.
 
+### `notification_settings`, `push_subscriptions`, `notification_log` (ADR-049)
+Сповіщення власника. Рядка налаштувань немає — сповіщень немає, як у v1; усі канали усталено вимкнені.
+
+| Таблиця | Що тримає | Хто бачить |
+|---|---|---|
+| `notification_settings` | один рядок на власника: `time_zone` (ім'я IANA з браузера; `check` на символи), десять прапорців «подія × канал» — `after_event_push`, `after_event_email`, `yearly_*`, `link_*`, `price_*`, `share_*` — і `last_sent_at` (для «не частіше ніж раз на 3 години») | власник — усе своє (RLS); сервіс — усіх |
+| `push_subscriptions` | пристрої для push: `endpoint` (унікальний, `https://` без пробілів і керівних символів, до 1024), ключі `p256dh` (65 байтів P-256 у base64url) і `auth` (16 байтів), `last_ok_at` | власник — читати свої; вставляти й прибирати — лише через `save_push_subscription` і `forget_push_subscription` |
+| `notification_log` | що вже надіслано: `(owner_id, kind, subject_id, occurrence)` — ключ, `channels` — куди дійшло (порожньо — пропущено: не було куди) | лише сервіс (`service_role`); `anon` і `authenticated` не мають жодних прав |
+
+`kind` — лише `after_event`, `yearly`, `link`, `price`, `share` (`check`): подій про позначки гостей не буває (ADR-040). `subject_id` — список, позиція чи посилання, без зовнішнього ключа: видалений предмет просто перестає давати події.
+
+**Пристрій — одного власника.** `save_push_subscription` (SECURITY DEFINER) прибирає рядок із тією самою адресою, якщо він належить іншому власникові, і тримає щонайбільше 10 пристроїв на власника (найстаріші — за `created_at`, який функція ставить `clock_timestamp()`). Адреса підписки — секрет рівня токена: хто її знає, може слати push на пристрій; тому її бачить лише власник, а сервіс не логує.
+
+Усі три таблиці видаляються каскадом разом з акаунтом.
+
 ## Пагінація
 
 Нескінченний скрол на **keyset-пагінації** (`list_items_page`), не на `OFFSET`. При `OFFSET` довантаження після додавання/видалення позиції дублює або губить рядки, і на великих списках сканування росте лінійно.
@@ -198,6 +220,8 @@ RLS: власник бачить свої й вбудовані, змінює й
 | `guest_keys.key_hash` (PK) | ключ гостя → ідентичність |
 | `claims (item_id, identity_id)` (PK) | скільки взято позиції; позначка цього гостя |
 | `guest_identities (list_id, short_code)` (unique) | код у межах списку |
+| `push_subscriptions (owner_id)`, `push_subscriptions.endpoint` (unique) | пристрої власника; одна підписка — один рядок |
+| `notification_log` (PK) | чи надсилали цей привід |
 
 ## Гроші
 
