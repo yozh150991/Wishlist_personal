@@ -647,7 +647,11 @@ gcloud scheduler jobs create http wishlist-check-links `
    ```powershell
    gcloud secrets add-iam-policy-binding wishlist-brevo-key --member "serviceAccount:$JOBS_SA" --role roles/secretmanager.secretAccessor
    ```
-Адреса відправника — та сама, що вже підтверджена в Brevo для листів Supabase (розділ 5).
+**Адреса відправника** зараз ніде не вказується. У 4г-2 вона стане звичайною змінною сервісу `wishlist-jobs` (не секретом, бо адреса не таємниця), і той крок дасть готову команду `gcloud run services update wishlist-jobs --update-env-vars …`. Сама адреса — та сама, що вже шле листи Supabase (розділ 5):
+- Brevo → **Settings → Senders, domains, IPs → Senders** — адреса з позначкою підтвердження;
+- вона ж у Supabase → **Authentication → Emails → SMTP Settings → Sender email**.
+
+Не плутай її з логіном SMTP `…@smtp-brevo.com`: це не адреса відправника. Блокування невідомих IP у Brevo вже вимкнене з розділу 5 (крок 3) — воно діє й на API-ключ, тож виклики з Cloud Run, у якого немає постійної адреси, не відсікатимуться.
 
 Якщо **Generate** відповідає «Your request could not be processed at this time. Try again later.» — це збій на боці Brevo, а не помилка у формі. Перезавантаж сторінку (сесія могла застаріти), вимкни блокувальник реклами для `app.brevo.com` і спробуй ще раз; не допомогло — через кілька годин. Лист із кодом має прийти на пошту акаунта Brevo, не на адресу відправника.
 
