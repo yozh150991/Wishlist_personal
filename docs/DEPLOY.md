@@ -305,9 +305,46 @@ gcloud run services logs read wishlist-parser --region europe-central2 --limit 3
 
 **Фронтенд.** `git push` у `main` — Vercel збирає сам. Гілки дають попередні збірки на окремих адресах; щоб вхід на них працював, додай `https://*.vercel.app/**` у Redirect URLs Supabase.
 
-**Парсер.** Повторити `gcloud run deploy --source .` із теки `services/parser`. Змінні оточення зберігаються між деплоями; міняти їх окремо — `gcloud run services update wishlist-parser --update-env-vars KEY=VALUE`.
+**Парсер.** `git push` його не чіпає: новий код парсера доходить до людей лише після деплою з твого комп'ютера. Деплой бере файли з робочої копії, а не з GitHub — тобто ту гілку й той стан, які зараз на диску.
 
-**Сервіс задач `wishlist-jobs`** збирається з того самого коду, тож після змін у `services/parser` його теж передеплоїти (розділ 9.6, команда та сама; змінні й секрет зберігаються).
+1. Робоча копія — з потрібним кодом. З кореня репозиторію:
+   ```powershell
+   git status              # чисто, без незакомічених змін
+   git log --oneline -1    # останній коміт — той, що деплоїш
+   ```
+2. Той самий проєкт GCP, що й під час першого деплою:
+   ```powershell
+   gcloud config get-value project          # wishlist-parser-<…>
+   ```
+3. Деплой — лише назва, джерело й регіон:
+   ```powershell
+   cd services\parser
+   gcloud run deploy wishlist-parser --source . --region europe-central2
+   cd ..\..
+   ```
+   Решта налаштувань зберігається з першого деплою (розділ 2.2): змінні оточення, пам'ять, `--max-instances`, відкритий доступ. **Команду з 2.2 цілком не повторюй**: `--set-env-vars` спершу стирає всі наявні змінні й лишає тільки перелічені. Змінити одну змінну — `gcloud run services update wishlist-parser --region europe-central2 --update-env-vars KEY=VALUE`.
+   Збірка — 3–5 хвилин. Нова ревізія отримує весь трафік, щойно стартує; до того відповідає стара.
+4. Перевірка:
+   ```powershell
+   $PARSER_URL = gcloud run services describe wishlist-parser --region europe-central2 --format="value(status.url)"
+   curl.exe "$PARSER_URL/health"
+   ```
+   Очікуємо `"supabase_configured":true`, свою адресу Vercel в `allowed_origins` і `"secret_key_present":false`. Потім у застосунку — «Заповнити» на будь-якому посиланні.
+5. Якщо нова ревізія зламалась — повернути попередню:
+   ```powershell
+   gcloud run revisions list --service wishlist-parser --region europe-central2
+   gcloud run services update-traffic wishlist-parser --region europe-central2 --to-revisions wishlist-parser-000NN-xxx=100
+   ```
+   Поки трафік прикутий до ревізії, нові деплої його не отримують. Після виправлення й нового деплою поверни звичайний режим: `gcloud run services update-traffic wishlist-parser --region europe-central2 --to-latest`.
+
+Порядок відносно фронтенду й міграцій: парсер ні від того, ні від іншого не залежить, доки відповідь `/parse` не міняє форми. Зміна, що міняє форму відповіді, — окремий випадок, і про нього скаже CHANGELOG.
+
+**Сервіс задач `wishlist-jobs`** збирається з того самого коду, тож після змін у `services/parser` його теж передеплоїти — так само, як парсер, лише назва інша (розділ 9.4):
+```powershell
+cd services\parser
+gcloud run deploy wishlist-jobs --source . --region europe-central2
+```
+Закритий доступ, обліковий запис, змінні й секрет зберігаються. Поки сервіс не створено за розділом 9, цей крок пропускаєш.
 
 **База.** `npx supabase db push` як і раніше. Міграції накочуються на той самий проєкт Supabase — окремої бойової бази в нас немає, і для особистого застосунку це нормально. Але з цього моменту редагувати вже застосовані міграції не можна: тільки нові файли.
 
