@@ -583,7 +583,19 @@ gcloud scheduler jobs create http wishlist-check-links `
    ```powershell
    curl.exe -H "Authorization: Bearer $(gcloud auth print-identity-token)" "$JOBS_URL/health"
    ```
-   Очікуємо `{"status":"ok","service":"wishlist-jobs","configured":true}`. `false` — ключ не `sb_secret_…` або `SUPABASE_URL` лишився шаблоном.
+   Очікуємо `{"status":"ok","service":"wishlist-jobs","configured":true,"problems":[]}`. `false` — у `problems` назва змінної, з якою біда:
+   - **`SUPABASE_URL`** — лишився шаблон `<project-ref>` або адреса без `https://`. Подивитись, що задано (значення секрету тут не видно, лише його назва):
+     ```powershell
+     gcloud run services describe wishlist-jobs --region $REGION --format="yaml(spec.template.spec.containers[0].env)"
+     ```
+     Виправити: `gcloud run services update wishlist-jobs --region $REGION --update-env-vars "SUPABASE_URL=https://<справжній-ref>.supabase.co"`.
+   - **`SUPABASE_SECRET_KEY`** — у секреті не той ключ. Перевірити початок, не виводячи ключ на екран:
+     ```powershell
+     $s = gcloud secrets versions access latest --secret wishlist-supabase-secret
+     $s.StartsWith("sb_secret_"); $s.Length
+     Remove-Variable s
+     ```
+     `False` — там publishable-ключ, порожньо чи щось інше. Нова версія секрету — як у 9.8, кроки 2–3.
 3. **Задача працює** — запустити розклад позачергово й глянути журнал:
    ```powershell
    gcloud scheduler jobs run wishlist-check-links --location $REGION

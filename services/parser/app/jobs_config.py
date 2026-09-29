@@ -31,14 +31,24 @@ class JobSettings(BaseSettings):
     @classmethod
     def _strip(cls, value: str) -> str:
         # Секрет, покладений у Secret Manager через `echo`, несе перенос рядка
-        # в кінці — і такий ключ Supabase уже не впізнає.
-        return value.strip()
+        # в кінці, а записаний через `Set-Content -Encoding UTF8` у Windows
+        # PowerShell — ще й BOM на початку. Такий ключ Supabase уже не впізнає.
+        return value.strip().lstrip("\ufeff").strip()
+
+    @property
+    def problems(self) -> list[str]:
+        """Що саме не налаштовано — назви змінних, без значень."""
+        out: list[str] = []
+        url = self.supabase_url
+        if not url.startswith("https://") or "<" in url:
+            out.append("SUPABASE_URL")
+        if not self.supabase_secret_key.startswith("sb_secret_"):
+            out.append("SUPABASE_SECRET_KEY")
+        return out
 
     @property
     def ready(self) -> bool:
-        url = self.supabase_url
-        key = self.supabase_secret_key
-        return url.startswith("https://") and "<" not in url and key.startswith("sb_secret_")
+        return not self.problems
 
 
 @lru_cache

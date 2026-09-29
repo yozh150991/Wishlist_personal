@@ -266,6 +266,24 @@ class TestApp:
         assert not JobSettings(supabase_url="https://r.supabase.co", supabase_secret_key="sb_publishable_x").ready
         assert not JobSettings(supabase_url="https://<ref>.supabase.co", supabase_secret_key="sb_secret_x").ready
 
+    def test_settings_strip_a_bom_from_the_secret(self):
+        cfg = JobSettings(supabase_url="https://r.supabase.co", supabase_secret_key="\ufeffsb_secret_x\r\n")
+        assert cfg.supabase_secret_key == "sb_secret_x"
+        assert cfg.ready
+
+    def test_health_names_what_is_missing_without_values(self, monkeypatch):
+        monkeypatch.setenv("SUPABASE_URL", "https://<project-ref>.supabase.co")
+        monkeypatch.setenv("SUPABASE_SECRET_KEY", "sb_publishable_wrong_key")
+        job_settings.cache_clear()
+        try:
+            with TestClient(app) as client:
+                body = client.get("/health").json()
+            assert body["configured"] is False
+            assert body["problems"] == ["SUPABASE_URL", "SUPABASE_SECRET_KEY"]
+            assert "sb_publishable" not in json.dumps(body)
+        finally:
+            job_settings.cache_clear()
+
     def test_public_parser_does_not_ship_the_jobs_app(self):
         from app import main as parser_main
 

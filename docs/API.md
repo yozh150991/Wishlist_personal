@@ -300,9 +300,11 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 
 ### `GET /health`
 ```json
-{ "status": "ok", "service": "wishlist-jobs", "configured": true }
+{ "status": "ok", "service": "wishlist-jobs", "configured": true, "problems": [] }
 ```
 Теж за IAM: без ID-токена — `403` від Cloud Run. Перевірка з консолі — DEPLOY.md, 9.7.
+
+`problems` — назви змінних, які не налаштовано, без значень: `SUPABASE_URL` (не `https://…` або лишився шаблон `<project-ref>`) і `SUPABASE_SECRET_KEY` (порожній чи не `sb_secret_…`). Пробіли й переноси рядка на краях значень і BOM на початку сервіс обрізає сам.
 
 ### Змінні оточення
 | Змінна | Усталено | Що робить |

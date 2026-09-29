@@ -35,7 +35,9 @@ def _require_invoker(request: Request) -> None:
 
 @app.get("/health")
 async def health() -> dict[str, object]:
-    return {"status": "ok", "service": "wishlist-jobs", "configured": job_settings().ready}
+    # Лише назви змінних, яких бракує, — без значень. /health теж за IAM.
+    cfg = job_settings()
+    return {"status": "ok", "service": "wishlist-jobs", "configured": cfg.ready, "problems": cfg.problems}
 
 
 @app.post("/jobs/check-links")
