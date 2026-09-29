@@ -230,10 +230,13 @@ Base URL: `VITE_PARSER_URL` (env). Автентифікація: `Authorization:
   "status": "ok",
   "version": "0.1.0",
   "supabase_configured": true,
-  "allowed_origins": ["https://wishlist-personal.vercel.app", "http://localhost:5173"]
+  "allowed_origins": ["https://wishlist-personal.vercel.app", "http://localhost:5173"],
+  "secret_key_present": false
 }
 ```
 Без автентифікації. `supabase_configured: false` одразу пояснює `500 supabase_not_configured` на `/parse`; `allowed_origins` показує, звідки дозволено CORS. Секретів тут немає, тож відповідь безпечно відкрита.
+
+`secret_key_present` має бути `false`. `true` означає, що в парсер помилково поклали `SUPABASE_SECRET_KEY`: ключ бази живе лише в закритому `wishlist-jobs` (ADR-012, ADR-048). Сам ключ парсер не читає — лише помічає його й пише помилку в лог при старті. Прибери змінну з сервісу парсера (DEPLOY.md, 9.7).
 
 ### Магазини з антибот-захистом
 
@@ -263,3 +266,52 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 - Заборона схем, крім `http`/`https`.
 - Читання потоком із лімітом 5 МБ. Понад ліміт сторінка не відхиляється, а обрізається: мета-теги лежать у `<head>`, тож прочитаного зазвичай достатньо.
 - Кеш відповідей 15 хв за нормалізованим URL.
+
+---
+
+## Сервіс фонових задач `wishlist-jobs` (ADR-048)
+
+Закритий сервіс Cloud Run з того самого коду, що й парсер (`APP_MODULE=app.jobs_main:app`). Браузер його не викликає і не знає його адреси. Налаштування — DEPLOY.md, розділ 9.
+
+**Хто викликає.** Лише Cloud Scheduler з ID-токеном (OIDC) облікового запису `wishlist-scheduler`; аудиторія токена — адреса сервісу. Запит без токена чи з токеном без ролі `roles/run.invoker` Cloud Run відхиляє сам — `403` ще до контейнера. Друга лінія в застосунку: без `Authorization: Bearer` — `401 missing_token`.
+
+**Як ходить у базу.** PostgREST із secret-ключем (`sb_secret_…`) лише в заголовку `apikey`, без `Authorization`: нові ключі Supabase — не JWT. Роль — `service_role`, тож RLS не діє; тому сервіс пише вузько — лише поля `link_*` позиції за її `id`. Таблиць позначок гостей (`claims`, `guest_*`) він не торкається.
+
+### `POST /jobs/check-links`
+Тіла немає. Перевіряє посилання, яким настала черга (ARCHITECTURE, «Перевірка посилань»), і відповідає лічильниками:
+```json
+{ "ok": 31, "out": 2, "gone": 1, "kept": 9, "deferred": 0, "checked": 43 }
+```
+| Поле | Що означає |
+|---|---|
+| `ok` / `out` / `gone` | висновки: сторінка є / товару немає в наявності / сторінки немає (404, 410) |
+| `kept` | нічого певного (антибот, 5xx, тайм-аут, заблокований хост): висновок не змінено, записано лише час |
+| `deferred` | не встигли за `JOBS_TIME_BUDGET_SECONDS` — підуть наступного запуску |
+| `checked` | скільки позицій записано |
+
+Поля з нулем у відповіді відсутні. Адрес, назв і `id` позицій немає ні у відповіді, ні в логах.
+
+**Помилки**
+| Код | Коли |
+|---|---|
+| `401 missing_token` | немає `Authorization: Bearer` (запит дійшов би сюди, лише якщо сервіс розгорнули відкритим) |
+| `503 jobs_not_configured` | не задано `SUPABASE_URL` або `SUPABASE_SECRET_KEY`, чи ключ не починається з `sb_secret_` |
+| `500` | Supabase відхилив ключ (401/403) чи недоступний; у лозі — «PostgREST відхилив ключ … перевір SUPABASE_SECRET_KEY» |
+
+### `GET /health`
+```json
+{ "status": "ok", "service": "wishlist-jobs", "configured": true }
+```
+Теж за IAM: без ID-токена — `403` від Cloud Run. Перевірка з консолі — DEPLOY.md, 9.7.
+
+### Змінні оточення
+| Змінна | Усталено | Що робить |
+|---|---|---|
+| `APP_MODULE` | `app.main:app` | для цього сервісу — `app.jobs_main:app` |
+| `SUPABASE_URL` | — | адреса проєкту |
+| `SUPABASE_SECRET_KEY` | — | з Secret Manager (`wishlist-supabase-secret`), не в `--set-env-vars` |
+| `JOBS_BATCH_SIZE` | `50` | розмір партії; запуск бере партію за партією, поки є черга й час |
+| `JOBS_TIME_BUDGET_SECONDS` | `300` | межа часу на запуск |
+| `JOBS_RECHECK_HOURS` | `20` | не перевіряти частіше |
+| `JOBS_HOST_DELAY_SECONDS` | `2` | пауза між сторінками одного магазину |
+| `JOBS_CONCURRENCY` | `4` | скільки магазинів одночасно |

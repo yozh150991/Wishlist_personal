@@ -59,6 +59,7 @@ $map = @{
   '20260928140000_owner_side_channels.sql' = 'supabase\migrations'
   '20260928160000_item_drafts.sql' = 'supabase\migrations'
   '20260928170000_yearly_lists.sql' = 'supabase\migrations'
+  '20260929090000_link_checks.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -73,6 +74,7 @@ $map = @{
   '08_owner_side_channels.test.sql' = 'supabase\tests\database'
   '09_item_drafts.test.sql' = 'supabase\tests\database'
   '10_yearly_lists.test.sql' = 'supabase\tests\database'
+  '11_link_checks.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -198,8 +200,12 @@ $map = @{
   'fetcher.py' = 'services\parser\app';  'extract.py' = 'services\parser\app'
   'cache.py' = 'services\parser\app';    'ratelimit.py' = 'services\parser\app'
   'main.py' = 'services\parser\app'
+  # closed background jobs service wishlist-jobs (ADR-048), same image
+  'jobs_main.py' = 'services\parser\app';  'jobs_config.py' = 'services\parser\app'
+  'jobs_store.py' = 'services\parser\app'; 'jobs_links.py' = 'services\parser\app'
   'test_extract.py' = 'services\parser\tests'; 'test_ssrf.py' = 'services\parser\tests'
   'test_auth.py' = 'services\parser\tests'; 'test_fetch_pinning.py' = 'services\parser\tests'
+  'test_jobs.py' = 'services\parser\tests'
   'jsonld.html' = 'services\parser\tests\fixtures'; 'og.html' = 'services\parser\tests\fixtures'
   'microdata.html' = 'services\parser\tests\fixtures'; 'bare.html' = 'services\parser\tests\fixtures'
   'price_in_text.html' = 'services\parser\tests\fixtures'

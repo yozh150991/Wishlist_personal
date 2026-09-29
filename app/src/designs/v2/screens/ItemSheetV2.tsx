@@ -3,7 +3,7 @@ import type { ClipboardEvent } from 'react';
 import { ClipboardPaste, Plus, X } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { errorText } from '../../../lib/errors';
-import { hostOf, moneyShort } from '../../../lib/format';
+import { formatDay, hostOf, moneyShort } from '../../../lib/format';
 import { ParseError, parseUrl, parserConfigured } from '../../../lib/parser';
 import { releaseItemClaims } from '../../../lib/shares';
 import { cleanVariants, variantsError } from '../../../lib/variants';
@@ -16,6 +16,7 @@ import {
   draftTitle,
   findSameTitle,
   findSameUrl,
+  linkPriceChange,
   normalizeUrl,
   parsePrice,
 } from '../../../lib/itemsView';
@@ -92,6 +93,11 @@ type Note = { tone: 'warn' | 'info'; text: string };
  * замовчуванням їх немає (V1). Своє фото — пізніше (ROADMAP, крок 4+):
  * поки лише фото з магазину, яке можна прибрати.
  *
+ * Що побачила щоденна перевірка посилання (R, ADR-048), — згори зміни
+ * позиції: сторінки немає — «Замінити посилання», «Шукати деінде», «Прибрати
+ * зі списку»; немає в наявності — «Шукати деінде»; ціна в магазині інша —
+ * «Оновити ціну». Саме нічого не міняється.
+ *
  * На телефоні — на весь екран із «Скасувати · Нова позиція · Додати» вгорі,
  * на десктопі — вікно по центру. Клік повз вікно форму не закриває.
  */
@@ -106,6 +112,7 @@ export function ItemSheetV2({
   onSave,
   onOpenExisting,
   onBumpQuantity,
+  onDelete,
 }: {
   open: boolean;
   /** Позиція, яку змінюють; `null` — нова. */
@@ -121,6 +128,8 @@ export function ItemSheetV2({
   onSave: (input: ItemInput, id: string | null) => Promise<void>;
   onOpenExisting: (item: Item) => void;
   onBumpQuantity: (item: Item) => Promise<void>;
+  /** «Прибрати зі списку», коли сторінки товару вже немає (R, ADR-048). */
+  onDelete?: (item: Item) => void;
 }) {
   const { t, locale } = useI18n();
   const priorityLabel = usePriorityLabel();
@@ -458,6 +467,19 @@ export function ItemSheetV2({
   const host = hostOf(urlNormal);
   const priceText = price.value !== null ? moneyShort(price.value, currency, locale) : null;
 
+  // Висновок перевірки стосується збереженого посилання; нове ще не перевіряли.
+  const inspected = editing && item && item.url && normalizeUrl(form.url) === item.url ? item : null;
+  const linkState =
+    inspected?.link_status === 'gone' || inspected?.link_status === 'out' ? inspected.link_status : null;
+  const shopPrice = inspected && inspected.status === 'active' ? linkPriceChange(inspected, currency) : null;
+  const checkedOn = formatDay(inspected?.link_checked_at ?? null, locale) ?? '';
+  const searchHref = `https://www.google.com/search?q=${encodeURIComponent(form.title.trim() || item?.title || '')}`;
+
+  function replaceLink() {
+    urlRef.current?.focus();
+    urlRef.current?.select();
+  }
+
   return (
     <>
       <SheetV2 open={open} onClose={onClose} labelledBy={titleId} className="v2-sheet--full" closeOnBackdrop={false}>
@@ -543,6 +565,52 @@ export function ItemSheetV2({
               </>
             ) : (
               <>
+                {(linkState || shopPrice) && (
+                  <div className="v2-linkcheck" role="status">
+                    {linkState && (
+                      <p className="v2-linkcheck__line" data-tone={linkState === 'gone' ? 'danger' : undefined}>
+                        {linkState === 'gone'
+                          ? t('v2item.linkcheck.gone', { date: checkedOn })
+                          : t('v2item.linkcheck.out', { date: checkedOn })}
+                      </p>
+                    )}
+                    {shopPrice && (
+                      <p className="v2-linkcheck__line">
+                        {t('v2item.linkcheck.price', {
+                          price: moneyShort(shopPrice.price, currency, locale) ?? '',
+                          date: checkedOn,
+                        })}
+                      </p>
+                    )}
+                    <div className="v2-linkcheck__actions">
+                      {shopPrice && (
+                        <button
+                          type="button"
+                          className="v2-btn v2-btn--outline v2-btn--small"
+                          onClick={() => set('price', String(shopPrice.price))}
+                        >
+                          {t('v2item.linkcheck.updatePrice')}
+                        </button>
+                      )}
+                      {linkState === 'gone' && (
+                        <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={replaceLink}>
+                          {t('v2item.linkcheck.replace')}
+                        </button>
+                      )}
+                      {linkState && (
+                        <a className="v2-btn v2-btn--ghost v2-btn--small" href={searchHref} target="_blank" rel="noopener noreferrer">
+                          {t('v2item.linkcheck.search')}
+                        </a>
+                      )}
+                      {linkState === 'gone' && onDelete && item && (
+                        <button type="button" className="v2-btn v2-btn--danger v2-btn--small" onClick={() => onDelete(item)}>
+                          {t('v2item.linkcheck.delete')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {showPreview && (
                   <div className="v2-preview" aria-busy={reading || undefined}>
                     {form.image_url ? (

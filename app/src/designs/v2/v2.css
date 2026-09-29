@@ -832,6 +832,8 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-tag[data-tone='accent'] { color: var(--color-accent-800); background: var(--color-accent-100); }
 .v2-tag[data-tone='warm'] { color: var(--color-accent-2-800); background: var(--color-accent-2-100); }
 .v2-tag[data-tone='neutral'] { color: var(--color-neutral-800); background: var(--color-neutral-100); }
+/* «Сторінки немає» (ADR-048) — та сама пара, що й банер небезпеки. */
+.v2-tag[data-tone='danger'] { color: var(--color-danger-ink); background: var(--color-danger-bg); }
 
 .v2-item--sk { min-height: 84px; animation: v2-sk 1.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
@@ -1644,3 +1646,17 @@ div.v2-chips { gap: var(--sp-3); }
 
 /* Нагадування на головній — та сама картка, що й «Як минуло свято?». */
 .v2-yearly__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+
+/* ── Перевірка посилань (крок 4г-1, потік R; ADR-048) ── */
+
+/* Згори зміни позиції: що побачила перевірка й що з цим зробити. */
+.v2-linkcheck {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--color-surface);
+  border-radius: var(--r-card);
+}
+.v2-linkcheck__line { font-size: var(--t-body); }
+.v2-linkcheck__line[data-tone='danger'] { color: var(--color-danger-ink); font-weight: 700; }
+.v2-linkcheck__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }

@@ -7,7 +7,7 @@ import { STATUSES } from '../../../lib/types';
 import type { Currency, Item, ItemPriority, ItemStatus } from '../../../lib/types';
 import { SECTION_TITLE_MAX } from '../../../lib/sections';
 import type { Section } from '../../../lib/sections';
-import { VIEW_SORTS } from '../../../lib/itemsView';
+import { VIEW_SORTS, linkPriceChange } from '../../../lib/itemsView';
 import type { ViewSort } from '../../../lib/itemsView';
 import type { Pending } from '../../../lib/undo';
 import { errorText } from '../../../lib/errors';
@@ -185,6 +185,10 @@ export function ItemCardV2({
   const tagPriority = showPriority && item.priority !== 'medium';
   // Чернетка (ADR-046): замість назви — адреса, поруч — «Потрібна назва».
   const draft = Boolean(item.needs_title);
+  // Що побачила щоденна перевірка посилання (ADR-048) — лише для актуального.
+  const link = item.status === 'active' ? item.link_status : undefined;
+  const priceMoved = item.status === 'active' ? linkPriceChange(item, currency)?.notable : false;
+  const linkTag = link === 'gone' || link === 'out' || priceMoved;
 
   return (
     <li
@@ -225,8 +229,23 @@ export function ItemCardV2({
                 {host && ` · ${host}`}
               </span>
               {variants && <span className="v2-item__meta">{variants}</span>}
-              {(tagPriority || item.status !== 'active' || draft) && (
+              {(tagPriority || item.status !== 'active' || draft || linkTag) && (
                 <span className="v2-item__tags">
+                  {link === 'gone' && (
+                    <span className="v2-tag" data-tone="danger">
+                      {t('v2list.item.linkGone')}
+                    </span>
+                  )}
+                  {link === 'out' && (
+                    <span className="v2-tag" data-tone="neutral">
+                      {t('v2list.item.linkOut')}
+                    </span>
+                  )}
+                  {priceMoved && (
+                    <span className="v2-tag" data-tone="warm">
+                      {t('v2list.item.priceChanged')}
+                    </span>
+                  )}
                   {draft && (
                     <span className="v2-tag" data-tone="warm">
                       {t('v2list.item.draft')}

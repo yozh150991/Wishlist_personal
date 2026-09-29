@@ -4,6 +4,7 @@ import {
   findSameTitle,
   findSameUrl,
   isDraft,
+  linkPriceChange,
   matchesView,
   normalizeUrl,
   parsePrice,
@@ -196,5 +197,37 @@ test.describe('чернетки (ADR-046)', () => {
     expect(isDraft(item({ needs_title: true }))).toBe(true);
     expect(isDraft(item({ needs_title: false }))).toBe(false);
     expect(isDraft(item())).toBe(false);
+  });
+});
+
+test.describe('ціна з перевірки посилання (ADR-048)', () => {
+  test('інша ціна в магазині — підказка; від 15 % — ще й мітка на картці', () => {
+    expect(linkPriceChange(item({ price: 1240, link_status: 'ok', link_price: 1390, link_currency: 'UAH' }), 'UAH')).toEqual({
+      price: 1390,
+      notable: false,
+    });
+    expect(linkPriceChange(item({ price: 1000, link_status: 'ok', link_price: 1150 }), 'UAH')).toEqual({
+      price: 1150,
+      notable: true,
+    });
+    expect(linkPriceChange(item({ price: '899.00', link_status: 'out', link_price: '599' }), 'PLN')).toEqual({
+      price: 599,
+      notable: true,
+    });
+  });
+
+  test('без ціни в списку — підказка в діалозі, але не «Ціна змінилась» на картці', () => {
+    expect(linkPriceChange(item({ price: null, link_status: 'ok', link_price: 500 }), 'PLN')).toEqual({
+      price: 500,
+      notable: false,
+    });
+  });
+
+  test('та сама ціна, інша валюта, нуль, сторінки немає чи не перевіряли — нічого', () => {
+    expect(linkPriceChange(item({ price: 1240, link_status: 'ok', link_price: '1240.00' }), 'UAH')).toBeNull();
+    expect(linkPriceChange(item({ price: 100, link_status: 'ok', link_price: 25, link_currency: 'EUR' }), 'PLN')).toBeNull();
+    expect(linkPriceChange(item({ price: 100, link_status: 'ok', link_price: 0 }), 'PLN')).toBeNull();
+    expect(linkPriceChange(item({ price: 100, link_status: 'gone', link_price: 50 }), 'PLN')).toBeNull();
+    expect(linkPriceChange(item({ price: 100 }), 'PLN')).toBeNull();
   });
 });

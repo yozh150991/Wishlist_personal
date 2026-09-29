@@ -1002,6 +1002,10 @@ export default function ListV2() {
         onSave={saveItem}
         onOpenExisting={openEdit}
         onBumpQuantity={bumpQuantity}
+        onDelete={(target) => {
+          setSheet((st) => ({ ...st, open: false }));
+          removeItem(target);
+        }}
       />
 
       <ItemMenuV2

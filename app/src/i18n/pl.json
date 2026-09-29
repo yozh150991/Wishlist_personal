@@ -865,7 +865,10 @@
       "delete": "Usuń",
       "deleteFailed": "Nie udało się usunąć.",
       "retry": "Jeszcze raz",
-      "draft": "Potrzebna nazwa"
+      "draft": "Potrzebna nazwa",
+      "linkGone": "Strony nie ma",
+      "linkOut": "Niedostępny",
+      "priceChanged": "Cena się zmieniła"
     },
     "toast": {
       "added": "Dodano: {title}",
@@ -988,6 +991,15 @@
       "save": "Zapisz szkic",
       "hint": "Nie chcesz teraz wymyślać nazwy? Zapisz szkic — goście go nie zobaczą, dopóki go nie nazwiesz.",
       "editNote": "To szkic: goście go nie widzą. Dopisz nazwę — albo zapisz dalej jako szkic."
+    },
+    "linkcheck": {
+      "gone": "Strony produktu już nie ma — sprawdzono {date}. Możesz podmienić link, poszukać rzeczy gdzie indziej albo usunąć ją z listy.",
+      "out": "Teraz niedostępny — sprawdzono {date}. Może jeszcze wróci; albo poszukaj gdzie indziej.",
+      "price": "W sklepie teraz {price} — sprawdzono {date}.",
+      "updatePrice": "Zaktualizuj cenę",
+      "replace": "Podmień link",
+      "search": "Szukaj gdzie indziej",
+      "delete": "Usuń z listy"
     }
   },
   "v2share": {

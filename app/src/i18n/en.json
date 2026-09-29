@@ -865,7 +865,10 @@
       "delete": "Delete",
       "deleteFailed": "Couldn't delete.",
       "retry": "Try again",
-      "draft": "Needs a name"
+      "draft": "Needs a name",
+      "linkGone": "Page gone",
+      "linkOut": "Out of stock",
+      "priceChanged": "Price changed"
     },
     "toast": {
       "added": "Added: {title}",
@@ -988,6 +991,15 @@
       "save": "Save as draft",
       "hint": "Don't want to think of a name now? Save a draft — guests won't see it until you name it.",
       "editNote": "This is a draft: guests don't see it. Add a name — or keep saving it as a draft."
+    },
+    "linkcheck": {
+      "gone": "The product page is gone — checked {date}. You can replace the link, look for it elsewhere or remove it from the list.",
+      "out": "Out of stock right now — checked {date}. It may come back; or look for it elsewhere.",
+      "price": "The shop now says {price} — checked {date}.",
+      "updatePrice": "Update the price",
+      "replace": "Replace the link",
+      "search": "Look elsewhere",
+      "delete": "Remove from the list"
     }
   },
   "v2share": {

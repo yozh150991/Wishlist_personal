@@ -11,6 +11,8 @@
 4. Supabase: адреси листів
 5. Пошта для листів
 6. Перевірка
+...
+9. Фонові задачі (wishlist-jobs) -> щоденна перевірка посилань (ADR-048)
 ```
 
 ---
@@ -305,6 +307,8 @@ gcloud run services logs read wishlist-parser --region europe-central2 --limit 3
 
 **Парсер.** Повторити `gcloud run deploy --source .` із теки `services/parser`. Змінні оточення зберігаються між деплоями; міняти їх окремо — `gcloud run services update wishlist-parser --update-env-vars KEY=VALUE`.
 
+**Сервіс задач `wishlist-jobs`** збирається з того самого коду, тож після змін у `services/parser` його теж передеплоїти (розділ 9.6, команда та сама; змінні й секрет зберігаються).
+
 **База.** `npx supabase db push` як і раніше. Міграції накочуються на той самий проєкт Supabase — окремої бойової бази в нас немає, і для особистого застосунку це нормально. Але з цього моменту редагувати вже застосовані міграції не можна: тільки нові файли.
 
 **Міграція, що міняє гостьові RPC, — разом із фронтендом.** `20260928110000_guest_keys_and_claims.sql` видаляє `reserve_item` / `unreserve_item` і змінює сигнатуру `get_shared_list` (ADR-035). Між `db push` і деплоєм фронтенду гості бачитимуть помилку бронювання, тож порядок такий: злити PR у `main`, дочекатися збірки Vercel (хвилина-дві) і одразу `npx supabase db push`. Гостьові сторінки Service Worker не кешує, тож гості отримують новий код першим же відкриттям.
@@ -369,12 +373,249 @@ Vercel збирає кожну гілку на окремій адресі — P
 
 ---
 
+## 9. Фонові задачі: сервіс `wishlist-jobs` (ADR-048)
+
+Задачі без людини — поки одна: щоденна перевірка посилань на товар («Сторінки немає», «Немає в наявності», «Ціна змінилась»). Далі тут з'являться сповіщення й листи гостям (ROADMAP, 4г-2 і крок 5).
+
+Як це влаштовано:
+
+```
+Cloud Scheduler — щодня о 04:15 за Варшавою
+   │  POST /jobs/check-links з ID-токеном облікового запису wishlist-scheduler
+   ▼
+wishlist-jobs — Cloud Run, ЗАКРИТИЙ (без --allow-unauthenticated)
+   │  той самий код, що й парсер, але APP_MODULE=app.jobs_main:app
+   │  secret-ключ Supabase — із Secret Manager, читає лише обліковий запис wishlist-jobs
+   ▼
+Supabase — пише лише поля перевірки в items (link_status, link_checked_at, link_price, link_currency)
+```
+
+Відкритий парсер **нічого з цього не отримує**: ключа бази в ньому як не було, так і нема (ADR-012).
+
+Займе хвилин 30–40. Усі команди — у PowerShell, у тому ж проєкті Google Cloud, що й парсер.
+
+### 9.0. Перед початком
+
+1. **Міграції вже в базі.** Застосуй до бою:
+   ```powershell
+   npx supabase db push
+   ```
+   Без міграції `20260929090000_link_checks.sql` сервіс отримає від бази `400`: колонок перевірки ще немає.
+2. **Той самий проєкт GCP**, що й парсер:
+   ```powershell
+   gcloud config get-value project          # має бути wishlist-parser-<…>
+   ```
+   Якщо не той — `gcloud config set project wishlist-parser-<…>`.
+3. **Змінні для наступних команд** — один раз на сесію PowerShell:
+   ```powershell
+   $PROJECT = gcloud config get-value project
+   $REGION  = "europe-central2"
+   $JOBS_SA = "wishlist-jobs@$PROJECT.iam.gserviceaccount.com"
+   $SCHED_SA = "wishlist-scheduler@$PROJECT.iam.gserviceaccount.com"
+   ```
+   Закрив вікно — повтори цей блок, решта команд на ці змінні спирається.
+4. **Три служби Google** (одноразово):
+   ```powershell
+   gcloud services enable secretmanager.googleapis.com cloudscheduler.googleapis.com iam.googleapis.com
+   ```
+
+### 9.1. Secret-ключ Supabase — звідки взяти
+
+Це ключ, який обходить RLS, тобто бачить **усі** списки всіх людей. Тому окремий ключ саме для цього сервісу — щоб його можна було відкликати, нічого не зламавши.
+
+1. [supabase.com/dashboard](https://supabase.com/dashboard) → твій проєкт.
+2. Ліворуч унизу **⚙ Project Settings** → **API Keys**.
+3. Вкладка з новими ключами (**Publishable and secret API keys**; не **Legacy**). Блок **Secret keys** → **+ New secret key**.
+4. Назва: `wishlist-jobs` → **Create**.
+5. Скопіюй значення — рядок, що починається з **`sb_secret_`**. Поки не закриєш вікно, тримай його під рукою: наступний крок — одразу в Secret Manager.
+
+**Куди його НЕ класти:** у `.env` репозиторію, у Vercel, у `--set-env-vars` парсера, у чат чи лист. Єдине місце — Secret Manager (9.2).
+
+Не плутай із **publishable**-ключем (`sb_publishable_…`): той публічний, він у фронтенді й парсері. Сервіс задач із publishable-ключем не запуститься — `/health` покаже `"configured": false`.
+
+### 9.2. Покласти ключ у Secret Manager
+
+**Через консоль (простіше):**
+1. [console.cloud.google.com](https://console.cloud.google.com) → угорі вибрати проєкт `wishlist-parser-<…>`.
+2. Пошук угорі: **Secret Manager** → **+ Create secret**.
+3. **Name:** `wishlist-supabase-secret`.
+4. **Secret value:** встав `sb_secret_…`. Перевір, що в кінці немає пробілу чи переносу рядка (сервіс їх і так обріже, але краще без них).
+5. Решту не чіпай (Replication — Automatic) → **Create secret**.
+
+**Або з PowerShell** — без переносу рядка в кінці, який дав би `echo`:
+```powershell
+$key = Read-Host "Встав sb_secret_ і натисни Enter"
+[IO.File]::WriteAllText("$env:TEMP\wl-key.txt", $key)
+gcloud secrets create wishlist-supabase-secret --replication-policy=automatic --data-file="$env:TEMP\wl-key.txt"
+Remove-Item "$env:TEMP\wl-key.txt"
+Remove-Variable key
+```
+`Read-Host` не пише введене в історію PowerShell — на відміну від ключа, вставленого прямо в команду.
+
+### 9.3. Два облікові записи: хто виконує і хто викликає
+
+```powershell
+gcloud iam service-accounts create wishlist-jobs --display-name "wishlist-jobs: runtime"
+gcloud iam service-accounts create wishlist-scheduler --display-name "Cloud Scheduler -> wishlist-jobs"
+```
+
+- **`wishlist-jobs`** — від його імені працює сервіс. Єдине право — читати секрет:
+  ```powershell
+  gcloud secrets add-iam-policy-binding wishlist-supabase-secret `
+    --member "serviceAccount:$JOBS_SA" `
+    --role roles/secretmanager.secretAccessor
+  ```
+- **`wishlist-scheduler`** — від його імені Cloud Scheduler стукає в сервіс. Право `run.invoker` він отримає в 9.5, коли сервіс уже існуватиме. Ключа він не бачить.
+
+Якщо `add-iam-policy-binding` одразу після створення каже, що обліковий запис не існує, — Google ще не розніс його по своїх системах. Зачекай пів хвилини й повтори ту саму команду.
+
+Чому не один спільний: тоді той, хто запускає задачу за розкладом, міг би й читати ключ бази.
+
+### 9.4. Деплой `wishlist-jobs`
+
+З теки `services\parser` (того самого коду, що й парсер):
+
+```powershell
+cd services\parser
+gcloud run deploy wishlist-jobs `
+  --source . `
+  --region $REGION `
+  --no-allow-unauthenticated `
+  --service-account $JOBS_SA `
+  --memory 512Mi `
+  --cpu 1 `
+  --min-instances 0 `
+  --max-instances 1 `
+  --concurrency 1 `
+  --timeout 900 `
+  --set-env-vars "APP_MODULE=app.jobs_main:app,SUPABASE_URL=https://<project-ref>.supabase.co" `
+  --set-secrets "SUPABASE_SECRET_KEY=wishlist-supabase-secret:latest"
+```
+
+Що тут важливо:
+- **`--no-allow-unauthenticated`** — головний захист: без ID-токена з правом виклику Google відповідає `403` ще до контейнера. Якщо gcloud спитає «Allow unauthenticated invocations?» — **N**.
+- **`APP_MODULE=app.jobs_main:app`** — той самий образ запускає не парсер, а сервіс задач.
+- **`--set-secrets`** кладе ключ у змінну оточення `SUPABASE_SECRET_KEY` під час старту. `:latest` — остання версія секрету.
+- `<project-ref>` — той самий, що в `SUPABASE_URL` парсера (видно в адресі дашборду: `supabase.com/dashboard/project/<project-ref>`).
+- **`--max-instances 1`, `--concurrency 1`** — одна перевірка за раз: два одночасні запуски перевіряли б ті самі позиції.
+- **`--timeout 900`** — запас понад 300 секунд, які задача сама собі відводить.
+
+Збірка триває 3–5 хвилин. Адреса сервісу:
+```powershell
+$JOBS_URL = gcloud run services describe wishlist-jobs --region $REGION --format="value(status.url)"
+$JOBS_URL
+```
+
+Якщо деплой падає з `Permission 'iam.serviceaccounts.actAs' denied` — у твого акаунта Google немає права діяти від імені `wishlist-jobs`. Власник проєкту це право має. Якщо ти не власник, попроси роль **Service Account User** на цей обліковий запис.
+
+### 9.5. Дозволити Cloud Scheduler викликати сервіс
+
+```powershell
+gcloud run services add-iam-policy-binding wishlist-jobs `
+  --region $REGION `
+  --member "serviceAccount:$SCHED_SA" `
+  --role roles/run.invoker
+```
+
+### 9.6. Розклад у Cloud Scheduler
+
+```powershell
+gcloud scheduler jobs create http wishlist-check-links `
+  --location $REGION `
+  --schedule "15 4 * * *" `
+  --time-zone "Europe/Warsaw" `
+  --http-method POST `
+  --uri "$JOBS_URL/jobs/check-links" `
+  --oidc-service-account-email $SCHED_SA `
+  --oidc-token-audience $JOBS_URL `
+  --attempt-deadline 600s
+```
+
+- **`15 4 * * *`** — щодня о 04:15. Вночі магазини найменш завантажені, а до ранку висновки вже в списках.
+- **`--oidc-token-audience`** — рівно адреса сервісу, без `/jobs/check-links`. Інакше Cloud Run відхилить токен (`401`/`403`).
+- Якщо gcloud скаже, що Cloud Scheduler у `europe-central2` недоступний, — постав `--location europe-west1`. Розклад може жити в іншому регіоні, ніж сервіс.
+
+### 9.7. Перевірка
+
+1. **Сервіс закритий** — запит без токена Google відхиляє:
+   ```powershell
+   curl.exe -i -X POST "$JOBS_URL/jobs/check-links"
+   ```
+   Очікуємо `403 Forbidden` (сторінка Google, не наша відповідь).
+2. **Сервіс налаштований** — з твоїм токеном (власник проєкту має право виклику):
+   ```powershell
+   curl.exe -H "Authorization: Bearer $(gcloud auth print-identity-token)" "$JOBS_URL/health"
+   ```
+   Очікуємо `{"status":"ok","service":"wishlist-jobs","configured":true}`. `false` — ключ не `sb_secret_…` або `SUPABASE_URL` лишився шаблоном.
+3. **Задача працює** — запустити розклад позачергово й глянути журнал:
+   ```powershell
+   gcloud scheduler jobs run wishlist-check-links --location $REGION
+   Start-Sleep 60
+   gcloud run services logs read wishlist-jobs --region $REGION --limit 20
+   ```
+   У журналі має бути рядок `check-links {'ok': …, 'checked': …}` — лише лічильники, адрес товарів там немає. `PostgREST відхилив ключ` — у секреті не той ключ (9.1). `400` від бази — не застосована міграція (9.0).
+4. **Парсер без ключа** — після передеплою парсера з новим кодом (розділ 7):
+   ```powershell
+   curl.exe https://wishlist-parser-xxxxx.europe-central2.run.app/health
+   ```
+   Має бути `"secret_key_present": false`. `true` означає, що ключ бази випадково опинився в парсері: прибери його (`gcloud run services update wishlist-parser --region $REGION --remove-env-vars SUPABASE_SECRET_KEY`).
+5. **У застосунку v2** наступного ранку в позицій із посиланням з'являються мітки «Сторінки немає», «Немає в наявності» чи «Ціна змінилась», якщо є що сказати. Здебільшого їх немає — і це нормально.
+
+### 9.8. Якщо ключ треба замінити
+
+Витік чи просто профілактика:
+1. Supabase → API Keys → **Secret keys** → створити новий `wishlist-jobs-2` (9.1).
+2. Нова версія секрету:
+   - консоль: Secret Manager → `wishlist-supabase-secret` → **+ New version**;
+   - або PowerShell, як у 9.2, але `gcloud secrets versions add wishlist-supabase-secret --data-file=…`.
+3. Перезапустити сервіс, щоб він узяв нову версію:
+   ```powershell
+   gcloud run services update wishlist-jobs --region $REGION --update-secrets "SUPABASE_SECRET_KEY=wishlist-supabase-secret:latest"
+   ```
+4. Supabase → API Keys → старий ключ → **Delete**. Від цієї миті він не працює ніде.
+
+### 9.9. Ключі для наступного кроку (сповіщення, 4г-2)
+
+Поки не потрібні — їх підключить наступний крок. Але якщо зручно, підготуй зараз: процедура та сама.
+
+**Brevo API-ключ** — для листів (не плутай із паролем SMTP з розділу 5: це інша річ).
+1. [app.brevo.com](https://app.brevo.com) → праворуч угорі ім'я профілю → **SMTP & API**.
+2. Вкладка **API Keys** → **Generate a new API key** → назва `wishlist-jobs` → **Generate**.
+3. Скопіюй `xkeysib-…` — Brevo покаже його **один раз**.
+4. Secret Manager → **Create secret** `wishlist-brevo-key` зі значенням ключа, далі:
+   ```powershell
+   gcloud secrets add-iam-policy-binding wishlist-brevo-key --member "serviceAccount:$JOBS_SA" --role roles/secretmanager.secretAccessor
+   ```
+Адреса відправника — та сама, що вже підтверджена в Brevo для листів Supabase (розділ 5).
+
+**VAPID-ключі** — для push у браузері. Це пара, яку генеруєш сам, нікому не платячи:
+```powershell
+npx web-push generate-vapid-keys --json
+```
+- `publicKey` — не секрет: піде у Vercel як `VITE_VAPID_PUBLIC_KEY` (наступний крок скаже, коли).
+- `privateKey` — секрет: Secret Manager `wishlist-vapid-private` і такий самий `add-iam-policy-binding` для `$JOBS_SA`.
+
+Пару генеруй **один раз**. Нова пара робить недійсними всі підписки на push, і людям доведеться вмикати сповіщення знову.
+
+### 9.10. Скільки коштує
+
+| Що | Безкоштовно | У нас |
+|---|---|---|
+| Cloud Scheduler | 3 задачі на платіжний акаунт | 1 |
+| Secret Manager | 6 активних версій, 10 000 звернень на місяць | 1–3 версії, ~30 звернень |
+| Cloud Run | 180 000 vCPU-секунд на місяць | ≤ 5 хвилин на добу |
+
+Бюджетне сповіщення з розділу 2.4 покриває й цей сервіс.
+
+---
+
 ## Скільки це коштує
 
 | Що | Тариф | Реально |
 |---|---|---|
 | Vercel | Hobby | 0 |
-| Cloud Run | безкоштовний рівень | 0 при кількох викликах на день |
+| Cloud Run | безкоштовний рівень | 0 при кількох викликах на день; `wishlist-jobs` — кілька хвилин на добу |
+| Cloud Scheduler, Secret Manager | безкоштовні квоти | 0 (розділ 9.10) |
 | Supabase | Free | 0; проєкт засинає після тижня бездіяльності |
 | Brevo | безкоштовний | 0 |
 

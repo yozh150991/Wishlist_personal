@@ -1,4 +1,5 @@
 import logging
+import os
 from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -23,6 +24,19 @@ app.add_middleware(
 )
 
 
+def _secret_key_present() -> bool:
+    """
+    Ключ бази у відкритому парсері — помилка налаштування (ADR-012): він
+    живе лише в закритому wishlist-jobs (ADR-048). Сам ключ парсер не читає
+    й не використовує — лише помічає, що його сюди поклали.
+    """
+    return bool(os.environ.get("SUPABASE_SECRET_KEY"))
+
+
+if _secret_key_present():
+    log.error("SUPABASE_SECRET_KEY заданий у відкритому парсері — прибери його: він потрібен лише wishlist-jobs")
+
+
 @app.get("/health")
 async def health() -> dict[str, object]:
     cfg = settings()
@@ -33,6 +47,8 @@ async def health() -> dict[str, object]:
         "version": "0.1.0",
         "supabase_configured": cfg.supabase_ready,
         "allowed_origins": cfg.origins,
+        # Має бути false: ключ бази в парсері — помилка (ADR-012, ADR-048).
+        "secret_key_present": _secret_key_present(),
     }
 
 

@@ -18,6 +18,9 @@
 | `20260928120000_sections_and_order.sql` | `sections`, `items.section_id` і `items.position`; `reorder_items` / `reorder_sections`; гість отримує розділи й ручний порядок (ADR-036) |
 | `20260928130000_share_expiry_zone.sql` | `shares.expires_tz` — зона власника; `create_share` бере день і зону, момент рахує база; `get_shared_list` віддає термін гостю (ADR-037) |
 | `20260928140000_owner_side_channels.sql` | побічні канали власника: `release_claim` відсікає власника, незмінні `lists.id`, `items.id`, `shares.source_list_id`; код гостя з криптографічного джерела (ADR-038) |
+| `20260928160000_item_drafts.sql` | `items.needs_title` — чернетка без назви; тригери `items_draft_guard` і `share_items_skip_drafts` (ADR-046) |
+| `20260928170000_yearly_lists.sql` | `lists.repeats_yearly` — щорічне свято (ADR-047) |
+| `20260929090000_link_checks.sql` | `items.link_status`, `link_checked_at`, `link_price`, `link_currency` — перевірка посилань; індекс черги й тригер `items_link_reset` (ADR-048) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 
@@ -31,13 +34,15 @@ auth.users
     ├──1:N── appearances       (name, hue, source) ← ще три вбудовані з owner_id = null
     │            ▲
     │            │ appearance_id (on delete set null)
-    └──1:N── lists             (title, description, currency, event_date, appearance_id, is_archived)
+    └──1:N── lists             (title, description, currency, event_date, appearance_id, is_archived,
+                 │                  repeats_yearly)
                  │
                  ├──1:N── sections    (title, position) ← section_id у items, on delete set null
                  │
                  ├──1:N── items       (title, url?, price?, quantity,
                  │           │         priority, note, variants, image_url, status,
-                 │           │         section_id?, position?)
+                 │           │         section_id?, position?, needs_title,
+                 │           │         link_status, link_checked_at?, link_price?, link_currency?)
                  │           │
                  │           ├──N:M── share_items ──N:1── shares
                  │           │
@@ -106,6 +111,19 @@ RLS: власник бачить свої й вбудовані, змінює й
 - `share_items_skip_drafts` мовчки не пускає чернетку в `share_items` — ні через `create_share`, ні прямою вставкою.
 
 Разом це означає, що гість чернетки не побачить ніде: гостьові RPC показують лише позиції з `share_items`. Позначок гостей тригери не читають.
+
+**Перевірка посилань** (ADR-048) — чотири колонки, які пише закритий сервіс `wishlist-jobs` secret-ключем (роль `service_role`). RLS пускає власника до всього свого рядка, тож змінити їх він технічно може, але застосунок цього не робить: це підказка йому ж самому, гостю вона не видна.
+
+| Колонка | Сенс |
+|---|---|
+| `link_status` | `unknown` (усталено — поведінка v1: ще не перевіряли або нічого певного) \| `ok` — сторінка є \| `out` — товару немає в наявності \| `gone` — сторінки немає (404, 410) |
+| `link_checked_at` | остання спроба перевірки, зокрема й без висновку; за нею стоїть черга |
+| `link_price` | ціна, яку перевірка побачила в магазині; `numeric(12,2)`, не від'ємна. **Ціну в `price` не міняє** — v2 лише підказує власнику |
+| `link_currency` | валюта цієї ціни, три великі літери (`UAH`) |
+
+Власник читає поля разом із позицією під тим самим RLS; нових політик і функцій для клієнта немає. Висновок належить адресі: тригер `items_link_reset` (`before update of url`) скидає всі чотири поля, коли посилання змінюється — у v2 чи у v1, яка про перевірку не знає. Зміна назви чи ціни висновку не чіпає. Функцію тригера викликати напряму не може ніхто, крім бази (`revoke … from public, anon, authenticated`).
+
+Гостьові RPC цих полів не віддають, і висновок нічого не ховає від гостя: позиція з `gone` лишається в посиланні, поки власник її не прибере. Позначок гостей перевірка не читає й не пише.
 
 `variants` — ознаки товару: масив пар `{label, value}`, до пʼяти, підпис до 40 символів, значення до 80, обидва непорожні й без переносів рядка. Чому jsonb, а не колонки чи окрема таблиця — ADR-030.
 
@@ -176,6 +194,7 @@ RLS: власник бачить свої й вбудовані, змінює й
 | `shares.token` (unique) | пошук за токеном |
 | `sections_list_idx (list_id, position)` | розділи списку в порядку власника |
 | `items_section_idx (section_id)` (частковий) | позиції розділу |
+| `items_link_check_idx (link_checked_at nulls first)` (частковий, `url is not null`) | черга перевірки посилань: ще не перевірені й найдавніші — першими (ADR-048) |
 | `guest_keys.key_hash` (PK) | ключ гостя → ідентичність |
 | `claims (item_id, identity_id)` (PK) | скільки взято позиції; позначка цього гостя |
 | `guest_identities (list_id, short_code)` (unique) | код у межах списку |

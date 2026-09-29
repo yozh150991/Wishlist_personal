@@ -221,6 +221,30 @@ export function draftTitle(href: string): string {
   return `${url.hostname.replace(/^www\./, '')}${path}`.slice(0, ITEM_TITLE_MAX);
 }
 
+/** Від якої різниці ціна в магазині — «Ціна змінилась» на картці (P: «>15 %»). */
+export const PRICE_CHANGE_RATIO = 0.15;
+
+/**
+ * Ціна, яку перевірка побачила в магазині (ADR-048), якщо вона інша, ніж у
+ * списку. Іншу валюту не порівнюємо: курсів застосунок не знає (ADR-005).
+ * `notable` — різниця від 15 % зі своєю ціною в списку: це мітка на картці.
+ * У формі позиції показуємо будь-яку різницю, зокрема коли своєї ціни ще немає.
+ */
+export function linkPriceChange(
+  item: Pick<Item, 'price' | 'link_price' | 'link_currency' | 'link_status'>,
+  currency: string,
+): { price: number; notable: boolean } | null {
+  if (item.link_status !== 'ok' && item.link_status !== 'out') return null;
+  const shop = toMinor(item.link_price);
+  if (shop === null || shop === 0) return null;
+  if (item.link_currency && item.link_currency !== currency) return null;
+  const own = toMinor(item.price);
+  if (own === shop) return null;
+  // Без своєї ціни різниці немає: лише підказка в діалозі, без мітки на картці.
+  const notable = own !== null && own !== 0 && Math.abs(shop - own) / own >= PRICE_CHANGE_RATIO;
+  return { price: shop / 100, notable };
+}
+
 /** Чернетка без назви — гостям невидима, у списку з міткою «Потрібна назва». */
 export function isDraft(item: Pick<Item, 'needs_title'>): boolean {
   return Boolean(item.needs_title);

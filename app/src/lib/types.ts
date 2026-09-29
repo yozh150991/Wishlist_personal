@@ -46,6 +46,9 @@ export type List = {
   active_count?: number;
 };
 
+/** unknown — не перевіряли чи нічого певного, ok — є, out — немає в наявності, gone — сторінки немає. */
+export type LinkStatus = 'unknown' | 'ok' | 'out' | 'gone';
+
 export type Item = {
   id: string;
   list_id: string;
@@ -70,6 +73,14 @@ export type Item = {
    * офлайн-знімок поля не має — тоді це не чернетка.
    */
   needs_title?: boolean;
+  /**
+   * Щоденна перевірка посилання (ADR-048): що побачив сервіс wishlist-jobs.
+   * Пише лише він; старий знімок полів не має — тоді «не перевіряли».
+   */
+  link_status?: LinkStatus;
+  link_checked_at?: string | null;
+  link_price?: number | string | null;
+  link_currency?: string | null;
   created_at: string;
   updated_at: string;
 };
