@@ -59,6 +59,7 @@ function draftItem(op: Extract<Op, { kind: 'create' }>, now: string): Item {
     status: op.input.status ?? 'active',
     section_id: op.input.section_id ?? null,
     position: null,
+    needs_title: op.input.needs_title ?? false,
     source_site: null,
     parsed_at: null,
     created_at: now,

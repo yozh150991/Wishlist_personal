@@ -4,3 +4,10 @@ httpx==0.28.1
 beautifulsoup4==4.12.3
 pydantic==2.10.4
 pydantic-settings==2.7.0
+# Сповіщення (ADR-049): шифрування push (RFC 8291) і підпис VAPID (RFC 8292).
+http-ece==1.2.1
+py-vapid==1.9.4
+cryptography==50.0.1
+# Пояси IANA зі старими назвами (Europe/Kiev, Asia/Calcutta): у образі python:3.12-slim
+# їх немає, і тиша 22:00–9:00 рахувалась би за UTC.
+tzdata==2026.4

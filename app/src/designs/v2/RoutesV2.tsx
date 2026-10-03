@@ -1,31 +1,75 @@
-import { Route, Routes } from 'react-router-dom';
-import SharedList from '../../routes/SharedList';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Placeholder from './screens/PlaceholderV2';
+import LoginV2 from './screens/LoginV2';
+import RegisterV2 from './screens/RegisterV2';
+import ResetV2 from './screens/ResetV2';
+import NewPasswordV2 from './screens/NewPasswordV2';
+import ListsV2 from './screens/ListsV2';
+import NewListV2 from './screens/NewListV2';
+import ListV2 from './screens/ListV2';
+import SharesV2 from './screens/SharesV2';
+import SettingsV2 from './screens/SettingsV2';
+import AddV2 from './screens/AddV2';
+import { RequireAuthV2, ShellV2 } from './ShellV2';
+// Стилі форми v2 їдуть разом із цим лінивим модулем (ADR-039, п. 9).
+import './v2.css';
 
 /**
- * Таблиця маршрутів дизайну v2 — поки що заглушка.
+ * Таблиця маршрутів дизайну v2.
  *
- * Сюди ляже пакет передачі: власні екрани, власний каркас, власні адреси.
- * Таблиця повна й незалежна саме для цього — v2 переробляє флоу, а не
- * перефарбовує екрани v1, тож ділити з нею таблицю маршрутів означало б
- * прив'язати новий флоу до порядку кроків старого (ADR-032).
+ * Свої екрани, свій каркас, свої адреси. Таблиця повна й незалежна саме для
+ * цього — v2 переробляє флоу, а не перефарбовує екрани v1, тож ділити з нею
+ * таблицю маршрутів означало б прив'язати новий флоу до порядку кроків
+ * старого (ADR-032).
  *
- * Що v2 **не** переробляє — дані. Усе з `src/lib/` (Supabase, автентифікація,
- * офлайн-кеш, черга змін, парсер, експорт) спільне з v1 і не дублюється:
- * інакше кожне виправлення довелося б робити двічі, а інваріанти приватності
- * (CLAUDE.md §3) роз'їхалися б між версіями непомітно. Потрібен новий запит —
- * він з'являється в `lib/` і доступний обом версіям.
+ * Що v2 **не** переробляє — дані й палітру. Усе з `src/lib/` (Supabase,
+ * автентифікація, вигляд, офлайн-кеш, черга змін, парсер, експорт) спільне з
+ * v1 і не дублюється: інакше кожне виправлення довелося б робити двічі, а
+ * інваріанти приватності (CLAUDE.md §3) роз'їхалися б між версіями непомітно.
+ * Потрібен новий запит — він з'являється в `lib/` і доступний обом версіям.
  *
- * Гостьова сторінка поки що спільна з v1 — навмисно. Посилання вже роздані
- * рідним, і вони не мають побачити незакінчений флоу через те, що власник
- * щось перемкнув у себе в браузері. Рядок нижче міняється на екран v2 тоді,
- * коли гостьова частина v2 буде готова й перевірена.
+ * Гостьових адрес тут немає: `/s/…` і `/l/…` стоять вище, у `App.tsx`, бо
+ * їхню версію визначає адреса, а не вибір власника (ADR-039).
+ *
+ * Готово: вхід, реєстрація, пароль (крок 2); каркас власника, «Мої списки» й
+ * новий список (крок 3а); сторінка списку з позиціями, «Поділитися», порядком,
+ * оформленням і налаштуваннями (крок 3б); «Мої посилання» й «Налаштування»
+ * (крок 3в). Усі екрани власника v1 мають пару у v2; невідома адреса —
+ * заглушка з дорогою назад. `/add` — «Додати в Wishlist» із системного
+ * «Поділитися» (крок 4б): без каркаса, бо це аркуш поверх магазину.
  */
 export default function DesignV2Routes() {
   return (
     <Routes>
-      <Route path="/s/:token" element={<SharedList />} />
-      <Route path="/s/:token/g/:key" element={<SharedList />} />
+      <Route path="/login" element={<LoginV2 />} />
+      <Route path="/register" element={<RegisterV2 />} />
+      <Route path="/reset" element={<ResetV2 />} />
+      <Route path="/update-password" element={<NewPasswordV2 />} />
+
+      <Route
+        path="/add"
+        element={
+          <RequireAuthV2>
+            <AddV2 />
+          </RequireAuthV2>
+        }
+      />
+
+      <Route
+        element={
+          <RequireAuthV2>
+            <ShellV2 />
+          </RequireAuthV2>
+        }
+      >
+        <Route path="/lists" element={<ListsV2 />} />
+        <Route path="/lists/new" element={<NewListV2 />} />
+        <Route path="/lists/:id" element={<ListV2 />} />
+        <Route path="/shares" element={<SharesV2 />} />
+        <Route path="/settings" element={<SettingsV2 />} />
+      </Route>
+
+      <Route path="/" element={<Navigate to="/lists" replace />} />
       <Route path="*" element={<Placeholder />} />
     </Routes>
   );

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useI18n } from '../lib/i18n';
+import { designSwitchHref } from '../lib/authFlow';
 import { LanguagePicker } from './LanguagePicker';
 
 /**
@@ -41,6 +43,7 @@ function PrivacyDemo() {
  */
 export function AuthLayout({ children }: { children: ReactNode }) {
   const { t } = useI18n();
+  const { pathname, search } = useLocation();
   return (
     <div className="auth">
       {/* Перемикач мови стоїть у правому верхньому куті на обох розкладках,
@@ -58,7 +61,15 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       {/* Саме <main>: на цих сторінках немає каркаса застосунку, і без
           орієнтира зчитувач екрана не має куди перейти до головного вмісту. */}
       <main className="auth__pane">
-        <div className="auth__form-wrap">{children}</div>
+        <div className="auth__form-wrap">
+          {children}
+          {/* Вибір версії ще до входу (ADR-039, п. 4): повне перезавантаження
+              через ?design=, як і аварійний вихід. Звичайне <a>, не <Link>:
+              таблиці маршрутів у версій різні. */}
+          <p className="auth__switch auth__design">
+            <a href={designSwitchHref(pathname, search, 'v2')}>{t('design.tryV2')}</a>
+          </p>
+        </div>
       </main>
     </div>
   );

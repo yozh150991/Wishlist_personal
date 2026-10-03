@@ -2,6 +2,7 @@ import { supabase, publicOrigin } from './supabase';
 import type { Currency, ItemPriority, ItemStatus, ItemVariant } from './types';
 import { isScheme } from './appearance';
 import { deviceTimeZone } from './zones';
+import { isNetworkError } from './errors';
 import type { Scheme } from './appearance';
 
 export type Share = {
@@ -84,6 +85,28 @@ export async function fetchShares(): Promise<ShareWithCount[]> {
   return (data ?? []) as ShareWithCount[];
 }
 
+/** Посилання з назвою списку, з якого його створено, — для «Моїх посилань» v2. */
+export type ShareOverview = ShareWithCount & { list_title: string | null };
+
+/**
+ * Посилання разом із назвою їхнього списку. Список — власника, тож RLS
+ * пропускає вкладення так само, як і самі посилання. Якщо сервер вкладення не
+ * прийме, картки просто лишаються без назви списку: помилка мережі йде нагору,
+ * решта — у запасний `fetchShares()`.
+ */
+export async function fetchSharesOverview(): Promise<ShareOverview[]> {
+  const { data, error } = await supabase
+    .from('shares')
+    .select('*, share_items(count), list:lists(title)')
+    .order('created_at', { ascending: false });
+  if (error) {
+    if (isNetworkError(error)) throw error;
+    return (await fetchShares()).map((s) => ({ ...s, list_title: null }));
+  }
+  type Row = ShareWithCount & { list?: { title: string } | null };
+  return ((data ?? []) as Row[]).map(({ list, ...s }) => ({ ...s, list_title: list?.title ?? null }));
+}
+
 /** Відкликання, а не видалення: історія і лічильник переглядів лишаються. */
 export async function revokeShare(id: string): Promise<void> {
   const { error } = await supabase
@@ -96,6 +119,19 @@ export async function revokeShare(id: string): Promise<void> {
 export async function deleteShare(id: string): Promise<void> {
   const { error } = await supabase.from('shares').delete().eq('id', id);
   if (error) throw error;
+}
+
+/**
+ * Скільки разів відкривали посилання на цей список — усі, зокрема відкликані й
+ * протерміновані. Потрібно видаленню списку в v2 (потік F3): назву рукою
+ * просимо ввести, щойно список хтось бачив, — а не за позначками, щоб діалог
+ * не видав сюрприз. Це лічильник переглядів самих посилань: його власник і
+ * так бачить у «Моїх посиланнях», позначок гостей він не торкається.
+ */
+export async function fetchListViews(listId: string): Promise<number> {
+  const { data, error } = await supabase.from('shares').select('view_count').eq('source_list_id', listId);
+  if (error) throw error;
+  return ((data ?? []) as { view_count: number | null }[]).reduce((n, r) => n + (r.view_count ?? 0), 0);
 }
 
 /* ── Гостьова частина ───────────────────────── */

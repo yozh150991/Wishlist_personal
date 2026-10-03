@@ -219,3 +219,63 @@ def extract(html: str, url: str) -> ParseResponse:
     out.confidence = src
     out.partial = not (out.title and out.price is not None)
     return out
+
+
+# schema.org/ItemAvailability: чого вже не купити. PreOrder, BackOrder,
+# LimitedAvailability купити можна — це «є».
+_GONE_AVAILABILITY = ("outofstock", "soldout", "discontinued")
+_IN_AVAILABILITY = ("instock", "instoreonly", "onlineonly", "limitedavailability", "preorder", "presale", "backorder")
+
+
+def _availability_word(value: object) -> bool | None:
+    """'https://schema.org/OutOfStock', 'out of stock', 'instock' → False/True/None."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    word = re.sub(r"[^a-z]", "", value.rsplit("/", 1)[-1].lower())
+    if word in _GONE_AVAILABILITY or word in ("oos", "outofstockonline"):
+        return False
+    if word in _IN_AVAILABILITY:
+        return True
+    return None
+
+
+def availability(html: str) -> bool | None:
+    """
+    Чи можна зараз купити товар: True — є, False — немає в наявності, None —
+    сторінка не каже. Лише для перевірки посилань (wishlist-jobs, ADR-048):
+    відповідь /parse цього поля не має.
+
+    Порядок той самий, що й для решти полів: JSON-LD → microdata → мета-теги.
+    Якщо хоч одна пропозиція є в наявності — товар є: інший розмір чи колір
+    теж підходить.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+
+    seen: list[bool] = []
+    for node in _iter_jsonld(soup):
+        types = node.get("@type")
+        types = [types] if isinstance(types, str) else (types or [])
+        if "Product" not in types:
+            continue
+        offers = node.get("offers")
+        offers = offers if isinstance(offers, list) else [offers]
+        for offer in offers:
+            if isinstance(offer, dict):
+                verdict = _availability_word(offer.get("availability"))
+                if verdict is not None:
+                    seen.append(verdict)
+    if seen:
+        return any(seen)
+
+    for tag in soup.select('[itemprop="availability"]'):
+        verdict = _availability_word(tag.get("href") or tag.get("content") or tag.get_text(" ", strip=True))
+        if verdict is not None:
+            return verdict
+
+    for tag in soup.find_all("meta"):
+        name = (tag.get("property") or tag.get("name") or "").lower()
+        if name in ("product:availability", "og:availability"):
+            verdict = _availability_word(tag.get("content"))
+            if verdict is not None:
+                return verdict
+    return None

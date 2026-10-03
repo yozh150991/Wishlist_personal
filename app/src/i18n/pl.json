@@ -112,7 +112,12 @@
   "design": {
     "emptyTitle": "Design v2 jeszcze nie dotarł",
     "emptyBody": "Tu pojawią się nowe ekrany. Dane są na miejscu — pusta jest tylko ta wersja.",
-    "backToV1": "Wróć do v1"
+    "backToV1": "Wróć do v1",
+    "tryV2": "Wypróbuj nowy wygląd",
+    "backToV1Link": "Wróć do starego wyglądu",
+    "signedInAs": "Konto: {email}",
+    "signOut": "Wyloguj się",
+    "toLogin": "Zaloguj się"
   },
   "errors": {
     "invalidCredentials": "E-mail albo hasło się nie zgadzają.",
@@ -600,5 +605,589 @@
     "berlin": "czasu berlińskiego",
     "prague": "czasu praskiego",
     "london": "czasu londyńskiego"
+  },
+  "v2auth": {
+    "language": "Język",
+    "back": "Wstecz",
+    "show": "Pokaż hasło",
+    "hide": "Ukryj hasło",
+    "or": "lub e-mailem",
+    "google": "Kontynuuj z Google",
+    "cancel": "Anuluj",
+    "sending": "Wysyłam…",
+    "toLogin": "Do logowania",
+    "ruleMet": "spełnione",
+    "ruleOpen": "jeszcze nie",
+    "password": "Hasło",
+    "passwordEmpty": "Wpisz hasło",
+    "passwordRules": "Hasło nie spełnia jeszcze wymagań poniżej",
+    "email": {
+      "label": "E-mail",
+      "placeholder": "ty@poczta.pl",
+      "empty": "Wpisz e-mail",
+      "noAt": "Brakuje znaku @",
+      "incomplete": "Adres wygląda na niepełny"
+    },
+    "rules": {
+      "long": "Co najmniej {n} znaków",
+      "notEmail": "Inne niż adres e-mail",
+      "notCommon": "Nie z najpopularniejszych haseł"
+    },
+    "login": {
+      "title": "Twoja lista zostaje twoja",
+      "lede": "Gość widzi tylko to, co mu udostępniasz.",
+      "forgot": "Nie pamiętasz hasła?",
+      "submit": "Zaloguj się",
+      "submitting": "Loguję…",
+      "toRegister": "Nie masz jeszcze konta?",
+      "toRegisterCta": "Zarejestruj się",
+      "paused": "Trzy próby z rzędu nie pasowały. Następna za {time}.",
+      "resetCta": "Zresetuj hasło",
+      "pausedButton": "Znowu można za {time}",
+      "confirmed": "E-mail potwierdzony. Teraz zaloguj się hasłem.",
+      "linkFailed": "Nie udało się zalogować przez link ani przez Google. Spróbuj ponownie."
+    },
+    "expired": {
+      "title": "Link już nie działa",
+      "body": "Link z wiadomości wygasł, został już użyty albo otwarto go w innej przeglądarce. Wyślemy nową wiadomość z potwierdzeniem — stara przestanie działać.",
+      "submit": "Wyślij nową wiadomość",
+      "sent": "Jeśli adres {email} nie jest jeszcze potwierdzony, nowa wiadomość jest już w drodze."
+    },
+    "register": {
+      "title": "Nowe konto",
+      "submit": "Utwórz konto",
+      "submitting": "Tworzę konto…",
+      "toLogin": "Masz już konto?",
+      "toLoginCta": "Zaloguj się"
+    },
+    "taken": {
+      "error": "Konto z tym adresem już istnieje.",
+      "title": "To ty?",
+      "login": "Zaloguj się tym adresem",
+      "reset": "Wyślij link do nowego hasła",
+      "resetSent": "Wiadomość jest już w skrzynce. Otwórz ją na tym samym urządzeniu — link działa godzinę.",
+      "googleHint": "Konto założone przez Google? To loguj się też przez Google — nie ma ono hasła."
+    },
+    "check": {
+      "title": "Wiadomość już w skrzynce",
+      "body": "Kliknij link w wiadomości wysłanej na {email} — potem możesz się zalogować. Link działa godzinę.",
+      "open": "Otwórz pocztę",
+      "resend": "Wyślij ponownie",
+      "resendIn": "Wyślij ponownie · za {time}",
+      "resent": "Nowa wiadomość wysłana.",
+      "change": "Zmień e-mail"
+    },
+    "reset": {
+      "title": "Reset hasła",
+      "body": "Wyślemy wiadomość z linkiem do nowego hasła. Otwórz ją na tym samym urządzeniu i w tej samej przeglądarce — gdzie indziej link nie zadziała.",
+      "submit": "Wyślij link",
+      "sentTitle": "Wiadomość wysłana",
+      "sentBody": "Jeśli konto {email} istnieje, wiadomość jest już w skrzynce. Link działa godzinę i zadziała raz."
+    },
+    "update": {
+      "title": "Nowe hasło",
+      "for": "Dla {email}",
+      "field": "Nowe hasło",
+      "submit": "Zapisz i zaloguj",
+      "submitting": "Zapisuję…",
+      "others": "Inne urządzenia zostaną wylogowane.",
+      "same": "To poprzednie hasło — potrzebne jest nowe.",
+      "deadTitle": "Ten link został już użyty",
+      "deadBody": "Albo minęła ponad godzina, albo otwarto go w innej przeglądarce. Wyślij nowy — adres jest już wpisany.",
+      "deadSubmit": "Wyślij nowy link"
+    },
+    "unconfirmed": {
+      "title": "Najpierw potwierdź e-mail",
+      "body": "Zalogować się można, gdy adres {email} jest potwierdzony: wiadomość z linkiem poszła tam po rejestracji. Nie ma jej — wyślemy ponownie.",
+      "submit": "Wyślij wiadomość ponownie"
+    }
+  },
+  "v2app": {
+    "nav": {
+      "label": "Nawigacja główna",
+      "account": "Konto"
+    },
+    "signOut": {
+      "title": "Wylogować się?",
+      "confirm": "Wyloguj mimo to",
+      "stay": "Zostań"
+    },
+    "count": {
+      "items": {
+        "one": "{n} pozycja",
+        "few": "{n} pozycje",
+        "many": "{n} pozycji",
+        "other": "{n} pozycji"
+      },
+      "open": {
+        "one": "{n} pozycja do rozliczenia",
+        "few": "{n} pozycje do rozliczenia",
+        "many": "{n} pozycji do rozliczenia",
+        "other": "{n} pozycji do rozliczenia"
+      }
+    },
+    "lists": {
+      "title": "Moje listy",
+      "new": "Nowa lista",
+      "welcome": "Witaj!",
+      "upcoming": "Najbliższe",
+      "past": "Minione",
+      "noDate": "bez daty",
+      "loading": "Wczytuję listy",
+      "errorTitle": "Nie udało się wczytać list",
+      "stale": "Brak połączenia. Pokazano zapisaną kopię z {time}.",
+      "deleted": "Lista „{title}” usunięta.",
+      "archive": "Archiwum"
+    },
+    "templates": {
+      "title": "Na jaką okazję zbieramy?",
+      "body": "Szablon podstawi tylko nazwę — można ją zmienić.",
+      "own": "Własna lista bez szablonu",
+      "birthday": "Urodziny",
+      "wedding": "Wesele",
+      "newYear": "Nowy Rok",
+      "baby": "Narodziny dziecka",
+      "housewarming": "Parapetówka",
+      "graduation": "Zakończenie szkoły",
+      "anniversary": "Rocznica",
+      "secretSanta": "Tajemniczy Mikołaj"
+    },
+    "newList": {
+      "title": "Nowa lista",
+      "name": "Nazwa",
+      "namePlaceholder": "Np. Parapetówka",
+      "date": "Data wydarzenia · opcjonalnie",
+      "nameEmpty": "Nazwij listę",
+      "duplicate": "Taka lista już jest. Utworzyć drugą o tej samej nazwie?",
+      "pastDate": "Ta data już minęła. Taka lista od razu trafi do archiwum — nie da się jej udostępnić gościom.",
+      "submit": "Gotowe",
+      "submitting": "Zapisuję…",
+      "submitArchive": "Utwórz jako archiwum",
+      "changeDate": "Zmień datę",
+      "draftTitle": "Zostawić szkic?",
+      "draftBody": "Nazwa jest już wpisana. Możemy ją zapisać i wrócić później.",
+      "draftKeep": "Zapisz szkic",
+      "draftDrop": "Usuń i wyjdź"
+    },
+    "firstRun": {
+      "title": "Od czego zaczniemy?",
+      "body": "Listę można nazwać później — najważniejsze to dodać pierwszą rzecz.",
+      "defaultTitle": "Moje życzenia",
+      "withItem": "Wklej link do rzeczy",
+      "withItemHint": "Nazwę i cenę pobierzemy ze sklepu.",
+      "withList": "Utwórz listę na okazję",
+      "withListHint": "Urodziny, ślub, parapetówka…",
+      "skip": "Pomiń"
+    }
+  },
+  "v2list": {
+    "back": "Do moich list",
+    "menu": "Działania na liście",
+    "loading": "Wczytuję pozycje",
+    "itemsLabel": "Pozycje",
+    "add": "Dodaj pozycję",
+    "allDone": "Nic aktualnego nie zostało — poniżej kupione i podarowane.",
+    "errorTitle": "Pozycje się nie wczytały",
+    "errorBody": "Sama lista jest na miejscu — nie udało się pobrać tylko jej zawartości.",
+    "actionFailed": "Zmiana nie została zapisana: {error}",
+    "found": "Znaleziono {n} z {m}",
+    "notFound": {
+      "title": "Nie ma takiej listy",
+      "body": "Może została usunięta albo adres jest niepełny. Pozostałe listy są na miejscu.",
+      "cta": "Do moich list"
+    },
+    "empty": {
+      "title": "Ani jednej pozycji",
+      "body": "Wklej link do produktu — nazwę i cenę pobierzemy sami."
+    },
+    "sum": {
+      "inActive": {
+        "one": "w {n} aktualnej pozycji",
+        "few": "w {n} aktualnych pozycjach",
+        "many": "w {n} aktualnych pozycjach",
+        "other": "w {n} aktualnych pozycjach"
+      },
+      "noPrice": "{n} bez ceny",
+      "purchased": "{n} kupione",
+      "gifted": "{n} podarowane"
+    },
+    "search": {
+      "label": "Szukaj w pozycjach",
+      "placeholder": {
+        "one": "Szukaj w {n} pozycji",
+        "few": "Szukaj w {n} pozycjach",
+        "many": "Szukaj w {n} pozycjach",
+        "other": "Szukaj w {n} pozycjach"
+      },
+      "clear": "Wyczyść wyszukiwanie"
+    },
+    "filter": {
+      "label": "Pokaż",
+      "all": "Wszystkie",
+      "noPrice": "Bez ceny"
+    },
+    "sort": {
+      "button": "Sortowanie",
+      "title": "Sortuj",
+      "manual": "Ręcznie",
+      "manualHint": "Tak widzą goście",
+      "priority": "Priorytet",
+      "priorityHint": "Najpierw „Bardzo chcę”",
+      "priceAsc": "Cena · od najniższej",
+      "priceDesc": "Cena · od najwyższej",
+      "recent": "Ostatnio dodane"
+    },
+    "priority": {
+      "high": "Bardzo chcę",
+      "medium": "Byłoby miło",
+      "low": "Tylko pomysł"
+    },
+    "group": {
+      "other": "Inne",
+      "done": "Kupione i podarowane",
+      "emptySection": "W tym dziale na razie pusto.",
+      "sectionMenu": "Działania na dziale „{title}”",
+      "draftsHint": "Goście nie widzą szkiców, dopóki ich nie nazwiesz."
+    },
+    "noResults": {
+      "title": "Nic dla „{q}”",
+      "titlePlain": "Nic nie znaleziono",
+      "alsoNoPrice": "Filtr „Bez ceny” też jest włączony.",
+      "reset": "Wyczyść filtry",
+      "addAsNew": "Dodaj jako nową pozycję"
+    },
+    "item": {
+      "menu": "Działania na pozycji „{title}”",
+      "noPrice": "Cena nie podana",
+      "edit": "Zmień",
+      "open": "Otwórz w sklepie",
+      "status": "Status",
+      "delete": "Usuń",
+      "deleteFailed": "Nie udało się usunąć.",
+      "retry": "Jeszcze raz",
+      "draft": "Potrzebna nazwa",
+      "linkGone": "Strony nie ma",
+      "linkOut": "Niedostępny",
+      "priceChanged": "Cena się zmieniła"
+    },
+    "toast": {
+      "added": "Dodano: {title}",
+      "deleted": "Usunięto: {title}",
+      "undo": "Cofnij",
+      "drafted": "Szkic zapisany"
+    },
+    "menuList": {
+      "newSection": "Nowy dział",
+      "inV1": "Otwórz tę listę w starym wyglądzie",
+      "shareEmpty": "Na razie nie ma czym się dzielić: na liście nie ma aktualnych pozycji.",
+      "exportBody": "Eksport do pliku jest na razie tylko w starym wyglądzie.",
+      "shareDrafts": "Na razie są tylko szkice — nazwij je, a będzie można je udostępnić."
+    },
+    "section": {
+      "newTitle": "Nowy dział",
+      "renameTitle": "Zmień nazwę działu",
+      "name": "Nazwa działu",
+      "namePlaceholder": "Np. Kuchnia",
+      "nameEmpty": "Nazwij dział",
+      "create": "Utwórz",
+      "rename": "Zmień nazwę",
+      "delete": "Usuń dział"
+    },
+    "untitled": "Lista",
+    "share": "Udostępnij",
+    "preview": {
+      "title": "Jak widzą goście"
+    },
+    "settings": {
+      "title": "Ustawienia listy",
+      "description": "Wiadomość dla gości · opcjonalnie"
+    },
+    "reorder": {
+      "cta": "Zmień kolejność",
+      "subtitle": "Własna kolejność — tak widzą goście",
+      "up": "„{title}” wyżej",
+      "down": "„{title}” niżej",
+      "sectionUp": "Dział „{title}” wyżej",
+      "sectionDown": "Dział „{title}” niżej",
+      "offline": "Kolejność zmienia się, gdy jest połączenie."
+    },
+    "delete": {
+      "cta": "Usuń listę",
+      "title": "Usunąć „{title}”?",
+      "body": "Razem z listą na zawsze znikną jej pozycje: {items}.",
+      "viewed": {
+        "one": "Link do niej otwierano już {n} raz — przestanie działać.",
+        "few": "Linki do niej otwierano już {n} razy — przestaną działać.",
+        "many": "Linki do niej otwierano już {n} razy — przestaną działać.",
+        "other": "Linki do niej otwierano już {n} razy — przestaną działać."
+      },
+      "viewedUnknown": "Linki do niej przestaną działać.",
+      "typeLabel": "Wpisz nazwę listy, aby potwierdzić",
+      "typeMismatch": "Nazwa się nie zgadza.",
+      "confirm": "Usuń na zawsze"
+    }
+  },
+  "v2item": {
+    "newTitle": "Nowa pozycja",
+    "editTitle": "Pozycja",
+    "add": "Dodaj",
+    "link": {
+      "label": "Link",
+      "placeholder": "Wklej adres ze sklepu",
+      "next": "Dalej",
+      "paste": "Wklej ze schowka",
+      "pasteFailed": "Przeglądarka nie pozwoliła odczytać schowka — wklej link w pole.",
+      "pasteNoUrl": "W schowku nie ma linku.",
+      "manual": "Wpisz ręcznie",
+      "bad": "To nie wygląda na adres strony. Sprawdź, czy nie brakuje kropki.",
+      "empty": "Wklej link — albo wpisz pozycję ręcznie.",
+      "tooLong": "Link jest za długi — do 2048 znaków.",
+      "withoutLink": "Dodaj bez linku",
+      "optional": "Link · opcjonalnie",
+      "or": "albo"
+    },
+    "reading": "Czytam stronę sklepu…",
+    "readFailed": "Sklep nie podał opisu. Link zapisany — resztę uzupełnij ręcznie.",
+    "title": {
+      "label": "Nazwa",
+      "placeholder": "Wymagane",
+      "placeholderReading": "Możesz wpisać już teraz",
+      "empty": "Nazwij pozycję",
+      "same": "Podobna już jest: {title}"
+    },
+    "price": {
+      "label": "Cena · opcjonalnie",
+      "bad": "Cena to liczba: 1240 lub 1240,50."
+    },
+    "quantity": "Ilość",
+    "priority": "Priorytet",
+    "note": "Notatka dla gości · opcjonalnie",
+    "variants": {
+      "open": "Rozmiar, kolor",
+      "legend": "Wariant",
+      "size": "Rozmiar",
+      "color": "Kolor",
+      "model": "Model",
+      "orElse": "Albo może być",
+      "labelAria": "Cecha {n}",
+      "valueAria": "Wartość cechy {n}",
+      "add": "Kolejna cecha",
+      "remove": "Usuń cechę {n}"
+    },
+    "section": {
+      "label": "Dział",
+      "none": "Bez działu"
+    },
+    "photo": {
+      "remove": "Usuń zdjęcie"
+    },
+    "same": {
+      "title": "Ta rzecz już jest na liście",
+      "body": "Chcesz dwie? Lepiej zwiększyć ilość — goście zobaczą, ile potrzeba.",
+      "more": "Ilość: {n}",
+      "open": "Otwórz istniejącą"
+    },
+    "draft": {
+      "save": "Zapisz szkic",
+      "hint": "Nie chcesz teraz wymyślać nazwy? Zapisz szkic — goście go nie zobaczą, dopóki go nie nazwiesz.",
+      "editNote": "To szkic: goście go nie widzą. Dopisz nazwę — albo zapisz dalej jako szkic."
+    },
+    "linkcheck": {
+      "gone": "Strony produktu już nie ma — sprawdzono {date}. Możesz podmienić link, poszukać rzeczy gdzie indziej albo usunąć ją z listy.",
+      "out": "Teraz niedostępny — sprawdzono {date}. Może jeszcze wróci; albo poszukaj gdzie indziej.",
+      "price": "W sklepie teraz {price} — sprawdzono {date}.",
+      "updatePrice": "Zaktualizuj cenę",
+      "replace": "Podmień link",
+      "search": "Szukaj gdzie indziej",
+      "delete": "Usuń z listy"
+    }
+  },
+  "v2share": {
+    "title": "Udostępnij",
+    "message": "Wiadomość dla gości · opcjonalnie",
+    "showPrices": "Pokazuj ceny",
+    "showPricesHint": "Goście widzą kwoty.",
+    "allowClaims": "Goście mogą oznaczać, co biorą",
+    "allowClaimsHint": "Żeby nikt nie kupił dwa razy. Ty tego nie zobaczysz — prezent zostanie niespodzianką.",
+    "expires": "Ważny do · opcjonalnie",
+    "whatGuestsSee": "Co zobaczą goście",
+    "chosen": "{n} z {m}",
+    "hiddenShort": "ukryto: {n}",
+    "pick": "Wybierz",
+    "all": "Wszystkie",
+    "none": "Żadnej",
+    "notIncluded": "Nie trafi do linku",
+    "previewCta": "Zobacz jako gość",
+    "previewTitle": "Jak zobaczy gość",
+    "previewOf": "Tak goście zobaczą link „{title}”.",
+    "previewNote": "Podgląd odświeża się z każdym zaznaczeniem. Nie ma tu oznaczeń gości — nie widzisz ich nigdzie.",
+    "hidden": "Ukryto w tym linku: {items}",
+    "creating": "Przygotowuję link…",
+    "creatingHint": "Zwykle mniej niż sekunda.",
+    "copied": "Link skopiowany.",
+    "linkHint": "Kto ma ten link, widzi wybrane pozycje. Rejestracja nie jest potrzebna.",
+    "shareOut": "Udostępnij",
+    "revoke": "Cofnij dostęp",
+    "revokeTitle": "Cofnąć dostęp?",
+    "revokeBody": "Link przestanie działać u wszystkich, którzy go dostali. Oznaczenia gości zostaną — nowy link pokaże je tak samo.",
+    "revokeConfirm": "Cofnij",
+    "revoking": "Cofam…",
+    "revokedTitle": "Dostęp cofnięty",
+    "revokedBody": "Link już się nie otwiera. Nowy można utworzyć w każdej chwili."
+  },
+  "v2shares": {
+    "live": "Aktywne",
+    "dead": "Już nieaktywne",
+    "fromList": "Z listy „{title}”",
+    "views": {
+      "one": "{n} wyświetlenie",
+      "few": "{n} wyświetlenia",
+      "many": "{n} wyświetleń",
+      "other": "{n} wyświetlenia"
+    },
+    "deleteLabel": "Usuń link „{title}”",
+    "emptyBody": "Otwórz listę, naciśnij „{share}”, wybierz pozycje i naciśnij „{create}”. Goście zobaczą tylko je.",
+    "copyManual": "Przeglądarka nie pozwoliła skopiować automatycznie — zaznacz adres i skopiuj.",
+    "subtitle": "Każdy link pokazuje tylko wybrane dla niego pozycje. Główna lista pozostaje prywatna."
+  },
+  "v2settings": {
+    "looksHint": "Własne wyglądy wydarzeń ustawia się na konkretnej liście — w menu listy, „Wygląd listy”.",
+    "data": {
+      "title": "Moje dane",
+      "body": "Plik zawiera wszystkie listy, pozycje i opis linków. Nie ma w nim adresów linków ani oznaczeń gości.",
+      "cta": "Pobierz moje dane",
+      "starting": "Przygotowuję…",
+      "progress": "Eksportuję… {n} z {m}",
+      "cancel": "Anuluj",
+      "saved": "Plik zapisany."
+    },
+    "deleteLater": "Usuwanie konta pojawi się tu później."
+  },
+  "v2after": {
+    "card": {
+      "kicker": "Święto minęło · {date}",
+      "title": "Jak minęło święto?",
+      "body": "Zamkniemy listę w minutę — albo wróć do tego później.",
+      "bodyAllDone": "Wszystko rozliczone. Zostało zarchiwizować listę albo powtórzyć ją za rok.",
+      "received": "Oznacz otrzymane",
+      "carry": "Przenieś to, czego wciąż chcę",
+      "repeat": "Powtórz na {year}",
+      "archive": "Zarchiwizuj",
+      "later": "Później",
+      "doneMark": "zrobione",
+      "noHints": "Tego, co wzięli goście, nie pokazujemy także po święcie — otrzymane oznaczasz ty."
+    },
+    "archiving": "Archiwizuję…",
+    "archived": {
+      "title": "Lista w archiwum.",
+      "body": "Nowego linku do niej nie utworzysz, a stare linki goście otwierają jak dotąd.",
+      "restore": "Przywróć z archiwum"
+    },
+    "received": {
+      "title": "Co podarowano?",
+      "body": "Zaznacz to, co podarowano — trafi do „Kupione i podarowane”. Tego, co wzięli goście, nie pokazujemy i teraz.",
+      "save": "Oznacz jako podarowane ({n})"
+    },
+    "carry": {
+      "title": "Czego jeszcze chcesz?",
+      "body": "Przeniesiemy kopie — ta lista zostanie taka, jaka była w dniu święta.",
+      "where": "Dokąd przenieść",
+      "newList": "Nowa lista",
+      "newName": "Nazwa nowej listy",
+      "newDefault": "Wciąż chcę",
+      "nothing": "Wybierz przynajmniej jedną pozycję.",
+      "submit": "Przenieś ({n})",
+      "submitting": "Przenoszę…",
+      "done": "Przeniesiono do „{title}”: {n}.",
+      "open": "Otwórz"
+    },
+    "repeat": {
+      "titlePlain": "Powtórz listę",
+      "body": "Nowa lista z tymi samymi ustawieniami, wyglądem i sekcjami.",
+      "items": "Niepodarowane pozycje · {n}",
+      "itemsHint": "Kopie w tych samych miejscach. Kupione i podarowane zostają tutaj.",
+      "noItems": "Brak niepodarowanych pozycji — nowa lista zacznie się pusta.",
+      "links": "Oznaczenia gości i linki nigdy nie są przenoszone: linki do nowej listy utworzysz od nowa, stare zostaną przy tej.",
+      "submit": "Utwórz",
+      "submitting": "Tworzę…",
+      "done": "Powtórzono z listy „{title}”."
+    }
+  },
+  "v2yearly": {
+    "label": "Powtarzaj co roku",
+    "hint": "Przypomnimy miesiąc przed {date} — nowych list sami nie tworzymy.",
+    "needsDate": "Potrzebna data wydarzenia — inaczej nie ma o czym przypominać.",
+    "kicker": "Coroczne święto",
+    "title": "Powtórzyć „{title}” na {year}?",
+    "body": "Przeniesiemy niepodarowane, ustawienia i sekcje. Oznaczeń gości i linków — nigdy.",
+    "notNow": "Nie tym razem"
+  },
+  "v2add": {
+    "title": "Dodaj do Wishlist",
+    "list": "Do listy",
+    "newList": "+ Nowa",
+    "newListName": "Nazwa nowej listy",
+    "newListOffline": "Nową listę utworzymy dopiero z internetem.",
+    "unread": "Sklep nie podał opisu. Zapiszemy link — nazwę dopiszesz teraz albo później.",
+    "offline": "Brak połączenia. Dodamy, gdy wróci internet; strony sklepu teraz nie odczytamy.",
+    "added": "Dodano do „{title}”",
+    "queued": "Zapisane na telefonie. Dodamy do „{title}”, gdy wróci internet.",
+    "draftNote": "To szkic „Potrzebna nazwa” — goście go nie zobaczą, dopóki go nie nazwiesz.",
+    "open": "Otwórz listę",
+    "nothingTitle": "Nie ma czego dodać",
+    "nothingBody": "W udostępnionym nie ma ani linku, ani nazwy. Spróbuj „Udostępnij” jeszcze raz ze strony produktu."
+  },
+  "v1add": {
+    "title": "Dodawanie z innych aplikacji — w nowym wyglądzie",
+    "body": "Aby dodać udostępnione, przełącz się na nowy wygląd aplikacji. Wrócić możesz w Ustawieniach.",
+    "switch": "Przełącz i dodaj"
+  },
+  "v2notify": {
+    "title": "Powiadomienia",
+    "intro": "Przypomnimy o ważnych rzeczach: po święcie, miesiąc przed corocznym, gdy produkt zniknie ze sklepu albo link zaraz wygaśnie. Żadnych reklam.",
+    "enable": "Włącz powiadomienia",
+    "enabling": "Włączam…",
+    "enabled": "Powiadomienia są włączone.",
+    "enabledEmail": "Push nie działa na tym urządzeniu, więc ważne rzeczy przyjdą e-mailem na {email}.",
+    "ask": {
+      "title": "Powiedzieć, kiedy nadejdzie czas?",
+      "body": "Dzień po święcie przypomnimy o domknięciu listy, a jeśli produkt zniknie ze sklepu — damy znać. Żadnych reklam.",
+      "later": "Nie teraz",
+      "settings": "Ustawienia powiadomień"
+    },
+    "channel": {
+      "push": "Push",
+      "email": "E-mail"
+    },
+    "kind": {
+      "afterEvent": "Po święcie",
+      "afterEventHint": "Przypomnienie o domknięciu listy",
+      "yearly": "Coroczne święto",
+      "yearlyHint": "Miesiąc przed datą",
+      "link": "Produkt niedostępny",
+      "linkHint": "Strona zniknęła albo brak towaru",
+      "price": "Cena się zmieniła",
+      "priceHint": "O więcej niż 15%",
+      "share": "Link wygasa",
+      "shareHint": "3 dni przed końcem ważności"
+    },
+    "device": {
+      "label": "Push na tym urządzeniu",
+      "on": "Powiadomienia przychodzą tutaj.",
+      "off": "Tutaj powiadomienia nie przychodzą.",
+      "count": "Urządzenia z push: {n}",
+      "nowhere": "Push nie ma dokąd trafić: włącz go na urządzeniu, na którym chcesz je dostawać.",
+      "denied": "Push jest wyłączony w ustawieniach przeglądarki. E-maile przychodzą jak zwykle.",
+      "unsupported": "Ta przeglądarka nie obsługuje push. E-maile przychodzą jak zwykle.",
+      "ios": "Na iPhonie i iPadzie push działa tylko w zainstalowanej aplikacji: „Udostępnij” → „Do ekranu początkowego”.",
+      "failed": "Nie udało się włączyć push w tej przeglądarce. E-maile możesz włączyć poniżej."
+    },
+    "security": "Bezpieczeństwo konta",
+    "securityHint": "Zmiana hasła",
+    "securityAlways": "E-mail · zawsze",
+    "quiet": "Od 22:00 do 9:00 Twojego czasu nie przeszkadzamy, a kilka zdarzeń w ciągu 3 godzin przychodzi jednym powiadomieniem.",
+    "email": "E-maile na adres {email}.",
+    "guests": "Nie ma powiadomień o tym, co wzięli goście: to niespodzianka także dla Ciebie.",
+    "off": "Wyłącz wszystkie powiadomienia"
   }
 }

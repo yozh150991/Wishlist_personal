@@ -1,82 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useI18n } from '../lib/i18n';
+import type { Pending } from '../lib/undo';
 
 /**
- * Скасування замість підтвердження.
+ * Тост «Скасувати» v1.
  *
- * Зворотна дія не питає дозволу — вона дає сім секунд, щоб передумати.
- * Діалог лишається тільки незворотному: видаленню списку, масовому видаленню.
- * Підтвердження на те, що й так можна відкотити, люди перестають читати
- * і натискають «так» не дивлячись — тобто воно не захищає ні від чого.
- *
- * Дія справді **не виконується** до кінця відліку: скасування має бути
- * миттєвим і не залежати від мережі. Ціна — сім секунд, протягом яких зміна
- * живе лише на екрані; тому при виході зі сторінки відлік не втрачається,
- * а завершується негайно.
+ * Логіка відліку — у `lib/undo.ts` (`useUndo`), спільна з v2: там і пояснення,
+ * чому дія не виконується до кінця відліку. Тут лише вигляд.
  */
 
-const DELAY = 7000;
-
-export type Pending = {
-  /** Що сталося — минулим часом: «Позицію видалено». */
-  label: string;
-  /** Справжня дія. Викликається, коли час вийшов або людина пішла зі сторінки. */
-  commit: () => void;
-  /** Повернути екран у попередній стан. */
-  revert: () => void;
-};
-
-export function useUndo() {
-  const [pending, setPending] = useState<Pending | null>(null);
-  const timer = useRef<number | null>(null);
-  // Тримаємо в ref, щоб прибирання ефекту бачило актуальне значення,
-  // а не те, яке було на момент підписки.
-  const current = useRef<Pending | null>(null);
-
-  const clear = useCallback(() => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-    timer.current = null;
-    current.current = null;
-    setPending(null);
-  }, []);
-
-  const commitNow = useCallback(() => {
-    const p = current.current;
-    clear();
-    p?.commit();
-  }, [clear]);
-
-  const schedule = useCallback(
-    (next: Pending) => {
-      // Друга дія поспіль не скасовує першу: та вже відбулась на екрані,
-      // і людина чекає, що вона доїде.
-      commitNow();
-      current.current = next;
-      setPending(next);
-      timer.current = window.setTimeout(() => {
-        const p = current.current;
-        clear();
-        p?.commit();
-      }, DELAY);
-    },
-    [clear, commitNow],
-  );
-
-  const undo = useCallback(() => {
-    const p = current.current;
-    clear();
-    p?.revert();
-  }, [clear]);
-
-  // Пішли зі сторінки — доводимо незавершене до кінця. Мовчки втратити
-  // видалення, яке людина вже бачила виконаним, гірше за все інше.
-  useEffect(() => () => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-    current.current?.commit();
-  }, []);
-
-  return { pending, schedule, undo };
-}
+export { useUndo } from '../lib/undo';
+export type { Pending } from '../lib/undo';
 
 export function UndoToast({ pending, onUndo }: { pending: Pending | null; onUndo: () => void }) {
   const { t } = useI18n();

@@ -15,7 +15,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-6Sgcyok3E/8OuWYNIHzloOo/uDcdWiOkWLE3z3sw+oo='; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.run.app; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none';"
+          "value": "default-src 'self'; script-src 'self' 'sha256-zaSUBywbNjMZmF6MMf8o/h/h+yD6xqtQ8UloUPkEy7M='; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.run.app; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none';"
         },
         {
           "key": "X-Content-Type-Options",
@@ -55,6 +55,15 @@
     },
     {
       "source": "/s/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/l/(.*)",
       "headers": [
         {
           "key": "X-Robots-Tag",

@@ -1,16 +1,7 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
-import { flush, pendingCount, subscribe } from '../lib/outbox';
-import type { Dropped } from '../lib/outbox';
+import { useOutbox } from '../lib/useOutbox';
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
 
@@ -67,49 +58,12 @@ type Item = {
 
 export function Banners() {
   const { t, locale } = useI18n();
-  const { session } = useAuth();
   const { stale } = useContext(StaleCtx);
-  const userId = session?.user.id;
-
-  const [count, setCount] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const [dropped, setDropped] = useState<Dropped[]>([]);
+  // Відправка черги й відхилені зміни — у lib/useOutbox.ts, спільному з v2.
+  // Відхилене сервером показуємо доти, доки людина не закриє: інакше зміна
+  // зникне без сліду, і вона дізнається про це з порожнього списку.
+  const { count, busy, dropped, send, clearDropped } = useOutbox();
   const [expanded, setExpanded] = useState(false);
-
-  const refresh = useCallback(() => {
-    if (!userId) return setCount(0);
-    void pendingCount(userId).then(setCount);
-  }, [userId]);
-
-  const send = useCallback(async () => {
-    if (!userId || busy) return;
-    setBusy(true);
-    try {
-      const result = await flush(userId);
-      // Відхилене сервером показуємо доти, доки людина не закриє: інакше зміна
-      // зникне без сліду, і вона дізнається про це з порожнього списку.
-      if (result.dropped.length) setDropped((prev) => [...prev, ...result.dropped]);
-    } finally {
-      setBusy(false);
-      refresh();
-    }
-  }, [userId, busy, refresh]);
-
-  useEffect(() => {
-    refresh();
-    return subscribe(refresh);
-  }, [refresh]);
-
-  useEffect(() => {
-    if (!userId) return;
-    void send();
-    const onOnline = () => void send();
-    window.addEventListener('online', onOnline);
-    return () => window.removeEventListener('online', onOnline);
-    // send змінюється разом із busy, а перепідписуватись на кожну відправку не
-    // треба: слухач читає актуальний userId через замикання.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
 
   const items: Item[] = [];
 
@@ -119,7 +73,7 @@ export function Banners() {
       tone: 'danger',
       icon: 'alert',
       title: t('outbox.dropped', { n: dropped.length }),
-      dismiss: () => setDropped([]),
+      dismiss: clearDropped,
     });
   }
 
