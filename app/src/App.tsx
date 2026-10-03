@@ -1,11 +1,42 @@
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from './lib/auth';
 import { I18nProvider } from './lib/i18n';
-import { ThemeProvider } from './lib/theme';
+import { designOfPath, ThemeProvider, useRouteDesign } from './lib/theme';
 import { LocaleSync } from './components/LocaleSync';
 import { AppearanceSync } from './components/AppearanceSync';
 import { UpdatePrompt } from './components/UpdatePrompt';
-import { DesignRoutes } from './designs/DesignRoutes';
+import SharedList from './routes/SharedList';
+import { DesignRoutes, GuestV2Screen } from './designs/DesignRoutes';
+
+/**
+ * Верхня таблиця маршрутів: гостьові адреси — і все інше.
+ *
+ * Гостьову версію визначає адреса, а не вибір власника: `/s/…` — гостьова v1,
+ * `/l/…` — гостьова v2 (ADR-039). У гостя немає сховища власника, а власник,
+ * який щось перемкнув у себе, не має змінити того, що бачать рідні за вже
+ * розданим посиланням. Тому ці маршрути стоять тут, **вище** за вибір версії;
+ * решту адрес розводить `DesignRoutes` за `wl.design`.
+ *
+ * Тут же адреса каже провайдеру, яку версію ставити на `<html>`
+ * (`useRouteDesign`) — при кожному переході, а не лише на старті.
+ */
+function Screens() {
+  const { pathname } = useLocation();
+  useRouteDesign(designOfPath(pathname));
+
+  return (
+    <Routes>
+      {/* Гостьова v1. Особисте посилання: ключ ляже в браузер і зникне з адреси (ADR-035). */}
+      <Route path="/s/:token" element={<SharedList />} />
+      <Route path="/s/:token/g/:key" element={<SharedList />} />
+      {/* Гостьова v2 (ADR-041): той самий токен і той самий ключ, інший префікс. */}
+      <Route path="/l/:token" element={<GuestV2Screen />} />
+      <Route path="/l/:token/g/:key" element={<GuestV2Screen />} />
+
+      <Route path="*" element={<DesignRoutes />} />
+    </Routes>
+  );
+}
 
 /**
  * Каркас застосунку: провайдери, сесія, мова — усе, що спільне для обох
@@ -26,7 +57,7 @@ export default function App() {
                 дизайну не їде: поки v2 наповнюється, вона не має вмикатися
                 сама на іншому пристрої. */}
             <AppearanceSync />
-            <DesignRoutes />
+            <Screens />
           </AuthProvider>
         </BrowserRouter>
       </I18nProvider>

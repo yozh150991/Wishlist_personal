@@ -15,6 +15,13 @@ const manifest = JSON.parse(await readFile(join(dist, 'manifest.webmanifest'), '
 check(manifest.name && manifest.short_name, 'маніфест: немає name або short_name');
 check(manifest.display === 'standalone', 'маніфест: display має бути standalone');
 check(manifest.start_url === '/lists', 'маніфест: start_url має бути /lists');
+// «Поділитися» з інших застосунків (ADR-046): лише GET на /add з трьома параметрами.
+check(
+  manifest.share_target?.action === '/add' &&
+    manifest.share_target?.method === 'GET' &&
+    ['title', 'text', 'url'].every((k) => manifest.share_target?.params?.[k] === k),
+  'маніфест: share_target має вести GET-запитом на /add з параметрами title, text, url',
+);
 
 async function pngSize(path) {
   const b = await readFile(join(dist, path));
@@ -65,16 +72,35 @@ if (csp) {
 // Гостьова сторінка — секрет у самій адресі. Кеш пристрою її не бачить
 // (нижче), а пошуковий індекс не має побачити й поготів: заборона в
 // robots.txt лише просить не сканувати, від індексації захищає заголовок.
-const guestHeaders = vercel.headers
-  ?.filter((h) => h.source?.includes('/s/'))
-  .flatMap((h) => h.headers ?? []);
-check(
-  guestHeaders?.some((h) => h.key === 'X-Robots-Tag' && /noindex/i.test(h.value)),
-  'vercel.json: для /s/* немає заголовка X-Robots-Tag: noindex — гостьові посилання можуть потрапити в пошук',
-);
+// Гостьових префіксів два: /s/ — гостьова v1, /l/ — гостьова v2 (ADR-041).
+// Кожна з трьох перевірок стосується обох.
+const GUEST_PREFIXES = ['s', 'l'];
 
 const robots = await readFile(join(dist, 'robots.txt'), 'utf8').catch(() => '');
-check(/^\s*Disallow:\s*\/s\//m.test(robots), 'robots.txt: немає рядка Disallow: /s/');
+for (const p of GUEST_PREFIXES) {
+  const guestHeaders = vercel.headers
+    ?.filter((h) => h.source?.startsWith(`/${p}/`))
+    .flatMap((h) => h.headers ?? []);
+  check(
+    guestHeaders?.some((h) => h.key === 'X-Robots-Tag' && /noindex/i.test(h.value)),
+    `vercel.json: для /${p}/* немає заголовка X-Robots-Tag: noindex — гостьові посилання можуть потрапити в пошук`,
+  );
+  check(new RegExp(`^\\s*Disallow:\\s*/${p}/`, 'm').test(robots), `robots.txt: немає рядка Disallow: /${p}/`);
+}
+
+// Шлях гостьової адреси несе токен, а в особистому посиланні ще й ключ гостя.
+// Referrer-Policy вирішує, чи піде цей шлях у магазин, коли гість натисне на
+// товар. Безпечні лише політики, які за межі сайту шлях не віддають;
+// `unsafe-url` і `no-referrer-when-downgrade` віддають його повністю (ADR-041).
+const referrer = vercel.headers
+  ?.filter((h) => h.source === '/(.*)')
+  .flatMap((h) => h.headers ?? [])
+  .find((h) => h.key === 'Referrer-Policy')?.value;
+const SAFE_REFERRER = ['no-referrer', 'same-origin', 'origin', 'strict-origin', 'origin-when-cross-origin', 'strict-origin-when-cross-origin'];
+check(
+  SAFE_REFERRER.includes(referrer?.trim()),
+  `vercel.json: Referrer-Policy «${referrer ?? 'немає'}» — шлях гостьової адреси з токеном і ключем може піти в магазин. Дозволено: ${SAFE_REFERRER.join(', ')}`,
+);
 
 // Жодного шрифта, вбудованого в CSS як `data:` URI. CSP дозволяє
 // `font-src 'self'`, тож вбудований шрифт браузер блокує мовчки — сторінка
@@ -90,8 +116,22 @@ for (const file of (await readdir(join(dist, 'assets'))).filter((f) => f.endsWit
 
 const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 check(sw.includes('createHandlerBoundToURL("/index.html")'), 'sw.js: немає запасної навігації на index.html');
-check(/denylist:\[[^\]]*\\\/s\\\//.test(sw), 'sw.js: гостьові сторінки /s/ не виключені з навігації — токени лягли б у кеш пристрою');
+for (const p of GUEST_PREFIXES) {
+  check(
+    new RegExp(`denylist:\\[[^\\]]*\\\\/${p}\\\\/`).test(sw),
+    `sw.js: гостьові сторінки /${p}/ не виключені з навігації — токени й ключі гостей лягли б у кеш пристрою`,
+  );
+}
 check(!/\.map"/.test(sw), 'sw.js: у кеш потрапили карти коду (.map)');
+
+// Push-сповіщення (ADR-049): без обробника push браузер покаже «сайт оновився
+// у фоні» замість сповіщення, а натиск нікуди не поведе.
+check(/importScripts\(\s*"push-sw\.js"\s*\)/.test(sw), 'sw.js: не підключено push-sw.js (workbox.importScripts)');
+const pushSw = await readFile(join(dist, 'push-sw.js'), 'utf8').catch(() => '');
+check(
+  pushSw.includes("addEventListener('push'") && pushSw.includes("addEventListener('notificationclick'"),
+  'push-sw.js: немає обробників push і notificationclick',
+);
 
 if (failures.length) {
   console.error('PWA: знайдено проблеми:\n- ' + failures.join('\n- '));

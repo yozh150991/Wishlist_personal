@@ -32,6 +32,8 @@ export type List = {
   /** Оформлення списку (ADR-034); null — без оформлення. Старий офлайн-знімок його не має. */
   appearance_id?: string | null;
   is_archived: boolean;
+  /** Щорічне свято (ADR-047): за місяць до дати v2 пропонує повторити список. Старий знімок поля не має. */
+  repeats_yearly?: boolean;
   created_at: string;
   updated_at: string;
   /**
@@ -40,7 +42,12 @@ export type List = {
    * читається як необовʼязковий.
    */
   item_count?: number;
+  /** Скільки з них ще актуальні — лише з `fetchListsOverview` (головна v2). */
+  active_count?: number;
 };
+
+/** unknown — не перевіряли чи нічого певного, ok — є, out — немає в наявності, gone — сторінки немає. */
+export type LinkStatus = 'unknown' | 'ok' | 'out' | 'gone';
 
 export type Item = {
   id: string;
@@ -61,6 +68,19 @@ export type Item = {
   section_id?: string | null;
   /** Ручний порядок у розділі; null — ще не впорядковано. */
   position?: number | null;
+  /**
+   * Чернетка без назви (ADR-046): у `title` — адреса. Гостям невидима. Старий
+   * офлайн-знімок поля не має — тоді це не чернетка.
+   */
+  needs_title?: boolean;
+  /**
+   * Щоденна перевірка посилання (ADR-048): що побачив сервіс wishlist-jobs.
+   * Пише лише він; старий знімок полів не має — тоді «не перевіряли».
+   */
+  link_status?: LinkStatus;
+  link_checked_at?: string | null;
+  link_price?: number | string | null;
+  link_currency?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -73,9 +93,28 @@ export type ItemInput = Pick<Item, 'title'> &
   Partial<
     Pick<
       Item,
-      'url' | 'price' | 'quantity' | 'priority' | 'note' | 'variants' | 'image_url' | 'status' | 'section_id' | 'position'
+      | 'url'
+      | 'price'
+      | 'quantity'
+      | 'priority'
+      | 'note'
+      | 'variants'
+      | 'image_url'
+      | 'status'
+      | 'section_id'
+      | 'position'
+      | 'needs_title'
     >
   >;
+
+/** Розділ списку (ADR-036): одна мітка на позицію, порядок задає власник. */
+export type Section = {
+  id: string;
+  list_id: string;
+  title: string;
+  position: number;
+  created_at: string;
+};
 
 export type Totals = {
   items_count: number;

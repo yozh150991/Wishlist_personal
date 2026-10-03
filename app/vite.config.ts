@@ -25,6 +25,13 @@ export default defineConfig({
         start_url: '/lists',
         scope: '/',
         display: 'standalone',
+        // Wishlist у системному «Поділитися» (Android, десктопний Chrome; потік L,
+        // ADR-046). GET: поширене приходить параметрами, а `/add` прибирає їх з адреси.
+        share_target: {
+          action: '/add',
+          method: 'GET',
+          params: { title: 'title', text: 'text', url: 'url' },
+        },
         background_color: '#f5f6f4',
         theme_color: '#ffffff',
         icons: [
@@ -55,12 +62,16 @@ export default defineConfig({
         // Будь-яка адреса застосунку відкривається з кешованого index.html,
         // навіть без мережі.
         navigateFallback: '/index.html',
-        // Крім гостьових сторінок: відповідь на /s/<токен> не має лягати
-        // в кеш пристрою разом із токеном (ARCHITECTURE.md, «Офлайн-режим»).
-        navigateFallbackDenylist: [/^\/s\//],
+        // Крім гостьових сторінок: відповідь на /s/<токен> (гостьова v1) чи
+        // /l/<токен> (гостьова v2, ADR-041) не має лягати в кеш пристрою разом
+        // із токеном і ключем гостя (ARCHITECTURE.md, «Офлайн-режим»).
+        navigateFallbackDenylist: [/^\/s\//, /^\/l\//],
         cleanupOutdatedCaches: true,
         // Запити до Supabase і парсера — завжди в мережу.
         runtimeCaching: [],
+        // Push-сповіщення власника (ADR-049): обробники push і натиску на
+        // сповіщення. Перевіряє `npm run check:pwa`.
+        importScripts: ['push-sw.js'],
       },
       devOptions: { enabled: false },
     }),

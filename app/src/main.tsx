@@ -6,9 +6,8 @@ import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/rubik';
 import '@fontsource-variable/manrope';
 import './styles.css';
-// Шар дизайну v2 — після базових стилів, щоб за однакової ваги селекторів
-// вигравав він. Поки файл порожній, підключення нічого не міняє (ADR-032).
-import './styles/design-v2.css';
+// Стилів v2 тут немає навмисно: вони імпортуються з модулів v2 і їдуть у її
+// лінивий чанк, тож користувач v1 їх не завантажує (ADR-039, п. 9).
 // Слухач beforeinstallprompt має зʼявитися до того, як браузер надішле подію.
 import './lib/install';
 import App from './App';

@@ -57,6 +57,10 @@ $map = @{
   '20260928120000_sections_and_order.sql' = 'supabase\migrations'
   '20260928130000_share_expiry_zone.sql' = 'supabase\migrations'
   '20260928140000_owner_side_channels.sql' = 'supabase\migrations'
+  '20260928160000_item_drafts.sql' = 'supabase\migrations'
+  '20260928170000_yearly_lists.sql' = 'supabase\migrations'
+  '20260929090000_link_checks.sql' = 'supabase\migrations'
+  '20260930090000_notifications.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -69,6 +73,10 @@ $map = @{
   '06_sections.test.sql' = 'supabase\tests\database'
   '07_share_expiry.test.sql' = 'supabase\tests\database'
   '08_owner_side_channels.test.sql' = 'supabase\tests\database'
+  '09_item_drafts.test.sql' = 'supabase\tests\database'
+  '10_yearly_lists.test.sql' = 'supabase\tests\database'
+  '11_link_checks.test.sql' = 'supabase\tests\database'
+  '12_notifications.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -137,11 +145,46 @@ $map = @{
   # Design version switch (ADR-032). File names here are unique across the
   # whole repository on purpose: this table maps by file name alone, so two
   # files both called Routes.tsx could not be placed.
-  'design-v2.css' = 'app\src\styles'; 'design.spec.ts' = 'app\tests\e2e'
+  'design.spec.ts' = 'app\tests\e2e'
   'DesignRoutes.tsx' = 'app\src\designs'
   'RoutesV1.tsx' = 'app\src\designs\v1'
   'RoutesV2.tsx' = 'app\src\designs\v2'
   'PlaceholderV2.tsx' = 'app\src\designs\v2\screens'
+  # Design v2 foundation (ADR-039): lazy v2 styles, /l/ guest route.
+  'v2.css' = 'app\src\designs\v2'; 'GuestV2.tsx' = 'app\src\designs\v2\screens'
+  # Design v2 sign-in (ADR-042): shared auth helpers and v2 screens.
+  'authFlow.ts' = 'app\src\lib'; 'password.ts' = 'app\src\lib'
+  'AuthPartsV2.tsx' = 'app\src\designs\v2\screens'; 'LoginV2.tsx' = 'app\src\designs\v2\screens'
+  'RegisterV2.tsx' = 'app\src\designs\v2\screens'; 'ResetV2.tsx' = 'app\src\designs\v2\screens'
+  'NewPasswordV2.tsx' = 'app\src\designs\v2\screens'; 'auth-v2.spec.ts' = 'app\tests\e2e'
+  # Design v2 owner shell and home (step 3a).
+  'ShellV2.tsx' = 'app\src\designs\v2'; 'CommonV2.tsx' = 'app\src\designs\v2\screens'
+  'ListsV2.tsx' = 'app\src\designs\v2\screens'
+  'NewListV2.tsx' = 'app\src\designs\v2\screens'; 'lists-v2.spec.ts' = 'app\tests\e2e'
+  # Design v2 list page (step 3b-1, ADR-044): shared pure helpers and v2 screens.
+  'itemsView.ts' = 'app\src\lib'; 'order.ts' = 'app\src\lib'
+  'undo.ts' = 'app\src\lib'; 'variants.ts' = 'app\src\lib'
+  'ListV2.tsx' = 'app\src\designs\v2\screens'; 'ItemSheetV2.tsx' = 'app\src\designs\v2\screens'
+  'ListPartsV2.tsx' = 'app\src\designs\v2\screens'; 'list-v2.spec.ts' = 'app\tests\e2e'
+  'items-view.spec.ts' = 'app\tests\e2e'
+  # Design v2 list actions (step 3b-2): share, preview, appearance, settings, order.
+  'ShareSheetV2.tsx' = 'app\src\designs\v2\screens'; 'PreviewV2.tsx' = 'app\src\designs\v2\screens'
+  'AppearanceSheetV2.tsx' = 'app\src\designs\v2\screens'; 'ListSettingsV2.tsx' = 'app\src\designs\v2\screens'
+  'ReorderV2.tsx' = 'app\src\designs\v2\screens'
+  # Design v2 step 3c: my links, settings; outbox flushing shared by both designs.
+  'SharesV2.tsx' = 'app\src\designs\v2\screens'; 'SettingsV2.tsx' = 'app\src\designs\v2\screens'
+  'useOutbox.ts' = 'app\src\lib'
+  # Design v2 step 4a: after the event, archive, repeat next year.
+  'AfterEventV2.tsx' = 'app\src\designs\v2\screens'; 'afterEvent.ts' = 'app\src\lib'
+  'after-event.spec.ts' = 'app\tests\e2e'; 'after-event-v2.spec.ts' = 'app\tests\e2e'
+  # Design v2 step 4b: drafts, share target (/add), v1 bridge.
+  'AddV2.tsx' = 'app\src\designs\v2\screens'; 'AddBridgeV1.tsx' = 'app\src\designs\v1'
+  'shareTarget.ts' = 'app\src\lib'; 'share-target.spec.ts' = 'app\tests\e2e'
+  # notifications v2, step 4g-2 (ADR-049)
+  'NotifyV2.tsx' = 'app\src\designs\v2\screens'
+  'notifications.ts' = 'app\src\lib'; 'notifyRules.ts' = 'app\src\lib'
+  'notify-rules.spec.ts' = 'app\tests\e2e'; 'notify-v2.spec.ts' = 'app\tests\e2e'
+  'push-sw.js' = 'app\public'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'
@@ -164,8 +207,15 @@ $map = @{
   'fetcher.py' = 'services\parser\app';  'extract.py' = 'services\parser\app'
   'cache.py' = 'services\parser\app';    'ratelimit.py' = 'services\parser\app'
   'main.py' = 'services\parser\app'
+  # closed background jobs service wishlist-jobs (ADR-048), same image
+  'jobs_main.py' = 'services\parser\app';  'jobs_config.py' = 'services\parser\app'
+  'jobs_store.py' = 'services\parser\app'; 'jobs_links.py' = 'services\parser\app'
+  # owner notifications (ADR-049)
+  'jobs_notify.py' = 'services\parser\app'; 'jobs_push.py' = 'services\parser\app'
+  'jobs_mail.py' = 'services\parser\app';   'jobs_texts.py' = 'services\parser\app'
   'test_extract.py' = 'services\parser\tests'; 'test_ssrf.py' = 'services\parser\tests'
   'test_auth.py' = 'services\parser\tests'; 'test_fetch_pinning.py' = 'services\parser\tests'
+  'test_jobs.py' = 'services\parser\tests'; 'test_notify.py' = 'services\parser\tests'
   'jsonld.html' = 'services\parser\tests\fixtures'; 'og.html' = 'services\parser\tests\fixtures'
   'microdata.html' = 'services\parser\tests\fixtures'; 'bare.html' = 'services\parser\tests\fixtures'
   'price_in_text.html' = 'services\parser\tests\fixtures'

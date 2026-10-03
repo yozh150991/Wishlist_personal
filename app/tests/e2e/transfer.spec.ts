@@ -6,6 +6,7 @@ import {
   parseCsvFile,
   parseFile,
   parseJsonFile,
+  toAccountJson,
   toCsv,
   toJson,
 } from '../../src/lib/transfer';
@@ -354,5 +355,34 @@ test.describe('ознаки товару', () => {
     const text = toJson(list, [item({ variants: [{ label: 'Розмір', value: 'M' }] })]);
     expect(JSON.parse(text).items[0].variants).toEqual([{ label: 'Розмір', value: 'M' }]);
     expect(text).not.toContain('reserved');
+  });
+});
+
+test.describe('«Мої дані» — усі списки одним файлом (v2, крок 3в)', () => {
+  test('списки з позиціями в тій самій формі, що й файл одного списку; посилання — без адрес', () => {
+    const text = toAccountJson(
+      [{ list, items: [item(), item({ id: 'i2', title: 'Келихи', price: null, status: 'gifted' })] }],
+      [
+        {
+          title: 'Для бабусі',
+          list_title: list.title,
+          created_at: '2026-09-01T00:00:00Z',
+          expires_at: null,
+          revoked_at: null,
+          view_count: 3,
+          items_count: 2,
+        },
+      ],
+      '2026-09-28T12:00:00Z',
+    );
+    const data = JSON.parse(text);
+    expect(data).toMatchObject({ format: 'wishlist-personal-account', version: 1, exported_at: '2026-09-28T12:00:00Z' });
+    // Кожен запис списку — те саме, що list та items у файлі одного списку.
+    const single = JSON.parse(toJson(list, [item(), item({ id: 'i2', title: 'Келихи', price: null, status: 'gifted' })]));
+    expect(data.lists[0].list).toEqual(single.list);
+    expect(data.lists[0].items).toEqual(single.items);
+    // Ні токена, ні id — адреса посилання й ключі лишаються в застосунку.
+    expect(text).not.toMatch(/"token"|"id"|"owner_id"/);
+    expect(data.shares[0]).toMatchObject({ title: 'Для бабусі', view_count: 3, items_count: 2 });
   });
 });

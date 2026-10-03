@@ -1,5 +1,8 @@
 import { supabase } from './supabase';
-import type { Item, ItemInput, ItemQuery, ItemStatus, List, Totals } from './types';
+import { CURRENCIES } from './types';
+import type { Currency, Item, ItemInput, ItemQuery, ItemStatus, List, Totals } from './types';
+import { isNetworkError } from './errors';
+import { copyInput } from './afterEvent';
 
 /* ── Списки ─────────────────────────────── */
 
@@ -37,8 +40,46 @@ export async function fetchList(id: string): Promise<List | null> {
   return { ...list, item_count: items?.[0]?.count ?? 0 };
 }
 
+/**
+ * Списки для головної v2: разом із кількістю позицій — скільки з них ще
+ * «актуальні» (`status = active`). Минулий список підписано «4 не розібрано»
+ * (потік U): це статуси самого власника, не позначки гостей, тож інваріант
+ * §3.2 тут ні до чого.
+ *
+ * Два агрегати одного вкладення розрізняє псевдонім, а фільтр на псевдонімі
+ * рахує лише активні. Якщо сервер такого запиту не прийме, картки просто
+ * лишаються без «не розібрано»: помилка мережі йде нагору, решта — у
+ * запасний `fetchLists()`.
+ */
+export async function fetchListsOverview(): Promise<List[]> {
+  const { data, error } = await supabase
+    .from('lists')
+    .select('*, all_items:items(count), active_items:items(count)')
+    .eq('active_items.status', 'active')
+    .order('created_at', { ascending: false });
+  if (error) {
+    if (isNetworkError(error)) throw error;
+    return fetchLists();
+  }
+  type Agg = { count: number }[] | null | undefined;
+  type Row = Omit<List, 'item_count' | 'active_count'> & { all_items?: Agg; active_items?: Agg };
+  return ((data ?? []) as Row[]).map(({ all_items, active_items, ...list }) => ({
+    ...list,
+    item_count: all_items?.[0]?.count ?? 0,
+    active_count: active_items?.[0]?.count ?? 0,
+  }));
+}
+
+/** Валюта нового списку — з профілю, якщо людина її колись задала. */
+export async function fetchDefaultCurrency(userId: string): Promise<Currency | null> {
+  const { data, error } = await supabase.from('profiles').select('default_currency').eq('id', userId).maybeSingle();
+  if (error || !data) return null;
+  const c = (data as { default_currency: string | null }).default_currency;
+  return c && (CURRENCIES as string[]).includes(c) ? (c as Currency) : null;
+}
+
 export type ListInput = Pick<List, 'title'> &
-  Partial<Pick<List, 'description' | 'currency' | 'event_date'>>;
+  Partial<Pick<List, 'description' | 'currency' | 'event_date' | 'is_archived' | 'repeats_yearly'>>;
 
 export async function createList(input: ListInput, ownerId: string): Promise<List> {
   const { data, error } = await supabase
@@ -57,6 +98,16 @@ export async function updateList(id: string, patch: Partial<ListInput>): Promise
 
 export async function deleteList(id: string): Promise<void> {
   const { error } = await supabase.from('lists').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * Архів (ADR-045) — полиця власника: список лишається цілим, наявні посилання
+ * працюють як і раніше, а нове v2 створити не дає. v1 прапорця не знає й
+ * показує такий список серед звичайних.
+ */
+export async function setListArchived(id: string, archived: boolean): Promise<void> {
+  const { error } = await supabase.from('lists').update({ is_archived: archived }).eq('id', id);
   if (error) throw error;
 }
 
@@ -176,6 +227,86 @@ export async function createListWithItems(
   } catch (e) {
     await deleteList(list.id).catch(() => {});
     throw e;
+  }
+  return list;
+}
+
+/**
+ * Копії позицій в інший список — «Ще хочу» після свята (M4, ADR-045).
+ * Оригінали не чіпаємо: архів лишається правдивим знімком свята, а позначки
+ * гостей не переїжджають — вони належать оригіналам.
+ */
+export async function copyItems(listId: string, items: ItemInput[]): Promise<void> {
+  for (const part of chunks(items, BULK_CHUNK)) {
+    const { error } = await supabase.from('items').insert(part.map((i) => ({ ...i, list_id: listId })));
+    if (error) throw error;
+  }
+}
+
+/**
+ * «Повторити на наступний рік» (S3, ADR-045): новий список із тими самими
+ * налаштуваннями — повідомлення гостям, валюта, оформлення, розділи в тому ж
+ * порядку — і копіями вибраних позицій на тих самих місцях. Позначки й
+ * посилання не переносяться ніколи.
+ *
+ * Як і в імпорті, транзакції на кілька запитів немає: не вдалося — щойно
+ * створений список видаляємо, щоб не лишити половину.
+ */
+export async function repeatList(
+  source: { list: List; sections: { id: string; title: string; position: number }[]; items: Item[] },
+  next: { title: string; event_date: string | null; repeats_yearly: boolean },
+  ownerId: string,
+): Promise<List> {
+  const { data, error } = await supabase
+    .from('lists')
+    .insert({
+      owner_id: ownerId,
+      title: next.title,
+      event_date: next.event_date,
+      description: source.list.description,
+      currency: source.list.currency,
+      appearance_id: source.list.appearance_id ?? null,
+      repeats_yearly: next.repeats_yearly,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  const list = data as List;
+  try {
+    // Розділи — по одному: так id нового точно відповідає старому.
+    const sectionIds = new Map<string, string>();
+    for (const s of source.sections) {
+      const { data: row, error: sErr } = await supabase
+        .from('sections')
+        .insert({ list_id: list.id, title: s.title, position: s.position })
+        .select('id')
+        .single();
+      if (sErr) throw sErr;
+      sectionIds.set(s.id, (row as { id: string }).id);
+    }
+    // Позиція з розділу, якого вже немає, стає в «Інше» без місця — як і в самому списку.
+    const inputs = source.items.map((i) => {
+      const section = i.section_id ? (sectionIds.get(i.section_id) ?? null) : null;
+      const lost = Boolean(i.section_id) && section === null;
+      return copyInput(i, { section_id: section, position: lost ? null : (i.position ?? null) });
+    });
+    await copyItems(list.id, inputs);
+  } catch (e) {
+    await deleteList(list.id).catch(() => {});
+    throw e;
+  }
+  // Щорічна позначка переходить до нового списку «ряду» (ADR-047): інакше
+  // старий нагадав би про ту саму дату ще раз. Не вдалося — не біда, новий
+  // список уже є, а зайве нагадування закривається «Не цього разу».
+  if (source.list.repeats_yearly) {
+    await supabase
+      .from('lists')
+      .update({ repeats_yearly: false })
+      .eq('id', source.list.id)
+      .then(
+        () => undefined,
+        () => undefined,
+      );
   }
   return list;
 }

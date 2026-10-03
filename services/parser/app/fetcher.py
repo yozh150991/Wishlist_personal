@@ -15,6 +15,18 @@ class BlockedHost(Exception):
     pass
 
 
+class UpstreamError(HTTPException):
+    """
+    Магазин відповів помилкою. Для /parse це той самий 502 з тим самим
+    `detail`, а перевірці посилань (wishlist-jobs, ADR-048) потрібен ще й
+    справжній код: 404 і 410 кажуть «сторінки немає», а 403 чи 503 — нічого.
+    """
+
+    def __init__(self, detail: str, upstream_status: int | None = None):
+        super().__init__(status.HTTP_502_BAD_GATEWAY, detail)
+        self.upstream_status = upstream_status
+
+
 def _is_public(ip: str) -> bool:
     addr = ipaddress.ip_address(ip)
     # is_global — білий список за реєстром спеціальних адрес IANA, а не набір
@@ -97,8 +109,8 @@ async def _read_page(res: httpx.Response, cfg, host: str | None) -> str:
         # 401/403/429 від магазину — це антибот-захист, а не поломка. Великі
         # маркетплейси перевіряють JS і cookies, і відрізняти це корисно.
         if res.status_code in (401, 403, 405, 429):
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "upstream_forbidden")
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "upstream_error")
+            raise UpstreamError("upstream_forbidden", res.status_code)
+        raise UpstreamError("upstream_error", res.status_code)
 
     ctype = res.headers.get("content-type", "")
     if "html" not in ctype.lower():

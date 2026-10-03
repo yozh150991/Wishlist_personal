@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase, publicOrigin } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { authReturn } from '../lib/authFlow';
 import { useI18n } from '../lib/i18n';
 import { authErrorKey } from '../lib/authErrors';
 import { AuthLayout } from '../components/AuthLayout';
@@ -25,7 +26,9 @@ export default function Register() {
       email,
       password,
       options: {
-        emailRedirectTo: `${publicOrigin}/lists`,
+        // ?design=v1 — лист, відкритий на іншому пристрої, відкриє ту саму
+        // версію, з якої реєструвались (ADR-039, п. 5).
+        emailRedirectTo: authReturn('/lists', 'v1'),
         // Мова листа підтвердження: шаблон читає її з user_metadata (ADR-024).
         data: { locale },
       },

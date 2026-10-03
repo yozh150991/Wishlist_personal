@@ -19,7 +19,7 @@ const { data } = await supabase.rpc('create_share', {
 // → { id, token, title, expires_at, expires_tz, ... }
 // URL для гостя: `${origin}/s/${data.token}`
 ```
-Чужі позиції та позиції з іншого списку мовчки відсіюються (RLS). Порожній масив → помилка `22023`.
+Чужі позиції та позиції з іншого списку мовчки відсіюються (RLS). Чернетки без назви (`items.needs_title`, ADR-046) теж мовчки пропускає тригер `share_items_skip_drafts` — тіло функції не змінилось, v1 про чернетки не знає й помилки не отримує. Порожній масив → помилка `22023`.
 
 Термін — **день і зона**, момент рахує база: 23:59:59 того дня за зоною власника (`expires_at`, UTC) плюс сама зона (`expires_tz`). ICU-імена, які дає браузер (`Europe/Kiev`, `Asia/Calcutta`), записуються сучасними. Помилки, обидві `22023`:
 - `bad_time_zone` — день без зони або зона, якої база не знає. Клієнт (`lib/shares.ts`) тоді повторює запит зі старим `p_expires_at` — кінцем дня за годинником пристрою, без зони.
@@ -137,13 +137,28 @@ const { data } = await supabase.rpc('list_totals', { p_list_id: listId });
 //     total_price, active_price, items_no_price }
 ```
 
+### `save_push_subscription` — authenticated
+```ts
+const json = subscription.toJSON();   // PushSubscription браузера
+await supabase.rpc('save_push_subscription', {
+  p_endpoint: json.endpoint, p_p256dh: json.keys.p256dh, p_auth: json.keys.auth,
+});                                    // 204, без тіла
+```
+Пристрій для push (ADR-049). `SECURITY DEFINER`: та сама адреса підписки від іншого власника прибирає його рядок — пристрій належить тому, хто ввімкнув push останнім, і наступна людина за пристроєм не отримує чужих сповіщень. Що адреса комусь належала, з відповіді не видно: функція нічого не повертає. Щонайбільше 10 пристроїв на власника — найстаріші відпадають. База перевіряє форму (`check`, `23514`): адреса — `https://` без пробілів і керівних символів, до 1024; `p256dh` — 65 байтів точки P-256 у base64url (`B…`, 87 знаків); `auth` — 16 байтів (22 знаки).
+
+### `forget_push_subscription` — authenticated
+```ts
+await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoint });   // 204
+```
+«Вимкнути push тут» і вихід з акаунта. Прибирає лише свій рядок; чужий із тією самою адресою не чіпає й не видає. Напряму ні вставити, ні змінити, ні видалити рядок `push_subscriptions` клієнт не може: адреса підписки — секрет рівня токена, і в тілі запиту вона не осідає в журналах шлюзу API, як осів би фільтр `?endpoint=eq.…`.
+
 ### Права на виклик
 
 | Функція | Ролі |
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code` | `anon`, `authenticated` |
-| `release_item_claims`, `reorder_items`, `reorder_sections` | `authenticated` |
+| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
 Права задано міграціями `20260910120300_grants.sql` і `20260916220000_revoke_default_function_grants.sql`. Перша відкликала лише `PUBLIC`, і функції власника лишались доступними `anon` через явні гранти Supabase за замовчуванням; друга це закрила. Кожна нова RPC-функція отримує гранти явно й відкликає їх у конкретних ролей (CLAUDE.md §3.4). Таблицю вище перевіряє `supabase/tests/database/01_schema_guards.test.sql`.
@@ -179,6 +194,16 @@ await supabase.from('sections').insert({ list_id, title, position });   // owner
 await supabase.from('items').update({ section_id, position: null }).eq('id', itemId);
 ```
 Розділ іншого списку база відхиляє з `section_not_in_list` (`23514`).
+
+Сповіщення (ADR-049), `lib/notifications.ts`:
+```ts
+await supabase.from('notification_settings').select('*').maybeSingle();          // null — нічого не ввімкнено
+await supabase.from('notification_settings')
+  .upsert({ owner_id, time_zone: 'Europe/Warsaw', link_push: true }, { onConflict: 'owner_id' });
+await supabase.from('push_subscriptions').select('id', { count: 'exact', head: true });   // лише число пристроїв
+await supabase.from('push_subscriptions').select('endpoint');   // чи цей пристрій ще на сервері — порівняння в браузері
+```
+Налаштування й пристрої бачить лише власник. `notification_log` (що вже надіслано) клієнту недоступний зовсім.
 
 ---
 
@@ -230,10 +255,13 @@ Base URL: `VITE_PARSER_URL` (env). Автентифікація: `Authorization:
   "status": "ok",
   "version": "0.1.0",
   "supabase_configured": true,
-  "allowed_origins": ["https://wishlist-personal.vercel.app", "http://localhost:5173"]
+  "allowed_origins": ["https://wishlist-personal.vercel.app", "http://localhost:5173"],
+  "secret_key_present": false
 }
 ```
 Без автентифікації. `supabase_configured: false` одразу пояснює `500 supabase_not_configured` на `/parse`; `allowed_origins` показує, звідки дозволено CORS. Секретів тут немає, тож відповідь безпечно відкрита.
+
+`secret_key_present` має бути `false`. `true` означає, що в парсер помилково поклали `SUPABASE_SECRET_KEY`: ключ бази живе лише в закритому `wishlist-jobs` (ADR-012, ADR-048). Сам ключ парсер не читає — лише помічає його й пише помилку в лог при старті. Прибери змінну з сервісу парсера (DEPLOY.md, 9.7).
 
 ### Магазини з антибот-захистом
 
@@ -263,3 +291,104 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 - Заборона схем, крім `http`/`https`.
 - Читання потоком із лімітом 5 МБ. Понад ліміт сторінка не відхиляється, а обрізається: мета-теги лежать у `<head>`, тож прочитаного зазвичай достатньо.
 - Кеш відповідей 15 хв за нормалізованим URL.
+
+---
+
+## Сервіс фонових задач `wishlist-jobs` (ADR-048)
+
+Закритий сервіс Cloud Run з того самого коду, що й парсер (`APP_MODULE=app.jobs_main:app`). Браузер його не викликає і не знає його адреси. Налаштування — DEPLOY.md, розділ 9.
+
+**Хто викликає.** Лише Cloud Scheduler з ID-токеном (OIDC) облікового запису `wishlist-scheduler`; аудиторія токена — адреса сервісу. Запит без токена чи з токеном без ролі `roles/run.invoker` Cloud Run відхиляє сам — `403` ще до контейнера. Друга лінія в застосунку: без `Authorization: Bearer` — `401 missing_token`.
+
+**Як ходить у базу.** PostgREST із secret-ключем (`sb_secret_…`) лише в заголовку `apikey`, без `Authorization`: нові ключі Supabase — не JWT. Роль — `service_role`, тож RLS не діє; тому сервіс пише вузько:
+- перевірка посилань — лише поля `link_*` позиції за її `id`;
+- сповіщення — `notification_log`, `notification_settings.last_sent_at`, `push_subscriptions.last_ok_at` і видалення мертвих підписок.
+
+Пошту й мову власника сервіс читає з Supabase Auth (`GET /auth/v1/admin/users/{id}` тим самим ключем). З `shares` бере лише назву й термін — без токена. Таблиць позначок гостей (`claims`, `guest_*`) він не торкається.
+
+### `POST /jobs/check-links`
+Тіла немає. Перевіряє посилання, яким настала черга (ARCHITECTURE, «Перевірка посилань»), і відповідає лічильниками:
+```json
+{ "ok": 31, "out": 2, "gone": 1, "kept": 9, "deferred": 0, "checked": 43 }
+```
+| Поле | Що означає |
+|---|---|
+| `ok` / `out` / `gone` | висновки: сторінка є / товару немає в наявності / сторінки немає (404, 410) |
+| `kept` | нічого певного (антибот, 5xx, тайм-аут, заблокований хост): висновок не змінено, записано лише час |
+| `deferred` | не встигли за `JOBS_TIME_BUDGET_SECONDS` — підуть наступного запуску |
+| `checked` | скільки позицій записано |
+
+Поля з нулем у відповіді відсутні. Адрес, назв і `id` позицій немає ні у відповіді, ні в логах.
+
+**Помилки**
+| Код | Коли |
+|---|---|
+| `401 missing_token` | немає `Authorization: Bearer` (запит дійшов би сюди, лише якщо сервіс розгорнули відкритим) |
+| `503 jobs_not_configured` | не задано `SUPABASE_URL` або `SUPABASE_SECRET_KEY`, чи ключ не починається з `sb_secret_` |
+| `500` | Supabase відхилив ключ (401/403) чи недоступний; у лозі — «PostgREST відхилив ключ … перевір SUPABASE_SECRET_KEY» |
+
+### `POST /jobs/notify`
+Тіла немає. Сповіщення власникам (ADR-049; ARCHITECTURE, «Сповіщення власника»). Cloud Scheduler кличе щогодини. Відповідь — лічильники:
+```json
+{ "events": 4, "push": 1, "email": 1, "quiet": 2, "waiting": 1, "dropped": 0, "push_gone": 1, "brevo_ok": 1 }
+```
+| Поле | Що означає |
+|---|---|
+| `events` | скільки нових подій знайдено |
+| `push` / `email` | скільком власникам дійшов push / лист (один на все, що назбиралось) |
+| `quiet` | власників, у яких зараз 22:00–9:00 — чекають ранку |
+| `waiting` | власників, яким надсилали менш ніж 3 год тому — чекають |
+| `dropped` | подій, яким не було куди піти (push без пристроїв, пошта не підтверджена) — записані як пропущені |
+| `push_gone` | підписок, яких більше немає (404/410) — прибрано |
+| `push_blocked` | підписок не на службі push чи зі зіпсованими ключами — запиту не було, прибрано |
+| `auth_unavailable` | власників, чию пошту й мову Auth зараз не віддав — чекають наступної години |
+| `errors` | власників, на яких щось зламалось (збій бази тощо) — решта не постраждала, їхня черга чекає |
+| `brevo_ok` / `brevo_refused` / `brevo_unreachable` | щоденна перевірка ключа Brevo о 03:00 UTC |
+
+Поля з нулем відсутні. Назв, адрес, пошт і `id` немає ні у відповіді, ні в логах.
+
+**Помилки**
+| Код | Коли |
+|---|---|
+| `401 missing_token` | немає `Authorization: Bearer` |
+| `503 notify_not_configured` | бракує `SUPABASE_*`, `BREVO_API_KEY`, `VAPID_PRIVATE_KEY`, `MAIL_FROM` чи `APP_ORIGIN` — які саме, показує `/health` |
+| `500` | Supabase відхилив ключ чи недоступний |
+
+Посилання в push і листах ведуть у v2: `/lists/…?design=v2`, `/settings?design=v2#notifications`.
+
+**Push** — Web Push: `POST` на адресу підписки з `Authorization: vapid t=<JWT ES256>,k=<публічний ключ>`, `Content-Encoding: aes128gcm`, `TTL: 86400`. Тіло — JSON `{title, body, url, tag}`, зашифроване для браузера (RFC 8291). Адреса — лише https на хостах `fcm.googleapis.com`, `*.push.services.mozilla.com`, `*.push.apple.com`, `*.notify.windows.com`; решта відкидається без запиту.
+
+**Лист** — `POST https://api.brevo.com/v3/smtp/email` з `api-key`, відправник `MAIL_FROM` з ім'ям «Wishlist», тег `wishlist-notify`. Раз на добу — `GET /v3/account`, щоб ключ не згас за 90 днів тиші.
+
+### `GET /health`
+```json
+{
+  "status": "ok", "service": "wishlist-jobs",
+  "configured": true, "problems": [],
+  "notify_configured": true, "notify_problems": [],
+  "brevo": "ok"
+}
+```
+Теж за IAM: без ID-токена — `403` від Cloud Run. Перевірка з консолі — DEPLOY.md, 9.7 і 9.11.
+
+- `problems` — чого бракує перевірці посилань: `SUPABASE_URL` (не `https://…` або лишився шаблон `<project-ref>`) і `SUPABASE_SECRET_KEY` (порожній чи не `sb_secret_…`).
+- `notify_problems` — чого бракує сповіщенням: `BREVO_API_KEY` (не `xkeysib-…`), `VAPID_PRIVATE_KEY` (не 43 символи base64url), `MAIL_FROM` (не адреса), `APP_ORIGIN` (не `https://домен`).
+- `brevo` — живий виклик `GET /v3/account`: `ok`, `refused` (ключ не той, вимкнений чи заблоковано IP), `unreachable`, `not_configured`.
+
+Назви змінних — без значень. Пробіли й переноси рядка на краях значень і BOM на початку сервіс обрізає сам.
+
+### Змінні оточення
+| Змінна | Усталено | Що робить |
+|---|---|---|
+| `APP_MODULE` | `app.main:app` | для цього сервісу — `app.jobs_main:app` |
+| `SUPABASE_URL` | — | адреса проєкту |
+| `SUPABASE_SECRET_KEY` | — | з Secret Manager (`wishlist-supabase-secret`), не в `--set-env-vars` |
+| `JOBS_BATCH_SIZE` | `50` | розмір партії; запуск бере партію за партією, поки є черга й час |
+| `JOBS_TIME_BUDGET_SECONDS` | `300` | межа часу на запуск |
+| `JOBS_RECHECK_HOURS` | `20` | не перевіряти частіше |
+| `JOBS_HOST_DELAY_SECONDS` | `2` | пауза між сторінками одного магазину |
+| `JOBS_CONCURRENCY` | `4` | скільки магазинів одночасно |
+| `BREVO_API_KEY` | — | з Secret Manager (`wishlist-brevo-key`), `xkeysib-…` |
+| `VAPID_PRIVATE_KEY` | — | з Secret Manager (`wishlist-vapid-private`), пара до `VITE_VAPID_PUBLIC_KEY` у Vercel |
+| `MAIL_FROM` | — | підтверджена в Brevo адреса відправника; вона ж — контакт у підписі VAPID (`mailto:`) |
+| `APP_ORIGIN` | — | адреса застосунку для посилань у листах, напр. `https://wishlist-personal.vercel.app` |

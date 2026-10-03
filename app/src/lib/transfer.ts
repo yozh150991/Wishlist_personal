@@ -146,6 +146,50 @@ export function toJson(list: List, items: Item[]): string {
   return JSON.stringify(payload, null, 2) + '\n';
 }
 
+/**
+ * «Мої дані» (потік I3): усі списки з позиціями й опис посилань одним файлом.
+ *
+ * Це файл на збереження, не на імпорт: імпорт приймає файл одного списку
+ * (ADR-027), а кожен запис у `lists` — той самий список і позиції, що й у
+ * ньому. Адрес посилань тут немає: токен — ключ до гостьової сторінки, а
+ * файл живе далі без нас (CLAUDE.md §3.5). Позначок гостей немає тим паче —
+ * їх не бачить і сам власник (§3.2).
+ */
+export const ACCOUNT_FORMAT = 'wishlist-personal-account';
+
+export type AccountShare = {
+  title: string;
+  list_title: string | null;
+  created_at: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  view_count: number;
+  items_count: number;
+};
+
+export function toAccountJson(
+  lists: { list: List; items: Item[] }[],
+  shares: AccountShare[],
+  now = new Date().toISOString(),
+): string {
+  const payload = {
+    format: ACCOUNT_FORMAT,
+    version: TRANSFER_VERSION,
+    exported_at: now,
+    lists: lists.map(({ list, items }) => ({
+      list: {
+        title: list.title,
+        description: list.description,
+        currency: list.currency,
+        event_date: list.event_date,
+      },
+      items: items.map(toTransferItem),
+    })),
+    shares,
+  };
+  return JSON.stringify(payload, null, 2) + '\n';
+}
+
 /** Екранування за RFC 4180 плюс захист від формул у таблицях. */
 function csvCell(value: string | number | null): string {
   if (value === null) return '';

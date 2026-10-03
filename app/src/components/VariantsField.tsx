@@ -104,25 +104,5 @@ export function VariantsField({
   );
 }
 
-/**
- * Готує пари до відправки: обрізає пробіли й прибирає порожні рядки.
- *
- * Пара, де заповнено лише одне з двох полів, не «здогадується» — її ловить
- * перевірка у формі, щоб людина не втратила введене мовчки.
- */
-export function cleanVariants(variants: ItemVariant[]): ItemVariant[] {
-  return variants
-    .map((v) => ({ label: v.label.trim(), value: v.value.trim() }))
-    .filter((v) => v.label !== '' || v.value !== '');
-}
-
-/** Ключ помилки для форми, або `null`, якщо пари придатні. Межі — ті самі, що в базі. */
-export function variantsError(variants: ItemVariant[]): string | null {
-  const clean = cleanVariants(variants);
-  if (clean.length > VARIANTS_MAX) return 'item.errors.variantsMany';
-  if (clean.some((v) => v.label === '' || v.value === '')) return 'item.errors.variantsHalf';
-  if (clean.some((v) => v.label.length > VARIANT_LABEL_MAX || v.value.length > VARIANT_VALUE_MAX)) {
-    return 'item.errors.variantsLong';
-  }
-  return null;
-}
+/** Перевірка й очищення пар — у `lib/variants.ts`, спільні з v2. */
+export { cleanVariants, variantsError } from '../lib/variants';

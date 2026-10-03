@@ -17,4 +17,6 @@ EXPOSE 8080
 
 # Порт береться з оточення: Cloud Run, Render і подібні платформи
 # передають його через $PORT і не питають, що зашито в образі.
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --proxy-headers"]
+# APP_MODULE вибирає застосунок: усталено — відкритий парсер; закритий сервіс
+# фонових задач (wishlist-jobs, ADR-048) задає app.jobs_main:app.
+CMD ["sh", "-c", "uvicorn ${APP_MODULE:-app.main:app} --host 0.0.0.0 --port ${PORT:-8080} --proxy-headers"]

@@ -256,7 +256,7 @@ rollback;
 ```bash
 cp .env.example app/.env.local     # потім лишити тільки блок фронтенду
 ```
-Заповнити `VITE_SUPABASE_URL` і `VITE_SUPABASE_PUBLISHABLE_KEY`. Файл уже в `.gitignore` — перевір `git status`, його не має бути серед відстежуваних.
+Заповнити `VITE_SUPABASE_URL` і `VITE_SUPABASE_PUBLISHABLE_KEY`. `VITE_AUTH_GOOGLE=1` додавай лише тоді, коли провайдер Google увімкнено в тому Supabase, на який дивиться фронтенд (DEPLOY.md, розділ 4.1): без нього кнопки Google на екранах v2 просто немає. Файл уже в `.gitignore` — перевір `git status`, його не має бути серед відстежуваних.
 
 ---
 
@@ -313,6 +313,10 @@ Get-NetTCPConnection -LocalPort 8787 -ErrorAction SilentlyContinue
 pip install -r requirements-dev.txt
 pytest
 ```
+
+**Сервіс фонових задач `wishlist-jobs`** (ADR-048) зібраний із цього ж коду, але **локально його не запускаємо**: він пише в базу secret-ключем, а база одна й бойова (CLAUDE.md §6). Його логіку перевіряє `tests/test_jobs.py` з підмінною базою й мережею — він іде разом з усім `pytest`. Не додавай `SUPABASE_SECRET_KEY`, `APP_MODULE` і ключі сповіщень (`BREVO_API_KEY`, `VAPID_PRIVATE_KEY`) у `.env` парсера: блок у `.env.example` закоментований навмисно, і `/health` парсера покаже `"secret_key_present": true`, якщо ключ бази туди потрапив. Налаштування в бою — DEPLOY.md, розділ 9. Сповіщення (ADR-049) локально перевіряє `tests/test_notify.py` з підмінними службами push і Brevo.
+
+`VITE_VAPID_PUBLIC_KEY` у `app/.env.local` локально зазвичай не потрібен: у режимі розробки Service Worker вимкнено, тож push і так не підписати. Без ключа картка «Сповіщення» в Налаштуваннях v2 показує лише листи.
 
 ### Деплой
 

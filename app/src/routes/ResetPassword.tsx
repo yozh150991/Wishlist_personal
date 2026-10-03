@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase, publicOrigin } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { authReturn } from '../lib/authFlow';
 import { useI18n } from '../lib/i18n';
 import { AuthLayout } from '../components/AuthLayout';
 import { Field, Note, SubmitButton } from '../components/ui';
@@ -19,7 +20,7 @@ export default function ResetPassword() {
     // Відповідь однакова незалежно від того, чи існує акаунт:
     // інакше форма перетворюється на перевірку, чи зареєстрована адреса.
     await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${publicOrigin}/update-password`,
+      redirectTo: authReturn('/update-password', 'v1'),
     });
     setSent(true);
     setBusy(false);
