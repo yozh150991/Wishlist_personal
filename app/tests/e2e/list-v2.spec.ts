@@ -136,6 +136,39 @@ test.describe('сторінка списку v2 з акаунтом', { tag: '@v
     await expect(page.getByRole('heading', { name: /жодної позиції|ani jednej pozycji|no items yet/i })).toBeVisible();
   });
 
+  test('фото посиланням: хибна адреса не зберігається, мініатюра на картці, у зміні — «Прибрати фото»', async ({
+    page,
+  }) => {
+    await signInV2(page);
+    await newList(page, unique('V2 photo'));
+    const title = unique('Навушники');
+    const photo = 'https://example.com/wishlist-e2e/photo.jpg';
+
+    await addButton(page).click();
+    const sheet = itemSheet(page);
+    await sheet.getByRole('button', { name: /вписати вручну|wpisz ręcznie|type it in/i }).click();
+    await sheet.locator('input[name="title"]').fill(title);
+    await sheet.locator('input[name="image_url"]').fill('ftp://example.com/photo.jpg');
+    await sheet.getByRole('button', { name: /^(додати|dodaj|add)$/i }).click();
+    await expect(sheet.locator('input[name="image_url"]')).toHaveAttribute('aria-invalid', 'true');
+    await expect(sheet.locator('input[name="image_url"]')).toBeFocused();
+
+    await sheet.locator('input[name="image_url"]').fill(photo);
+    await sheet.getByRole('button', { name: /^(додати|dodaj|add)$/i }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(card(page, title).locator('img')).toHaveAttribute('src', photo);
+
+    // Зміна позиції: фото видно й можна прибрати.
+    await card(page, title).getByRole('button', { name: new RegExp(escape(title)) }).first().click();
+    const edit = page.getByRole('dialog', { name: /^(позиція|pozycja|item)$/i });
+    await expect(edit.locator('input[name="image_url"]')).toHaveValue(photo);
+    await edit.getByRole('button', { name: /прибрати фото|usuń zdjęcie|remove photo/i }).click();
+    await expect(edit.locator('input[name="image_url"]')).toHaveValue('');
+    await edit.getByRole('button', { name: /^(зберегти|zapisz|save)$/i }).click();
+    await expect(edit).toHaveCount(0);
+    await expect(card(page, title).locator('img')).toHaveCount(0);
+  });
+
   test('хибне посилання — підказка під полем і «Додати без посилання» до ручної форми', async ({ page }) => {
     await signInV2(page);
     await newList(page, unique('V2 link'));
@@ -335,5 +368,100 @@ test.describe('сторінка списку v2: чернетки', { tag: '@v2'
     await page.reload();
     await expect(card(page, lamp)).toBeVisible();
     await expect(page.getByRole('heading', { name: /потрібна назва|potrzebna nazwa|needs a name/i })).toHaveCount(0);
+  });
+});
+
+test.describe('сторінка списку v2: те, що прийшло з v1 (ADR-050)', { tag: '@v2' }, () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('пошук і «Фільтри» є вже на короткому списку; статус звужує, чип «×» знімає', async ({ page }) => {
+    await signInV2(page);
+    await newList(page, unique('V2 filters'));
+    const keep = unique('Чашка');
+    const bought = unique('Ковдра');
+    await addManual(page, keep, '50');
+    await addManual(page, bought, '300');
+    await expect(undoButton(page)).toHaveCount(0, { timeout: 10_000 });
+    await menuOf(page, bought).click();
+    await page.getByRole('dialog', { name: bought }).getByRole('radio', { name: /^(куплено|kupione|purchased)$/i }).click();
+
+    // Два пункти — а пошук уже є (у пакеті був від 20).
+    await expect(page.getByRole('searchbox')).toBeVisible();
+
+    await page.getByRole('button', { name: /^(фільтри|filtry|filters)/i }).click();
+    const sheet = page.getByRole('dialog', { name: /^(фільтри|filtry|filters)$/i });
+    await sheet.getByRole('checkbox', { name: /^(куплено|kupione|purchased)$/i }).check();
+    await sheet.getByRole('button', { name: /^(показати|pokaż|show)$/i }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(card(page, keep)).toHaveCount(0);
+    // Картка, а не getByText: назва є ще в закритих вікнах (меню «⋯», «Схожа вже є»),
+    // які лишаються в DOM, і строгий режим знаходить три збіги.
+    await expect(card(page, bought)).toBeVisible();
+
+    await page.getByRole('button', { name: /зняти фільтр статусу|clear status filter|zdejmij filtr statusu/i }).click();
+    await expect(card(page, keep)).toBeVisible();
+
+    // Ціна «від–до»: 100…500 лишає лише ковдру.
+    await page.getByRole('button', { name: /^(фільтри|filtry|filters)/i }).click();
+    await sheet.locator('input[name="price_from"]').fill('100');
+    await sheet.locator('input[name="price_to"]').fill('500');
+    await sheet.getByRole('button', { name: /^(показати|pokaż|show)$/i }).click();
+    await expect(card(page, keep)).toHaveCount(0);
+  });
+
+  test('експорт CSV із меню списку й імпорт файлу на «Моїх списках»', async ({ page }) => {
+    await signInV2(page);
+    const listTitle = unique('V2 export');
+    await newList(page, listTitle);
+    const title = unique('Ліхтарик');
+    await addManual(page, title, '120');
+
+    await page.getByRole('button', { name: /^(дії зі списком|działania na liście|list actions)$/i }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /експортувати список|eksportuj listę|export list/i }).click();
+    const download = page.waitForEvent('download');
+    await page.getByRole('dialog').getByRole('button', { name: /csv/i }).click();
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(/\.csv$/);
+    const path = await file.path();
+
+    await page.goto('/lists');
+    await page.getByRole('button', { name: /імпорт із файлу|import z pliku|import from a file/i }).first().click();
+    const sheet = page.getByRole('dialog', { name: /імпортувати список|importuj listę|import list/i });
+    await sheet.locator('input[type="file"]').setInputFiles(path);
+    await expect(sheet.getByText(title)).toBeVisible();
+    const imported = unique('V2 imported');
+    await sheet.locator('input[name="import_title"]').fill(imported);
+    await sheet.getByRole('button', { name: /\(1\)/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: imported })).toBeVisible();
+    await expect(card(page, title)).toBeVisible();
+  });
+});
+
+test.describe('сторінка списку v2: валюта позиції (ADR-051)', { tag: '@v2' }, () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('позиція в євро — своя валюта на картці й окремий доданок у сумі', async ({ page }) => {
+    await signInV2(page);
+    await newList(page, unique('V2 currency'));
+    await addManual(page, unique('Чашка'), '50');
+
+    const title = unique('Навушники');
+    await addButton(page).click();
+    const sheet = itemSheet(page);
+    await sheet.getByRole('button', { name: /вписати вручну|wpisz ręcznie|type it in/i }).click();
+    await sheet.locator('input[name="title"]').fill(title);
+    await sheet.locator('input[name="price"]').fill('85');
+    await sheet.locator('select[name="currency"]').selectOption('EUR');
+    await expect(sheet.getByText(/не у валюті списку|nie w walucie listy|not in the list currency/i)).toBeVisible();
+    await sheet.getByRole('button', { name: /^(додати|dodaj|add)$/i }).click();
+    await expect(sheet).toHaveCount(0);
+
+    await expect(card(page, title)).toContainText('€');
+    // «50 zł + 85 €» — без перерахунку.
+    await expect(page.locator('.v2-sum__value')).toContainText('+');
+    await expect(page.locator('.v2-sum__value')).toContainText('€');
+
+    await page.reload();
+    await expect(card(page, title)).toContainText('€');
   });
 });

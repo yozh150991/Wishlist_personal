@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent, ReactNode, MouseEvent as ReactMouseEvent } from 'react';
-import { ExternalLink, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Braces, ExternalLink, FileSpreadsheet, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { hostOf, moneyShort } from '../../../lib/format';
 import { STATUSES } from '../../../lib/types';
-import type { Currency, Item, ItemPriority, ItemStatus } from '../../../lib/types';
+import type { Currency, Item, ItemPriority, ItemStatus, List } from '../../../lib/types';
 import { SECTION_TITLE_MAX } from '../../../lib/sections';
 import type { Section } from '../../../lib/sections';
-import { VIEW_SORTS, linkPriceChange } from '../../../lib/itemsView';
-import type { ViewSort } from '../../../lib/itemsView';
+import { EMPTY_RANGE, VIEW_SORTS, itemCurrency, linkPriceChange, parsePrice, toMinor } from '../../../lib/itemsView';
+import type { ViewRange, ViewSort } from '../../../lib/itemsView';
+import { downloadText } from '../../../lib/download';
+import { fileName, toCsv, toJson } from '../../../lib/transfer';
 import type { Pending } from '../../../lib/undo';
 import { errorText } from '../../../lib/errors';
 import { FieldV2, NoteV2, SubmitV2, useCountdown } from './AuthPartsV2';
@@ -47,6 +49,8 @@ export function useSortLabel() {
         return t('v2list.sort.priceDesc');
       case 'recent':
         return t('v2list.sort.recent');
+      case 'title':
+        return t('v2list.sort.byTitle');
       default:
         return t('v2list.sort.manual');
     }
@@ -179,7 +183,8 @@ export function ItemCardV2({
   const priority = usePriorityLabel();
   const status = useStatusLabel();
   const swipe = useSwipe(Boolean(onDelete));
-  const price = moneyShort(item.price, currency, locale);
+  // Своя валюта позиції, якщо вона інша, ніж у списку (ADR-051).
+  const price = moneyShort(item.price, itemCurrency(item, currency), locale);
   const host = hostOf(item.url);
   const variants = item.variants.map((v) => v.value).join(' · ');
   const tagPriority = showPriority && item.priority !== 'medium';
@@ -427,6 +432,196 @@ export function SortSheetV2({
           </label>
         ))}
       </fieldset>
+    </SheetV2>
+  );
+}
+
+/* ── Фільтри: статус і ціна (ADR-050) ─────────────────────── */
+
+/** «1 240,50» у полі з мінорних одиниць — щоб відкрите вікно показувало те, що діє. */
+function minorToText(v: number | null): string {
+  return v === null ? '' : String(v / 100).replace('.', ',');
+}
+
+/**
+ * Аркуш «Фільтри» — те, що у v1 було на панелі фільтрів: статус (кілька
+ * одразу) і ціна «від–до». Застосовується кнопкою «Показати», щоб список під
+ * вікном не стрибав від кожної цифри. Порожній статус — усі.
+ */
+export function FiltersSheetV2({
+  open,
+  value,
+  onClose,
+  onApply,
+}: {
+  open: boolean;
+  value: ViewRange;
+  onClose: () => void;
+  onApply: (range: ViewRange) => void;
+}) {
+  const { t } = useI18n();
+  const status = useStatusLabel();
+  const [statuses, setStatuses] = useState<ItemStatus[]>(value.statuses);
+  const [min, setMin] = useState('');
+  const [max, setMax] = useState('');
+  const [tried, setTried] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setStatuses(value.statuses);
+    setMin(minorToText(value.min));
+    setMax(minorToText(value.max));
+    setTried(false);
+  }, [open, value]);
+
+  const pMin = parsePrice(min);
+  const pMax = parsePrice(max);
+  const minVal = pMin.value === null ? null : toMinor(pMin.value);
+  const maxVal = pMax.value === null ? null : toMinor(pMax.value);
+  const order = minVal !== null && maxVal !== null && minVal > maxVal;
+  const minError = tried && pMin.error ? t('v2item.price.bad') : null;
+  const maxError = tried && pMax.error ? t('v2item.price.bad') : tried && order ? t('v2filters.order') : null;
+
+  function apply() {
+    setTried(true);
+    if (pMin.error || pMax.error || order) return;
+    // Усі три статуси — те саме, що жодного: не тримаємо «фільтр», який нічого не звужує.
+    onApply({ statuses: statuses.length === STATUSES.length ? [] : statuses, min: minVal, max: maxVal });
+    onClose();
+  }
+
+  return (
+    <SheetV2 open={open} onClose={onClose} labelledBy="v2-filters-title">
+      <form
+        className="v2-stack"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          apply();
+        }}
+      >
+        <h2 className="v2-sheet__title" id="v2-filters-title">
+          {t('v2filters.title')}
+        </h2>
+        <fieldset className="v2-seg">
+          <legend className="v2-field__label">{t('v2filters.status')}</legend>
+          <div className="v2-seg__row">
+            {STATUSES.map((s) => (
+              <label key={s} className="v2-seg__opt">
+                <input
+                  type="checkbox"
+                  value={s}
+                  checked={statuses.includes(s)}
+                  onChange={() =>
+                    setStatuses((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
+                  }
+                />
+                <span>{status(s)}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="v2-row v2-row--even">
+          <FieldV2
+            label={t('v2filters.priceFrom')}
+            name="price_from"
+            inputMode="decimal"
+            autoComplete="off"
+            value={min}
+            error={minError}
+            onChange={(e) => setMin(e.target.value)}
+          />
+          <FieldV2
+            label={t('v2filters.priceTo')}
+            name="price_to"
+            inputMode="decimal"
+            autoComplete="off"
+            value={max}
+            error={maxError}
+            onChange={(e) => setMax(e.target.value)}
+          />
+        </div>
+        <p className="v2-hint v2-hint--start">{t('v2filters.priceHint')}</p>
+        <div className="v2-sheet__actions">
+          <button type="submit" className="v2-btn v2-btn--primary v2-btn--block">
+            {t('v2filters.apply')}
+          </button>
+          <button
+            type="button"
+            className="v2-btn v2-btn--ghost"
+            onClick={() => {
+              onApply(EMPTY_RANGE);
+              onClose();
+            }}
+          >
+            {t('v2filters.reset')}
+          </button>
+        </div>
+      </form>
+    </SheetV2>
+  );
+}
+
+/* ── Експорт у файл (ADR-050) ─────────────────────────────── */
+
+/**
+ * «Експорт у файл» — ті самі CSV і JSON, що у v1 (`lib/transfer.ts`), тож
+ * файл з однієї версії імпортується в іншу. Позиції вже на сторінці цілим
+ * списком, тож нічого не дозавантажуємо. Позначок гостей у файлі немає — їх
+ * власник не бачить ніде (ADR-040).
+ */
+export function ExportSheetV2({
+  open,
+  list,
+  items,
+  onClose,
+}: {
+  open: boolean;
+  list: List | null;
+  items: Item[];
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) setError(null);
+  }, [open]);
+
+  function save(kind: 'csv' | 'json') {
+    if (!list) return;
+    try {
+      const text = kind === 'csv' ? toCsv(items) : toJson(list, items);
+      downloadText(fileName(list.title, kind), text, kind === 'csv' ? 'text/csv' : 'application/json');
+      onClose();
+    } catch (e) {
+      setError(errorText(e, t));
+    }
+  }
+
+  return (
+    <SheetV2 open={open} onClose={onClose} labelledBy="v2-export-title">
+      <h2 className="v2-sheet__title" id="v2-export-title">
+        {t('transfer.export.title')}
+      </h2>
+      {error && <NoteV2 tone="error">{error}</NoteV2>}
+      <p className="v2-hint v2-hint--start">{t('transfer.export.body')}</p>
+      <div className="v2-menu">
+        <button type="button" className="v2-menu__item v2-menu__item--two" onClick={() => save('csv')}>
+          <FileSpreadsheet size={20} strokeWidth={STROKE} aria-hidden="true" />
+          <span className="v2-menu__text">
+            <span>{t('transfer.export.csv')}</span>
+            <span className="v2-menu__hint">{t('transfer.export.csvHint')}</span>
+          </span>
+        </button>
+        <button type="button" className="v2-menu__item v2-menu__item--two" onClick={() => save('json')}>
+          <Braces size={20} strokeWidth={STROKE} aria-hidden="true" />
+          <span className="v2-menu__text">
+            <span>{t('transfer.export.json')}</span>
+            <span className="v2-menu__hint">{t('transfer.export.jsonHint')}</span>
+          </span>
+        </button>
+      </div>
     </SheetV2>
   );
 }

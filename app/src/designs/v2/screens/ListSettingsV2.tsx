@@ -4,7 +4,7 @@ import { errorText } from '../../../lib/errors';
 import { CURRENCIES } from '../../../lib/types';
 import type { Currency, List } from '../../../lib/types';
 import type { ListInput } from '../../../lib/db';
-import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
+import { DateFieldV2, FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { SheetV2, YearlySwitchV2, useCounts } from './CommonV2';
 
 /** Межі з `lists` (README, «Обмеження полів»). */
@@ -122,12 +122,11 @@ export function ListSettingsV2({
             />
           </div>
           <div className="v2-row v2-row--even">
-            <FieldV2
+            <DateFieldV2
               label={t('v2app.newList.date')}
               name="list_date"
-              type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={setDate}
             />
             <div className="v2-field">
               <label className="v2-field__label" htmlFor={currencyId}>

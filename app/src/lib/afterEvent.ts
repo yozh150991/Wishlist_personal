@@ -6,7 +6,8 @@
  * Жодне правило тут не знає про позначки гостей і не може знати (ADR-040):
  * «не розібрано» й «неподароване» — це статуси самого власника.
  */
-import type { Item, ItemInput, List } from './types';
+import { itemCurrency } from './itemsView';
+import type { Currency, Item, ItemInput, List } from './types';
 
 /** «Пізніше» ховає картку «Свято минуло» на три дні (M1). */
 export const SNOOZE_DAYS = 3;
@@ -143,6 +144,10 @@ export function yearlyDue(
  * Копія позиції для іншого списку: те, що людина хоче, — без статусу, бо це
  * знову бажання, і без позначок, які живуть окремо й не копіюються ніколи.
  * Розділ і місце — лише якщо їх передано (повтор списку переносить розділи).
+ *
+ * Валюта (ADR-051) — уже розгорнута з валюти списку-джерела: копія в список
+ * з іншою валютою не перетворить 85 € на 85 zł. Чи це «валюта списку» в
+ * новому місці, вирішує `copyItems` за валютою цілі.
  */
 export function copyInput(
   item: Item,
@@ -150,6 +155,7 @@ export function copyInput(
     section_id: null,
     position: null,
   },
+  sourceCurrency?: Currency,
 ): ItemInput {
   return {
     title: item.title,
@@ -165,6 +171,7 @@ export function copyInput(
     position: place.position,
     // Чернетка лишається чернеткою й у копії: гості її так само не бачать (ADR-046).
     needs_title: Boolean(item.needs_title),
+    currency: sourceCurrency ? itemCurrency(item, sourceCurrency) : (item.currency ?? null),
   };
 }
 

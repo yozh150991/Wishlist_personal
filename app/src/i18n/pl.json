@@ -167,7 +167,8 @@
       "imageUrl": "Link do zdjęcia",
       "note": "Notatka",
       "section": "Dział",
-      "sectionNone": "Bez działu (Inne)"
+      "sectionNone": "Bez działu (Inne)",
+      "priceCurrency": "Cena w {currency} — walutę zmienia się w nowym wyglądzie"
     },
     "variants": {
       "legend": "Cechy produktu",
@@ -325,7 +326,8 @@
       "tooMany": "pozycji w pliku {count}, weźmiemy pierwsze {max}.",
       "variants": "nie udało się odczytać cech «{value}», pole zostało puste.",
       "variantsMany": "więcej niż pięć cech, nadmiar pominięto.",
-      "variantsLong": "cecha skrócona: nazwa do 40 znaków, wartość do 80."
+      "variantsLong": "cecha skrócona: nazwa do 40 znaków, wartość do 80.",
+      "itemCurrency": "Nieznana waluta „{value}” — cena w walucie listy"
     }
   },
   "offline": {
@@ -767,7 +769,9 @@
       "draftTitle": "Zostawić szkic?",
       "draftBody": "Nazwa jest już wpisana. Możemy ją zapisać i wrócić później.",
       "draftKeep": "Zapisz szkic",
-      "draftDrop": "Usuń i wyjdź"
+      "draftDrop": "Usuń i wyjdź",
+      "more": "Opis i waluta · {currency}",
+      "dateHint": "Po niej zaproponujemy podsumowanie."
     },
     "firstRun": {
       "title": "Od czego zaczniemy?",
@@ -809,7 +813,8 @@
       },
       "noPrice": "{n} bez ceny",
       "purchased": "{n} kupione",
-      "gifted": "{n} podarowane"
+      "gifted": "{n} podarowane",
+      "fx": "≈ {sum} łącznie po kursie NBP z {date}"
     },
     "search": {
       "label": "Szukaj w pozycjach",
@@ -835,7 +840,8 @@
       "priorityHint": "Najpierw „Bardzo chcę”",
       "priceAsc": "Cena · od najniższej",
       "priceDesc": "Cena · od najwyższej",
-      "recent": "Ostatnio dodane"
+      "recent": "Ostatnio dodane",
+      "byTitle": "Według nazwy"
     },
     "priority": {
       "high": "Bardzo chcę",
@@ -878,9 +884,7 @@
     },
     "menuList": {
       "newSection": "Nowy dział",
-      "inV1": "Otwórz tę listę w starym wyglądzie",
       "shareEmpty": "Na razie nie ma czym się dzielić: na liście nie ma aktualnych pozycji.",
-      "exportBody": "Eksport do pliku jest na razie tylko w starym wyglądzie.",
       "shareDrafts": "Na razie są tylko szkice — nazwij je, a będzie można je udostępnić."
     },
     "section": {
@@ -944,7 +948,9 @@
       "tooLong": "Link jest za długi — do 2048 znaków.",
       "withoutLink": "Dodaj bez linku",
       "optional": "Link · opcjonalnie",
-      "or": "albo"
+      "or": "albo",
+      "fill": "Uzupełnij z linku",
+      "fillNothing": "Brak pustych pól, które strona mogłaby uzupełnić — wpisane zostaje bez zmian."
     },
     "reading": "Czytam stronę sklepu…",
     "readFailed": "Sklep nie podał opisu. Link zapisany — resztę uzupełnij ręcznie.",
@@ -979,7 +985,12 @@
       "none": "Bez działu"
     },
     "photo": {
-      "remove": "Usuń zdjęcie"
+      "remove": "Usuń zdjęcie",
+      "label": "Zdjęcie · opcjonalnie",
+      "placeholder": "Link do obrazka, https://…",
+      "bad": "To nie wygląda na adres obrazka — potrzebny link zaczynający się od https://.",
+      "tooLong": "Link do zdjęcia jest za długi — do 2048 znaków.",
+      "broken": "Obrazek pod tym linkiem się nie otwiera. Można zapisać, ale goście też go nie zobaczą."
     },
     "same": {
       "title": "Ta rzecz już jest na liście",
@@ -1000,6 +1011,11 @@
       "replace": "Podmień link",
       "search": "Szukaj gdzie indziej",
       "delete": "Usuń z listy"
+    },
+    "currency": {
+      "label": "Waluta ceny",
+      "other": "Nie w walucie listy ({currency}): w sumie osobno, bez przeliczania.",
+      "fromShop": "Cenę pobrano ze sklepu razem z walutą: {currency}."
     }
   },
   "v2share": {
@@ -1189,5 +1205,25 @@
     "email": "E-maile na adres {email}.",
     "guests": "Nie ma powiadomień o tym, co wzięli goście: to niespodzianka także dla Ciebie.",
     "off": "Wyłącz wszystkie powiadomienia"
+  },
+  "v2date": {
+    "placeholder": "DD.MM.RRRR",
+    "bad": "Data to dzień, miesiąc i rok: 20.12.2026."
+  },
+  "v2filters": {
+    "title": "Filtry",
+    "on": "włączone:",
+    "status": "Status",
+    "priceFrom": "Cena od",
+    "priceTo": "Cena do",
+    "priceHint": "Ceny w walucie listy. Pozycje bez ceny lub w innej walucie nie wchodzą w zakres.",
+    "order": "„Do” jest mniejsze niż „od”.",
+    "apply": "Pokaż",
+    "reset": "Wyczyść filtry",
+    "alsoOn": "Filtry statusu lub ceny też są włączone."
+  },
+  "v2import": {
+    "open": "Import z pliku",
+    "done": "Zaimportowano pozycji: {n}"
   }
 }

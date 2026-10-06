@@ -131,7 +131,13 @@ test.describe('копії позицій', () => {
       section_id: null,
       position: null,
       needs_title: false,
+      currency: null,
     });
+  });
+
+  test('копія несе валюту позиції, розгорнуту з валюти списку-джерела (ADR-051)', () => {
+    expect(copyInput(item(), undefined, 'UAH').currency).toBe('UAH');
+    expect(copyInput(item({ currency: 'EUR' }), undefined, 'UAH').currency).toBe('EUR');
   });
 
   test('чернетка й у копії лишається чернеткою — гості її так само не бачать', () => {

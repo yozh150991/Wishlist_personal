@@ -4,6 +4,7 @@
 Secret-ключ дає роль service_role, яка обходить RLS, тож усе, що тут
 пишеться, має бути вузьким:
 - перевірка посилань — лише поля `items.link_*` за `id`;
+- курс НБП (ADR-051) — лише таблиця `fx_rates`, по рядку на валюту;
 - сповіщення (ADR-049) — журнал надісланого, час останнього надсилання й
   прибирання мертвих підписок push.
 Позначок гостей (`claims`, `guest_*`) цей модуль не торкається й не повинен.
@@ -12,11 +13,12 @@ Secret-ключ дає роль service_role, яка обходить RLS, то�
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 
 from .jobs_push import Subscription
+from .jobs_rates import Rate
 
 log = logging.getLogger("jobs.store")
 
@@ -84,6 +86,24 @@ class Store:
             headers={**self._headers, "Prefer": "return=minimal"},
             params={"id": f"eq.{target.id}"},
             json=body,
+        )
+        res.raise_for_status()
+
+    async def save_rates(self, rates: list[Rate]) -> None:
+        """Курс НБП (ADR-051): по рядку на валюту, новий замінює вчорашній."""
+        res = await self._client.post(
+            f"{self._base}/fx_rates",
+            headers={**self._headers, "Prefer": "resolution=merge-duplicates,return=minimal"},
+            params={"on_conflict": "currency"},
+            json=[
+                {
+                    "currency": r.currency,
+                    "pln_per_unit": str(r.pln_per_unit),
+                    "rate_date": r.rate_date.isoformat(),
+                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                }
+                for r in rates
+            ],
         )
         res.raise_for_status()
 
@@ -164,7 +184,7 @@ class NotifyStore:
         return await self._get(
             "items",
             [
-                ("select", "id,list_id,title,url,price,link_status,link_price,link_currency"),
+                ("select", "id,list_id,title,url,price,currency,link_status,link_price,link_currency"),
                 ("owner_id", f"eq.{owner_id}"),
                 ("status", "eq.active"),
                 ("url", "not.is.null"),

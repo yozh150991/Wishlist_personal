@@ -135,18 +135,23 @@ def _minor(value: object) -> int | None:
         return None
 
 
+def item_currency(item: dict, list_currency: str) -> str:
+    """Валюта ціни позиції (ADR-051): своя, а NULL — валюта списку."""
+    return item.get("currency") or list_currency
+
+
 def price_change(item: dict, list_currency: str) -> tuple[int, int] | None:
     """
     Ціна з магазину проти ціни в списку, у мінорних одиницях — як
     `linkPriceChange` у застосунку: лише зі своєю ціною, у тій самій валюті й
-    від 15 % різниці.
+    від 15 % різниці. Валюта — позиції, а якщо її немає, списку (ADR-051).
     """
     shop = _minor(item.get("link_price"))
     own = _minor(item.get("price"))
     if not shop or not own or shop == own:
         return None
     currency = item.get("link_currency")
-    if currency and currency != list_currency:
+    if currency and currency != item_currency(item, list_currency):
         return None
     if abs(shop - own) * 100 < PRICE_CHANGE_PERCENT * own:
         return None
@@ -197,7 +202,7 @@ def find_events(
             change = price_change(item, parent.get("currency") or "")
             if change:
                 shop, own = change
-                currency = parent.get("currency") or ""
+                currency = item_currency(item, parent.get("currency") or "")
                 out.append(
                     Event(
                         "price", item["id"], f"{shop}:{currency}", path, "price", item["title"],

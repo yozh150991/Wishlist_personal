@@ -11,6 +11,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { itemCurrency } from '../../../lib/itemsView';
 import { useI18n } from '../../../lib/i18n';
 import { moneyShort } from '../../../lib/format';
 import type { Currency, Item, Section } from '../../../lib/types';
@@ -220,7 +221,7 @@ function SortableRow({
   const { t, locale } = useI18n();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style: CSSProperties = { transform: CSS.Transform.toString(transform), transition };
-  const price = moneyShort(item.price, currency, locale);
+  const price = moneyShort(item.price, itemCurrency(item, currency), locale);
   return (
     <li ref={setNodeRef} style={style} className="v2-order" data-dragging={isDragging || undefined}>
       <button

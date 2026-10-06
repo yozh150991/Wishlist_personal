@@ -167,7 +167,8 @@
       "imageUrl": "Image link",
       "note": "Note",
       "section": "Section",
-      "sectionNone": "No section (Other)"
+      "sectionNone": "No section (Other)",
+      "priceCurrency": "Price in {currency} — the currency is changed in the new design"
     },
     "variants": {
       "legend": "Product details",
@@ -325,7 +326,8 @@
       "tooMany": "{count} items in the file, taking the first {max}.",
       "variants": "could not read details “{value}”, the field was left empty.",
       "variantsMany": "more than five details, the extra ones were dropped.",
-      "variantsLong": "detail trimmed: label to 40 characters, value to 80."
+      "variantsLong": "detail trimmed: label to 40 characters, value to 80.",
+      "itemCurrency": "Unknown currency “{value}” — the price is taken in the list currency"
     }
   },
   "offline": {
@@ -767,7 +769,9 @@
       "draftTitle": "Keep the draft?",
       "draftBody": "The name is already filled in. We can save it and you can come back later.",
       "draftKeep": "Save draft",
-      "draftDrop": "Delete and leave"
+      "draftDrop": "Delete and leave",
+      "more": "Description and currency · {currency}",
+      "dateHint": "After it, we'll offer to wrap things up."
     },
     "firstRun": {
       "title": "Where shall we start?",
@@ -809,7 +813,8 @@
       },
       "noPrice": "{n} without a price",
       "purchased": "{n} purchased",
-      "gifted": "{n} gifted"
+      "gifted": "{n} gifted",
+      "fx": "≈ {sum} in total at the NBP rate of {date}"
     },
     "search": {
       "label": "Search items",
@@ -835,7 +840,8 @@
       "priorityHint": "“Really want” first",
       "priceAsc": "Price · low to high",
       "priceDesc": "Price · high to low",
-      "recent": "Recently added"
+      "recent": "Recently added",
+      "byTitle": "By name"
     },
     "priority": {
       "high": "Really want",
@@ -878,9 +884,7 @@
     },
     "menuList": {
       "newSection": "New section",
-      "inV1": "Open this list in the old look",
       "shareEmpty": "Nothing to share yet: the list has no open items.",
-      "exportBody": "Export to a file is only in the old look for now.",
       "shareDrafts": "There are only drafts so far — name them and you can share them."
     },
     "section": {
@@ -944,7 +948,9 @@
       "tooLong": "The link is too long — up to 2048 characters.",
       "withoutLink": "Add without a link",
       "optional": "Link · optional",
-      "or": "or"
+      "or": "or",
+      "fill": "Fill in from the link",
+      "fillNothing": "No empty fields the page could fill — what you typed stays as it is."
     },
     "reading": "Reading the shop page…",
     "readFailed": "The shop didn't give a description. The link is saved — fill in the rest by hand.",
@@ -979,7 +985,12 @@
       "none": "No section"
     },
     "photo": {
-      "remove": "Remove photo"
+      "remove": "Remove photo",
+      "label": "Photo · optional",
+      "placeholder": "Link to an image, https://…",
+      "bad": "This doesn't look like an image address — it needs a link starting with https://.",
+      "tooLong": "The photo link is too long — up to 2048 characters.",
+      "broken": "The image at this link doesn't open. You can save it, but guests won't see it either."
     },
     "same": {
       "title": "This is already on the list",
@@ -1000,6 +1011,11 @@
       "replace": "Replace the link",
       "search": "Look elsewhere",
       "delete": "Remove from the list"
+    },
+    "currency": {
+      "label": "Price currency",
+      "other": "Not in the list currency ({currency}): it shows as a separate amount in the total, unconverted.",
+      "fromShop": "Price taken from the shop along with its currency: {currency}."
     }
   },
   "v2share": {
@@ -1189,5 +1205,25 @@
     "email": "Emails go to {email}.",
     "guests": "There are no notifications about what guests took: it's a surprise for you too.",
     "off": "Turn off all notifications"
+  },
+  "v2date": {
+    "placeholder": "DD.MM.YYYY",
+    "bad": "A date is day, month and year: 20.12.2026."
+  },
+  "v2filters": {
+    "title": "Filters",
+    "on": "on:",
+    "status": "Status",
+    "priceFrom": "Price from",
+    "priceTo": "Price to",
+    "priceHint": "Prices are in the list currency. Items without a price or in another currency are not in the range.",
+    "order": "“To” is less than “from”.",
+    "apply": "Show",
+    "reset": "Reset filters",
+    "alsoOn": "Status or price filters are on too."
+  },
+  "v2import": {
+    "open": "Import from a file",
+    "done": "Items imported: {n}"
   }
 }

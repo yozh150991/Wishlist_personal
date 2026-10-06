@@ -1,11 +1,12 @@
 import { forwardRef, useEffect, useId, useState } from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AlertCircle, Check, ChevronLeft, Eye, EyeOff, TriangleAlert } from 'lucide-react';
+import { AlertCircle, CalendarDays, Check, ChevronLeft, Eye, EyeOff, TriangleAlert } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useI18n, LOCALES } from '../../../lib/i18n';
 import type { Locale } from '../../../lib/i18n';
 import { designSwitchHref } from '../../../lib/authFlow';
+import { dateTextToIso, isoToDateText, maskDateText } from '../../../lib/dateText';
 import type { EmailProblem } from '../../../lib/authFlow';
 
 /**
@@ -141,6 +142,101 @@ export const FieldV2 = forwardRef<HTMLInputElement, FieldProps>(function FieldV2
   );
 });
 
+type DateFieldProps = {
+  label: string;
+  name: string;
+  /** `YYYY-MM-DD` або порожньо — як у рідного `<input type="date">`. */
+  value: string;
+  onChange: (iso: string) => void;
+  min?: string;
+  error?: string | null;
+  warning?: string | null;
+  /** Тихий рядок під полем — навіщо ця дата. */
+  hint?: string;
+};
+
+/**
+ * Дата, яку можна і вписати, і вибрати. Рідний `<input type="date">` на
+ * Android відкриває лише календар — клавіатури немає, і дату через кілька
+ * років гортати місяцями. Тож поле — текст із цифровою клавіатурою й маскою
+ * «ДД.ММ.РРРР», а календар — значок праворуч: під ним прозорий рідний
+ * `<input type="date">`, тож вибір відкривається системний на будь-якому
+ * пристрої. Назовні — той самий `YYYY-MM-DD`, що й раніше; неповна дата
+ * назовні — порожньо, як у рідного поля, і під полем — підказка.
+ */
+export const DateFieldV2 = forwardRef<HTMLInputElement, DateFieldProps>(function DateFieldV2(
+  { label, name, value, onChange, min, error, warning, hint },
+  ref,
+) {
+  const { t } = useI18n();
+  const [text, setText] = useState(() => isoToDateText(value));
+  const [touched, setTouched] = useState(false);
+
+  // Значення змінили ззовні (скидання форми, «Повторити» підставив дату) —
+  // показуємо його. Неповний набір із порожнім значенням не чіпаємо.
+  useEffect(() => {
+    const mine = dateTextToIso(text);
+    if (value && value !== mine) setText(isoToDateText(value));
+    else if (!value && mine) setText('');
+  }, [value]);
+
+  function typed(raw: string) {
+    const next = maskDateText(raw);
+    setText(next);
+    const iso = dateTextToIso(next);
+    if (iso) setTouched(true);
+    if ((iso ?? '') !== value) onChange(iso ?? '');
+  }
+
+  const incomplete = text.trim() !== '' && dateTextToIso(text) === null;
+  const ownError = touched && incomplete ? t('v2date.bad') : null;
+
+  return (
+    <FieldV2
+      ref={ref}
+      label={label}
+      name={name}
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      placeholder={t('v2date.placeholder')}
+      maxLength={10}
+      value={text}
+      error={error ?? ownError}
+      warning={warning}
+      onChange={(e) => typed(e.target.value)}
+      onBlur={() => setTouched(true)}
+      after={hint ? <p className="v2-hint v2-hint--start">{hint}</p> : undefined}
+      addon={
+        <span className="v2-iconbtn v2-field__addon v2-datepick">
+          <CalendarDays size={20} strokeWidth={STROKE} aria-hidden="true" />
+          {/* Для пальця й миші; з клавіатури дату вписують у поле. */}
+          <input
+            type="date"
+            className="v2-datepick__native"
+            tabIndex={-1}
+            aria-hidden="true"
+            min={min}
+            value={value}
+            onClick={(e) => {
+              try {
+                e.currentTarget.showPicker();
+              } catch {
+                // Браузер без showPicker відкриє вибір сам — за натиском.
+              }
+            }}
+            onChange={(e) => {
+              setTouched(true);
+              setText(isoToDateText(e.target.value));
+              onChange(e.target.value);
+            }}
+          />
+        </span>
+      }
+    />
+  );
+});
+
 /** Пароль із кнопкою «показати» — одне поле замість «повторіть пароль» (T2). */
 export const PasswordFieldV2 = forwardRef<HTMLInputElement, Omit<FieldProps, 'type' | 'addon'>>(
   function PasswordFieldV2(props, ref) {
@@ -270,7 +366,6 @@ export function useCountdown(until: number | null): number {
       if (v === 0) window.clearInterval(id);
     }, 1000);
     return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [until]);
   return value;
 }

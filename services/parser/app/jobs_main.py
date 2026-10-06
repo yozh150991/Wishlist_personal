@@ -14,6 +14,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 
 from . import jobs_links as links
 from . import jobs_notify as notify
+from . import jobs_rates as rates
 from .jobs_config import job_settings
 from .jobs_mail import Mailer
 from .jobs_push import Pusher
@@ -85,7 +86,10 @@ async def check_links(request: Request) -> dict[str, int]:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "jobs_not_configured")
     async with httpx.AsyncClient(timeout=15.0) as client:
         store = Store(cfg.supabase_url, cfg.supabase_secret_key, client)
-        return await links.run(
+        # Курс НБП — тим самим щоденним викликом (ADR-051): без третьої задачі
+        # Cloud Scheduler. Збій курсу перевірку посилань не зупиняє.
+        fx = await rates.refresh(store, client)
+        summary = await links.run(
             store,
             batch=cfg.jobs_batch_size,
             budget_seconds=cfg.jobs_time_budget_seconds,
@@ -93,6 +97,7 @@ async def check_links(request: Request) -> dict[str, int]:
             host_delay=cfg.jobs_host_delay_seconds,
             concurrency=cfg.jobs_concurrency,
         )
+        return {**summary, "fx_rates": fx}
 
 
 @app.post("/jobs/notify")

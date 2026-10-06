@@ -7,6 +7,7 @@ import {
   ArrowDownUp,
   ChevronLeft,
   Eye,
+  FileDown,
   FolderPlus,
   ListOrdered,
   ListPlus,
@@ -18,12 +19,14 @@ import {
   SearchX,
   Settings2,
   Share2,
+  SlidersHorizontal,
   X,
 } from 'lucide-react';
 import { deleteList, fetchList, setListArchived, updateList } from '../../../lib/db';
 import type { ListInput } from '../../../lib/db';
 import { fetchListViews } from '../../../lib/shares';
 import { useItems } from '../../../lib/useItems';
+import { useFxRates } from '../../../lib/fx';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
 import { errorText, isNetworkError } from '../../../lib/errors';
@@ -32,7 +35,6 @@ import { listKey, readSnapshot, saveSnapshot, sectionsKey } from '../../../lib/c
 import { newId, run } from '../../../lib/outbox';
 import type { Op } from '../../../lib/outbox';
 import { useUndo } from '../../../lib/undo';
-import { designSwitchHref } from '../../../lib/authFlow';
 import { afterEventDue, isPastEvent, readSnooze, repeatTarget, snoozeNext, writeSnooze } from '../../../lib/afterEvent';
 import type { Snooze } from '../../../lib/afterEvent';
 import {
@@ -46,18 +48,22 @@ import {
 } from '../../../lib/sections';
 import type { Section } from '../../../lib/sections';
 import {
+  EMPTY_RANGE,
   ITEM_QTY_MAX,
+  approxTotal,
   TOOLS_FROM,
+  rangeCount,
   isDraft,
   isViewSort,
+  itemCurrency,
   matchesView,
   sortItems,
   totalsOf,
   viewGroups,
 } from '../../../lib/itemsView';
-import type { ViewFilter, ViewGroup, ViewSort } from '../../../lib/itemsView';
+import type { ViewFilter, ViewGroup, ViewRange, ViewSort } from '../../../lib/itemsView';
 import { DEFAULT_QUERY } from '../../../lib/types';
-import type { Item, ItemInput, ItemStatus, List } from '../../../lib/types';
+import type { Currency, Item, ItemInput, ItemStatus, List } from '../../../lib/types';
 import { NoteV2 } from './AuthPartsV2';
 import { SheetV2, useCounts } from './CommonV2';
 import { ItemSheetV2 } from './ItemSheetV2';
@@ -77,9 +83,12 @@ import {
   ItemSkeletonsV2,
   SectionSheetV2,
   SortSheetV2,
+  FiltersSheetV2,
+  ExportSheetV2,
   UndoToastV2,
   usePriorityLabel,
   useSortLabel,
+  useStatusLabel,
 } from './ListPartsV2';
 
 const STROKE = 2.75;
@@ -158,6 +167,7 @@ export default function ListV2() {
   const { session } = useAuth();
   const counts = useCounts();
   const sortLabel = useSortLabel();
+  const statusLabel = useStatusLabel();
   const priorityLabel = usePriorityLabel();
   const userId = session?.user.id ?? '';
   const navigate = useNavigate();
@@ -185,6 +195,10 @@ export default function ListV2() {
   const [sort, setSort] = useState<ViewSort>(() => readSort(id));
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<ViewFilter>('all');
+  /** Статус і ціна з аркуша «Фільтри» (ADR-050). */
+  const [range, setRange] = useState<ViewRange>(EMPTY_RANGE);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const [sheet, setSheet] = useState<{ open: boolean; item: Item | null; presetTitle?: string }>({
     open: false,
@@ -228,6 +242,7 @@ export default function ListV2() {
     setSort(readSort(id));
     setSearch('');
     setFilter('all');
+    setRange(EMPTY_RANGE);
     setHidden(new Set());
     setFailed(new Map());
     setOrdering(false);
@@ -304,30 +319,37 @@ export default function ListV2() {
 
   /* ── Що на екрані ── */
 
+  const currency: Currency = list?.currency ?? 'PLN';
   const live = useMemo(() => items.filter((i) => !hidden.has(i.id)), [items, hidden]);
-  const totals = useMemo(() => totalsOf(live), [live]);
+  // Сума — у валюті списку, інші валюти окремими доданками (ADR-051).
+  const totals = useMemo(() => totalsOf(live, currency), [live, currency]);
+  /** Курс НБП — лише коли є що перераховувати: інша валюта в сумі. */
+  const rates = useFxRates(totals.foreign.length > 0);
   const noPriceCount = totals.items_no_price;
 
-  // Менший список лишається чистим: без інструментів — і без їхньої дії.
+  // Інструменти — щойно є хоч одна позиція (ADR-050; у пакеті було від 20).
   const tools = live.length >= TOOLS_FROM;
   const viewSort: ViewSort = tools ? sort : 'manual';
   const viewSearch = tools ? search : '';
   const viewFilter: ViewFilter = tools && noPriceCount > 0 ? filter : 'all';
-  const filtering = viewSearch.trim() !== '' || viewFilter !== 'all';
+  const viewRange: ViewRange = tools ? range : EMPTY_RANGE;
+  const rangeOn = rangeCount(viewRange);
+  const filtering = viewSearch.trim() !== '' || viewFilter !== 'all' || rangeOn > 0;
 
   const shown = useMemo(
-    () => live.filter((i) => matchesView(i, viewSearch, viewFilter)),
-    [live, viewSearch, viewFilter],
+    () => live.filter((i) => matchesView(i, viewSearch, viewFilter, viewRange, currency)),
+    [live, viewSearch, viewFilter, viewRange, currency],
   );
+
   const groups = useMemo(
     () =>
       viewGroups(
         shown.filter((i) => i.status === 'active' && !isDraft(i)),
         viewSort,
         sections,
-        { keepEmpty: !filtering },
+        { keepEmpty: !filtering, listCurrency: currency },
       ),
-    [shown, viewSort, sections, filtering],
+    [shown, viewSort, sections, filtering, currency],
   );
   /** Чернетки без назви (ADR-046) — окремо згори: їм бракує назви, а гостям їх не видно. */
   const drafts = useMemo(
@@ -335,8 +357,13 @@ export default function ListV2() {
     [shown],
   );
   const done = useMemo(
-    () => sortItems(shown.filter((i) => i.status !== 'active'), viewSort === 'priority' ? 'manual' : viewSort),
-    [shown, viewSort],
+    () =>
+      sortItems(
+        shown.filter((i) => i.status !== 'active'),
+        viewSort === 'priority' ? 'manual' : viewSort,
+        currency,
+      ),
+    [shown, viewSort, currency],
   );
   const activeShown = groups.reduce((n, g) => n + g.items.length, 0) + drafts.length;
 
@@ -363,7 +390,26 @@ export default function ListV2() {
     [shareable, sections],
   );
 
-  const currency = list?.currency ?? 'PLN';
+
+  /** «Статус: Куплене, Подароване» і «Ціна 100–500» — що саме звужує список. */
+  const rangeChips: { key: 'status' | 'price'; label: string; clear: () => void; clearLabel: string }[] = [];
+  if (viewRange.statuses.length > 0) {
+    rangeChips.push({
+      key: 'status',
+      label: t('item.chip.status', { list: viewRange.statuses.map((x) => statusLabel(x)).join(', ') }),
+      clear: () => setRange((r) => ({ ...r, statuses: [] })),
+      clearLabel: t('item.chip.clearStatus'),
+    });
+  }
+  if (viewRange.min !== null || viewRange.max !== null) {
+    const edge = (v: number | null) => (v === null ? '…' : (moneyShort(v / 100, currency, locale) ?? ''));
+    rangeChips.push({
+      key: 'price',
+      label: t('item.chip.price', { from: edge(viewRange.min), to: edge(viewRange.max) }),
+      clear: () => setRange((r) => ({ ...r, min: null, max: null })),
+      clearLabel: t('item.chip.clearPrice'),
+    });
+  }
 
   // Позицій без ціни не лишилось — і фільтра «Без ціни» теж: інакше він
   // мовчки ввімкнувся б знову з першою такою позицією.
@@ -666,7 +712,25 @@ export default function ListV2() {
   }
 
   const ready = !loading && !error;
-  const activePriced = live.some((i) => i.status === 'active' && num(i.price) !== null);
+  const activePriced = live.some(
+    (i) => i.status === 'active' && num(i.price) !== null && itemCurrency(i, currency) === currency,
+  );
+  /** «1 240 zł + 85 €» — кожна валюта окремим доданком, без курсу (ADR-051). */
+  const sumValue = [
+    activePriced ? moneyShort(totals.active_price, currency, locale) : null,
+    ...totals.foreign.map((f) => moneyShort(f.active_price, f.currency, locale)),
+  ]
+    .filter(Boolean)
+    .join(' + ');
+  /** «≈ 1 605 zł разом за курсом НБП від 5 жовтня» — підказка, не сума (ADR-051). */
+  const fx =
+    rates && totals.foreign.length > 0
+      ? approxTotal(
+          [{ currency, amount: totals.active_price }, ...totals.foreign.map((f) => ({ currency: f.currency, amount: f.active_price }))],
+          currency,
+          rates,
+        )
+      : null;
   const sumParts = [
     totals.active_count > 0 ? counts.inActive(totals.active_count) : null,
     totals.items_no_price > 0 ? t('v2list.sum.noPrice', { n: totals.items_no_price }) : null,
@@ -810,7 +874,15 @@ export default function ListV2() {
 
       {ready && live.length > 0 && !ordering && (
         <p className="v2-sum">
-          {activePriced && <strong className="v2-sum__value">{moneyShort(totals.active_price, currency, locale)}</strong>}
+          {sumValue && <strong className="v2-sum__value">{sumValue}</strong>}
+          {fx && (
+            <span className="v2-sum__fx">
+              {t('v2list.sum.fx', {
+                sum: moneyShort(fx.amount, currency, locale) ?? '',
+                date: formatDay(fx.date, locale) ?? fx.date,
+              })}
+            </span>
+          )}
           {sumParts.length > 0 && <span className="v2-sum__line">{sumParts.join(' · ')}</span>}
         </p>
       )}
@@ -844,7 +916,34 @@ export default function ListV2() {
               <span className="v2-sr">{t('v2list.sort.button')}: </span>
               {sortLabel(sort)}
             </button>
+            <button type="button" className="v2-chip v2-chip--tool" onClick={() => setFiltersOpen(true)}>
+              <SlidersHorizontal size={18} strokeWidth={STROKE} aria-hidden="true" />
+              {t('v2filters.title')}
+              {rangeOn > 0 && (
+                <span className="v2-chip__badge">
+                  <span className="v2-sr">{t('v2filters.on')} </span>
+                  {rangeOn}
+                </span>
+              )}
+            </button>
           </div>
+          {rangeChips.length > 0 && (
+            <div className="v2-chips">
+              {rangeChips.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  className="v2-chip v2-chip--toggle"
+                  aria-pressed="true"
+                  aria-label={`${c.clearLabel}: ${c.label}`}
+                  onClick={c.clear}
+                >
+                  {c.label}
+                  <X size={16} strokeWidth={STROKE} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          )}
           <div className="v2-chips" role="radiogroup" aria-label={t('v2list.filter.label')}>
             <button
               type="button"
@@ -922,12 +1021,14 @@ export default function ListV2() {
             {viewSearch.trim() ? t('v2list.noResults.title', { q: viewSearch.trim() }) : t('v2list.noResults.titlePlain')}
           </h2>
           {viewFilter === 'noPrice' && <p className="v2-hint">{t('v2list.noResults.alsoNoPrice')}</p>}
+          {rangeOn > 0 && <p className="v2-hint">{t('v2filters.alsoOn')}</p>}
           <button
             type="button"
             className="v2-btn v2-btn--outline v2-btn--block"
             onClick={() => {
               setSearch('');
               setFilter('all');
+              setRange(EMPTY_RANGE);
             }}
           >
             {t('v2list.noResults.reset')}
@@ -1017,6 +1118,8 @@ export default function ListV2() {
       />
 
       <SortSheetV2 open={sortOpen} value={sort} onClose={() => setSortOpen(false)} onChange={changeSort} />
+      <FiltersSheetV2 open={filtersOpen} value={range} onClose={() => setFiltersOpen(false)} onApply={setRange} />
+      <ExportSheetV2 open={exportOpen} list={list} items={live} onClose={() => setExportOpen(false)} />
 
       <SheetV2 open={listMenu} onClose={() => setListMenu(false)} labelledBy="v2-list-menu-title">
         <h2 className="v2-sheet__title v2-sheet__title--item" id="v2-list-menu-title">
@@ -1126,6 +1229,19 @@ export default function ListV2() {
             <Settings2 size={20} strokeWidth={STROKE} aria-hidden="true" />
             {t('v2list.settings.title')}
           </button>
+          <button
+            type="button"
+            className="v2-menu__item"
+            aria-disabled={!list || loading || Boolean(error) || undefined}
+            onClick={() => {
+              if (!list || loading || error) return;
+              setListMenu(false);
+              setExportOpen(true);
+            }}
+          >
+            <FileDown size={20} strokeWidth={STROKE} aria-hidden="true" />
+            {t('transfer.export.title')}
+          </button>
         </div>
         {shareable.length === 0 && !archived && (
           <p className="v2-hint v2-hint--start" id="v2-share-empty">
@@ -1137,13 +1253,6 @@ export default function ListV2() {
             {t('v2list.reorder.offline')}
           </p>
         )}
-        {/* Експорт у файл — поки лише у v1; дорога туди з тим самим списком. */}
-        <p className="v2-hint v2-hint--start">
-          {t('v2list.menuList.exportBody')}{' '}
-          <a href={designSwitchHref(`/lists/${id}`, '', 'v1')} className="v2-link">
-            {t('v2list.menuList.inV1')}
-          </a>
-        </p>
       </SheetV2>
 
       <ShareSheetV2 open={shareOpen} list={list} groups={guestGroups} onClose={() => setShareOpen(false)} />

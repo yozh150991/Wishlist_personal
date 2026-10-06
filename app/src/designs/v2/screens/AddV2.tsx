@@ -11,6 +11,7 @@ import { ParseError, parseUrl, parserConfigured } from '../../../lib/parser';
 import { newId, run } from '../../../lib/outbox';
 import { ITEM_TITLE_MAX, ITEM_URL_MAX, PRIORITY_ORDER, draftTitle } from '../../../lib/itemsView';
 import { fromShare, readLastList, writeLastList } from '../../../lib/shareTarget';
+import { CURRENCIES } from '../../../lib/types';
 import type { Currency, ItemInput, ItemPriority, List } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { usePriorityLabel } from './ListPartsV2';
@@ -68,6 +69,8 @@ export default function AddV2() {
   const [newName, setNewName] = useState('');
   const [title, setTitle] = useState(shared.title ?? '');
   const [price, setPrice] = useState<number | null>(null);
+  /** Валюта ціни з магазину (ADR-051); null — магазин не сказав, тоді це валюта списку. */
+  const [priceCurrency, setPriceCurrency] = useState<Currency | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [priority, setPriority] = useState<ItemPriority>('medium');
   const [reading, setReading] = useState(false);
@@ -124,7 +127,11 @@ export default function AddV2() {
         if (ctl.signal.aborted) return;
         // Назва зі сторінки точніша за супровідний текст («Подивись!»), але не за вписане людиною.
         if (got.title && !edited.current) setTitle(got.title.slice(0, ITEM_TITLE_MAX));
-        setPrice(got.price);
+        // Ціну беремо лише в знайомій валюті: 25 £ без курсу не стануть ні злотими, ні гривнями.
+        const known = CURRENCIES.find((c) => c === got.currency) ?? null;
+        const usable = got.price !== null && (!got.currency || known !== null);
+        setPrice(usable ? got.price : null);
+        setPriceCurrency(usable ? known : null);
         setImage(got.image_url && got.image_url.length <= ITEM_URL_MAX ? got.image_url : null);
         if (!got.title && !shared.title) setUnread(true);
       })
@@ -156,10 +163,12 @@ export default function AddV2() {
     setServer(null);
     try {
       let listId = target;
+      let newCurrency: Currency = FALLBACK_CURRENCY;
       let listTitle = chosen?.title ?? '';
       if (target === 'new') {
         // Новий список — лише з мережею: списки в офлайн-черзі не живуть (ADR-029).
         const cur = (await fetchDefaultCurrency(userId).catch(() => null)) ?? FALLBACK_CURRENCY;
+        newCurrency = cur;
         const created = await createList({ title: listName, currency: cur }, userId);
         listId = created.id;
         listTitle = created.title;
@@ -169,6 +178,9 @@ export default function AddV2() {
         title: draft ? draftTitle(shared.url!) : name,
         url: shared.url,
         price,
+        // Валюта списку — NULL, як і у формі позиції (ADR-051). У новий список —
+        // за валютою, з якою його щойно створено.
+        currency: priceCurrency && priceCurrency !== (target === 'new' ? newCurrency : currency) ? priceCurrency : null,
         image_url: image,
         priority,
         ...(draft ? { needs_title: true } : {}),
@@ -238,7 +250,7 @@ export default function AddV2() {
   }
 
   const host = hostOf(shared.url);
-  const priceText = price !== null ? moneyShort(price, currency, locale) : null;
+  const priceText = price !== null ? moneyShort(price, priceCurrency ?? currency, locale) : null;
 
   return (
     <main className="v2-page v2-page--narrow">

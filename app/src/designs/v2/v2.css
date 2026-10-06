@@ -1692,3 +1692,85 @@ div.v2-chips { gap: var(--sp-3); }
   border-top: 1px solid var(--color-divider);
 }
 .v2-notify-ask__title { font-size: var(--t-item); }
+
+/* Фото позиції посиланням (як у v1): мініатюра під полем, «×» прибирає. */
+.v2-photo { display: flex; padding-top: var(--sp-3); }
+
+/* Дата: текст із маскою + календар праворуч (DateFieldV2). Рідне поле дати —
+   прозоре поверх значка, а його кнопка вибору розтягнута на весь значок:
+   натиск будь-де по ньому відкриває системний календар. */
+.v2-datepick { position: absolute; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
+.v2-datepick__native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.v2-datepick__native::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Пункт меню з підказкою під назвою (Експорт у файл). */
+.v2-menu__item--two { padding-block: var(--sp-4); }
+.v2-menu__text { display: grid; gap: var(--sp-1, 2px); }
+.v2-menu__hint { font-size: var(--t-small); font-weight: 500; color: var(--color-neutral-700); }
+
+/* Увімкнені фільтри під пошуком — чипи з «×», як у v1 (ADR-050). */
+.v2-chip__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  font-size: var(--t-small);
+  color: var(--color-primary-ink);
+  background: var(--color-accent-700);
+  border-radius: var(--r-pill);
+}
+.v2-count { margin: 0; font-size: var(--t-small); color: var(--color-neutral-700); text-align: end; }
+.v2-count[data-full] { color: var(--color-accent-2-800); }
+
+/* Імпорт із файлу (ADR-050): своя кнопка вибору замість рідної — та
+   підписує себе мовою браузера. Справжній <input> лишається фокусованим. */
+.v2-file { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
+.v2-file__input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.v2-file__input:focus-visible + label { outline: 2px solid var(--color-accent-700); outline-offset: 2px; }
+.v2-file__name { min-width: 0; font-size: var(--t-small); color: var(--color-neutral-700); overflow-wrap: anywhere; }
+.v2-import { display: grid; gap: var(--sp-3); padding: var(--sp-5); background: var(--color-surface); border-radius: var(--r-card); }
+.v2-import__lead { margin: 0; font-weight: 700; }
+.v2-import__rows { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.v2-import__rows li { display: flex; flex-wrap: wrap; gap: var(--sp-3); justify-content: space-between; }
+.v2-import__name { min-width: 0; overflow-wrap: anywhere; }
+.v2-import__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-import__issues summary { cursor: pointer; font-size: var(--t-small); }
+.v2-import__issues ul { display: grid; gap: var(--sp-2); margin: var(--sp-3) 0 0; padding-inline-start: var(--sp-5); font-size: var(--t-small); }
+.v2-import__issues li[data-tone='danger'] { color: var(--color-danger); }
+.v2-lists__foot { display: flex; justify-content: center; }
+
+/* Валюта поруч із ціною (ADR-051): рідний <select> усередині поля, праворуч. */
+.v2-field__box:has(.v2-cursel) .v2-input { padding-inline-end: 84px; }
+.v2-cursel {
+  width: 76px;
+  padding: 0 var(--sp-3);
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  border-inline-start: 1px solid var(--color-divider);
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  cursor: pointer;
+}
+.v2-cursel:focus-visible { outline: 2px solid var(--color-accent-700); outline-offset: -2px; }
+.v2-sum__fx { font-size: var(--t-small); color: var(--color-neutral-700); }

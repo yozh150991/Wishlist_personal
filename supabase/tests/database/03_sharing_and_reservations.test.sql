@@ -185,7 +185,8 @@ select is(tests.item_field((select token from tests.created), 'guest-one-key-000
           '1'::jsonb, 'автор позначки впізнаний за ключем');
 select set_eq(
   $$ select jsonb_object_keys(e) from jsonb_array_elements(get_shared_list((select token from tests.created), 'guest-two-key-000000000002')->'items') e $$,
-  array['id', 'title', 'url', 'price', 'quantity', 'priority', 'note', 'variants', 'image_url',
+  -- currency — валюта позиції (ADR-051): про гостей нічого не каже.
+  array['id', 'title', 'url', 'price', 'currency', 'quantity', 'priority', 'note', 'variants', 'image_url',
         'status', 'created_at', 'section_id', 'taken_qty', 'mine_qty'],
   'у відповіді гостю немає ні хто, ні коли позначив — лише скільки'
 );
