@@ -1015,6 +1015,7 @@
     "currency": {
       "label": "Waluta ceny",
       "other": "Nie w walucie listy ({currency}): w sumie osobno, bez przeliczania.",
+      "fx": "≈ {sum} po kursie NBP z {date}",
       "fromShop": "Cenę pobrano ze sklepu razem z walutą: {currency}."
     }
   },

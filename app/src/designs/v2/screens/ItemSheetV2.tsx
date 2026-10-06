@@ -13,6 +13,7 @@ import {
   ITEM_TITLE_MAX,
   ITEM_URL_MAX,
   PRIORITY_ORDER,
+  approxTotal,
   draftTitle,
   findSameTitle,
   itemCurrency,
@@ -27,6 +28,7 @@ import type { Section } from '../../../lib/sections';
 import { FieldV2, NoteV2, OrDividerV2 } from './AuthPartsV2';
 import { SheetV2 } from './CommonV2';
 import { ConfirmSheetV2, usePriorityLabel } from './ListPartsV2';
+import { useFxRates } from '../../../lib/fx';
 
 const STROKE = 2.75;
 
@@ -529,6 +531,11 @@ export function ItemSheetV2({
   const showPreview = stage === 'form' && !editing && Boolean(form.url) && (reading || parsed || Boolean(form.image_url));
   const host = hostOf(urlNormal);
   const priceText = price.value !== null ? moneyShort(price.value, form.currency, locale) : null;
+  // Ціна не у валюті списку — підказка «≈ … за курсом НБП» (ADR-051). Лише
+  // підказка: збережеться ціна як вписана, у своїй валюті.
+  const foreign = form.currency !== currency;
+  const rates = useFxRates(open && foreign && price.value !== null);
+  const fx = foreign && price.value !== null && rates ? approxTotal([{ currency: form.currency, amount: price.value }], currency, rates) : null;
 
   // Висновок перевірки стосується збереженого посилання; нове ще не перевіряли.
   const inspected = editing && item && item.url && normalizeUrl(form.url) === item.url ? item : null;
@@ -821,8 +828,18 @@ export function ItemSheetV2({
                       </select>
                     }
                     after={
-                      form.currency !== currency ? (
-                        <p className="v2-hint v2-hint--start">{t('v2item.currency.other', { currency })}</p>
+                      foreign ? (
+                        <>
+                          {fx && (
+                            <p className="v2-hint v2-hint--start" data-testid="item-fx">
+                              {t('v2item.currency.fx', {
+                                sum: moneyShort(fx.amount, currency, locale) ?? '',
+                                date: formatDay(fx.date, locale) ?? fx.date,
+                              })}
+                            </p>
+                          )}
+                          <p className="v2-hint v2-hint--start">{t('v2item.currency.other', { currency })}</p>
+                        </>
                       ) : null
                     }
                   />

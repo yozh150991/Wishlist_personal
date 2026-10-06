@@ -1015,6 +1015,7 @@
     "currency": {
       "label": "Price currency",
       "other": "Not in the list currency ({currency}): it shows as a separate amount in the total, unconverted.",
+      "fx": "≈ {sum} at the NBP rate of {date}",
       "fromShop": "Price taken from the shop along with its currency: {currency}."
     }
   },
