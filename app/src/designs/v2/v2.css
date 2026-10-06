@@ -1832,3 +1832,192 @@ div.v2-chips { gap: var(--sp-3); }
 }
 .v2-cursel:focus-visible { outline: 2px solid var(--color-accent-700); outline-offset: -2px; }
 .v2-sum__fx { font-size: var(--t-small); color: var(--color-neutral-700); }
+
+/* ── Гостьова v2 (потік E; ADR-041, ADR-053) ─────────────────
+   Тепліша за застосунок — «як листівка»: власні гостьові токени
+   (--color-guest-bg / -header / -card), а не акцентна рампа. Оформлення
+   списку лягає поверх тим самим оверлеєм, що й у v1. */
+
+.v2-guest {
+  min-height: 100dvh;
+  color: var(--color-text);
+  background: var(--color-guest-bg);
+}
+.v2-guest--boot { display: grid; place-items: center; }
+.v2-guest--gone {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--sp-5);
+  padding: var(--sp-8) var(--sp-6);
+  text-align: center;
+}
+.v2-guest__gone-title { font-size: var(--t-h1); line-height: 1.15; }
+
+.v2-guest__head {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-7) var(--sp-6) var(--sp-6);
+  background: var(--color-guest-header);
+}
+.v2-guest__head > * { width: 100%; max-width: calc(44rem - 2 * var(--sp-6)); margin-inline: auto; }
+.v2-guest__top { display: flex; align-items: center; gap: var(--sp-3); min-height: var(--tap); }
+.v2-guest__kicker {
+  flex: 1;
+  font-size: var(--t-meta);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+}
+.v2-guest__picks {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  margin-inline-start: auto;
+  padding: 0 var(--sp-5);
+  font: inherit;
+  font-size: var(--t-small);
+  font-weight: 800;
+  color: var(--color-accent-800);
+  background: var(--color-guest-card);
+  border: 0;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.v2-guest__picks:focus-visible { outline: 2px solid var(--color-accent-700); outline-offset: 2px; }
+.v2-guest__title {
+  font-size: 1.875rem;
+  line-height: 1.12;
+  color: var(--color-accent-900);
+  overflow-wrap: anywhere;
+}
+@media (min-width: 56rem) {
+  .v2-guest__title { font-size: 2.75rem; }
+}
+.v2-guest__meta,
+.v2-guest__valid { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-guest__message { margin-top: var(--sp-2); line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+
+.v2-guest__body {
+  display: grid;
+  gap: var(--sp-6);
+  width: 100%;
+  max-width: 44rem;
+  margin-inline: auto;
+  padding: var(--sp-6) var(--sp-6) calc(var(--sp-8) + 72px + env(safe-area-inset-bottom));
+}
+.v2-guest__footer { font-size: var(--t-small); color: var(--color-neutral-700); text-align: center; }
+.v2-guest__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--sp-4); }
+
+/* Фільтри гостя: «Вільні · Усі», поріг ціни, «Дуже хочу». */
+.v2-gfilters { display: grid; gap: var(--sp-3); scroll-margin-top: var(--sp-6); }
+.v2-gfilters__group { display: contents; }
+.v2-chip--toggle[aria-pressed='true'] { color: var(--color-primary-ink); background: var(--color-primary-fill); }
+
+.v2-gbanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  font-size: var(--t-small);
+  background: var(--color-guest-card);
+  border-radius: 20px;
+}
+
+/* Картка гостя: фото → текст → дія. Своя — контур і мітка шавлією;
+   чужа — приглушене чорнило, а не заливка (README пакета, «Коли брати нічого»). */
+.v2-gcards { display: grid; gap: var(--sp-3); margin: 0; padding: 0; list-style: none; }
+@media (min-width: 40rem) {
+  .v2-gcards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.v2-gcard {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  min-height: 76px;
+  padding: var(--sp-5);
+  background: var(--color-guest-card);
+  border-radius: 20px;
+}
+.v2-gcard[data-state='mine'] { box-shadow: inset 0 0 0 2px var(--color-accent-400); }
+.v2-gcard[data-state='taken'] { color: var(--color-neutral-700); }
+.v2-gcard[data-state='taken'] .v2-gcard__img { opacity: 0.55; }
+.v2-gcard__img {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  object-fit: cover;
+  background: var(--color-neutral-100);
+  border-radius: 14px;
+}
+.v2-gcard__text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.v2-gcard__flag { justify-self: start; margin-bottom: var(--sp-1); }
+.v2-gcard__title { font-family: inherit; font-size: var(--t-item); font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.v2-gcard__title a { color: inherit; text-decoration: none; }
+.v2-gcard__title a:hover { text-decoration: underline; }
+.v2-gcard__title a:focus-visible { outline: 2px solid var(--color-accent-700); outline-offset: 2px; border-radius: 4px; }
+.v2-gcard__meta { font-size: var(--t-small); color: var(--color-neutral-700); overflow-wrap: anywhere; }
+.v2-gcard__note { font-size: var(--t-small); color: var(--color-neutral-700); white-space: pre-line; overflow-wrap: anywhere; }
+.v2-gcard__tags { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); }
+.v2-gcard__mine { display: inline-flex; align-items: center; gap: var(--sp-1); }
+.v2-gcard__taken { font-size: var(--t-small); font-weight: 700; color: var(--color-accent-2-700); }
+.v2-gcard__actions { display: grid; justify-items: end; gap: var(--sp-1); flex: none; }
+.v2-gcard__actions .v2-btn { padding-inline: var(--sp-5); }
+.v2-gcard__release { color: var(--color-danger-ink); }
+
+/* Аркуші гостя. */
+.v2-gbook { display: grid; gap: var(--sp-5); }
+.v2-gqty { display: inline-flex; align-items: center; gap: var(--sp-3); }
+.v2-gqty__value { min-width: 2.5ch; font-size: var(--t-card); font-weight: 800; text-align: center; }
+.v2-gcode {
+  justify-self: stretch;
+  padding: var(--sp-5);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-align: center;
+  color: var(--color-accent-900);
+  background: var(--color-accent-100);
+  border-radius: 20px;
+}
+.v2-gcode-input { letter-spacing: 0.22em; font-weight: 700; text-transform: uppercase; }
+.v2-gpicks { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.v2-gpicks__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-surface);
+  border-radius: 16px;
+}
+.v2-gpicks__text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.v2-gpicks__name { font-weight: 700; overflow-wrap: anywhere; }
+.v2-gpicks__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-gkeep { display: grid; gap: var(--sp-3); }
+.v2-gkeep .v2-gcode { font-size: 1.5rem; padding: var(--sp-4); }
+.v2-gkeep__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+
+/* «Усе розібрали» й порожньо. */
+.v2-gall { display: grid; gap: var(--sp-4); background: var(--color-guest-card); }
+.v2-gempty { display: grid; justify-items: center; gap: var(--sp-4); padding: var(--sp-7) var(--sp-5); text-align: center; }
+.v2-gempty__title { font-size: var(--t-card); }
+.v2-gtaken { display: grid; gap: var(--sp-3); }
+.v2-gtaken__rows { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.v2-gtaken__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-5);
+  color: var(--color-neutral-700);
+  background: var(--color-surface);
+  border-radius: 16px;
+  overflow-wrap: anywhere;
+}
+
+/* Тост гостя — над нижнім краєм: навігації застосунку тут немає. */
+.v2-toast--guest { bottom: calc(var(--sp-5) + env(safe-area-inset-bottom)); }

@@ -96,7 +96,9 @@ select set_eq(
         and not exists (select 1 from pg_depend d
                          where d.classid = 'pg_proc'::regclass and d.objid = p.oid and d.deptype = 'e')
         and has_function_privilege('anon', p.oid, 'EXECUTE') $$,
-  array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code'],
+  -- get_guest_list, claim_item_v2 — гостьова v2 (ADR-053): обгортки над v1.
+  array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
+        'get_guest_list', 'claim_item_v2'],
   'anon може викликати лише гостьові RPC'
 );
 
@@ -116,6 +118,7 @@ select set_eq(
   -- переходить до того, хто ввімкнув push останнім (ADR-049); нічого не
   -- повертають, адреса підписки — у тілі запиту.
   array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
+        'get_guest_list', 'claim_item_v2',
         'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
         'reorder_items', 'reorder_sections', 'save_push_subscription', 'forget_push_subscription'],
   'authenticated може викликати лише гостьові RPC і функції власника'

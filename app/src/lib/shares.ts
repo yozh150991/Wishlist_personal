@@ -162,6 +162,8 @@ export type SharedItem = {
   mine_qty: number | null;
 };
 
+export type GuestInfo = { code: string; name?: string | null; email?: string | null };
+
 export type SharedList = {
   title: string;
   message: string | null;
@@ -178,8 +180,12 @@ export type SharedList = {
   hide_prices: boolean;
   allow_reservations: boolean;
   viewer_is_owner: boolean;
-  /** Ключ гостя впізнано — ось його короткий код. null — ключа немає або він чужий. */
-  guest: { code: string } | null;
+  /**
+   * Ключ гостя впізнано — ось його короткий код. null — ключа немає або він
+   * чужий. Гостьова v2 (`get_guest_list`) додає підпис і пошту, які гість
+   * вписав сам (ADR-053); v1 їх не отримує й не показує.
+   */
+  guest: GuestInfo | null;
   /** Розділи зі спільними позиціями, у порядку власника (ADR-036). */
   sections: { id: string; title: string }[];
   /** У ручному порядку власника: розділи, усередині — його порядок, «Інше» в кінці. */
@@ -206,6 +212,20 @@ function rpcError(error: { message?: string; code?: string } | null): Error {
 export async function fetchSharedList(token: string, key: string | null): Promise<SharedList> {
   const { data, error } = await supabase.rpc('get_shared_list', { p_token: token, p_key: key });
   if (error) throw rpcError(error);
+  return normalizeShared(data);
+}
+
+/**
+ * Гостьова v2 (ADR-053): те саме, що `get_shared_list`, плюс підпис і пошта
+ * гостя в `guest` — лише для його ключа. Власнику `guest` приходить null.
+ */
+export async function fetchGuestList(token: string, key: string | null): Promise<SharedList> {
+  const { data, error } = await supabase.rpc('get_guest_list', { p_token: token, p_key: key });
+  if (error) throw rpcError(error);
+  return normalizeShared(data);
+}
+
+function normalizeShared(data: unknown): SharedList {
   const list = data as SharedList & { owner_scheme: unknown; appearance_hue: unknown };
   // Старий бекенд або несподіване значення — усталена Шавлія без оформлення,
   // а не зламана сторінка.
@@ -248,6 +268,33 @@ export async function claimItem(
   });
   if (error) throw rpcError(error);
   return data as ClaimResult;
+}
+
+export type ClaimV2Result = ClaimResult & { name: string | null; email: string | null };
+
+/**
+ * «Беру» гостьової v2 (ADR-053): як `claimItem`, плюс підпис і пошта гостя.
+ * `name` / `email`: null — лишити як є, порожній рядок — прибрати. Помилки
+ * `bad_name` і `bad_email` приходять до позначки — тоді її не зроблено.
+ */
+export async function claimItemV2(
+  token: string,
+  itemId: string,
+  key: string,
+  quantity: number,
+  name: string | null,
+  email: string | null,
+): Promise<ClaimV2Result> {
+  const { data, error } = await supabase.rpc('claim_item_v2', {
+    p_token: token,
+    p_item_id: itemId,
+    p_key: key,
+    p_quantity: quantity,
+    p_name: name,
+    p_email: email,
+  });
+  if (error) throw rpcError(error);
+  return data as ClaimV2Result;
 }
 
 export async function releaseClaim(token: string, itemId: string, key: string): Promise<void> {

@@ -96,6 +96,18 @@ await supabase.rpc('release_claim', { p_token: token, p_item_id: itemId, p_key: 
 
 `release_claim` повертає `{ "taken_qty": … }` — суму позначок усіх гостей, тож власнику (увійшов і відкрив своє посилання) відповідає `owner_cannot_reserve`, як і `claim_item` (ADR-038). Решта помилок: `not_found`, `item_not_in_share`.
 
+### `get_guest_list` / `claim_item_v2` — anon + authenticated (гостьова v2, ADR-053)
+```ts
+const { data } = await supabase.rpc('get_guest_list', { p_token: token, p_key: guestKey });
+// те саме, що get_shared_list, але guest: { "code": "7K4M2", "name": "Іра", "email": null }
+
+const { data } = await supabase.rpc('claim_item_v2', {
+  p_token: token, p_item_id: itemId, p_key: guestKey, p_quantity: 1, p_name: 'Іра', p_email: null,
+});
+// → { "taken_qty": 1, "mine_qty": 1, "code": "7K4M2", "name": "Іра", "email": null }
+```
+Обгортки над замороженими `get_shared_list` і `claim_item` (ADR-039, п. 10): позначки, гонка, мертве посилання й власник поводяться рівно як у v1, додаються лише підпис і пошта гостя. `get_guest_list` віддає їх тільки гостю з ключем цієї ідентичності; власнику на власному посиланні `guest` — `null`, як і в v1. У `claim_item_v2` `p_name` / `p_email`: `null` — лишити як є, `''` — прибрати, інше — записати (пошта — у нижньому регістрі). Перевірка йде **до** позначки: `bad_name` (понад 60 символів чи перенос рядка) і `bad_email` позначки не роблять. Решта помилок — як у `claim_item`. Коли v1 піде (крок 9), тіла переїдуть у ці функції.
+
 ### `redeem_guest_code` — anon + authenticated
 ```ts
 const { data } = await supabase.rpc('redeem_guest_code', { p_token: token, p_code: '7K4M2' });
@@ -161,7 +173,7 @@ await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoi
 | Функція | Ролі |
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
-| `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code` | `anon`, `authenticated` |
+| `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2` | `anon`, `authenticated` |
 | `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
