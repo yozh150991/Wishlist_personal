@@ -984,6 +984,21 @@ div.v2-chips { gap: var(--sp-3); }
   border-color: transparent;
 }
 .v2-seg__opt input:focus-visible + span { outline: 2px solid var(--color-accent-700); outline-offset: 2px; }
+/*
+ * Короткий вибір (тема, мова) — завжди один рядок: варіанти ділять ширину,
+ * поля тонші. «Jak w systemie» на 375 px інакше падав на другий рядок.
+ * На зовсім вузькому екрані довгий підпис переноситься всередині кнопки,
+ * а не виносить кнопку вниз.
+ */
+.v2-seg__row--fit { flex-wrap: nowrap; }
+.v2-seg__row--fit .v2-seg__opt { flex: 1 1 auto; min-width: 0; }
+.v2-seg__row--fit .v2-seg__opt span {
+  flex: 1;
+  justify-content: center;
+  padding: var(--sp-2) var(--sp-4);
+  line-height: 1.15;
+  text-align: center;
+}
 
 .v2-radios { display: grid; gap: var(--sp-2); min-width: 0; margin: 0; padding: 0; border: 0; }
 .v2-radios > legend { margin-bottom: var(--sp-5); padding: 0; }

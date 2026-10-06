@@ -37,7 +37,7 @@ function Choice<T extends string>({
   return (
     <fieldset className="v2-seg" data-testid={testId}>
       <legend className="v2-settings__label">{legend}</legend>
-      <div className="v2-seg__row">
+      <div className="v2-seg__row v2-seg__row--fit">
         {options.map((o) => (
           <label key={o.value} className="v2-seg__opt">
             <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} />
