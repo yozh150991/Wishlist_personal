@@ -394,7 +394,9 @@ test.describe('сторінка списку v2: те, що прийшло з v1
     await sheet.getByRole('button', { name: /^(показати|pokaż|show)$/i }).click();
     await expect(sheet).toHaveCount(0);
     await expect(card(page, keep)).toHaveCount(0);
-    await expect(page.getByText(bought)).toBeVisible();
+    // Картка, а не getByText: назва є ще в закритих вікнах (меню «⋯», «Схожа вже є»),
+    // які лишаються в DOM, і строгий режим знаходить три збіги.
+    await expect(card(page, bought)).toBeVisible();
 
     await page.getByRole('button', { name: /зняти фільтр статусу|clear status filter|zdejmij filtr statusu/i }).click();
     await expect(card(page, keep)).toBeVisible();
