@@ -838,10 +838,14 @@
       "manualHint": "Так бачать гості",
       "priority": "Пріоритет",
       "priorityHint": "Спершу «Дуже хочу»",
+      "priorityLow": "Пріоритет · від ідеї",
+      "priorityLowHint": "Спершу «Просто ідея»",
       "priceAsc": "Ціна · від меншої",
       "priceDesc": "Ціна · від більшої",
       "recent": "Нещодавно додані",
-      "byTitle": "За назвою"
+      "oldest": "Давно додані",
+      "byTitle": "За назвою · А–Я",
+      "byTitleDesc": "За назвою · Я–А"
     },
     "priority": {
       "high": "Дуже хочу",

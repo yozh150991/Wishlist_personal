@@ -16,8 +16,26 @@ import { hasAccount, signIn } from './helpers';
  * Теги (playwright.config.ts): `@both` іде в усіх чотирьох проєктах — у
  * v1-проєктах сховище каже «v1», у v2-проєктах «v2», тож перевірка «адреса
  * перемагає вибір» проходить в обидва боки. Без тегу — лише v1-проєкти: ці
- * тести починають зі стану «людина ще нічого не перемикала».
+ * тести починають зі стану «людина обрала v1» (`wl.design = v1` у сховищі).
  */
+
+/**
+ * Усталена версія — v2 (ADR-052): чисте сховище відкриває екрани v2 ще до
+ * рендера, і React цього не перекидає.
+ */
+test('без вибору в сховищі — v2', { tag: '@both' }, async ({ browser }) => {
+  const context = await browser.newContext({
+    baseURL: test.info().project.use.baseURL,
+    storageState: { cookies: [], origins: [] },
+  });
+  const page = await context.newPage();
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('html')).toHaveAttribute('data-design', 'v2');
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('html')).toHaveAttribute('data-design', 'v2');
+  expect(await page.evaluate(() => localStorage.getItem('wl.design'))).toBeNull();
+  await context.close();
+});
 
 /** Кнопка заглушки v2 «Повернутися на v1» — на гостьовій її бути не може. */
 const placeholderBack = (page: import('@playwright/test').Page) =>
@@ -104,8 +122,8 @@ test.describe('гостьова адреса визначає версію', { t
   /** Будь-який рядок форми ключа (lib/guest.ts): 22–64 символи base64url. */
   const KEY = 'e2eGuestKeyAAAAAAAAAAAAA';
 
-  /** Вибір людини в цьому проєкті: v2-проєкти кладуть його в сховище. */
-  const chosen = (page: Page) => page.evaluate(() => localStorage.getItem('wl.design') ?? 'v1');
+  /** Вибір людини в цьому проєкті (сховище кладе кожен проєкт); без нього — усталена v2 (ADR-052). */
+  const chosen = (page: Page) => page.evaluate(() => localStorage.getItem('wl.design') ?? 'v2');
 
   for (const [prefix, version] of [['/s/', 'v1'], ['/l/', 'v2']] as const) {
     test(`${prefix}… — завжди ${version}, і до рендера, і після`, async ({ page }) => {

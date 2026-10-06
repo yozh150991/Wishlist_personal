@@ -15,8 +15,36 @@ import type { Currency, Item, ItemPriority, ItemStatus, Section, Totals } from '
  */
 
 /** «Вручну» — той самий порядок, що в гостя; решта — лише для власника (потік O2). */
-export type ViewSort = 'manual' | 'priority' | 'priceAsc' | 'priceDesc' | 'recent' | 'title';
-export const VIEW_SORTS: ViewSort[] = ['manual', 'priority', 'priceAsc', 'priceDesc', 'recent', 'title'];
+/**
+ * Сортування сторінки списку v2. Кожне поле — в обидва боки, як було у v1:
+ * «Пріоритет» і «від ідеї», ціна ↑↓, «Нещодавно» й «Давно додані», назва А–Я і Я–А.
+ */
+export type ViewSort =
+  | 'manual'
+  | 'priority'
+  | 'priorityLow'
+  | 'priceAsc'
+  | 'priceDesc'
+  | 'recent'
+  | 'oldest'
+  | 'title'
+  | 'titleDesc';
+export const VIEW_SORTS: ViewSort[] = [
+  'manual',
+  'priority',
+  'priorityLow',
+  'priceAsc',
+  'priceDesc',
+  'recent',
+  'oldest',
+  'title',
+  'titleDesc',
+];
+
+/** Сортування, що ділить список на рівні пріоритету — заголовками, без мітки на картці. */
+export function isPrioritySort(sort: ViewSort): boolean {
+  return sort === 'priority' || sort === 'priorityLow';
+}
 
 export function isViewSort(value: unknown): value is ViewSort {
   return typeof value === 'string' && (VIEW_SORTS as string[]).includes(value);
@@ -156,15 +184,23 @@ export function sortItems(items: Item[], sort: ViewSort, listCurrency?: Currency
   switch (sort) {
     case 'priority':
       return out.sort((a, b) => RANK[a.priority] - RANK[b.priority] || manualOrder(a, b));
+    case 'priorityLow':
+      return out.sort((a, b) => RANK[b.priority] - RANK[a.priority] || manualOrder(a, b));
     case 'priceAsc':
       return out.sort(byPrice(false, listCurrency));
     case 'priceDesc':
       return out.sort(byPrice(true, listCurrency));
     case 'title':
       return out.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base', numeric: true }) || manualOrder(a, b));
+    case 'titleDesc':
+      return out.sort((a, b) => b.title.localeCompare(a.title, undefined, { sensitivity: 'base', numeric: true }) || manualOrder(a, b));
     case 'recent':
       return out.sort((a, b) =>
         a.created_at !== b.created_at ? (a.created_at < b.created_at ? 1 : -1) : a.id < b.id ? -1 : 1,
+      );
+    case 'oldest':
+      return out.sort((a, b) =>
+        a.created_at !== b.created_at ? (a.created_at < b.created_at ? -1 : 1) : a.id < b.id ? -1 : 1,
       );
     default:
       return out.sort(manualOrder);
@@ -185,6 +221,7 @@ export type ViewGroup =
  * Позиції по групах.
  *
  * - «Пріоритет» — заголовки рівнів, не окремі екрани (O1); порожніх рівнів немає.
+ *   «Пріоритет · від ідеї» — ті самі рівні у зворотному порядку.
  * - «Вручну» зі створеними розділами — розділи в їхньому порядку, без розділу —
  *   «Інше» в кінці (ADR-036). Порожній розділ лишається, коли нічого не
  *   відфільтровано: власник має бачити розділ, який щойно створив.
@@ -196,8 +233,9 @@ export function viewGroups(
   sections: Section[],
   { keepEmpty, listCurrency }: { keepEmpty: boolean; listCurrency?: Currency },
 ): ViewGroup[] {
-  if (sort === 'priority') {
-    return PRIORITY_ORDER.map((priority) => ({
+  if (isPrioritySort(sort)) {
+    const order = sort === 'priority' ? PRIORITY_ORDER : [...PRIORITY_ORDER].reverse();
+    return order.map((priority) => ({
       kind: 'priority' as const,
       key: `p:${priority}`,
       priority,

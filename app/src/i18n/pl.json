@@ -838,10 +838,14 @@
       "manualHint": "Tak widzą goście",
       "priority": "Priorytet",
       "priorityHint": "Najpierw „Bardzo chcę”",
+      "priorityLow": "Priorytet · od pomysłu",
+      "priorityLowHint": "Najpierw „Tylko pomysł”",
       "priceAsc": "Cena · od najniższej",
       "priceDesc": "Cena · od najwyższej",
       "recent": "Ostatnio dodane",
-      "byTitle": "Według nazwy"
+      "oldest": "Najdawniej dodane",
+      "byTitle": "Według nazwy · A–Z",
+      "byTitleDesc": "Według nazwy · Z–A"
     },
     "priority": {
       "high": "Bardzo chcę",

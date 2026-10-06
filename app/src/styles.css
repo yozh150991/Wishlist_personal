@@ -1939,3 +1939,28 @@ a.btn { text-decoration: none; }
   overflow-wrap: anywhere;
 }
 .guest-empty { display: grid; justify-items: center; gap: var(--sp-4); }
+
+/* ── Нова версія застосунку (UpdatePrompt) ─────────────────────
+   Спільний для обох версій і гостьової, тож живе тут, а не у v2.css.
+   Угорі, а не внизу: низ зайнятий навігацією v2, тостом «Відмінити»,
+   «+» і панеллю вибору. Стилі випали з «changed styles» 21.09 — повернуто. */
+.update-banner {
+  position: fixed;
+  top: calc(var(--sp-3) + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3) var(--sp-4);
+  width: min(36rem, calc(100% - 2 * var(--sp-5)));
+  padding: var(--sp-4) var(--sp-5);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-lg);
+}
+.update-banner > span { flex: 1 1 12rem; font-weight: 700; }
+.update-banner__actions { display: flex; gap: var(--sp-2); margin-inline-start: auto; }

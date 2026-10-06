@@ -57,6 +57,7 @@ import {
   TOOLS_FROM,
   rangeCount,
   isDraft,
+  isPrioritySort,
   isViewSort,
   itemCurrency,
   matchesView,
@@ -381,7 +382,7 @@ export default function ListV2() {
     () =>
       sortItems(
         shown.filter((i) => i.status !== 'active'),
-        viewSort === 'priority' ? 'manual' : viewSort,
+        isPrioritySort(viewSort) ? 'manual' : viewSort,
         currency,
       ),
     [shown, viewSort, currency],
@@ -885,7 +886,7 @@ export default function ListV2() {
         key={item.id}
         item={item}
         currency={currency}
-        showPriority={viewSort !== 'priority'}
+        showPriority={!isPrioritySort(viewSort)}
         highlight={highlight === item.id}
         failed={failed.get(item.id) ?? null}
         onOpen={openEdit}

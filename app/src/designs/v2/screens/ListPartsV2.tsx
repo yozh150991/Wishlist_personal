@@ -43,14 +43,20 @@ export function useSortLabel() {
     switch (s) {
       case 'priority':
         return t('v2list.sort.priority');
+      case 'priorityLow':
+        return t('v2list.sort.priorityLow');
       case 'priceAsc':
         return t('v2list.sort.priceAsc');
       case 'priceDesc':
         return t('v2list.sort.priceDesc');
       case 'recent':
         return t('v2list.sort.recent');
+      case 'oldest':
+        return t('v2list.sort.oldest');
       case 'title':
         return t('v2list.sort.byTitle');
+      case 'titleDesc':
+        return t('v2list.sort.byTitleDesc');
       default:
         return t('v2list.sort.manual');
     }
@@ -434,7 +440,13 @@ export function SortSheetV2({
   const { t } = useI18n();
   const label = useSortLabel();
   const hint = (s: ViewSort) =>
-    s === 'manual' ? t('v2list.sort.manualHint') : s === 'priority' ? t('v2list.sort.priorityHint') : null;
+    s === 'manual'
+      ? t('v2list.sort.manualHint')
+      : s === 'priority'
+        ? t('v2list.sort.priorityHint')
+        : s === 'priorityLow'
+          ? t('v2list.sort.priorityLowHint')
+          : null;
 
   return (
     <SheetV2 open={open} onClose={onClose} labelledBy="v2-sort-title">

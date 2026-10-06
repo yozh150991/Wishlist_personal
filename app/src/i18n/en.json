@@ -838,10 +838,14 @@
       "manualHint": "What guests see",
       "priority": "Priority",
       "priorityHint": "“Really want” first",
+      "priorityLow": "Priority · ideas first",
+      "priorityLowHint": "“Just an idea” first",
       "priceAsc": "Price · low to high",
       "priceDesc": "Price · high to low",
       "recent": "Recently added",
-      "byTitle": "By name"
+      "oldest": "Oldest first",
+      "byTitle": "By name · A–Z",
+      "byTitleDesc": "By name · Z–A"
     },
     "priority": {
       "high": "Really want",

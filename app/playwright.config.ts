@@ -5,19 +5,22 @@ const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
 /**
  * Версія дизайну — друга вісь проєктів поряд із розкладкою (ADR-039, п. 11).
  *
- * v1-проєкти (`chromium`, `mobile`) нічого не кладуть у сховище, тобто стоять
- * на усталеній v1. v2-проєкти кладуть `wl.design = v2` — так, як його лишає
- * перемикач у Налаштуваннях. Які тести де йдуть, вирішують теги:
+ * Усталена версія — v2 (ADR-052). v1-проєкти (`chromium`, `mobile`) кладуть
+ * `wl.design = v1` — так, як його лишає перемикач у Налаштуваннях; v2-проєкти
+ * кладуть `wl.design = v2` явно, щоб не залежати від усталеного значення.
+ * Які тести де йдуть, вирішують теги:
  *
  *   без тегу — екрани v1: лише v1-проєкти;
  *   `@v2`    — екрани v2: лише v2-проєкти;
  *   `@both`  — те, що мусить однаково працювати за будь-якого вибору
  *              (гостьова адреса, аварійний вихід): усі чотири.
  */
-const V2_STORAGE = {
+const storage = (design: 'v1' | 'v2') => ({
   cookies: [],
-  origins: [{ origin: new URL(baseURL).origin, localStorage: [{ name: 'wl.design', value: 'v2' }] }],
-};
+  origins: [{ origin: new URL(baseURL).origin, localStorage: [{ name: 'wl.design', value: design }] }],
+});
+const V1_STORAGE = storage('v1');
+const V2_STORAGE = storage('v2');
 const IN_V1 = { grepInvert: /@v2\b/ };
 const IN_V2 = { grep: /@v2\b|@both\b/ };
 
@@ -35,8 +38,8 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'chromium',    use: { ...devices['Desktop Chrome'] }, ...IN_V1 },
-    { name: 'mobile',      use: { ...devices['Pixel 7'] }, ...IN_V1 },
+    { name: 'chromium',    use: { ...devices['Desktop Chrome'], storageState: V1_STORAGE }, ...IN_V1 },
+    { name: 'mobile',      use: { ...devices['Pixel 7'], storageState: V1_STORAGE }, ...IN_V1 },
     { name: 'chromium-v2', use: { ...devices['Desktop Chrome'], storageState: V2_STORAGE }, ...IN_V2 },
     { name: 'mobile-v2',   use: { ...devices['Pixel 7'], storageState: V2_STORAGE }, ...IN_V2 },
   ],

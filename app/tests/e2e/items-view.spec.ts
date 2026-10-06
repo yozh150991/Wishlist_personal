@@ -103,6 +103,18 @@ test.describe('сортування й групи', () => {
     expect(sortItems([old, fresh], 'recent')[0]!.id).toBe(fresh.id);
   });
 
+  test('кожне поле — в обидва боки: «Давно додані», назва Я–А, «Пріоритет · від ідеї»', () => {
+    const old = item({ created_at: '2026-01-01T00:00:00Z', title: 'Ялинка', priority: 'high' });
+    const fresh = item({ created_at: '2026-09-01T00:00:00Z', title: 'Абажур', priority: 'low' });
+    expect(sortItems([fresh, old], 'oldest').map((i) => i.id)).toEqual([old.id, fresh.id]);
+    expect(sortItems([old, fresh], 'title').map((i) => i.id)).toEqual([fresh.id, old.id]);
+    expect(sortItems([fresh, old], 'titleDesc').map((i) => i.id)).toEqual([old.id, fresh.id]);
+    expect(sortItems([old, fresh], 'priorityLow').map((i) => i.id)).toEqual([fresh.id, old.id]);
+    const mid = item({ priority: 'medium' });
+    const groups = viewGroups([old, mid, fresh], 'priorityLow', [], { keepEmpty: true });
+    expect(groups.map((g) => (g.kind === 'priority' ? g.priority : g.kind))).toEqual(['low', 'medium', 'high']);
+  });
+
   test('«Вручну» з розділами: розділи в їхньому порядку, решта — «Інше» в кінці', () => {
     const s1 = section('s1', 2);
     const s2 = section('s2', 1);

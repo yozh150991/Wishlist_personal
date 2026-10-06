@@ -1,7 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { useI18n } from '../lib/i18n';
 import { useDesign } from '../lib/theme';
-import DesignV1Routes from './v1/RoutesV1';
+import DesignV2Routes from './v2/RoutesV2';
 
 /**
  * Перемикач версій дизайну на рівні маршрутів.
@@ -11,19 +11,18 @@ import DesignV1Routes from './v1/RoutesV1';
  * компонентів. Гілка `design === 'v2'` у кожному екрані дала б застосунок,
  * який неможливо ні читати, ні викинути (ADR-032).
  *
- * **v1 завантажується одразу, v2 — ліниво.** v1 сьогодні бачать усі, і зайвий
- * запит перед першим екраном коштував би їм відчутніше, ніж економія на коді
- * v2, якого вони ніколи не відкриють. Коли v2 стане усталеною, порядок
- * міняється на протилежний — це один рядок.
+ * **v2 завантажується одразу, v1 — ліниво** (ADR-052). v2 — усталена версія,
+ * її бачать усі, тож зайвий запит перед першим екраном коштував би їм, а не
+ * тим поодиноким, хто сам повернувся на v1. До ADR-052 було навпаки.
  *
  * Спільне для обох версій лишається вище за це місце: провайдери, сесія,
  * мова, синхронізація вигляду й гостьові адреси — усе в `App.tsx`. Версія
  * міняє екрани, а не те, звідки застосунок бере дані.
  */
-const DesignV2Routes = lazy(() => import('./v2/RoutesV2'));
+const DesignV1Routes = lazy(() => import('./v1/RoutesV1'));
 const GuestV2 = lazy(() => import('./v2/screens/GuestV2'));
 
-/** Поки лінивий модуль v2 вантажиться. */
+/** Поки лінивий модуль вантажиться. */
 function Loading() {
   const { t } = useI18n();
   return (
@@ -36,18 +35,19 @@ function Loading() {
 export function DesignRoutes() {
   const design = useDesign();
 
-  if (design === 'v1') return <DesignV1Routes />;
+  if (design === 'v2') return <DesignV2Routes />;
 
   return (
     <Suspense fallback={<Loading />}>
-      <DesignV2Routes />
+      <DesignV1Routes />
     </Suspense>
   );
 }
 
 /**
- * Гостьова v2 (`/l/…`) — ліниво, як і решта v2, але поза вибором версії:
- * її показує адреса, а не `wl.design` (ADR-039). Маршрут стоїть в `App.tsx`.
+ * Гостьова v2 (`/l/…`) — поза вибором версії: її показує адреса, а не
+ * `wl.design` (ADR-039). Маршрут стоїть в `App.tsx`. Лінива, бо сьогодні це
+ * та сама гостьова сторінка v1, що й під `/s/…` (ARCHITECTURE).
  */
 export function GuestV2Screen() {
   return (
