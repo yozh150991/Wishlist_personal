@@ -61,6 +61,7 @@ $map = @{
   '20260928170000_yearly_lists.sql' = 'supabase\migrations'
   '20260929090000_link_checks.sql' = 'supabase\migrations'
   '20260930090000_notifications.sql' = 'supabase\migrations'
+  '20261006090000_item_currency_and_rates.sql' = 'supabase\migrations'
 
   'seed.sql' = 'supabase'
 
@@ -77,6 +78,7 @@ $map = @{
   '10_yearly_lists.test.sql' = 'supabase\tests\database'
   '11_link_checks.test.sql' = 'supabase\tests\database'
   '12_notifications.test.sql' = 'supabase\tests\database'
+  '13_item_currency.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -122,7 +124,7 @@ $map = @{
   'Filters.tsx' = 'app\src\components'; 'media.ts' = 'app\src\lib'
   'AppearanceSync.tsx' = 'app\src\components'
   'AppearanceSheet.tsx' = 'app\src\components'
-  'transfer.spec.ts' = 'app\tests\e2e'
+  'transfer.spec.ts' = 'app\tests\e2e'; 'date-text.spec.ts' = 'app\tests\e2e'
   'check-pwa.mjs' = 'app\scripts'; 'generate-icons.mjs' = 'app\scripts'
   'icon.svg' = 'app\public\icons'; 'maskable.svg' = 'app\public\icons'
   'icon-192.png' = 'app\public\icons'; 'icon-512.png' = 'app\public\icons'
@@ -162,10 +164,10 @@ $map = @{
   'ListsV2.tsx' = 'app\src\designs\v2\screens'
   'NewListV2.tsx' = 'app\src\designs\v2\screens'; 'lists-v2.spec.ts' = 'app\tests\e2e'
   # Design v2 list page (step 3b-1, ADR-044): shared pure helpers and v2 screens.
-  'itemsView.ts' = 'app\src\lib'; 'order.ts' = 'app\src\lib'
+  'itemsView.ts' = 'app\src\lib'; 'order.ts' = 'app\src\lib'; 'dateText.ts' = 'app\src\lib'; 'fx.ts' = 'app\src\lib'
   'undo.ts' = 'app\src\lib'; 'variants.ts' = 'app\src\lib'
   'ListV2.tsx' = 'app\src\designs\v2\screens'; 'ItemSheetV2.tsx' = 'app\src\designs\v2\screens'
-  'ListPartsV2.tsx' = 'app\src\designs\v2\screens'; 'list-v2.spec.ts' = 'app\tests\e2e'
+  'ListPartsV2.tsx' = 'app\src\designs\v2\screens'; 'list-v2.spec.ts' = 'app\tests\e2e'; 'ImportSheetV2.tsx' = 'app\src\designs\v2\screens'
   'items-view.spec.ts' = 'app\tests\e2e'
   # Design v2 list actions (step 3b-2): share, preview, appearance, settings, order.
   'ShareSheetV2.tsx' = 'app\src\designs\v2\screens'; 'PreviewV2.tsx' = 'app\src\designs\v2\screens'
@@ -209,13 +211,13 @@ $map = @{
   'main.py' = 'services\parser\app'
   # closed background jobs service wishlist-jobs (ADR-048), same image
   'jobs_main.py' = 'services\parser\app';  'jobs_config.py' = 'services\parser\app'
-  'jobs_store.py' = 'services\parser\app'; 'jobs_links.py' = 'services\parser\app'
+  'jobs_store.py' = 'services\parser\app'; 'jobs_links.py' = 'services\parser\app'; 'jobs_rates.py' = 'services\parser\app'
   # owner notifications (ADR-049)
   'jobs_notify.py' = 'services\parser\app'; 'jobs_push.py' = 'services\parser\app'
   'jobs_mail.py' = 'services\parser\app';   'jobs_texts.py' = 'services\parser\app'
   'test_extract.py' = 'services\parser\tests'; 'test_ssrf.py' = 'services\parser\tests'
   'test_auth.py' = 'services\parser\tests'; 'test_fetch_pinning.py' = 'services\parser\tests'
-  'test_jobs.py' = 'services\parser\tests'; 'test_notify.py' = 'services\parser\tests'
+  'test_jobs.py' = 'services\parser\tests'; 'test_notify.py' = 'services\parser\tests'; 'test_rates.py' = 'services\parser\tests'
   'jsonld.html' = 'services\parser\tests\fixtures'; 'og.html' = 'services\parser\tests\fixtures'
   'microdata.html' = 'services\parser\tests\fixtures'; 'bare.html' = 'services\parser\tests\fixtures'
   'price_in_text.html' = 'services\parser\tests\fixtures'

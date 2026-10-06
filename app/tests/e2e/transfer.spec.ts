@@ -69,6 +69,7 @@ test.describe('вивантаження', () => {
       note: null,
       image_url: null,
       variants: [],
+      currency: null,
     });
   });
 
@@ -83,7 +84,7 @@ test.describe('вивантаження', () => {
     const csv = toCsv([item()]);
     expect(csv.startsWith('﻿')).toBe(true);
     expect(csv.split('\r\n')[0]).toBe(
-      '﻿title,url,price,quantity,priority,status,note,image_url,variants',
+      '﻿title,url,price,quantity,priority,status,note,image_url,variants,currency',
     );
   });
 
@@ -131,6 +132,7 @@ test.describe('повний оберт', () => {
       note: i.note,
       image_url: i.image_url,
       variants: i.variants,
+      currency: null,
     })));
   });
 
@@ -384,5 +386,28 @@ test.describe('«Мої дані» — усі списки одним файло
     // Ні токена, ні id — адреса посилання й ключі лишаються в застосунку.
     expect(text).not.toMatch(/"token"|"id"|"owner_id"/);
     expect(data.shares[0]).toMatchObject({ title: 'Для бабусі', view_count: 3, items_count: 2 });
+  });
+});
+
+test.describe('валюта позиції (ADR-051)', () => {
+  test('CSV і JSON зберігають валюту позиції; порожня — валюта списку', () => {
+    const items = [item({ title: 'Навушники', price: 85, currency: 'EUR' }), item({ title: 'Чашка', price: 50 })];
+    const csv = parseCsvFile(toCsv(items), 'Список');
+    expect(csv.issues).toEqual([]);
+    expect(csv.items.map((i) => i.currency)).toEqual(['EUR', null]);
+    const json = parseJsonFile(toJson(list, items), 'Список');
+    expect(json.items.map((i) => i.currency)).toEqual(['EUR', null]);
+  });
+
+  test('файл без колонки currency читається як раніше', () => {
+    const r = parseCsvFile('title,price\r\nЛампа,100\r\n', 'Список');
+    expect(r.issues).toEqual([]);
+    expect(r.items[0]?.currency).toBeNull();
+  });
+
+  test('незнайома валюта — зауваження, ціна у валюті списку', () => {
+    const r = parseCsvFile('title,price,currency\r\nЧайник,30,gbp\r\nЛампа,100,eur\r\n', 'Список');
+    expect(r.items.map((i) => i.currency)).toEqual([null, 'EUR']);
+    expect(r.issues.map((i) => i.key)).toEqual(['transfer.issues.itemCurrency']);
   });
 });

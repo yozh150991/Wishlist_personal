@@ -218,7 +218,7 @@ export async function createListWithItems(
 ): Promise<List> {
   const list = await createList(input, ownerId);
   try {
-    for (const part of chunks(items, BULK_CHUNK)) {
+    for (const part of chunks(ownCurrency(items, list.currency), BULK_CHUNK)) {
       const { error } = await supabase
         .from('items')
         .insert(part.map((i) => ({ ...i, list_id: list.id })));
@@ -232,12 +232,21 @@ export async function createListWithItems(
 }
 
 /**
+ * Валюта позиції, що збігається з валютою списку, зберігається як NULL
+ * (ADR-051): так позиція й далі йде за валютою списку, як у v1, і не
+ * лишається «євровою», якщо список потім переведуть в євро й назад.
+ */
+export function ownCurrency<T extends { currency?: Currency | null }>(items: T[], listCurrency: Currency): T[] {
+  return items.map((i) => (i.currency && i.currency === listCurrency ? { ...i, currency: null } : i));
+}
+
+/**
  * Копії позицій в інший список — «Ще хочу» після свята (M4, ADR-045).
  * Оригінали не чіпаємо: архів лишається правдивим знімком свята, а позначки
  * гостей не переїжджають — вони належать оригіналам.
  */
-export async function copyItems(listId: string, items: ItemInput[]): Promise<void> {
-  for (const part of chunks(items, BULK_CHUNK)) {
+export async function copyItems(listId: string, items: ItemInput[], listCurrency?: Currency): Promise<void> {
+  for (const part of chunks(listCurrency ? ownCurrency(items, listCurrency) : items, BULK_CHUNK)) {
     const { error } = await supabase.from('items').insert(part.map((i) => ({ ...i, list_id: listId })));
     if (error) throw error;
   }
@@ -288,9 +297,9 @@ export async function repeatList(
     const inputs = source.items.map((i) => {
       const section = i.section_id ? (sectionIds.get(i.section_id) ?? null) : null;
       const lost = Boolean(i.section_id) && section === null;
-      return copyInput(i, { section_id: section, position: lost ? null : (i.position ?? null) });
+      return copyInput(i, { section_id: section, position: lost ? null : (i.position ?? null) }, source.list.currency);
     });
-    await copyItems(list.id, inputs);
+    await copyItems(list.id, inputs, list.currency);
   } catch (e) {
     await deleteList(list.id).catch(() => {});
     throw e;

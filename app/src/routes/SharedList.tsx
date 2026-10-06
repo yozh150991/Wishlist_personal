@@ -9,6 +9,8 @@ import {
   releaseClaim,
 } from '../lib/shares';
 import type { SharedItem, SharedList as Shared } from '../lib/shares';
+import { CURRENCIES } from '../lib/types';
+import type { Currency } from '../lib/types';
 import {
   ensureKey,
   isGuestKey,
@@ -302,9 +304,18 @@ export default function SharedList({ base = '/s' }: { base?: GuestBase }) {
     await copyLink();
   }
 
+  /** Ціна в іншій валюті, ніж список (ADR-051): поріг ціни її не порівнює — 100 € не 100 zł. */
+  const foreign = (i: SharedItem) => Boolean(data && i.currency && i.currency !== data.currency);
   const thresholds = useMemo(
-    () => priceThresholds(items.map((i) => num(i.price)).filter((p): p is number => p !== null)),
-    [items],
+    () =>
+      priceThresholds(
+        items
+          .filter((i) => !foreign(i))
+          .map((i) => num(i.price))
+          .filter((p): p is number => p !== null),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, data],
   );
   const hasHigh = items.some((i) => i.priority === 'high');
 
@@ -319,7 +330,7 @@ export default function SharedList({ base = '/s' }: { base?: GuestBase }) {
         if (canClaim && filter === 'free' && !(left(i) > 0 || mine(i) > 0 || lost.has(i.id))) return false;
         if (maxPrice !== null) {
           const p = num(i.price);
-          if (p === null || p > maxPrice) return false;
+          if (p === null || foreign(i) || p > maxPrice) return false;
         }
         if (highOnly && i.priority !== 'high') return false;
         return true;
@@ -341,14 +352,20 @@ export default function SharedList({ base = '/s' }: { base?: GuestBase }) {
     return groups.filter((g) => g.items.length > 0);
   }, [shown, data, t]);
 
+  /** «1 240 zł + 85 €» — кожна валюта окремо, без курсу (ADR-051). */
   const freeSum = useMemo(() => {
     if (!data || data.hide_prices) return null;
-    let cents = 0;
+    const cents = new Map<Currency, number>();
     for (const i of freeItems) {
       const p = num(i.price);
-      if (p !== null) cents += Math.round(p * 100) * left(i);
+      const c = i.currency ?? data.currency;
+      if (p !== null) cents.set(c, (cents.get(c) ?? 0) + Math.round(p * 100) * left(i));
     }
-    return cents > 0 ? money(cents / 100, data.currency, locale) : null;
+    const order = [data.currency, ...CURRENCIES.filter((c) => c !== data.currency)];
+    const parts = order
+      .filter((c) => (cents.get(c) ?? 0) > 0)
+      .map((c) => money((cents.get(c) ?? 0) / 100, c, locale));
+    return parts.length > 0 ? parts.join(' + ') : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, items, locale]);
 

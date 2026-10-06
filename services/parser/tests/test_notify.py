@@ -128,6 +128,22 @@ class TestEvents:
         item = {"price": price, "link_price": shop, "link_currency": currency}
         assert notify.price_change(item, "UAH") == expected
 
+    def test_price_change_uses_the_item_currency(self):
+        """Позиція в євро в гривневому списку порівнюється з ціною магазину в євро (ADR-051)."""
+        item = {"price": "100.00", "currency": "EUR", "link_price": "130.00", "link_currency": "EUR"}
+        assert notify.price_change(item, "UAH") == (13000, 10000)
+        assert notify.price_change({**item, "currency": None}, "UAH") is None
+        found = notify.find_events(
+            owner(price=(True, False)),
+            LISTS,
+            [{**ITEMS[0], "price": "100.00", "currency": "EUR", "link_status": "ok", "link_price": "130.00", "link_currency": "EUR"}],
+            [],
+            today=TODAY,
+            logged=set(),
+        )
+        price_events = [e for e in found if e.kind == "price"]
+        assert price_events and price_events[0].occurrence.endswith(":EUR")
+
     def test_share_date_in_the_owner_zone(self):
         found = notify.find_events(owner(share=(True, False)), LISTS, [], SHARES, today=TODAY, logged=set())
         assert len(found) == 1 and found[0].path == "/shares"

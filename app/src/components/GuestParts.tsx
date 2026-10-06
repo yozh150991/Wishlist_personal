@@ -45,6 +45,8 @@ export type GuestItemView = {
   title: string;
   url: string | null;
   price: number | string | null;
+  /** Валюта ціни позиції (ADR-051); немає — валюта списку. */
+  currency?: Currency | null;
   quantity: number;
   priority: ItemPriority;
   note: string | null;
@@ -71,7 +73,7 @@ export function GuestItemBody({
   children?: ReactNode;
 }) {
   const { t, locale } = useI18n();
-  const price = money(item.price, currency, locale);
+  const price = money(item.price, item.currency ?? currency, locale);
   const host = hostOf(item.url);
   return (
     <>

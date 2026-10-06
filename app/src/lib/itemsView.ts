@@ -1,6 +1,6 @@
 import { num } from './format';
 import { groupItems, manualOrder } from './order';
-import type { Item, ItemPriority, Section, Totals } from './types';
+import type { Currency, Item, ItemPriority, ItemStatus, Section, Totals } from './types';
 
 /**
  * Вигляд позицій списку на екрані власника — чисті функції без React і мережі.
@@ -15,15 +15,19 @@ import type { Item, ItemPriority, Section, Totals } from './types';
  */
 
 /** «Вручну» — той самий порядок, що в гостя; решта — лише для власника (потік O2). */
-export type ViewSort = 'manual' | 'priority' | 'priceAsc' | 'priceDesc' | 'recent';
-export const VIEW_SORTS: ViewSort[] = ['manual', 'priority', 'priceAsc', 'priceDesc', 'recent'];
+export type ViewSort = 'manual' | 'priority' | 'priceAsc' | 'priceDesc' | 'recent' | 'title';
+export const VIEW_SORTS: ViewSort[] = ['manual', 'priority', 'priceAsc', 'priceDesc', 'recent', 'title'];
 
 export function isViewSort(value: unknown): value is ViewSort {
   return typeof value === 'string' && (VIEW_SORTS as string[]).includes(value);
 }
 
-/** Пошук, сортування й фільтри з'являються від стількох позицій (потік O). */
-export const TOOLS_FROM = 20;
+/**
+ * Пошук, сортування й фільтри з'являються від стількох позицій. У пакеті (O)
+ * було 20, але власник вирішив інакше (ADR-050): інструменти є завжди, як у
+ * v1, щойно в списку є хоч одна позиція.
+ */
+export const TOOLS_FROM = 1;
 
 /** Межі з check-обмежень таблиці `items` — форма перевіряє їх до відправки (CLAUDE.md §4). */
 export const ITEM_TITLE_MAX = 200;
@@ -34,10 +38,36 @@ export const ITEM_QTY_MAX = 999;
 /** «Усі» чи «Без ціни» — чипи під пошуком (O1). Фільтра за позначками у власника немає. */
 export type ViewFilter = 'all' | 'noPrice';
 
+/**
+ * Фільтри з аркуша «Фільтри» (як у v1, ADR-050): статус і ціна «від–до».
+ * Порожній `statuses` — усі статуси. Межі ціни — у мінорних одиницях,
+ * включно; позиція без ціни під діапазон не потрапляє.
+ */
+export type ViewRange = { statuses: ItemStatus[]; min: number | null; max: number | null };
+export const EMPTY_RANGE: ViewRange = { statuses: [], min: null, max: null };
+
+/** Скільки фільтрів аркуша ввімкнено — для лічильника на кнопці. */
+export function rangeCount(r: ViewRange): number {
+  return (r.statuses.length > 0 ? 1 : 0) + (r.min !== null || r.max !== null ? 1 : 0);
+}
+
 /** Від найбажанішого: так ідуть і групи, і сортування «Пріоритет». */
 export const PRIORITY_ORDER: ItemPriority[] = ['high', 'medium', 'low'];
 
 const RANK: Record<ItemPriority, number> = { high: 0, medium: 1, low: 2 };
+
+/**
+ * Валюта ціни позиції (ADR-051): своя або валюта списку. Порожня колонка й
+ * старий офлайн-знімок без поля — валюта списку.
+ */
+export function itemCurrency(item: Pick<Item, 'currency'>, listCurrency: Currency): Currency {
+  return item.currency ?? listCurrency;
+}
+
+/** Ціна позиції в іншій валюті, ніж список, — окремо в сумі й у кінці сортування за ціною. */
+export function isForeign(item: Pick<Item, 'currency'>, listCurrency: Currency): boolean {
+  return itemCurrency(item, listCurrency) !== listCurrency;
+}
 
 /**
  * Гроші — у мінорних одиницях (копійки, гроші, центи): у JS не рахуємо
@@ -48,52 +78,90 @@ export function toMinor(value: number | string | null | undefined): number | nul
   return n === null ? null : Math.round(n * 100);
 }
 
+/** Сума актуального в іншій валюті (ADR-051) — окремим доданком, без курсу. */
+export type ForeignSum = { currency: Currency; active_price: number };
+
+export type ViewTotals = Totals & { total_price: number; active_price: number; foreign: ForeignSum[] };
+
 /**
  * Підсумок списку з того, що на екрані, — ті самі правила, що в RPC
  * `list_totals`: ціна множиться на кількість, «без ціни» — усі статуси.
  * Рахуємо самі, а не беремо з сервера, щоб видалення з «Відмінити» й зміни в
  * офлайн-черзі одразу відбивались у сумі.
+ *
+ * Валюта (ADR-051): `active_price` і `total_price` — лише у валюті списку;
+ * актуальне в інших валютах — у `foreign`, по доданку на валюту, у порядку
+ * `CURRENCIES`. Злоті з євро не складаємо ніде. Без `listCurrency` усе
+ * вважається валютою списку — так рахувалось до ADR-051.
  */
-export function totalsOf(items: Item[]): Totals {
+export function totalsOf(items: Item[], listCurrency?: Currency): ViewTotals {
   let total = 0;
   let active = 0;
+  const foreign = new Map<Currency, number>();
   const out = { items_count: items.length, active_count: 0, purchased_count: 0, gifted_count: 0, items_no_price: 0 };
   for (const i of items) {
     const price = toMinor(i.price);
     const line = price === null ? 0 : price * i.quantity;
-    total += line;
+    const other = listCurrency !== undefined && isForeign(i, listCurrency);
     if (price === null) out.items_no_price++;
+    if (!other) total += line;
     if (i.status === 'active') {
       out.active_count++;
-      active += line;
+      if (!other) active += line;
+      else if (price !== null) {
+        const c = itemCurrency(i, listCurrency!);
+        foreign.set(c, (foreign.get(c) ?? 0) + line);
+      }
     } else if (i.status === 'purchased') out.purchased_count++;
     else out.gifted_count++;
   }
-  return { ...out, total_price: total / 100, active_price: active / 100 };
+  const order: Currency[] = ['PLN', 'UAH', 'EUR', 'USD'];
+  return {
+    ...out,
+    total_price: total / 100,
+    active_price: active / 100,
+    foreign: order
+      .filter((c) => (foreign.get(c) ?? 0) > 0)
+      .map((c) => ({ currency: c, active_price: (foreign.get(c) ?? 0) / 100 })),
+  };
 }
 
-/** Порівняння за ціною: позиції без ціни — завжди в кінці, у ручному порядку. */
-function byPrice(desc: boolean) {
+/**
+ * Порівняння за ціною. Позиції без ціни — завжди в кінці, у ручному порядку.
+ * Ціни в іншій валюті (ADR-051) — між ними: 100 € — не 100 zł, тож
+ * порівнюються лише з ціною в тій самій валюті, групами за валютою.
+ */
+function byPrice(desc: boolean, listCurrency?: Currency) {
+  const rank = (i: Item, p: number | null) =>
+    p === null ? 2 : listCurrency !== undefined && isForeign(i, listCurrency) ? 1 : 0;
   return (a: Item, b: Item) => {
     const pa = toMinor(a.price);
     const pb = toMinor(b.price);
-    if (pa === null && pb === null) return manualOrder(a, b);
-    if (pa === null) return 1;
-    if (pb === null) return -1;
-    if (pa !== pb) return desc ? pb - pa : pa - pb;
+    const ra = rank(a, pa);
+    const rb = rank(b, pb);
+    if (ra !== rb) return ra - rb;
+    if (ra === 2) return manualOrder(a, b);
+    if (ra === 1) {
+      const ca = itemCurrency(a, listCurrency!);
+      const cb = itemCurrency(b, listCurrency!);
+      if (ca !== cb) return ca < cb ? -1 : 1;
+    }
+    if (pa !== pb) return desc ? pb! - pa! : pa! - pb!;
     return manualOrder(a, b);
   };
 }
 
-export function sortItems(items: Item[], sort: ViewSort): Item[] {
+export function sortItems(items: Item[], sort: ViewSort, listCurrency?: Currency): Item[] {
   const out = [...items];
   switch (sort) {
     case 'priority':
       return out.sort((a, b) => RANK[a.priority] - RANK[b.priority] || manualOrder(a, b));
     case 'priceAsc':
-      return out.sort(byPrice(false));
+      return out.sort(byPrice(false, listCurrency));
     case 'priceDesc':
-      return out.sort(byPrice(true));
+      return out.sort(byPrice(true, listCurrency));
+    case 'title':
+      return out.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base', numeric: true }) || manualOrder(a, b));
     case 'recent':
       return out.sort((a, b) =>
         a.created_at !== b.created_at ? (a.created_at < b.created_at ? 1 : -1) : a.id < b.id ? -1 : 1,
@@ -126,7 +194,7 @@ export function viewGroups(
   items: Item[],
   sort: ViewSort,
   sections: Section[],
-  { keepEmpty }: { keepEmpty: boolean },
+  { keepEmpty, listCurrency }: { keepEmpty: boolean; listCurrency?: Currency },
 ): ViewGroup[] {
   if (sort === 'priority') {
     return PRIORITY_ORDER.map((priority) => ({
@@ -145,14 +213,32 @@ export function viewGroups(
       )
       .filter((g) => g.items.length > 0 || (keepEmpty && g.kind === 'section'));
   }
-  return [{ kind: 'all', key: 'all', items: sortItems(items, sort) }];
+  return [{ kind: 'all', key: 'all', items: sortItems(items, sort, listCurrency) }];
 }
 
 /** Пошук у назві без регістру — те саме правило, що в `list_items_page`. */
-export function matchesView(item: Item, search: string, filter: ViewFilter): boolean {
+/**
+ * Межі ціни — у валюті списку (ADR-051): позиція в іншій валюті під діапазон
+ * не потрапляє, як і позиція без ціни.
+ */
+export function matchesView(
+  item: Item,
+  search: string,
+  filter: ViewFilter,
+  range: ViewRange = EMPTY_RANGE,
+  listCurrency?: Currency,
+): boolean {
   const q = search.trim().toLowerCase();
   if (q && !item.title.toLowerCase().includes(q)) return false;
   if (filter === 'noPrice' && num(item.price) !== null) return false;
+  if (range.statuses.length > 0 && !range.statuses.includes(item.status)) return false;
+  if (range.min !== null || range.max !== null) {
+    const price = toMinor(item.price);
+    if (price === null) return false;
+    if (listCurrency !== undefined && isForeign(item, listCurrency)) return false;
+    if (range.min !== null && price < range.min) return false;
+    if (range.max !== null && price > range.max) return false;
+  }
   return true;
 }
 
@@ -226,18 +312,19 @@ export const PRICE_CHANGE_RATIO = 0.15;
 
 /**
  * Ціна, яку перевірка побачила в магазині (ADR-048), якщо вона інша, ніж у
- * списку. Іншу валюту не порівнюємо: курсів застосунок не знає (ADR-005).
+ * списку. Порівнюємо з валютою позиції (ADR-051): товар у євро з магазину в
+ * євро теж перевіряється. Іншу валюту не порівнюємо — курсу для цього немає.
  * `notable` — різниця від 15 % зі своєю ціною в списку: це мітка на картці.
  * У формі позиції показуємо будь-яку різницю, зокрема коли своєї ціни ще немає.
  */
 export function linkPriceChange(
-  item: Pick<Item, 'price' | 'link_price' | 'link_currency' | 'link_status'>,
-  currency: string,
+  item: Pick<Item, 'price' | 'link_price' | 'link_currency' | 'link_status' | 'currency'>,
+  listCurrency: Currency,
 ): { price: number; notable: boolean } | null {
   if (item.link_status !== 'ok' && item.link_status !== 'out') return null;
   const shop = toMinor(item.link_price);
   if (shop === null || shop === 0) return null;
-  if (item.link_currency && item.link_currency !== currency) return null;
+  if (item.link_currency && item.link_currency !== itemCurrency(item, listCurrency)) return null;
   const own = toMinor(item.price);
   if (own === shop) return null;
   // Без своєї ціни різниці немає: лише підказка в діалозі, без мітки на картці.
@@ -293,4 +380,36 @@ export function parsePrice(input: string): PriceParse {
   const value = Number(s);
   if (value > PRICE_MAX) return { value: null, error: 'tooBig' };
   return { value, error: null };
+}
+
+/* ── Курс НБП: лише підказка «≈» (ADR-051) ─────────────────── */
+
+export type FxRate = { pln_per_unit: number; rate_date: string };
+export type FxRates = Partial<Record<Currency, FxRate>>;
+
+/**
+ * Приблизна сума всіх доданків у валюті списку: через злотий за середнім
+ * курсом НБП, округлена до цілих — це «≈», а не гроші. `date` — найстаріша
+ * дата курсу, що пішов у розрахунок. `null` — бракує курсу хоч для однієї
+ * валюти: неповна підказка гірша за жодну.
+ */
+export function approxTotal(
+  parts: { currency: Currency; amount: number }[],
+  listCurrency: Currency,
+  rates: FxRates,
+): { amount: number; date: string } | null {
+  const plnPer = (c: Currency): number | null => (c === 'PLN' ? 1 : (rates[c]?.pln_per_unit ?? null));
+  const target = plnPer(listCurrency);
+  if (target === null) return null;
+  let pln = 0;
+  const dates: string[] = [];
+  for (const p of parts) {
+    const r = plnPer(p.currency);
+    if (r === null) return null;
+    pln += p.amount * r;
+    if (p.currency !== 'PLN') dates.push(rates[p.currency]!.rate_date);
+  }
+  if (listCurrency !== 'PLN') dates.push(rates[listCurrency]!.rate_date);
+  if (dates.length === 0) return null;
+  return { amount: Math.round(pln / target), date: dates.sort()[0]! };
 }

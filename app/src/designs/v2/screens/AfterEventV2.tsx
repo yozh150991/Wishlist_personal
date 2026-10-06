@@ -2,11 +2,12 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Archive, ArchiveRestore, Check, CopyPlus, Gift, Repeat } from 'lucide-react';
 import { copyItems, createListWithItems, fetchListsOverview, repeatList } from '../../../lib/db';
 import { copyInput, eventYear, repeatTarget, repeatTitle } from '../../../lib/afterEvent';
+import { itemCurrency } from '../../../lib/itemsView';
 import { useI18n } from '../../../lib/i18n';
 import { errorText } from '../../../lib/errors';
 import { formatDay, localToday, moneyShort } from '../../../lib/format';
-import type { Item, List, Section } from '../../../lib/types';
-import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
+import type { Currency, Item, List, Section } from '../../../lib/types';
+import { DateFieldV2, FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { SheetV2, SwitchV2, YearlySwitchV2 } from './CommonV2';
 
 const STROKE = 2.75;
@@ -196,7 +197,7 @@ function PickList({
                 <span className="v2-pick__text">
                   <span className="v2-pick__name">{item.title}</span>
                   <span className="v2-pick__meta">
-                    {moneyShort(item.price, currency, locale) ?? t('v2list.item.noPrice')}
+                    {moneyShort(item.price, itemCurrency(item, currency), locale) ?? t('v2list.item.noPrice')}
                   </span>
                 </span>
               </label>
@@ -294,7 +295,7 @@ export function ReceivedSheetV2({
   );
 }
 
-type Target = { kind: 'new' } | { kind: 'list'; id: string; title: string };
+type Target = { kind: 'new' } | { kind: 'list'; id: string; title: string; currency: Currency };
 
 /**
  * «Перенести, що ще хочу» (M4). Переносимо **копії**: цей список лишається
@@ -352,13 +353,13 @@ export function CarrySheetV2({
     if (target.kind === 'new' && !name.trim()) return nameRef.current?.focus();
     setBusy(true);
     setServer(null);
-    const inputs = items.filter((i) => selected.has(i.id)).map((i) => copyInput(i));
+    const inputs = items.filter((i) => selected.has(i.id)).map((i) => copyInput(i, undefined, list.currency));
     try {
       if (target.kind === 'new') {
         const created = await createListWithItems({ title: name.trim(), currency: list.currency }, inputs, userId);
         onDone({ id: created.id, title: created.title }, inputs.length);
       } else {
-        await copyItems(target.id, inputs);
+        await copyItems(target.id, inputs, target.currency);
         onDone({ id: target.id, title: target.title }, inputs.length);
       }
       onClose();
@@ -422,7 +423,7 @@ export function CarrySheetV2({
                         type="radio"
                         name="carry-target"
                         checked={on}
-                        onChange={() => setTarget({ kind: 'list', id: l.id, title: l.title })}
+                        onChange={() => setTarget({ kind: 'list', id: l.id, title: l.title, currency: l.currency })}
                       />
                       <span className="v2-pick__text">
                         <span className="v2-pick__name">{l.title}</span>
@@ -550,12 +551,11 @@ export function RepeatSheetV2({
             error={submitted && !name.trim() ? t('v2app.newList.nameEmpty') : null}
             onChange={(e) => setName(e.target.value)}
           />
-          <FieldV2
+          <DateFieldV2
             label={t('v2app.newList.date')}
             name="repeat_date"
-            type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={setDate}
           />
           {items.length > 0 ? (
             <SwitchV2

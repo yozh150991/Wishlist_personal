@@ -48,7 +48,8 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token, p_key: 
   "sections": [{ "id": "…", "title": "Кухня" }],   // лише розділи зі спільними позиціями, у порядку власника (ADR-036)
   "items": [{
     "id": "…", "title": "Навушники", "url": "https://…",
-    "price": "399.00", "quantity": 1, "priority": "high",
+    "price": "399.00", "currency": "PLN",   // валюта ціни позиції, уже розгорнута (ADR-051)
+    "quantity": 1, "priority": "high",
     "note": null, "image_url": "https://…", "status": "active",
     "variants": [{ "label": "Розмір", "value": "M" }],   // до 5 пар, ADR-030
     "section_id": "…",       // розділ або null — «Інше»
@@ -60,6 +61,8 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token, p_key: 
 Помилка одна: `not_found` (код `P0002`) — і для неіснуючого, і для відкликаного, і для протермінованого токена (ADR-035). Відповідь не має підтверджувати, що токен колись існував.
 
 Показуються лише позиції зі `status = 'active'`. При `hide_prices: true` поле `price` повертається як `null` — ціна не їде на клієнт узагалі, не ховається стилями.
+
+`currency` у позиції (ADR-051) — її валюта, а якщо своєї немає, валюта списку; поле верхнього рівня `currency` — валюта списку, як і раніше. Різні валюти гостьова сторінка не складає: «Ще вільно на 1 240 zł + 85 €».
 
 `variants` від `hide_prices` не залежить: розмір і колір — не ціна, і саме заради них гість і дивиться картку.
 
@@ -136,6 +139,7 @@ const { data } = await supabase.rpc('list_totals', { p_list_id: listId });
 // → { items_count, active_count, purchased_count, gifted_count,
 //     total_price, active_price, items_no_price }
 ```
+Суми — лише позиції у валюті списку (ADR-051); кількості й `items_no_price` — усі позиції. v2 цю функцію не викликає: сума рахується на клієнті (`totalsOf`), з іншими валютами окремими доданками.
 
 ### `save_push_subscription` — authenticated
 ```ts
@@ -319,6 +323,8 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 | `checked` | скільки позицій записано |
 
 Поля з нулем у відповіді відсутні. Адрес, назв і `id` позицій немає ні у відповіді, ні в логах.
+
+Перед перевіркою той самий виклик оновлює курс НБП (ADR-051): `GET https://api.nbp.pl/api/exchangerates/tables/A/?format=json`, рядки `EUR`, `USD`, `UAH` — upsert у `fx_rates`. У відповіді — `"fx_rates": 3` (скільки записано; `0` — НБП не відповів, перевірка посилань іде далі).
 
 **Помилки**
 | Код | Коли |

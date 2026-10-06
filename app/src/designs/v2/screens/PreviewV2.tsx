@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { itemCurrency } from '../../../lib/itemsView';
 import { useI18n } from '../../../lib/i18n';
 import { useTheme } from '../../../lib/theme';
 import { fetchAppearanceHue } from '../../../lib/appearances';
@@ -85,7 +86,7 @@ export function GuestPreviewV2({
                 {g.title && <p className="v2-gprev__section">{g.title}</p>}
                 <ul className="v2-gprev__items">
                   {g.items.map((item) => {
-                    const price = hidePrices ? null : moneyShort(item.price, currency, locale);
+                    const price = hidePrices ? null : moneyShort(item.price, itemCurrency(item, currency), locale);
                     const variants = item.variants.map((v) => v.value).join(' · ');
                     return (
                       <li key={item.id} className="v2-gprev__card">

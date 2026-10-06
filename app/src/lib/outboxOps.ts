@@ -60,6 +60,7 @@ function draftItem(op: Extract<Op, { kind: 'create' }>, now: string): Item {
     section_id: op.input.section_id ?? null,
     position: null,
     needs_title: op.input.needs_title ?? false,
+    currency: op.input.currency ?? null,
     source_site: null,
     parsed_at: null,
     created_at: now,

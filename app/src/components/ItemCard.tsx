@@ -43,7 +43,8 @@ export function ItemCard({
   dragging?: boolean;
 }) {
   const { t, locale } = useI18n();
-  const price = money(item.price, currency, locale);
+  // Своя валюта позиції (ADR-051) — задається у v2; v1 її лише показує.
+  const price = money(item.price, item.currency ?? currency, locale);
   const host = hostOf(item.url);
   const statusLabel = t(`item.status.${item.status}`);
 

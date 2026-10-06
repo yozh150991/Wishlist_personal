@@ -1,12 +1,13 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Check, Link2 } from 'lucide-react';
+import { itemCurrency } from '../../../lib/itemsView';
 import { useI18n } from '../../../lib/i18n';
 import { errorText } from '../../../lib/errors';
 import { localToday, moneyShort } from '../../../lib/format';
 import { useMediaQuery } from '../../../lib/media';
 import { createShare, revokeShare, shareUrl } from '../../../lib/shares';
 import type { List } from '../../../lib/types';
-import { FieldV2, IconCircleV2, NoteV2, SubmitV2 } from './AuthPartsV2';
+import { DateFieldV2, FieldV2, IconCircleV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { SheetV2, SwitchV2, useCounts } from './CommonV2';
 import { ConfirmSheetV2 } from './ListPartsV2';
 import { NotifyAskV2 } from './NotifyV2';
@@ -212,7 +213,7 @@ export function ShareSheetV2({
       <ul className="v2-pick__list">
         {all.map((item) => {
           const on = selected.has(item.id);
-          const price = moneyShort(item.price, list?.currency ?? 'PLN', locale);
+          const price = moneyShort(item.price, itemCurrency(item, list?.currency ?? 'PLN'), locale);
           return (
             <li key={item.id}>
               <label className="v2-pick__row" data-on={on || undefined}>
@@ -284,14 +285,13 @@ export function ShareSheetV2({
           onChange={setAllowClaims}
         />
       </div>
-      <FieldV2
+      <DateFieldV2
         label={t('v2share.expires')}
         name="share_expires"
-        type="date"
         min={localToday()}
         value={expiresOn}
         error={pastError}
-        onChange={(e) => setExpiresOn(e.target.value)}
+        onChange={setExpiresOn}
       />
       {noneError && <NoteV2 tone="error">{noneError}</NoteV2>}
     </>

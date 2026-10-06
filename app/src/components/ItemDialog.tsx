@@ -262,7 +262,10 @@ export function ItemDialog({
             max="9999999999"
             step="0.01"
             inputMode="decimal"
-            hint={t('item.fields.priceHint')}
+            hint={
+              // Валюту позиції задають у v2 (ADR-051); тут її не губимо й не міняємо — лише кажемо.
+              item?.currency ? t('item.fields.priceCurrency', { currency: item.currency }) : t('item.fields.priceHint')
+            }
             value={form.price}
             onChange={(e) => set('price', e.target.value)}
           />

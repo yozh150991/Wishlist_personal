@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AlertCircle, Check, ChevronRight, Link2, ListPlus, Plus, Repeat } from 'lucide-react';
-import { createList, deleteList, fetchDefaultCurrency, fetchListsOverview } from '../../../lib/db';
+import { AlertCircle, Check, ChevronRight, FileUp, Link2, ListPlus, Plus, Repeat } from 'lucide-react';
+import { createList, createListWithItems, deleteList, fetchDefaultCurrency, fetchListsOverview } from '../../../lib/db';
 import { fetchAppearances } from '../../../lib/appearances';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
@@ -13,10 +13,12 @@ import { LISTS_KEY, readSnapshot, saveSnapshot } from '../../../lib/cache';
 import { overlayVars } from '../../../lib/hue-ramp.js';
 import { useUndo } from '../../../lib/undo';
 import { readYearlyDismissed, writeYearlyDismissed, yearlyDue } from '../../../lib/afterEvent';
-import type { List } from '../../../lib/types';
+import type { Currency, List } from '../../../lib/types';
+import type { TransferItem, TransferList } from '../../../lib/transfer';
 import { NoteV2 } from './AuthPartsV2';
 import { useCounts } from './CommonV2';
 import { UndoToastV2 } from './ListPartsV2';
+import { ImportSheetV2 } from './ImportSheetV2';
 
 /** Стрічка «Вітаю!» після входу живе стільки (A4). */
 const WELCOME_MS = 4000;
@@ -108,6 +110,16 @@ export default function ListsV2() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [firstRun, setFirstRun] = useState(() => !firstRunDone());
   const [starting, setStarting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  /** Валюта для імпорту з CSV (у ньому валюти немає) — з профілю, інакше PLN. */
+  const [importCurrency, setImportCurrency] = useState<Currency>('PLN');
+
+  useEffect(() => {
+    if (!userId) return;
+    fetchDefaultCurrency(userId)
+      .then((c) => c && setImportCurrency(c))
+      .catch(() => undefined);
+  }, [userId]);
   /** «Не цього разу» в цьому відкритті — щоб картка зникла одразу, без перечитування сховища. */
   const [notNow, setNotNow] = useState<Set<string>>(new Set());
   const undo = useUndo(UNDO_MS);
@@ -275,6 +287,32 @@ export default function ListsV2() {
   const empty = !loading && !error && visible.length === 0;
 
   /**
+   * Імпорт із файлу (ADR-050): список створюється з позиціями одним кроком і
+   * одразу відкривається з рядком «Імпортовано N». Збій — список не лишається
+   * напівпорожнім: `createListWithItems` прибирає його сам.
+   */
+  async function importFile(list: TransferList, items: TransferItem[]) {
+    const created = await createListWithItems(list, items, userId);
+    setImportOpen(false);
+    navigate(`/lists/${created.id}`, { state: { flash: t('v2import.done', { n: items.length }) } });
+  }
+
+  const importButton = (
+    <button type="button" className="v2-btn v2-btn--ghost" onClick={() => setImportOpen(true)}>
+      <FileUp size={20} strokeWidth={2.75} aria-hidden="true" />
+      {t('v2import.open')}
+    </button>
+  );
+  const importSheet = (
+    <ImportSheetV2
+      open={importOpen}
+      defaultCurrency={importCurrency}
+      onClose={() => setImportOpen(false)}
+      onImport={importFile}
+    />
+  );
+
+  /**
    * «Вставити посилання на річ» (Q2): список створюється з назвою «Мої
    * бажання» — назвати інакше можна пізніше, у налаштуваннях списку, — і
    * одразу відкривається форма позиції. Чернеток без назви ще немає (крок 4).
@@ -391,6 +429,8 @@ export default function ListsV2() {
         <Link to="/lists/new" className="v2-btn v2-btn--ghost">
           {t('v2app.templates.own')}
         </Link>
+        {importButton}
+        {importSheet}
         {toast}
       </main>
     );
@@ -486,8 +526,10 @@ export default function ListsV2() {
               <ul className="v2-listgrid">{groups.archived.map((l) => card(l, 'archived'))}</ul>
             </details>
           )}
+          <div className="v2-lists__foot">{importButton}</div>
         </div>
       )}
+      {importSheet}
       {toast}
     </main>
   );

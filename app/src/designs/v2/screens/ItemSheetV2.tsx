@@ -15,12 +15,13 @@ import {
   PRIORITY_ORDER,
   draftTitle,
   findSameTitle,
+  itemCurrency,
   findSameUrl,
   linkPriceChange,
   normalizeUrl,
   parsePrice,
 } from '../../../lib/itemsView';
-import { VARIANTS_MAX, VARIANT_LABEL_MAX, VARIANT_VALUE_MAX } from '../../../lib/types';
+import { CURRENCIES, VARIANTS_MAX, VARIANT_LABEL_MAX, VARIANT_VALUE_MAX } from '../../../lib/types';
 import type { Currency, Item, ItemInput, ItemPriority, ItemVariant } from '../../../lib/types';
 import type { Section } from '../../../lib/sections';
 import { FieldV2, NoteV2, OrDividerV2 } from './AuthPartsV2';
@@ -43,9 +44,11 @@ type Form = {
   note: string;
   image_url: string;
   section_id: string;
+  /** Валюта ціни (ADR-051) — завжди розгорнута; `null` у базу йде, коли вона = валюта списку. */
+  currency: Currency;
 };
 
-const EMPTY: Form = {
+const EMPTY: Omit<Form, 'currency'> = {
   url: '',
   title: '',
   price: '',
@@ -56,8 +59,9 @@ const EMPTY: Form = {
   section_id: '',
 };
 
-function fromItem(item: Item): Form {
+function fromItem(item: Item, listCurrency: Currency): Form {
   return {
+    currency: itemCurrency(item, listCurrency),
     url: item.url ?? '',
     // У чернетки в назві — адреса-заглушка; поле порожнє, щоб його дописали.
     title: item.needs_title ? '' : item.title,
@@ -71,6 +75,24 @@ function fromItem(item: Item): Form {
 }
 
 type Note = { tone: 'warn' | 'info'; text: string };
+
+/**
+ * Адреса картинки — як вимагає `items.image_url`: `http(s)://` і до 2048
+ * символів. Без «нормалізації» посилань позиції: мітки в запиті картинки —
+ * часто частина її адреси на CDN, їх не можна викидати.
+ */
+function imageCheck(raw: string): 'empty' | 'ok' | 'bad' | 'tooLong' {
+  const s = raw.trim();
+  if (!s) return 'empty';
+  if (s.length > ITEM_URL_MAX) return 'tooLong';
+  if (!/^https?:\/\//i.test(s)) return 'bad';
+  try {
+    const u = new URL(s);
+    return u.hostname.includes('.') ? 'ok' : 'bad';
+  } catch {
+    return 'bad';
+  }
+}
 
 /**
  * Нова позиція й зміна позиції v2 (потоки C, J1, L1, R1–R2, V1).
@@ -90,8 +112,10 @@ type Note = { tone: 'warn' | 'info'; text: string };
  * назву дописано, це звичайна позиція.
  *
  * Ознаки («+ Розмір, колір») з'являються на вимогу — у формі за
- * замовчуванням їх немає (V1). Своє фото — пізніше (ROADMAP, крок 4+):
- * поки лише фото з магазину, яке можна прибрати.
+ * замовчуванням їх немає (V1). Фото — посиланням на картинку, як у v1:
+ * магазин підставляє своє, його можна прибрати, замінити або вписати вручну;
+ * «Заповнити з посилання» дотягує порожні поля й у вже збереженої позиції.
+ * Своє фото файлом — пізніше, разом із місцем для файлів (ROADMAP, V2).
  *
  * Що побачила щоденна перевірка посилання (R, ADR-048), — згори зміни
  * позиції: сторінки немає — «Замінити посилання», «Шукати деінде», «Прибрати
@@ -137,7 +161,7 @@ export function ItemSheetV2({
   const hintsId = useId();
 
   const [stage, setStage] = useState<Stage>('link');
-  const [form, setForm] = useState<Form>(EMPTY);
+  const [form, setForm] = useState<Form>(() => ({ ...EMPTY, currency }));
   const [variants, setVariants] = useState<ItemVariant[]>([]);
   const [variantsOpen, setVariantsOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -161,6 +185,11 @@ export function ItemSheetV2({
   const urlRef = useRef<HTMLInputElement>(null);
   const priceRef = useRef<HTMLInputElement>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
+  const imageRef = useRef<HTMLInputElement>(null);
+  /** Адреса картинки, яка не відкрилась, — щоб не мигати битим значком. */
+  const [brokenImage, setBrokenImage] = useState<string | null>(null);
+  /** Свіжий стан форми для async-читання: що саме парсер дописав. */
+  const formRef = useRef<Form>({ ...EMPTY, currency });
   const topRef = useRef<HTMLDivElement>(null);
   /** Куди поставити фокус після відкриття чи зміни кроку. */
   const focusNext = useRef<'link' | 'title' | null>(null);
@@ -175,7 +204,7 @@ export function ItemSheetV2({
       reader.current?.abort();
       return;
     }
-    setForm(item ? fromItem(item) : { ...EMPTY, title: presetTitle ?? '' });
+    setForm(item ? fromItem(item, currency) : { ...EMPTY, currency, title: presetTitle ?? '' });
     setVariants(item ? item.variants.map((v) => ({ ...v })) : []);
     setVariantsOpen(Boolean(item && item.variants.length > 0));
     setStage(item || presetTitle ? 'form' : 'link');
@@ -189,7 +218,11 @@ export function ItemSheetV2({
     setServer(null);
     setBusy(false);
     setResetNote(null);
+    setBrokenImage(null);
     focusNext.current = item ? null : presetTitle ? 'title' : 'link';
+    // Валюта списку не міняється, поки форма відкрита; у залежностях вона
+    // лише перевідкривала б форму й губила вписане.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item, presetTitle]);
 
   // Фокус — після того, як вікно вже відкрите (SheetV2 відкриває його в
@@ -211,6 +244,8 @@ export function ItemSheetV2({
     if (server) topRef.current?.scrollIntoView({ block: 'nearest' });
   }, [server]);
 
+  formRef.current = form;
+
   function set<K extends keyof Form>(key: K, value: Form[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
@@ -220,8 +255,10 @@ export function ItemSheetV2({
   /**
    * Читає сторінку й заповнює **порожні** поля. Уже вписане людиною не
    * перезаписуємо: ручний ввід важливіший за здогад парсера (C2).
+   * `asked` — людина сама натиснула «Заповнити з посилання»: тоді й «нічого
+   * не дописано» варте рядка, інакше натиск виглядав би зламаним.
    */
-  async function read(url: string) {
+  async function read(url: string, asked = false) {
     reader.current?.abort();
     if (!parserConfigured()) return;
     const ctl = new AbortController();
@@ -232,18 +269,35 @@ export function ItemSheetV2({
     try {
       const got = await parseUrl(url, ctl.signal);
       if (ctl.signal.aborted) return;
-      const image = got.image_url && got.image_url.length <= ITEM_URL_MAX ? got.image_url : '';
+      const image = got.image_url && imageCheck(got.image_url) === 'ok' ? got.image_url : '';
+      const before = formRef.current;
+      const filled =
+        (!before.title && Boolean(got.title)) ||
+        (!before.price && got.price !== null) ||
+        (!before.image_url && Boolean(image));
+      // Ціну з магазину беремо разом із її валютою, якщо застосунок її знає (ADR-051).
+      const shopCurrency = CURRENCIES.find((c) => c === got.currency) ?? null;
+      const takesPrice = !before.price && got.price !== null;
       setForm((f) => ({
         ...f,
         title: f.title || (got.title ?? '').slice(0, ITEM_TITLE_MAX),
         price: f.price || (got.price !== null ? String(got.price) : ''),
+        currency: !f.price && takesPrice && shopCurrency ? shopCurrency : f.currency,
         image_url: f.image_url || image,
       }));
       setParsed(true);
       if (!got.title && got.price === null) setParseNote({ tone: 'warn', text: t('v2item.readFailed') });
+      else if (asked && !filled) setParseNote({ tone: 'info', text: t('v2item.link.fillNothing') });
       else if (got.partial) setParseNote({ tone: 'info', text: t('parser.partial') });
-      else if (got.currency && got.currency !== currency) {
-        setParseNote({ tone: 'info', text: t('parser.gotCurrency', { currency: got.currency }) });
+      else if (got.currency && got.currency !== currency && takesPrice) {
+        // Знайома валюта вже стоїть поруч із ціною — про неї й кажемо. Незнайома
+        // (GBP, CZK…) — лише попередження: таку ціну треба перерахувати самому.
+        setParseNote({
+          tone: 'info',
+          text: shopCurrency
+            ? t('v2item.currency.fromShop', { currency: shopCurrency })
+            : t('parser.gotCurrency', { currency: got.currency }),
+        });
       }
     } catch (e) {
       if (ctl.signal.aborted) return;
@@ -348,6 +402,9 @@ export function ItemSheetV2({
         ? t('item.errors.priceTooBig')
         : null;
   const qtyError = checked && !qtyOk ? t('item.errors.badQuantity') : null;
+  const image = imageCheck(form.image_url);
+  const imageError =
+    checked && image === 'bad' ? t('v2item.photo.bad') : checked && image === 'tooLong' ? t('v2item.photo.tooLong') : null;
 
   const same = stage === 'form' && urlNormal ? findSameUrl(items, urlNormal, item?.id) : undefined;
   const sameTitle = !same && title ? findSameTitle(items, title, item?.id) : undefined;
@@ -364,6 +421,10 @@ export function ItemSheetV2({
     }
     if (!qtyOk) {
       qtyRef.current?.focus();
+      return false;
+    }
+    if (image === 'bad' || image === 'tooLong') {
+      imageRef.current?.focus();
       return false;
     }
     if (variantsKey) {
@@ -403,6 +464,8 @@ export function ItemSheetV2({
       price: price.value,
       quantity: qty,
       priority: form.priority,
+      // Валюта списку — NULL: позиція йде за списком, як у v1 (ADR-051).
+      currency: form.currency === currency ? null : form.currency,
       note: form.note.trim() || null,
       variants: cleanVariants(filledVariants),
       image_url: form.image_url.trim() || null,
@@ -465,7 +528,7 @@ export function ItemSheetV2({
   const heading = editing ? t('v2item.editTitle') : t('v2item.newTitle');
   const showPreview = stage === 'form' && !editing && Boolean(form.url) && (reading || parsed || Boolean(form.image_url));
   const host = hostOf(urlNormal);
-  const priceText = price.value !== null ? moneyShort(price.value, currency, locale) : null;
+  const priceText = price.value !== null ? moneyShort(price.value, form.currency, locale) : null;
 
   // Висновок перевірки стосується збереженого посилання; нове ще не перевіряли.
   const inspected = editing && item && item.url && normalizeUrl(form.url) === item.url ? item : null;
@@ -474,6 +537,10 @@ export function ItemSheetV2({
   const shopPrice = inspected && inspected.status === 'active' ? linkPriceChange(inspected, currency) : null;
   const checkedOn = formatDay(inspected?.link_checked_at ?? null, locale) ?? '';
   const searchHref = `https://www.google.com/search?q=${encodeURIComponent(form.title.trim() || item?.title || '')}`;
+
+  const imageSrc = image === 'ok' ? form.image_url.trim() : null;
+  const imageBroken = imageSrc !== null && brokenImage === imageSrc;
+  const canFill = stage === 'form' && Boolean(urlNormal) && !urlError && parserConfigured() && !reading;
 
   function replaceLink() {
     urlRef.current?.focus();
@@ -577,7 +644,7 @@ export function ItemSheetV2({
                     {shopPrice && (
                       <p className="v2-linkcheck__line">
                         {t('v2item.linkcheck.price', {
-                          price: moneyShort(shopPrice.price, currency, locale) ?? '',
+                          price: moneyShort(shopPrice.price, form.currency, locale) ?? '',
                           date: checkedOn,
                         })}
                       </p>
@@ -615,7 +682,16 @@ export function ItemSheetV2({
                   <div className="v2-preview" aria-busy={reading || undefined}>
                     {form.image_url ? (
                       <span className="v2-preview__imgbox">
-                        <img className="v2-preview__img" src={form.image_url} alt="" />
+                        {brokenImage === form.image_url.trim() ? (
+                          <span className="v2-preview__img v2-preview__img--empty" aria-hidden="true" />
+                        ) : (
+                          <img
+                            className="v2-preview__img"
+                            src={form.image_url}
+                            alt=""
+                            onError={() => setBrokenImage(form.image_url.trim())}
+                          />
+                        )}
                         <button
                           type="button"
                           className="v2-preview__remove"
@@ -661,7 +737,7 @@ export function ItemSheetV2({
                     <p className="v2-same__title">{t('v2item.same.title')}</p>
                     <p className="v2-same__item">
                       {same.title}
-                      {same.price !== null && ` · ${moneyShort(same.price, currency, locale)}`}
+                      {same.price !== null && ` · ${moneyShort(same.price, itemCurrency(same, currency), locale)}`}
                     </p>
                     <p className="v2-same__body">{t('v2item.same.body')}</p>
                     <div className="v2-same__actions">
@@ -692,6 +768,14 @@ export function ItemSheetV2({
                   error={titleError}
                   warning={sameTitle ? t('v2item.title.same', { title: sameTitle.title }) : null}
                   onChange={(e) => set('title', e.target.value)}
+                  after={
+                    // Лічильник, як у v1: межа з бази, і краще бачити її заздалегідь.
+                    form.title.length > 0 ? (
+                      <p className="v2-count" data-full={form.title.length >= ITEM_TITLE_MAX || undefined}>
+                        {form.title.length} / {ITEM_TITLE_MAX}
+                      </p>
+                    ) : null
+                  }
                 />
 
                 {urlNormal && !title && !reading && (!editing || draftEdit) && (
@@ -717,10 +801,30 @@ export function ItemSheetV2({
                     name="price"
                     inputMode="decimal"
                     autoComplete="off"
-                    placeholder={currencySymbol(currency, locale)}
+                    placeholder={currencySymbol(form.currency, locale)}
                     value={form.price}
                     error={priceError}
                     onChange={(e) => set('price', e.target.value)}
+                    addon={
+                      <select
+                        className="v2-field__addon v2-cursel"
+                        name="currency"
+                        aria-label={t('v2item.currency.label')}
+                        value={form.currency}
+                        onChange={(e) => set('currency', e.target.value as Currency)}
+                      >
+                        {CURRENCIES.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    }
+                    after={
+                      form.currency !== currency ? (
+                        <p className="v2-hint v2-hint--start">{t('v2item.currency.other', { currency })}</p>
+                      ) : null
+                    }
                   />
                   <FieldV2
                     ref={qtyRef}
@@ -804,6 +908,59 @@ export function ItemSheetV2({
                   error={urlError}
                   onChange={(e) => set('url', e.target.value)}
                   onPaste={onFormUrlPaste}
+                  after={
+                    canFill ? (
+                      <p className="v2-field__after v2-field__after--start">
+                        <button type="button" className="v2-link v2-linkbtn" onClick={() => void read(urlNormal!, true)}>
+                          {t('v2item.link.fill')}
+                        </button>
+                      </p>
+                    ) : null
+                  }
+                />
+
+                <FieldV2
+                  ref={imageRef}
+                  label={t('v2item.photo.label')}
+                  name="image_url"
+                  type="url"
+                  inputMode="url"
+                  autoComplete="off"
+                  placeholder={t('v2item.photo.placeholder')}
+                  value={form.image_url}
+                  error={imageError}
+                  warning={imageBroken ? t('v2item.photo.broken') : null}
+                  onChange={(e) => set('image_url', e.target.value)}
+                  after={
+                    // Угорі вже є прев'ю з тим самим фото — другий раз не малюємо.
+                    imageSrc && !showPreview ? (
+                      <div className="v2-photo">
+                        <span className="v2-preview__imgbox">
+                          {imageBroken ? (
+                            <span className="v2-preview__img v2-preview__img--empty" aria-hidden="true" />
+                          ) : (
+                            <img
+                              className="v2-preview__img"
+                              src={imageSrc}
+                              alt=""
+                              onError={() => setBrokenImage(imageSrc)}
+                            />
+                          )}
+                          <button
+                            type="button"
+                            className="v2-preview__remove"
+                            aria-label={t('v2item.photo.remove')}
+                            onClick={() => {
+                              set('image_url', '');
+                              imageRef.current?.focus();
+                            }}
+                          >
+                            <X size={16} strokeWidth={STROKE} aria-hidden="true" />
+                          </button>
+                        </span>
+                      </div>
+                    ) : null
+                  }
                 />
 
                 {editing && (

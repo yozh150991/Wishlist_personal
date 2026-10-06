@@ -1,22 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Plus } from 'lucide-react';
 import { createList, fetchDefaultCurrency, fetchListsOverview } from '../../../lib/db';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
 import { errorText } from '../../../lib/errors';
 import { localToday } from '../../../lib/format';
+import { CURRENCIES } from '../../../lib/types';
 import type { Currency } from '../../../lib/types';
-import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
+import { DateFieldV2, FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { SheetV2, YearlySwitchV2 } from './CommonV2';
 
 /** Межа з БД (`lists.title`, README «Обмеження полів») — і тут, до відправки. */
 const TITLE_MAX = 120;
+/** Межа `lists.description` — та сама, що в налаштуваннях списку. */
+const DESCRIPTION_MAX = 2000;
 const DRAFT_KEY = 'wl.v2.listDraft';
 /** Валюта, якщо в профілі її не задано, — та сама, що в v1. */
 const FALLBACK_CURRENCY: Currency = 'PLN';
 
-type Draft = { title: string; date: string; yearly: boolean };
+type Draft = { title: string; date: string; yearly: boolean; description: string };
 
 function readDraft(): Draft | null {
   try {
@@ -27,6 +30,7 @@ function readDraft(): Draft | null {
       title: typeof d.title === 'string' ? d.title : '',
       date: typeof d.date === 'string' ? d.date : '',
       yearly: d.yearly === true,
+      description: typeof d.description === 'string' ? d.description : '',
     };
   } catch {
     return null;
@@ -35,7 +39,7 @@ function readDraft(): Draft | null {
 
 function writeDraft(d: Draft) {
   try {
-    if (d.title.trim() || d.date) localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+    if (d.title.trim() || d.date || d.description.trim()) localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
     else localStorage.removeItem(DRAFT_KEY);
   } catch {
     /* приватний режим — чернетка просто не переживе вкладку */
@@ -54,7 +58,9 @@ function dropDraft() {
  * Новий список v2 (потоки B2–B4, U3).
  *
  * - Список створюється однією назвою; решта налаштувань — усередині списку.
- *   Дата необов'язкова. Валюта — з профілю, інакше PLN, як у v1.
+ *   Дата необов'язкова. Валюта — з профілю, інакше PLN, як у v1. Опис і
+ *   валюту можна задати й одразу — «+ Опис і валюта · PLN» (ADR-050), як у
+ *   діалозі нового списку v1.
  * - Дубль назви — попередження, не заборона: у людини може бути два «Дім».
  * - Минула дата — не заборона, а інша кнопка (U3): «Створити як архів» — для
  *   старих свят, які хочуть зберегти в історії, — або «Змінити дату».
@@ -77,8 +83,8 @@ export default function NewListV2() {
     const saved = readDraft();
     // Шаблон свята важить більше за стару чернетку: людина щойно його обрала.
     return template?.title
-      ? { title: template.title, date: saved?.date ?? '', yearly: Boolean(template.yearly) }
-      : (saved ?? { title: '', date: '', yearly: false });
+      ? { title: template.title, date: saved?.date ?? '', yearly: Boolean(template.yearly), description: saved?.description ?? '' }
+      : (saved ?? { title: '', date: '', yearly: false, description: '' });
   });
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -86,6 +92,12 @@ export default function NewListV2() {
   const [titles, setTitles] = useState<string[]>([]);
   const [currency, setCurrency] = useState<Currency>(FALLBACK_CURRENCY);
   const [asking, setAsking] = useState(false);
+  /** Опис і валюта — на вимогу (ADR-050): за замовчуванням список — одна назва. */
+  const [more, setMore] = useState(() => Boolean(readDraft()?.description.trim()));
+  /** Людина сама вибрала валюту — профіль, що відповів пізніше, її не перетирає. */
+  const currencyPicked = useRef(false);
+  const descId = useId();
+  const currencyId = useId();
   const titleRef = useRef<HTMLInputElement>(null);
   const dateRef = useRef<HTMLInputElement>(null);
 
@@ -97,7 +109,7 @@ export default function NewListV2() {
       .catch(() => undefined);
     if (userId) {
       fetchDefaultCurrency(userId)
-        .then((c) => c && setCurrency(c))
+        .then((c) => c && !currencyPicked.current && setCurrency(c))
         .catch(() => undefined);
     }
   }, [userId]);
@@ -112,7 +124,7 @@ export default function NewListV2() {
   const past = Boolean(draft.date) && draft.date < localToday();
 
   function leave() {
-    if (draft.title.trim() || draft.date) setAsking(true);
+    if (draft.title.trim() || draft.date || draft.description.trim()) setAsking(true);
     else {
       dropDraft();
       navigate('/lists');
@@ -131,6 +143,7 @@ export default function NewListV2() {
         {
           title,
           event_date: draft.date || null,
+          description: draft.description.trim() || null,
           currency,
           repeats_yearly: Boolean(draft.date) && draft.yearly,
           ...(past ? { is_archived: true } : {}),
@@ -177,20 +190,65 @@ export default function NewListV2() {
           warning={duplicate}
           onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
         />
-        <FieldV2
+        <DateFieldV2
           ref={dateRef}
           label={t('v2app.newList.date')}
           name="event_date"
-          type="date"
           value={draft.date}
           warning={past ? t('v2app.newList.pastDate') : null}
-          onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))}
+          hint={past ? undefined : t('v2app.newList.dateHint')}
+          onChange={(date) => setDraft((d) => ({ ...d, date }))}
         />
         <YearlySwitchV2
           date={draft.date}
           checked={draft.yearly}
           onChange={(yearly) => setDraft((d) => ({ ...d, yearly }))}
         />
+
+        {more ? (
+          <>
+            <div className="v2-field">
+              <label className="v2-field__label" htmlFor={descId}>
+                {t('v2list.settings.description')}
+              </label>
+              <textarea
+                id={descId}
+                name="list_description"
+                className="v2-input v2-input--area"
+                rows={3}
+                maxLength={DESCRIPTION_MAX}
+                value={draft.description}
+                onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+              />
+            </div>
+            <div className="v2-field">
+              <label className="v2-field__label" htmlFor={currencyId}>
+                {t('lists.fields.currency')}
+              </label>
+              <select
+                id={currencyId}
+                name="list_currency"
+                className="v2-input v2-select"
+                value={currency}
+                onChange={(e) => {
+                  currencyPicked.current = true;
+                  setCurrency(e.target.value as Currency);
+                }}
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        ) : (
+          <button type="button" className="v2-btn v2-btn--ghost v2-btn--start" onClick={() => setMore(true)}>
+            <Plus size={18} strokeWidth={2.75} aria-hidden="true" />
+            {t('v2app.newList.more', { currency })}
+          </button>
+        )}
 
         <SubmitV2
           busy={busy}

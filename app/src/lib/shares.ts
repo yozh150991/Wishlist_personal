@@ -141,6 +141,11 @@ export type SharedItem = {
   title: string;
   url: string | null;
   price: number | string | null;
+  /**
+   * Валюта ціни позиції (ADR-051), уже розгорнута сервером: валюта позиції
+   * або списку. Необовʼязкова — відповідь до ADR-051 її не мала.
+   */
+  currency?: Currency;
   quantity: number;
   priority: ItemPriority;
   note: string | null;

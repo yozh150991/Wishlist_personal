@@ -44,6 +44,8 @@ export const CSV_COLUMNS = [
   // Нова колонка стоїть у кінці: файли, збережені до появи ознак, читаються
   // далі без змін, а чужі таблиці зі старим набором колонок не ламаються.
   'variants',
+  // Валюта ціни позиції (ADR-051). Порожньо — валюта списку, як у файлах до неї.
+  'currency',
 ] as const;
 
 export type TransferItem = {
@@ -56,6 +58,8 @@ export type TransferItem = {
   note: string | null;
   image_url: string | null;
   variants: ItemVariant[];
+  /** Валюта ціни (ADR-051); null — валюта списку. */
+  currency: Currency | null;
 };
 
 export type TransferList = {
@@ -115,6 +119,7 @@ export function toTransferItem(item: Item): TransferItem {
     note: item.note,
     image_url: item.image_url,
     variants: item.variants ?? [],
+    currency: item.currency ?? null,
   };
 }
 
@@ -215,6 +220,7 @@ export function toCsv(items: Item[]): string {
         csvCell(t.note),
         csvCell(t.image_url),
         csvCell(variantsOut(t.variants)),
+        csvCell(t.currency),
       ].join(','),
     );
   }
@@ -429,8 +435,17 @@ function rowToItem(
     issues.push({ level: 'warning', row, key: 'transfer.issues.noteLong', vars: { max: NOTE_MAX } });
   }
 
+  // Порожньо — валюта списку. Незнайома валюта — зауваження, і ціна лишається
+  // без валюти, тобто у валюті списку: так файл імпортувався й до ADR-051.
+  const rawCurrency = get('currency').toUpperCase();
+  const currency = (CURRENCIES as string[]).includes(rawCurrency) ? (rawCurrency as Currency) : null;
+  if (rawCurrency && !currency) {
+    issues.push({ level: 'warning', row, key: 'transfer.issues.itemCurrency', vars: { value: rawCurrency } });
+  }
+
   return {
     title,
+    currency,
     url: checkUrl(get('url'), row, 'url', issues),
     price,
     quantity,

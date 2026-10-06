@@ -81,6 +81,12 @@ export type Item = {
   link_checked_at?: string | null;
   link_price?: number | string | null;
   link_currency?: string | null;
+  /**
+   * Валюта ціни (ADR-051); null — валюта списку, як до ADR-051 і як у v1.
+   * Старий офлайн-знімок поля не має — теж валюта списку. Читати через
+   * `itemCurrency()` з `lib/itemsView.ts`, а не напряму.
+   */
+  currency?: Currency | null;
   created_at: string;
   updated_at: string;
 };
@@ -104,6 +110,7 @@ export type ItemInput = Pick<Item, 'title'> &
       | 'section_id'
       | 'position'
       | 'needs_title'
+      | 'currency'
     >
   >;
 
