@@ -1225,5 +1225,18 @@
   "v2import": {
     "open": "Import from a file",
     "done": "Items imported: {n}"
+  },
+  "v2select": {
+    "menu": "Select several",
+    "hint": "Tap the items you want to change together",
+    "none": "Clear selection",
+    "status": "Status",
+    "share": "Share",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "statusTitle": "Mark the selected ({n}) as…",
+    "statusDone": "Marked as “{status}”: {n}",
+    "deleted": "Items deleted: {n}",
+    "shareNone": "None of the selected items are active — nothing to share."
   }
 }

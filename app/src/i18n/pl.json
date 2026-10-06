@@ -1225,5 +1225,18 @@
   "v2import": {
     "open": "Import z pliku",
     "done": "Zaimportowano pozycji: {n}"
+  },
+  "v2select": {
+    "menu": "Zaznacz kilka",
+    "hint": "Stuknij pozycje, które chcesz zmienić razem",
+    "none": "Odznacz wszystkie",
+    "status": "Status",
+    "share": "Udostępnij",
+    "delete": "Usuń",
+    "deleting": "Usuwam…",
+    "statusTitle": "Oznacz zaznaczone ({n}) jako…",
+    "statusDone": "Oznaczono jako „{status}”: {n}",
+    "deleted": "Usunięto pozycji: {n}",
+    "shareNone": "Wśród zaznaczonych nie ma aktualnych pozycji — nie ma czym się dzielić."
   }
 }

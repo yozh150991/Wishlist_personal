@@ -465,3 +465,55 @@ test.describe('сторінка списку v2: валюта позиції (AD
     await expect(card(page, title)).toContainText('€');
   });
 });
+
+test.describe('сторінка списку v2: «Вибрати кілька»', { tag: '@v2' }, () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('статус вибраним одним рухом; масове видалення — з підтвердженням і переживає F5', async ({ page }) => {
+    await signInV2(page);
+    await newList(page, unique('V2 select'));
+    const a = unique('Чайник');
+    const b = unique('Тостер');
+    const c = unique('Міксер');
+    for (const title of [a, b, c]) await addManual(page, title);
+    await expect(undoButton(page)).toHaveCount(0, { timeout: 10_000 });
+
+    await listMenu(page, /^(вибрати кілька|zaznacz kilka|select several)$/i);
+    const bar = page.getByRole('region', {
+      name: /дії з вибраними позиціями|działania na zaznaczonych pozycjach|actions for selected items/i,
+    });
+    await expect(bar).toBeVisible();
+    // У режимі вибору картка — прапорець: «⋯» і «+» ховаються.
+    await expect(menuOf(page, a)).toHaveCount(0);
+    await expect(addButton(page)).toHaveCount(0);
+
+    await card(page, a).getByRole('checkbox').check();
+    await card(page, b).getByRole('checkbox').check();
+    await expect(bar).toContainText(/: 2/);
+
+    await bar.getByRole('button', { name: /^(статус|status)$/i }).click();
+    await page
+      .getByRole('dialog', { name: /\(2\)/ })
+      .getByRole('button', { name: /^(куплено|kupione|purchased)$/i })
+      .click();
+    await expect(bar).toHaveCount(0);
+    const done = page.locator('details').filter({ hasText: /куплене й подароване|kupione i podarowane|purchased and gifted/i });
+    await expect(done).toContainText(a);
+    await expect(done).toContainText(b);
+    await expect(done).not.toContainText(c);
+
+    // «Вибрати всі показані» → «Видалити» → підтвердження: незворотне питає.
+    await listMenu(page, /^(вибрати кілька|zaznacz kilka|select several)$/i);
+    await bar.getByRole('button', { name: /вибрати всі показані|zaznacz wszystkie widoczne|select all shown/i }).click();
+    await expect(bar).toContainText(/: 3/);
+    await bar.getByRole('button', { name: /^(видалити|usuń|delete)$/i }).click();
+    const confirm = page.getByRole('dialog', { name: /\(3\)/ });
+    await expect(confirm).toBeVisible();
+    const deleted = itemDeleted(page);
+    await confirm.getByRole('button', { name: /^(видалити|usuń|delete)$/i }).click();
+    await deleted;
+    await expect(card(page, c)).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: /жодної позиції|ani jednej pozycji|no items yet/i })).toBeVisible();
+  });
+});

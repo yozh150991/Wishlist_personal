@@ -153,6 +153,10 @@ function useSwipe(enabled: boolean) {
  *
  * На картці немає нічого про позначки гостей — ні пігулки, ні лічильника
  * (ADR-040). Статус «Куплено» / «Подаровано» — власний, його ставить власник.
+ *
+ * У режимі «Вибрати кілька» (`select`) уся картка — прапорець: натиск
+ * вибирає, а не відкриває. «⋯» і свайп ховаються — дії з вибраними живуть
+ * у панелі внизу, а не на кожній картці.
  */
 export function ItemCardV2({
   item,
@@ -164,6 +168,7 @@ export function ItemCardV2({
   onMenu,
   onRetry,
   onDelete,
+  select,
 }: {
   item: Item;
   currency: Currency;
@@ -178,11 +183,14 @@ export function ItemCardV2({
   onRetry: (item: Item) => void;
   /** Є — свайп ліворуч відкриває «Видалити». */
   onDelete?: (item: Item) => void;
+  /** Режим вибору: чи вибрана й як перемкнути. */
+  select?: { on: boolean; onToggle: (item: Item) => void };
 }) {
   const { t, locale } = useI18n();
   const priority = usePriorityLabel();
   const status = useStatusLabel();
-  const swipe = useSwipe(Boolean(onDelete));
+  const selecting = select !== undefined;
+  const swipe = useSwipe(Boolean(onDelete) && !selecting);
   // Своя валюта позиції, якщо вона інша, ніж у списку (ADR-051).
   const price = moneyShort(item.price, itemCurrency(item, currency), locale);
   const host = hostOf(item.url);
@@ -195,6 +203,55 @@ export function ItemCardV2({
   const priceMoved = item.status === 'active' ? linkPriceChange(item, currency)?.notable : false;
   const linkTag = link === 'gone' || link === 'out' || priceMoved;
 
+  const body = (
+    <>
+      {item.image_url && <img className="v2-item__img" src={item.image_url} alt="" loading="lazy" />}
+      <span className="v2-item__text">
+        <span className="v2-item__title">{item.title}</span>
+        <span className="v2-item__meta">
+          {price ? <span className="v2-item__price">{price}</span> : t('v2list.item.noPrice')}
+          {item.quantity > 1 && ` · × ${item.quantity}`}
+          {host && ` · ${host}`}
+        </span>
+        {variants && <span className="v2-item__meta">{variants}</span>}
+        {(tagPriority || item.status !== 'active' || draft || linkTag) && (
+          <span className="v2-item__tags">
+            {link === 'gone' && (
+              <span className="v2-tag" data-tone="danger">
+                {t('v2list.item.linkGone')}
+              </span>
+            )}
+            {link === 'out' && (
+              <span className="v2-tag" data-tone="neutral">
+                {t('v2list.item.linkOut')}
+              </span>
+            )}
+            {priceMoved && (
+              <span className="v2-tag" data-tone="warm">
+                {t('v2list.item.priceChanged')}
+              </span>
+            )}
+            {draft && (
+              <span className="v2-tag" data-tone="warm">
+                {t('v2list.item.draft')}
+              </span>
+            )}
+            {tagPriority && (
+              <span className="v2-tag" data-tone={item.priority === 'high' ? 'accent' : 'warm'}>
+                {priority(item.priority)}
+              </span>
+            )}
+            {item.status !== 'active' && (
+              <span className="v2-tag" data-tone="neutral">
+                {status(item.status)}
+              </span>
+            )}
+          </span>
+        )}
+      </span>
+    </>
+  );
+
   return (
     <li
       className="v2-item"
@@ -203,6 +260,7 @@ export function ItemCardV2({
       data-draft={draft || undefined}
       data-new={highlight || undefined}
       data-failed={failed ? 'true' : undefined}
+      data-selected={select?.on || undefined}
     >
       <div className="v2-item__row">
         {swipe.revealed && onDelete && (
@@ -224,60 +282,31 @@ export function ItemCardV2({
           style={swipe.offset ? { transform: `translateX(${swipe.offset}px)` } : undefined}
           {...swipe.handlers}
         >
-          <button type="button" className="v2-item__main" onClick={() => onOpen(item)}>
-            {item.image_url && <img className="v2-item__img" src={item.image_url} alt="" loading="lazy" />}
-            <span className="v2-item__text">
-              <span className="v2-item__title">{item.title}</span>
-              <span className="v2-item__meta">
-                {price ? <span className="v2-item__price">{price}</span> : t('v2list.item.noPrice')}
-                {item.quantity > 1 && ` · × ${item.quantity}`}
-                {host && ` · ${host}`}
-              </span>
-              {variants && <span className="v2-item__meta">{variants}</span>}
-              {(tagPriority || item.status !== 'active' || draft || linkTag) && (
-                <span className="v2-item__tags">
-                  {link === 'gone' && (
-                    <span className="v2-tag" data-tone="danger">
-                      {t('v2list.item.linkGone')}
-                    </span>
-                  )}
-                  {link === 'out' && (
-                    <span className="v2-tag" data-tone="neutral">
-                      {t('v2list.item.linkOut')}
-                    </span>
-                  )}
-                  {priceMoved && (
-                    <span className="v2-tag" data-tone="warm">
-                      {t('v2list.item.priceChanged')}
-                    </span>
-                  )}
-                  {draft && (
-                    <span className="v2-tag" data-tone="warm">
-                      {t('v2list.item.draft')}
-                    </span>
-                  )}
-                  {tagPriority && (
-                    <span className="v2-tag" data-tone={item.priority === 'high' ? 'accent' : 'warm'}>
-                      {priority(item.priority)}
-                    </span>
-                  )}
-                  {item.status !== 'active' && (
-                    <span className="v2-tag" data-tone="neutral">
-                      {status(item.status)}
-                    </span>
-                  )}
-                </span>
-              )}
-            </span>
-          </button>
-          <button
-            type="button"
-            className="v2-iconbtn v2-item__more"
-            aria-label={t('v2list.item.menu', { title: item.title })}
-            onClick={() => onMenu(item)}
-          >
-            <MoreHorizontal size={22} strokeWidth={STROKE} aria-hidden="true" />
-          </button>
+          {select ? (
+            <label className="v2-item__main v2-item__main--select">
+              <input
+                type="checkbox"
+                className="v2-item__check"
+                checked={select.on}
+                onChange={() => select.onToggle(item)}
+              />
+              {body}
+            </label>
+          ) : (
+            <button type="button" className="v2-item__main" onClick={() => onOpen(item)}>
+              {body}
+            </button>
+          )}
+          {!selecting && (
+            <button
+              type="button"
+              className="v2-iconbtn v2-item__more"
+              aria-label={t('v2list.item.menu', { title: item.title })}
+              onClick={() => onMenu(item)}
+            >
+              <MoreHorizontal size={22} strokeWidth={STROKE} aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
       {failed && (
