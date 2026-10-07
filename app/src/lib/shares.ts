@@ -273,9 +273,11 @@ export async function claimItem(
 export type ClaimV2Result = ClaimResult & { name: string | null; email: string | null };
 
 /**
- * «Беру» гостьової v2 (ADR-053): як `claimItem`, плюс підпис і пошта гостя.
- * `name` / `email`: null — лишити як є, порожній рядок — прибрати. Помилки
- * `bad_name` і `bad_email` приходять до позначки — тоді її не зроблено.
+ * «Беру» гостьової v2 (ADR-053, ADR-054): як `claimItem`, плюс підпис і пошта
+ * гостя. `name` / `email`: null — лишити як є, порожній рядок — прибрати.
+ * Помилки `bad_name` і `bad_email` приходять до позначки — тоді її не
+ * зроблено. Є пошта й гість не відписався — сервер ставить лист у чергу
+ * мовою `locale`.
  */
 export async function claimItemV2(
   token: string,
@@ -284,6 +286,7 @@ export async function claimItemV2(
   quantity: number,
   name: string | null,
   email: string | null,
+  locale: string,
 ): Promise<ClaimV2Result> {
   const { data, error } = await supabase.rpc('claim_item_v2', {
     p_token: token,
@@ -292,6 +295,7 @@ export async function claimItemV2(
     p_quantity: quantity,
     p_name: name,
     p_email: email,
+    p_locale: locale,
   });
   if (error) throw rpcError(error);
   return data as ClaimV2Result;
@@ -303,6 +307,29 @@ export async function releaseClaim(token: string, itemId: string, key: string): 
     p_item_id: itemId,
     p_key: key,
   });
+  if (error) throw rpcError(error);
+}
+
+/**
+ * «Надіслати код на пошту» (ADR-041, п. 4): відповідь однакова, є така адреса
+ * в цьому списку чи ні. Ліміт — спільний зі спробами коду.
+ */
+export async function sendGuestCode(
+  token: string,
+  email: string,
+  locale: string,
+): Promise<{ ok: true } | { error: 'too_many_attempts' }> {
+  const { data, error } = await supabase.rpc('send_guest_code', { p_token: token, p_email: email, p_locale: locale });
+  if (error) throw rpcError(error);
+  return data as { ok: true } | { error: 'too_many_attempts' };
+}
+
+/**
+ * Листи про цей список: вимкнути (з посилання в листі) чи ввімкнути знову.
+ * Секрет — з адреси листа; відповідь однакова, чи такий секрет є.
+ */
+export async function setGuestMail(mailToken: string, on: boolean): Promise<void> {
+  const { error } = await supabase.rpc('guest_mail_set', { p_mail_token: mailToken, p_on: on });
   if (error) throw rpcError(error);
 }
 

@@ -1310,7 +1310,10 @@
       "submit": "Take it",
       "submitting": "Taking…",
       "later": "Not now",
-      "badName": "Up to 60 characters, on one line."
+      "badName": "Up to 60 characters, on one line.",
+      "email": "Email · optional",
+      "emailHint": "We'll send the code and a note about this pick. The list's owner won't see the address.",
+      "badEmail": "That address looks mistyped."
     },
     "race": {
       "title": "Someone just took “{title}”",
@@ -1333,7 +1336,8 @@
       "signed": "Name: {name}",
       "release": "Release pick",
       "keepTitle": "To come back from another device",
-      "keepBody": "The code or your personal link brings your picks back on any phone."
+      "keepBody": "The code or your personal link brings your picks back on any phone.",
+      "email": "Email: {email}"
     },
     "redeem": {
       "title": "Get my picks back",
@@ -1345,7 +1349,19 @@
       "notFound": "That code isn't on this list. Check the letters and digits.",
       "tooMany": "Too many attempts for this list. Try again in an hour — until then even the right code won't be accepted.",
       "done": "Picks restored: {n}. They're on this device now too.",
-      "noCode": "Without the code, picks stay on the old device — we don't guess."
+      "noCode": "Without the code, picks stay on the old device — we don't guess.",
+      "byMail": "Email me the code",
+      "mailBody": "Enter the email you gave when picking on this list.",
+      "email": "Email",
+      "mailSubmit": "Send the code",
+      "mailSending": "Sending…",
+      "mailSent": "If this address is among the picks on this list, the code is on its way. Check your spam folder too.",
+      "toCode": "Enter a code"
+    },
+    "unsub": {
+      "done": "No more emails about this list. Your picks are still in place.",
+      "undo": "Turn emails back on",
+      "back": "Emails about this list are back on."
     }
   }
 }

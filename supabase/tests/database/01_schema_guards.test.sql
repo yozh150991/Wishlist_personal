@@ -42,12 +42,12 @@ select is_empty(
 );
 
 -- ── Позначки: власник не бачить (§3.2) ───────
--- Позначки й усе, що про гостя (ідентичність, ключі, спроби коду), закриті
--- від authenticated повністю: жодного права й жодної політики.
+-- Позначки й усе, що про гостя (ідентичність, ключі, спроби коду, черга
+-- листів), закриті від authenticated повністю: жодного права й жодної політики.
 
 select is_empty(
   $$ select t.name || ': ' || p.priv
-       from unnest(array['claims', 'guest_identities', 'guest_keys', 'guest_code_attempts']) as t(name)
+       from unnest(array['claims', 'guest_identities', 'guest_keys', 'guest_code_attempts', 'guest_mail']) as t(name)
       cross join unnest(array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) as p(priv)
       where has_table_privilege('authenticated', 'public.' || t.name, p.priv) $$,
   'authenticated не має жодних прав на позначки й дані гостей'
@@ -55,7 +55,7 @@ select is_empty(
 
 select is(
   (select count(*)::int from pg_policies where schemaname = 'public'
-      and tablename in ('claims', 'guest_identities', 'guest_keys', 'guest_code_attempts')),
+      and tablename in ('claims', 'guest_identities', 'guest_keys', 'guest_code_attempts', 'guest_mail')),
   0,
   'на позначках і даних гостей немає жодної RLS-політики'
 );
@@ -97,8 +97,9 @@ select set_eq(
                          where d.classid = 'pg_proc'::regclass and d.objid = p.oid and d.deptype = 'e')
         and has_function_privilege('anon', p.oid, 'EXECUTE') $$,
   -- get_guest_list, claim_item_v2 — гостьова v2 (ADR-053): обгортки над v1.
+  -- send_guest_code, guest_mail_set — код на пошту й відписка (ADR-054).
   array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
-        'get_guest_list', 'claim_item_v2'],
+        'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set'],
   'anon може викликати лише гостьові RPC'
 );
 
@@ -118,7 +119,7 @@ select set_eq(
   -- переходить до того, хто ввімкнув push останнім (ADR-049); нічого не
   -- повертають, адреса підписки — у тілі запиту.
   array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
-        'get_guest_list', 'claim_item_v2',
+        'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set',
         'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
         'reorder_items', 'reorder_sections', 'save_push_subscription', 'forget_push_subscription'],
   'authenticated може викликати лише гостьові RPC і функції власника'

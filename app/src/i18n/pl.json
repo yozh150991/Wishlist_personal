@@ -1310,7 +1310,10 @@
       "submit": "Zarezerwuj",
       "submitting": "Rezerwuję…",
       "later": "Nie teraz",
-      "badName": "Podpis — do 60 znaków, w jednym wierszu."
+      "badName": "Podpis — do 60 znaków, w jednym wierszu.",
+      "email": "E-mail · opcjonalnie",
+      "emailHint": "Wyślemy kod i wiadomość o tej rezerwacji. Właściciel listy adresu nie zobaczy.",
+      "badEmail": "Wygląda na to, że w adresie jest błąd."
     },
     "race": {
       "title": "Ktoś właśnie wziął „{title}”",
@@ -1333,7 +1336,8 @@
       "signed": "Podpis: {name}",
       "release": "Zdejmij rezerwację",
       "keepTitle": "Żeby wrócić z innego urządzenia",
-      "keepBody": "Kod albo osobisty link przywracają twoje rezerwacje na dowolnym telefonie."
+      "keepBody": "Kod albo osobisty link przywracają twoje rezerwacje na dowolnym telefonie.",
+      "email": "E-mail: {email}"
     },
     "redeem": {
       "title": "Przywróć swoje rezerwacje",
@@ -1345,7 +1349,19 @@
       "notFound": "Takiego kodu nie ma na tej liście. Sprawdź litery i cyfry.",
       "tooMany": "Za dużo prób dla tej listy. Spróbuj za godzinę — do tego czasu nawet poprawny kod nie zostanie przyjęty.",
       "done": "Przywrócono rezerwacje: {n}. Teraz są też na tym urządzeniu.",
-      "noCode": "Bez kodu rezerwacje zostają na starym urządzeniu — nie zgadujemy."
+      "noCode": "Bez kodu rezerwacje zostają na starym urządzeniu — nie zgadujemy.",
+      "byMail": "Wyślij kod na e-mail",
+      "mailBody": "Podaj e-mail, który został wpisany przy rezerwacji na tej liście.",
+      "email": "E-mail",
+      "mailSubmit": "Wyślij kod",
+      "mailSending": "Wysyłam…",
+      "mailSent": "Jeśli ten adres jest wśród rezerwacji tej listy, kod już do ciebie leci. Sprawdź też folder „Spam”.",
+      "toCode": "Wpisz kod"
+    },
+    "unsub": {
+      "done": "Nie będzie już wiadomości o tej liście. Rezerwacje zostały na miejscu.",
+      "undo": "Przywróć wiadomości",
+      "back": "Wiadomości o tej liście znów będą przychodzić."
     }
   }
 }

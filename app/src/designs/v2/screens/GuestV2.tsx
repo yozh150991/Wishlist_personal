@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Link2, ListChecks, Palette, X } from 'lucide-react';
 import {
   claimItemV2,
@@ -7,6 +7,7 @@ import {
   GoneError,
   registerView,
   releaseClaim,
+  setGuestMail,
 } from '../../../lib/shares';
 import type { SharedItem, SharedList } from '../../../lib/shares';
 import {
@@ -52,8 +53,12 @@ import '../v2.css';
  * повернутись з іншого пристрою без посилання.
  *
  * «Беру» відкриває аркуш: необовʼязковий підпис (щоб гість упізнав свої
- * броні) і, для позицій на кілька штук, скільки. Ні власник, ні інші гості
- * підпису не бачать (ADR-053). Пошти поки немає — разом із листами (5б).
+ * броні), пошта (код і лист про бронь, ADR-054) і, для позицій на кілька
+ * штук, скільки. Ні власник, ні інші гості ні підпису, ні пошти не бачать.
+ *
+ * `/l/{токен}/u/{секрет}` — посилання «Не надсилати листів про цей список»
+ * з листа: листи вимикаються одразу, секрет зникає з адреси, а на сторінці —
+ * «Повернути листи».
  *
  * Своя бронь — контур і «Ви берете», «Зняти» одним дотиком із тостом на 6 с:
  * запит іде, коли відлік скінчився, тож відкат миттєвий. Чужа — «Уже взяли»,
@@ -75,8 +80,9 @@ type Filter = 'free' | 'all';
 type Changes = { fresh: Set<string>; freed: Set<string> } | null;
 
 export default function GuestV2() {
-  const { token = '', key: urlKey } = useParams();
+  const { token = '', key: urlKey, mailToken } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t, locale, setLocale } = useI18n();
   const counts = useCounts();
   const priority = usePriorityLabel();
@@ -107,6 +113,10 @@ export default function GuestV2() {
   const pendingRelease = useRef<string | null>(null);
   const undo = useUndo(UNDO_MS);
 
+  /** Відписка з листа: секрет живе лише в стані історії цієї вкладки. */
+  const unsubToken = (location.state as { unsub?: string } | null)?.unsub ?? null;
+  const [unsubOn, setUnsubOn] = useState<boolean | null>(null);
+
   const [watching, setWatching] = useState(false);
   const [changes, setChanges] = useState<Changes>(null);
   const watchChecked = useRef(false);
@@ -122,6 +132,26 @@ export default function GuestV2() {
     if (isGuestKey(urlKey)) rememberKey(token, urlKey);
     navigate(`${BASE}/${token}`, { replace: true });
   }, [urlKey, token, navigate]);
+
+  /**
+   * «Не надсилати листів про цей список» — одним натиском, без входу
+   * (потік P3). Секрет прибираємо з адресного рядка, як і ключ гостя.
+   */
+  useEffect(() => {
+    if (!mailToken) return;
+    void setGuestMail(mailToken, false).catch(() => undefined);
+    navigate(`${BASE}/${token}`, { replace: true, state: { unsub: mailToken } });
+  }, [mailToken, token, navigate]);
+
+  async function toggleMail(on: boolean) {
+    if (!unsubToken) return;
+    try {
+      await setGuestMail(unsubToken, on);
+      setUnsubOn(on);
+    } catch {
+      setError(t('v2guest.error'));
+    }
+  }
 
   const load = useCallback(async () => {
     const own = storedKey(token);
@@ -143,9 +173,9 @@ export default function GuestV2() {
   }, [token]);
 
   useEffect(() => {
-    if (urlKey) return;
+    if (urlKey || mailToken) return;
     void load();
-  }, [load, urlKey]);
+  }, [load, urlKey, mailToken]);
 
   useEffect(() => {
     if (data && !data.viewer_is_owner) void registerView(token);
@@ -304,7 +334,7 @@ export default function GuestV2() {
     setBook({ item, step: { kind: 'form' } });
   }
 
-  async function submitBook(quantity: number, name: string) {
+  async function submitBook(quantity: number, name: string, email: string) {
     if (!book || bookBusy || !data) return;
     const target = book.item;
     // Бронь, зняття якої ще відлічує тост, повертаємо: інакше відкладений
@@ -321,7 +351,7 @@ export default function GuestV2() {
     const k = ensureKey(token);
     setKey(k);
     try {
-      const res = await claimItemV2(token, target.id, k, base + quantity, name, null);
+      const res = await claimItemV2(token, target.id, k, base + quantity, name, email, locale);
       setData(await fetchGuestList(token, k));
       if (first) setBook({ item: target, step: { kind: 'code', code: res.code } });
       else setBook(null);
@@ -337,6 +367,8 @@ export default function GuestV2() {
         setBook({ item: target, step: { kind: 'race' } });
       } else if (msg.includes('bad_name')) {
         setBookError(t('v2guest.book.badName'));
+      } else if (msg.includes('bad_email')) {
+        setBookError(t('v2guest.book.badEmail'));
       } else {
         setBookError(t('v2guest.error'));
       }
@@ -420,7 +452,7 @@ export default function GuestV2() {
 
   /* ── Розмітка ── */
 
-  if (loading || urlKey) {
+  if (loading || urlKey || mailToken) {
     return (
       <div className="v2-guest v2-guest--boot" role="status">
         <span className="v2-spinner" aria-hidden="true" />
@@ -496,6 +528,16 @@ export default function GuestV2() {
         {data.viewer_is_owner && <NoteV2 tone="info">{t('v2guest.ownerBanner')}</NoteV2>}
         {error && <NoteV2 tone="error">{error}</NoteV2>}
         {notice && <NoteV2 tone="info">{notice}</NoteV2>}
+        {unsubToken && (
+          <div className="v2-gbanner" role="status">
+            <span>{unsubOn ? t('v2guest.unsub.back') : t('v2guest.unsub.done')}</span>
+            {!unsubOn && (
+              <button type="button" className="v2-btn v2-btn--ghost v2-btn--small" onClick={() => void toggleMail(true)}>
+                {t('v2guest.unsub.undo')}
+              </button>
+            )}
+          </div>
+        )}
 
         {changes && (
           <div className="v2-gbanner" role="status">
@@ -718,6 +760,7 @@ export default function GuestV2() {
         step={book?.step ?? { kind: 'form' }}
         counts={book ? countsOf(book.item) : { left: 1, mine: 0 }}
         name={data.guest?.name ?? ''}
+        email={data.guest?.email ?? ''}
         busy={bookBusy}
         error={bookError}
         canSimilar={Boolean(
@@ -731,7 +774,7 @@ export default function GuestV2() {
                 (i.currency ?? listCurrency) === (book.item.currency ?? listCurrency),
             ),
         )}
-        onSubmit={(q, n) => void submitBook(q, n)}
+        onSubmit={(q, n, e) => void submitBook(q, n, e)}
         onClose={() => {
           if (!bookBusy) setBook(null);
         }}
@@ -746,6 +789,7 @@ export default function GuestV2() {
         currency={listCurrency}
         code={data.guest?.code ?? null}
         name={data.guest?.name ?? null}
+        email={data.guest?.email ?? null}
         onRelease={release}
         onCopyCode={copyText}
         onSendLink={() => void sendLink()}

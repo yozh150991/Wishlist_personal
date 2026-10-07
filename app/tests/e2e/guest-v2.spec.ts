@@ -15,6 +15,7 @@ import { addItem, createList, createShare, hasAccount, signIn, unique } from './
 const takeBtn = /^(беру|biorę|take)$/i;
 const yours = /ви берете|bierzesz to|you're taking this/i;
 const NAME = 'Іра-e2e';
+const MAIL = 'guest-e2e@example.com';
 
 async function guest(browser: Browser, link: string): Promise<Page> {
   const ctx = await browser.newContext();
@@ -45,6 +46,11 @@ test.describe('з акаунтом власника', () => {
     const sheet = a.getByRole('dialog');
     await expect(sheet.getByRole('heading', { name: /сковорода/i })).toBeVisible();
     await sheet.locator('input[name="guest_name"]').fill(NAME);
+    // Хибна пошта не доходить до сервера: помилка під полем, броні ще немає.
+    await sheet.locator('input[name="guest_email"]').fill('ira@pochta');
+    await sheet.getByRole('button', { name: /^(забронювати|zarezerwuj|take it)$/i }).click();
+    await expect(sheet.getByText(/в адресі помилка|w adresie jest błąd|looks mistyped/i)).toBeVisible();
+    await sheet.locator('input[name="guest_email"]').fill(MAIL);
     await sheet.getByRole('button', { name: /^(забронювати|zarezerwuj|take it)$/i }).click();
     await expect(sheet.getByRole('heading', { name: /за вами|twoje|is yours/i })).toBeVisible();
     const code = (await sheet.locator('.v2-gcode').innerText()).trim();
@@ -88,7 +94,26 @@ test.describe('з акаунтом власника', () => {
     await a.reload();
     await expect(card(a, 'Сковорода').getByRole('button', { name: takeBtn })).toBeVisible();
 
-    for (const p of [a, b, c]) await p.context().close();
+    // «Надіслати код на пошту»: відповідь однакова, є адреса в списку чи ні (ADR-041, п. 4).
+    const d = await guest(browser, link);
+    const sent = /код уже в дорозі|kod już do ciebie leci|code is on its way/i;
+    for (const address of ['nobody-e2e@example.com', MAIL]) {
+      await d.getByRole('button', { name: /уже маю броні|mam już rezerwacje|already have picks/i }).click();
+      const sheetD = d.getByRole('dialog');
+      await sheetD.getByRole('button', { name: /надіслати код на пошту|wyślij kod na e-mail|email me the code/i }).click();
+      await sheetD.locator('input[name="guest_code_email"]').fill(address);
+      await sheetD.getByRole('button', { name: /^(надіслати код|wyślij kod|send the code)$/i }).click();
+      await expect(sheetD.getByText(sent)).toBeVisible();
+      await d.keyboard.press('Escape');
+    }
+
+    // Відписка з листа: секрет зникає з адреси, «Повернути листи» — на місці.
+    const e = await guest(browser, `${link}/u/e2eMailTokenAAAAAAAAAAA`);
+    await expect(e).toHaveURL(new RegExp(`/l/${token}$`));
+    await expect(e.getByText(/більше не буде|nie będzie już|no more emails/i)).toBeVisible();
+    await expect(e.getByRole('button', { name: /повернути листи|przywróć wiadomości|turn emails back on/i })).toBeVisible();
+
+    for (const p of [a, b, c, d, e]) await p.context().close();
   });
 });
 

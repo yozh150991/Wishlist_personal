@@ -4,7 +4,7 @@ import { useI18n } from '../../../lib/i18n';
 import { THEMES, useTheme } from '../../../lib/theme';
 import type { Theme } from '../../../lib/theme';
 import { hostOf, moneyShort } from '../../../lib/format';
-import { redeemCode } from '../../../lib/shares';
+import { redeemCode, sendGuestCode } from '../../../lib/shares';
 import type { SharedItem } from '../../../lib/shares';
 import type { Currency } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
@@ -21,6 +21,10 @@ import { usePriorityLabel } from './ListPartsV2';
  */
 
 const STROKE = 2.75;
+
+/** Та сама перевірка, що в базі (`claim_item_v2`): до 254 символів, одне «@», крапка після нього. */
+const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const EMAIL_MAX = 254;
 
 /** «Скопіювати код» → «Скопійовано» на дві секунди: підтвердження там, куди дивляться. */
 function useCopied(): [boolean, (ok: Promise<boolean>) => void] {
@@ -166,9 +170,10 @@ export type BookStep =
   | { kind: 'code'; code: string };
 
 /**
- * Аркуш броні (E2): «Берете …?», необовʼязковий підпис, скільки (для позицій
- * на кілька штук), «Забронювати / Не зараз». Підпис підставляється з
- * попередньої броні. Пошти поки немає: вона прийде разом із листами (5б).
+ * Аркуш броні (E2): «Берете …?», скільки (для позицій на кілька штук),
+ * необовʼязкові підпис і пошта, «Забронювати / Не зараз». Обидва
+ * підставляються з попередньої броні. Пошта — для коду й листа про бронь
+ * (ADR-054); власник її не бачить.
  *
  * Той самий аркуш показує й наслідок: програну гонку (гілка «встигли
  * раніше») і код після першої броні (E3).
@@ -178,6 +183,7 @@ export function BookSheetV2({
   step,
   counts,
   name,
+  email,
   busy,
   error,
   canSimilar,
@@ -190,12 +196,13 @@ export function BookSheetV2({
   item: SharedItem | null;
   step: BookStep;
   counts: GuestCounts;
-  /** Підпис з минулої броні. */
+  /** Підпис і пошта з минулої броні. */
   name: string;
+  email: string;
   busy: boolean;
   error: string | null;
   canSimilar: boolean;
-  onSubmit: (quantity: number, name: string) => void;
+  onSubmit: (quantity: number, name: string, email: string) => void;
   onClose: () => void;
   onSimilar: () => void;
   onCopyCode: (code: string) => Promise<boolean>;
@@ -208,6 +215,8 @@ export function BookSheetV2({
   const [qty, setQty] = useState(1);
   const [signature, setSignature] = useState(name);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [mail, setMail] = useState(email);
+  const [mailError, setMailError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!item) return;
@@ -215,6 +224,8 @@ export function BookSheetV2({
     setQty(1);
     setSignature(name);
     setNameError(null);
+    setMail(email);
+    setMailError(null);
     // Новий аркуш — нова позиція; підпис підставляється раз, на відкритті.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?.id]);
@@ -226,11 +237,13 @@ export function BookSheetV2({
   function submit() {
     if (busy) return;
     const clean = signature.trim();
-    if (clean.length > 60 || /[\u0000-\u001f\u007f]/.test(clean)) {
-      setNameError(t('v2guest.book.badName'));
-      return;
-    }
-    onSubmit(multi ? qty : 1, clean);
+    const address = mail.trim();
+    const badName = clean.length > 60 || /[\u0000-\u001f\u007f]/.test(clean);
+    const badMail = address !== '' && (address.length > EMAIL_MAX || !EMAIL_SHAPE.test(address));
+    setNameError(badName ? t('v2guest.book.badName') : null);
+    setMailError(badMail ? t('v2guest.book.badEmail') : null);
+    if (badName || badMail) return;
+    onSubmit(multi ? qty : 1, clean, address);
   }
 
   return (
@@ -337,6 +350,21 @@ export function BookSheetV2({
             }}
             after={<p className="v2-hint v2-hint--start">{t('v2guest.book.nameHint')}</p>}
           />
+          <FieldV2
+            label={t('v2guest.book.email')}
+            name="guest_email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            maxLength={EMAIL_MAX}
+            value={mail}
+            error={mailError}
+            onChange={(e) => {
+              setMail(e.target.value);
+              setMailError(null);
+            }}
+            after={<p className="v2-hint v2-hint--start">{t('v2guest.book.emailHint')}</p>}
+          />
           <div className="v2-sheet__actions">
             <SubmitV2 busy={busy} label={t('v2guest.book.submit')} busyLabel={t('v2guest.book.submitting')} />
             <button type="button" className="v2-btn v2-btn--ghost" onClick={onClose}>
@@ -362,6 +390,7 @@ export function MyPicksSheetV2({
   currency,
   code,
   name,
+  email,
   onRelease,
   onCopyCode,
   onSendLink,
@@ -372,6 +401,7 @@ export function MyPicksSheetV2({
   currency: Currency;
   code: string | null;
   name: string | null;
+  email: string | null;
   onRelease: (item: SharedItem) => void;
   onCopyCode: (code: string) => Promise<boolean>;
   onSendLink: () => void;
@@ -388,6 +418,7 @@ export function MyPicksSheetV2({
       <p className="v2-hint v2-hint--start">
         {t('v2guest.mineSheet.count', { n: items.length })}
         {name ? ` · ${t('v2guest.mineSheet.signed', { name })}` : ''}
+        {email ? ` · ${t('v2guest.mineSheet.email', { email })}` : ''}
       </p>
       <ul className="v2-gpicks">
         {items.map(({ item, mine }) => {
@@ -453,7 +484,9 @@ export function MyPicksSheetV2({
  * Гілка «інший пристрій» (E4): код із 5 символів переносить броні на цей
  * пристрій і лишає їх на старому. Після 5 спроб на годину на список не
  * приймається навіть правильний — і це сказано прямо (ADR-035, п. 5).
- * «Надіслати код на пошту» з'явиться разом із листами (5б).
+ *
+ * Немає коду під рукою — «Надіслати код на пошту» (ADR-041, п. 4): відповідь
+ * однакова, є така адреса в списку чи ні, і ліміт спільний зі спробами коду.
  */
 export function RedeemSheetV2({
   open,
@@ -466,42 +499,70 @@ export function RedeemSheetV2({
   onClose: () => void;
   onRedeemed: (key: string, claims: number) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const titleId = useId();
+  const [mode, setMode] = useState<'code' | 'mail'>('code');
   const [code, setCode] = useState('');
+  const [mail, setMail] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
   const busyRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
+    setMode('code');
     setCode('');
+    setMail('');
     setError(null);
+    setSent(false);
   }, [open]);
 
-  async function submit() {
+  async function run(job: () => Promise<void>) {
     if (busyRef.current) return;
-    const clean = code.replace(/\s+/g, '').toUpperCase();
-    if (clean.length !== 5) {
-      setError(t('v2guest.redeem.short'));
-      return;
-    }
     busyRef.current = true;
     setBusy(true);
     setError(null);
     try {
-      const res = await redeemCode(token, clean);
-      if ('error' in res) {
-        setError(res.error === 'too_many_attempts' ? t('v2guest.redeem.tooMany') : t('v2guest.redeem.notFound'));
-      } else {
-        onRedeemed(res.key, res.claims);
-      }
+      await job();
     } catch {
       setError(t('v2guest.error'));
     } finally {
       busyRef.current = false;
       setBusy(false);
     }
+  }
+
+  function submitCode() {
+    const clean = code.replace(/\s+/g, '').toUpperCase();
+    if (clean.length !== 5) {
+      setError(t('v2guest.redeem.short'));
+      return;
+    }
+    void run(async () => {
+      const res = await redeemCode(token, clean);
+      if ('error' in res) {
+        setError(res.error === 'too_many_attempts' ? t('v2guest.redeem.tooMany') : t('v2guest.redeem.notFound'));
+      } else {
+        onRedeemed(res.key, res.claims);
+      }
+    });
+  }
+
+  function submitMail() {
+    const address = mail.trim();
+    if (address.length > EMAIL_MAX || !EMAIL_SHAPE.test(address)) {
+      setError(t('v2guest.book.badEmail'));
+      return;
+    }
+    void run(async () => {
+      const res = await sendGuestCode(token, address, locale);
+      if ('error' in res) setError(t('v2guest.redeem.tooMany'));
+      else {
+        setSent(true);
+        setMode('code');
+      }
+    });
   }
 
   return (
@@ -511,35 +572,84 @@ export function RedeemSheetV2({
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          void submit();
+          if (mode === 'code') submitCode();
+          else submitMail();
         }}
       >
         <h2 className="v2-sheet__title" id={titleId}>
           {t('v2guest.redeem.title')}
         </h2>
-        <p className="v2-lede">{t('v2guest.redeem.body')}</p>
-        <FieldV2
-          label={t('v2guest.redeem.code')}
-          name="guest_code"
-          className="v2-input v2-gcode-input"
-          maxLength={5}
-          autoComplete="one-time-code"
-          autoCapitalize="characters"
-          spellCheck={false}
-          value={code}
-          error={error}
-          onChange={(e) => {
-            setCode(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ''));
-            setError(null);
-          }}
-          after={<p className="v2-hint v2-hint--start">{t('v2guest.redeem.noCode')}</p>}
-        />
-        <div className="v2-sheet__actions">
-          <SubmitV2 busy={busy} label={t('v2guest.redeem.submit')} busyLabel={t('v2guest.redeem.submitting')} />
-          <button type="button" className="v2-btn v2-btn--ghost" onClick={onClose}>
-            {t('common.close')}
-          </button>
-        </div>
+        {sent && <NoteV2 tone="info">{t('v2guest.redeem.mailSent')}</NoteV2>}
+        {mode === 'code' ? (
+          <>
+            <p className="v2-lede">{t('v2guest.redeem.body')}</p>
+            <FieldV2
+              key="code"
+              label={t('v2guest.redeem.code')}
+              name="guest_code"
+              className="v2-input v2-gcode-input"
+              maxLength={5}
+              autoComplete="one-time-code"
+              autoCapitalize="characters"
+              spellCheck={false}
+              value={code}
+              error={error}
+              onChange={(e) => {
+                setCode(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ''));
+                setError(null);
+              }}
+              after={<p className="v2-hint v2-hint--start">{t('v2guest.redeem.noCode')}</p>}
+            />
+            <div className="v2-sheet__actions">
+              <SubmitV2 busy={busy} label={t('v2guest.redeem.submit')} busyLabel={t('v2guest.redeem.submitting')} />
+              <button
+                type="button"
+                className="v2-btn v2-btn--ghost"
+                onClick={() => {
+                  setError(null);
+                  setMode('mail');
+                }}
+              >
+                {t('v2guest.redeem.byMail')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="v2-lede">{t('v2guest.redeem.mailBody')}</p>
+            <FieldV2
+              key="mail"
+              label={t('v2guest.redeem.email')}
+              name="guest_code_email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              maxLength={EMAIL_MAX}
+              value={mail}
+              error={error}
+              onChange={(e) => {
+                setMail(e.target.value);
+                setError(null);
+              }}
+            />
+            <div className="v2-sheet__actions">
+              <SubmitV2 busy={busy} label={t('v2guest.redeem.mailSubmit')} busyLabel={t('v2guest.redeem.mailSending')} />
+              <button
+                type="button"
+                className="v2-btn v2-btn--ghost"
+                onClick={() => {
+                  setError(null);
+                  setMode('code');
+                }}
+              >
+                {t('v2guest.redeem.toCode')}
+              </button>
+            </div>
+          </>
+        )}
+        <button type="button" className="v2-btn v2-btn--ghost" onClick={onClose}>
+          {t('common.close')}
+        </button>
       </form>
     </SheetV2>
   );

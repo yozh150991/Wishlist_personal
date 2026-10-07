@@ -108,6 +108,18 @@ const { data } = await supabase.rpc('claim_item_v2', {
 ```
 Обгортки над замороженими `get_shared_list` і `claim_item` (ADR-039, п. 10): позначки, гонка, мертве посилання й власник поводяться рівно як у v1, додаються лише підпис і пошта гостя. `get_guest_list` віддає їх тільки гостю з ключем цієї ідентичності; власнику на власному посиланні `guest` — `null`, як і в v1. У `claim_item_v2` `p_name` / `p_email`: `null` — лишити як є, `''` — прибрати, інше — записати (пошта — у нижньому регістрі). Перевірка йде **до** позначки: `bad_name` (понад 60 символів чи перенос рядка) і `bad_email` позначки не роблять. Решта помилок — як у `claim_item`. Коли v1 піде (крок 9), тіла переїдуть у ці функції.
 
+### `send_guest_code` / `guest_mail_set` — anon + authenticated (ADR-054)
+```ts
+const { data } = await supabase.rpc('send_guest_code', { p_token: token, p_email: 'ira@pochta.ua', p_locale: 'uk' });
+// → { "ok": true }  або  { "error": "too_many_attempts" }
+await supabase.rpc('guest_mail_set', { p_mail_token: mailToken, p_on: false });   // 204, без тіла
+```
+`send_guest_code` — «Надіслати код на пошту»: ставить у чергу лист із поточним кодом на кожну (до трьох) ідентичність цього списку з такою адресою. Відповідь `{ok:true}` однакова, є адреса в списку чи ні (ADR-041, п. 4). Ліміт — спільний із `redeem_guest_code`, 5 спроб на годину на список. Відписка на код не діє: його людина просить сама. Помилки: `not_found`, `owner_cannot_reserve`.
+
+`guest_mail_set` — «Не надсилати листів про цей список» (`p_on: false`) і «Повернути листи» (`true`) за секретом із листа `/l/{токен}/u/{mail_token}`. Без ключа гостя й без входу; відповідь однакова, чи такий секрет є.
+
+`claim_item_v2` з ADR-054 приймає ще `p_locale` (мова гостьової): є пошта й гість не відписався — лист на бронь стає в чергу цією мовою. Старий виклик без `p_locale` працює — усталено `uk`.
+
 ### `redeem_guest_code` — anon + authenticated
 ```ts
 const { data } = await supabase.rpc('redeem_guest_code', { p_token: token, p_code: '7K4M2' });
@@ -173,7 +185,8 @@ await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoi
 | Функція | Ролі |
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
-| `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2` | `anon`, `authenticated` |
+| `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
+| `wake_guest_mail`, `enqueue_guest_mail` | нікому — внутрішні (тригер, гостьові RPC, `pg_cron`) |
 | `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
@@ -410,3 +423,30 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 | `VAPID_PRIVATE_KEY` | — | з Secret Manager (`wishlist-vapid-private`), пара до `VITE_VAPID_PUBLIC_KEY` у Vercel |
 | `MAIL_FROM` | — | підтверджена в Brevo адреса відправника; вона ж — контакт у підписі VAPID (`mailto:`) |
 | `APP_ORIGIN` | — | адреса застосунку для посилань у листах, напр. `https://wishlist-personal.vercel.app` |
+
+## Сервіс гостьових листів `wishlist-guestmail` (ADR-054)
+
+Той самий образ (`APP_MODULE=app.mail_main:app`), окремий **відкритий** сервіс Cloud Run: `pg_net` у базі не має Google ID-токена, яким закрито `wishlist-jobs`. Модулі `jobs_*` (перевірка посилань, сповіщення власника) тут не імпортуються.
+
+### `POST /wake`
+Заголовок `x-wake-secret` — той самий секрет, що в Supabase Vault (`guest_mail_secret`); порівняння постійного часу. Тіло ігнорується: сигнал не несе даних, що й кому писати — сервіс читає з черги `guest_mail` secret-ключем. Тож витеклий секрет дає лише зайву обробку тієї самої черги.
+
+```
+POST /wake
+x-wake-secret: <секрет>
+→ 200 { "sent": 1, "skipped": 0, "failed": 0, "busy": 0 }
+```
+
+- `401 bad_secret` — заголовка немає, він не той, або секрет на сервісі не задано.
+- `503 guest_mail_not_configured` — бракує змінних (їхні назви — у журналі сервісу).
+- `{"busy": 1}` — черга саме обробляється; другий сигнал нічого не робить.
+
+Що робить: бере до 50 невідправлених рядків (найстаріші першими), кожен — атомарно (`PATCH … sent_at=is.null` з `Prefer: return=representation`), тож дві копії сервісу не надішлють той самий лист. Пропускає (`skipped`): пошти немає, гість відписався (для листа на бронь), посилання відкликане чи протерміноване, позиції немає. Brevo відмовив — `attempts + 1`, після п'ятої спроби рядок лишається в спокої. Наприкінці прибирає рядки, старші за 30 днів. У журнал — лише лічильники: ні адрес, ні токенів, ні секретів відписки.
+
+Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
+
+### `GET /health`
+`{ "status": "ok", "service": "wishlist-guestmail", "configured": true }` — без назв змінних: сервіс відкритий.
+
+### Змінні оточення
+`APP_MODULE=app.mail_main:app`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `BREVO_API_KEY`, `MAIL_FROM`, `APP_ORIGIN` — як у `wishlist-jobs`, плюс `GUEST_MAIL_WAKE_SECRET` (з Secret Manager, `wishlist-guestmail-wake`, щонайменше 32 символи).

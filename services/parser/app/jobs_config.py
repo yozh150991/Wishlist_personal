@@ -35,8 +35,18 @@ class JobSettings(BaseSettings):
     mail_from: str = ""
     app_origin: str = ""
 
+    # Гостьові листи (ADR-054): окремий відкритий сервіс wishlist-guestmail
+    # приймає лише сигнал «прокинься» з цим секретом (той самий — у Vault).
+    guest_mail_wake_secret: str = ""
+
     @field_validator(
-        "supabase_url", "supabase_secret_key", "brevo_api_key", "vapid_private_key", "mail_from", "app_origin"
+        "supabase_url",
+        "supabase_secret_key",
+        "brevo_api_key",
+        "vapid_private_key",
+        "mail_from",
+        "app_origin",
+        "guest_mail_wake_secret",
     )
     @classmethod
     def _strip(cls, value: str) -> str:
@@ -79,6 +89,20 @@ class JobSettings(BaseSettings):
     @property
     def notify_ready(self) -> bool:
         return self.ready and not self.notify_problems
+
+    @property
+    def guest_mail_problems(self) -> list[str]:
+        """Чого бракує гостьовим листам (ADR-054) — назви змінних, без значень."""
+        out = [p for p in self.notify_problems if p != "VAPID_PRIVATE_KEY"]
+        # Секрет сигналу — не коротший за 32 символи: він стоїть між відкритим
+        # сервісом і чергою.
+        if len(self.guest_mail_wake_secret) < 32:
+            out.append("GUEST_MAIL_WAKE_SECRET")
+        return out
+
+    @property
+    def guest_mail_ready(self) -> bool:
+        return self.ready and not self.guest_mail_problems
 
 
 @lru_cache
