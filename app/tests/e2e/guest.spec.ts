@@ -74,11 +74,11 @@ test('особисте посилання й код переносять поз�
 });
 
 /**
- * Гостьова v2 живе під `/l/…` (ADR-041): той самий токен і той самий ключ.
- * Поки її екрани не намальовані, під `/l/` стоїть та сама сторінка — і вже
- * зараз важливо, що ключ з особистого посилання прибирається на `/l/`, а не
- * перекидає гостя на `/s/`, і що «Забери доступ із собою» дає посилання
- * під тим самим префіксом.
+ * Позначка з гостьової v1 видна й у гостьовій v2 під `/l/…` (ADR-041): токен
+ * той самий, ключ той самий. Ключ з особистого посилання прибирається на
+ * `/l/`, а не перекидає гостя на `/s/`, і «Надіслати собі посилання» в «Моїх
+ * бронях» дає посилання під тим самим префіксом. Екрани `/l/` — гостьової v2
+ * (ADR-053), тож і підписи тут її: «Ви берете», «Мої броні».
  */
 test('/l/ — та сама позначка за тим самим ключем, особисте посилання лишається під /l/', async ({ page, browser }) => {
   const { link, token } = await setup(page, ['Глечик']);
@@ -89,12 +89,14 @@ test('/l/ — та сама позначка за тим самим ключем
   const key = await first.evaluate((tk) => localStorage.getItem(`wl.gk.${tk}`), token);
   expect(key).toMatch(/^[A-Za-z0-9_-]{22,64}$/);
 
-  // Буфер обміну в тестовому профілі потребує дозволу. Підміняємо запис,
-  // щоб прочитати, що саме сторінка скопіювала б.
+  // Системного «Поділитися» в тестовому браузері може й не бути, а буфер
+  // потребує дозволу. Вимикаємо перше й підміняємо друге, щоб прочитати, що
+  // саме сторінка скопіювала б.
   const ctx = await browser.newContext();
   await ctx.addInitScript(() => {
     const w = window as unknown as { __copied: string[] };
     w.__copied = [];
+    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {
@@ -108,12 +110,17 @@ test('/l/ — та сама позначка за тим самим ключем
   await v2.goto(`${link.replace('/s/', '/l/')}/g/${key}`);
   await expect(v2).toHaveURL(new RegExp(`/l/${token}$`));
   await expect(v2.locator('html')).toHaveAttribute('data-design', 'v2');
-  await expect(v2.getByText(yours)).toBeVisible();
+  await expect(v2.getByText(/ви берете|bierzesz to|you're taking this/i)).toBeVisible();
 
-  await v2.getByRole('button', { name: /^(скопіювати|skopiuj|copy)$/i }).click();
+  await v2.getByRole('button', { name: /мої броні · 1|moje rezerwacje · 1|my picks · 1/i }).click();
+  await v2
+    .getByRole('dialog')
+    .getByRole('button', { name: /надіслати собі посилання|wyślij sobie link|send myself the link/i })
+    .click();
+  await expect.poll(() => v2.evaluate(() => (window as unknown as { __copied: string[] }).__copied.length)).toBe(1);
   const copied = await v2.evaluate(() => (window as unknown as { __copied: string[] }).__copied);
-  expect(copied).toHaveLength(1);
   expect(copied[0]).toMatch(new RegExp(`/l/${token}/g/${key}$`));
+  await ctx.close();
 });
 
 test('програш гонки пояснюється на місці позиції, кнопка зникає', async ({ page, browser }) => {
