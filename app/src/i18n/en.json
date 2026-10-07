@@ -838,10 +838,14 @@
       "manualHint": "What guests see",
       "priority": "Priority",
       "priorityHint": "“Really want” first",
+      "priorityLow": "Priority · ideas first",
+      "priorityLowHint": "“Just an idea” first",
       "priceAsc": "Price · low to high",
       "priceDesc": "Price · high to low",
       "recent": "Recently added",
-      "byTitle": "By name"
+      "oldest": "Oldest first",
+      "byTitle": "By name · A–Z",
+      "byTitleDesc": "By name · Z–A"
     },
     "priority": {
       "high": "Really want",
@@ -1015,6 +1019,7 @@
     "currency": {
       "label": "Price currency",
       "other": "Not in the list currency ({currency}): it shows as a separate amount in the total, unconverted.",
+      "fx": "≈ {sum} at the NBP rate of {date}",
       "fromShop": "Price taken from the shop along with its currency: {currency}."
     }
   },
@@ -1225,5 +1230,18 @@
   "v2import": {
     "open": "Import from a file",
     "done": "Items imported: {n}"
+  },
+  "v2select": {
+    "menu": "Select several",
+    "hint": "Tap the items you want to change together",
+    "none": "Clear selection",
+    "status": "Status",
+    "share": "Share",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "statusTitle": "Mark the selected ({n}) as…",
+    "statusDone": "Marked as “{status}”: {n}",
+    "deleted": "Items deleted: {n}",
+    "shareNone": "None of the selected items are active — nothing to share."
   }
 }

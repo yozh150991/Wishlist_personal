@@ -9,6 +9,7 @@ import {
   Eye,
   FileDown,
   FolderPlus,
+  ListChecks,
   ListOrdered,
   ListPlus,
   MoreHorizontal,
@@ -20,6 +21,8 @@ import {
   Settings2,
   Share2,
   SlidersHorizontal,
+  Tag,
+  Trash2,
   X,
 } from 'lucide-react';
 import { deleteList, fetchList, setListArchived, updateList } from '../../../lib/db';
@@ -54,6 +57,7 @@ import {
   TOOLS_FROM,
   rangeCount,
   isDraft,
+  isPrioritySort,
   isViewSort,
   itemCurrency,
   matchesView,
@@ -62,7 +66,7 @@ import {
   viewGroups,
 } from '../../../lib/itemsView';
 import type { ViewFilter, ViewGroup, ViewRange, ViewSort } from '../../../lib/itemsView';
-import { DEFAULT_QUERY } from '../../../lib/types';
+import { DEFAULT_QUERY, STATUSES } from '../../../lib/types';
 import type { Currency, Item, ItemInput, ItemStatus, List } from '../../../lib/types';
 import { NoteV2 } from './AuthPartsV2';
 import { SheetV2, useCounts } from './CommonV2';
@@ -156,6 +160,11 @@ type ListState = 'loading' | 'ready' | 'missing';
  * видалення списку: тостом, якщо список ніхто не відкривав, і з введенням
  * назви, якщо відкривали (F3).
  *
+ * «Вибрати кілька» — режим масових дій, як у v1: прапорці на картках і
+ * панель унизу — статус, «Поділитися» вибраними (у посилання йдуть лише
+ * актуальні) і видалення. Статус оборотний, тож без підтвердження; масове
+ * видалення — з ним (`lib/undo.ts`: діалог лишається незворотному).
+ *
  * Після свята (крок 4а, потоки M, S3; ADR-045) — картка «Як минуло свято?»:
  * позначити отримане, перенести копії того, що ще хочеш, повторити на
  * наступний рік, архівувати або «Пізніше». Архівний список — полиця: без
@@ -222,6 +231,16 @@ export default function ListV2() {
   const [deleteAsk, setDeleteAsk] = useState<{ views: number | null } | null>(null);
   /** «Змінити порядок» (V3): окремий режим, щоб перетягування не заважало свайпу. */
   const [ordering, setOrdering] = useState(false);
+  /** «Вибрати кілька»: режим і вибрані id. */
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [bulkDeleteAsk, setBulkDeleteAsk] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  /** Що щойно зробили з вибраними — рядком згори, бо панель уже зникла. */
+  const [bulkNote, setBulkNote] = useState<string | null>(null);
+  /** «Поділитися» з режиму вибору: що позначити в аркуші одразу. */
+  const [sharePick, setSharePick] = useState<string[] | undefined>(undefined);
   const hue = useAppearanceHue(list?.appearance_id);
 
   /* ── Після свята й архів (ADR-045) ── */
@@ -246,6 +265,9 @@ export default function ListV2() {
     setHidden(new Set());
     setFailed(new Map());
     setOrdering(false);
+    setSelecting(false);
+    setPicked(new Set());
+    setBulkNote(null);
     setSnooze(readSnooze(id));
     setAfterStep(null);
     setAfterDone(new Set());
@@ -360,7 +382,7 @@ export default function ListV2() {
     () =>
       sortItems(
         shown.filter((i) => i.status !== 'active'),
-        viewSort === 'priority' ? 'manual' : viewSort,
+        isPrioritySort(viewSort) ? 'manual' : viewSort,
         currency,
       ),
     [shown, viewSort, currency],
@@ -390,6 +412,14 @@ export default function ListV2() {
     [shareable, sections],
   );
 
+
+  /* ── «Вибрати кілька» ── */
+
+  /** Вибране, що ще на екрані: позиція могла зникнути (видалили тостом, синхронізація). */
+  const chosen = useMemo(() => live.filter((i) => picked.has(i.id)), [live, picked]);
+  /** У посилання йде лише те, що бачать гості: актуальне й з назвою. */
+  const chosenShareable = useMemo(() => chosen.filter((i) => i.status === 'active' && !isDraft(i)), [chosen]);
+  const allPicked = shown.length > 0 && shown.every((i) => picked.has(i.id));
 
   /** «Статус: Куплене, Подароване» і «Ціна 100–500» — що саме звужує список. */
   const rangeChips: { key: 'status' | 'price'; label: string; clear: () => void; clearLabel: string }[] = [];
@@ -521,6 +551,88 @@ export default function ListV2() {
     setMenuItem(null);
     setSheet({ open: true, item });
   }, []);
+
+  /* ── «Вибрати кілька» ── */
+
+  function startSelecting() {
+    setListMenu(false);
+    setBulkNote(null);
+    setPicked(new Set());
+    setSelecting(true);
+  }
+
+  function stopSelecting() {
+    setSelecting(false);
+    setPicked(new Set());
+  }
+
+  function togglePick(item: Item) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(item.id)) next.delete(item.id);
+      else next.add(item.id);
+      return next;
+    });
+  }
+
+  /** «Вибрати всі показані» — з урахуванням пошуку й фільтрів; вдруге — зняти. */
+  function toggleAll() {
+    setPicked(allPicked ? new Set() : new Set(shown.map((i) => i.id)));
+  }
+
+  /** Статус вибраних — оборотний тим самим шляхом, тож без підтвердження; працює й офлайн. */
+  async function bulkStatus(status: ItemStatus) {
+    setBulkStatusOpen(false);
+    const ids = chosen.filter((i) => i.status !== status).map((i) => i.id);
+    const n = chosen.length;
+    stopSelecting();
+    setActionError(null);
+    setBulkNote(t('v2select.statusDone', { status: statusLabel(status), n }));
+    if (ids.length === 0) return;
+    const op: Op = { kind: 'status', listId: id, ids, status };
+    applyLocal(op);
+    try {
+      if ((await run(userId, op)) === 'sent') void refresh();
+    } catch (e) {
+      setBulkNote(null);
+      setActionError(t('v2list.actionFailed', { error: errorText(e, t) }));
+      void refresh();
+    }
+  }
+
+  /**
+   * Масове видалення — після підтвердження й одразу, без відліку: діалог уже
+   * був. Позначки гостей на ці позиції зникають разом із ними (ADR-044) —
+   * про це каже текст підтвердження.
+   */
+  async function bulkDelete() {
+    if (bulkBusy) return;
+    const ids = chosen.map((i) => i.id);
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    setActionError(null);
+    const op: Op = { kind: 'delete', listId: id, ids };
+    try {
+      const result = await run(userId, op);
+      applyLocal(op);
+      setBulkNote(t('v2select.deleted', { n: ids.length }));
+      if (result === 'sent') void refresh();
+    } catch (e) {
+      setActionError(t('v2list.actionFailed', { error: errorText(e, t) }));
+      void refresh();
+    } finally {
+      setBulkBusy(false);
+      setBulkDeleteAsk(false);
+      stopSelecting();
+    }
+  }
+
+  function shareChosen() {
+    if (chosenShareable.length === 0) return;
+    setSharePick(chosenShareable.map((i) => i.id));
+    stopSelecting();
+    setShareOpen(true);
+  }
 
   /* ── Розділи (ADR-036) ── */
 
@@ -742,7 +854,7 @@ export default function ListV2() {
   const archived = Boolean(list?.is_archived);
   const past = list ? isPastEvent(list, today) : false;
   const repeatYear = list ? repeatTarget(list, today).year : null;
-  const afterDue = list !== null && ready && !ordering && afterEventDue(list, today, snooze);
+  const afterDue = list !== null && ready && !ordering && !selecting && afterEventDue(list, today, snooze);
 
   function groupHeading(g: ViewGroup, index: number) {
     const headingId = `v2-group-${index}`;
@@ -774,19 +886,24 @@ export default function ListV2() {
         key={item.id}
         item={item}
         currency={currency}
-        showPriority={viewSort !== 'priority'}
+        showPriority={!isPrioritySort(viewSort)}
         highlight={highlight === item.id}
         failed={failed.get(item.id) ?? null}
         onOpen={openEdit}
         onMenu={setMenuItem}
         onRetry={removeItem}
         onDelete={removeItem}
+        select={selecting ? { on: picked.has(item.id), onToggle: togglePick } : undefined}
       />
     );
   }
 
   return (
-    <main className="v2-page v2-page--list" aria-busy={loading || undefined}>
+    <main
+      className="v2-page v2-page--list"
+      data-selecting={selecting || undefined}
+      aria-busy={loading || undefined}
+    >
       <div className="v2-listhead">
         <Link to="/lists" className="v2-iconbtn v2-listhead__back" aria-label={t('v2list.back')}>
           <ChevronLeft size={24} strokeWidth={STROKE} aria-hidden="true" />
@@ -806,6 +923,8 @@ export default function ListV2() {
           </h1>
           {ordering ? (
             <p className="v2-listhead__meta">{t('v2list.reorder.subtitle')}</p>
+          ) : selecting ? (
+            <p className="v2-listhead__meta">{t('v2select.hint')}</p>
           ) : (
             ready && (
               <p className="v2-listhead__meta">{[counts.items(live.length), eventDay].filter(Boolean).join(' · ')}</p>
@@ -814,6 +933,10 @@ export default function ListV2() {
         </div>
         {ordering ? (
           <button type="button" className="v2-btn v2-btn--primary v2-btn--small" onClick={() => setOrdering(false)}>
+            {t('common.done')}
+          </button>
+        ) : selecting ? (
+          <button type="button" className="v2-btn v2-btn--primary v2-btn--small" onClick={stopSelecting}>
             {t('common.done')}
           </button>
         ) : (
@@ -850,6 +973,7 @@ export default function ListV2() {
       )}
       {actionError && <NoteV2 tone="error">{actionError}</NoteV2>}
       {flash && <NoteV2 tone="info">{flash}</NoteV2>}
+      {bulkNote && <NoteV2 tone="info">{bulkNote}</NoteV2>}
       {carried && (
         <NoteV2 tone="info">
           {t('v2after.carry.done', { title: carried.title, n: carried.n })}{' '}
@@ -1072,7 +1196,7 @@ export default function ListV2() {
             ),
           )}
           {done.length > 0 && (
-            <details className="v2-done" open={activeShown === 0 || undefined}>
+            <details className="v2-done" open={activeShown === 0 || selecting || undefined}>
               <summary className="v2-done__summary">
                 {t('v2list.group.done')} · {done.length}
               </summary>
@@ -1084,10 +1208,73 @@ export default function ListV2() {
 
       {/* Плаваюча «+» — під великим пальцем. Поки видно тост, її немає: вони
           ділять одне місце, а «Відмінити» важливіше ці шість секунд. */}
-      {ready && live.length > 0 && !undo.pending && !ordering && !archived && (
+      {ready && live.length > 0 && !undo.pending && !ordering && !selecting && !archived && (
         <button type="button" className="v2-fab v2-fab--float" aria-label={t('v2list.add')} onClick={() => openNew()}>
           <Plus size={26} strokeWidth={STROKE} aria-hidden="true" />
         </button>
+      )}
+
+      {selecting && (
+        <div className="v2-selbar" role="region" aria-label={t('select.region')}>
+          <div className="v2-selbar__head">
+            <p className="v2-selbar__count" aria-live="polite">
+              {t('select.selected', { n: chosen.length })}
+            </p>
+            <button
+              type="button"
+              className="v2-btn v2-btn--ghost v2-btn--small"
+              aria-disabled={shown.length === 0 || undefined}
+              onClick={() => {
+                if (shown.length > 0) toggleAll();
+              }}
+            >
+              {allPicked ? t('v2select.none') : t('select.selectAll')}
+            </button>
+          </div>
+          <div className="v2-selbar__actions">
+            <button
+              type="button"
+              className="v2-btn v2-btn--outline v2-btn--small"
+              aria-disabled={chosen.length === 0 || undefined}
+              onClick={() => {
+                if (chosen.length > 0) setBulkStatusOpen(true);
+              }}
+            >
+              <Tag size={18} strokeWidth={STROKE} aria-hidden="true" />
+              {t('v2select.status')}
+            </button>
+            {!archived && (
+              <button
+                type="button"
+                className="v2-btn v2-btn--outline v2-btn--small"
+                aria-disabled={chosenShareable.length === 0 || undefined}
+                aria-describedby={chosen.length > 0 && chosenShareable.length < chosen.length ? 'v2-sel-share' : undefined}
+                onClick={shareChosen}
+              >
+                <Share2 size={18} strokeWidth={STROKE} aria-hidden="true" />
+                {t('v2select.share')}
+              </button>
+            )}
+            <button
+              type="button"
+              className="v2-btn v2-btn--danger v2-btn--small"
+              aria-disabled={chosen.length === 0 || undefined}
+              onClick={() => {
+                if (chosen.length > 0) setBulkDeleteAsk(true);
+              }}
+            >
+              <Trash2 size={18} strokeWidth={STROKE} aria-hidden="true" />
+              {t('v2select.delete')}
+            </button>
+          </div>
+          {!archived && chosen.length > 0 && chosenShareable.length < chosen.length && (
+            <p className="v2-hint v2-hint--start" id="v2-sel-share">
+              {chosenShareable.length > 0
+                ? t('select.shareActiveOnly', { n: chosenShareable.length })
+                : t('v2select.shareNone')}
+            </p>
+          )}
+        </div>
       )}
 
       <UndoToastV2 pending={undo.pending} until={undo.until} onUndo={undo.undo} />
@@ -1221,6 +1408,18 @@ export default function ListV2() {
           <button
             type="button"
             className="v2-menu__item"
+            aria-disabled={live.length === 0 || !ready || undefined}
+            onClick={() => {
+              if (live.length === 0 || !ready) return;
+              startSelecting();
+            }}
+          >
+            <ListChecks size={20} strokeWidth={STROKE} aria-hidden="true" />
+            {t('v2select.menu')}
+          </button>
+          <button
+            type="button"
+            className="v2-menu__item"
             onClick={() => {
               setListMenu(false);
               setSettingsOpen(true);
@@ -1255,7 +1454,41 @@ export default function ListV2() {
         )}
       </SheetV2>
 
-      <ShareSheetV2 open={shareOpen} list={list} groups={guestGroups} onClose={() => setShareOpen(false)} />
+      <ShareSheetV2
+        open={shareOpen}
+        list={list}
+        groups={guestGroups}
+        preselect={sharePick}
+        onClose={() => {
+          setShareOpen(false);
+          setSharePick(undefined);
+        }}
+      />
+
+      <SheetV2 open={bulkStatusOpen} onClose={() => setBulkStatusOpen(false)} labelledBy="v2-bulk-status-title">
+        <h2 className="v2-sheet__title" id="v2-bulk-status-title">
+          {t('v2select.statusTitle', { n: chosen.length })}
+        </h2>
+        <div className="v2-menu">
+          {STATUSES.map((st) => (
+            <button key={st} type="button" className="v2-menu__item" onClick={() => void bulkStatus(st)}>
+              {statusLabel(st)}
+            </button>
+          ))}
+        </div>
+      </SheetV2>
+
+      <ConfirmSheetV2
+        open={bulkDeleteAsk}
+        id="v2-bulk-delete-title"
+        title={t('select.confirmTitle', { n: chosen.length })}
+        body={t('select.confirmBody')}
+        confirmLabel={t('v2select.delete')}
+        busyLabel={t('v2select.deleting')}
+        busy={bulkBusy}
+        onConfirm={() => void bulkDelete()}
+        onClose={() => setBulkDeleteAsk(false)}
+      />
 
       <ReceivedSheetV2
         open={afterStep === 'received'}

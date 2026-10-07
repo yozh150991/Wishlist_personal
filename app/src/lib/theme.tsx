@@ -136,7 +136,8 @@ function initialDesign(): Design {
   } catch {
     /* адреса без параметрів або заборонене сховище — просто йдемо далі */
   }
-  return read(DESIGN_KEY, isDesign, 'v1');
+  // Усталена — v2 (ADR-052); v1 лишається тим, хто обрав її сам.
+  return read(DESIGN_KEY, isDesign, 'v2');
 }
 
 /**

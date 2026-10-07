@@ -805,6 +805,49 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-item__tags { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
 .v2-item__more { margin-inline-end: var(--sp-3); }
 
+/* «Вибрати кілька»: уся картка — прапорець; вибрана — з контуром акценту,
+   як рядок вибору в «Поділитися». Права частина без «⋯» — вміст до краю. */
+.v2-item__main--select { padding-inline-end: var(--sp-5); border-radius: var(--r-card); }
+.v2-item__check { width: 22px; height: 22px; flex: none; margin: 0; accent-color: var(--color-accent-700); cursor: pointer; }
+.v2-item[data-selected='true'] { border-color: var(--color-accent-700); }
+.v2-item__front:has(.v2-item__check:focus-visible) { outline: 2px solid var(--color-accent-700); outline-offset: -2px; }
+
+/* Панель дій з вибраними — над нижньою навігацією, там, де «+» і тост. */
+.v2-selbar {
+  position: fixed;
+  inset-inline: var(--sp-5);
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  z-index: 11;
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: 22px;
+  box-shadow: var(--shadow-lg);
+}
+@media (min-width: 56rem) {
+  .v2-selbar { inset-inline: auto var(--sp-8); bottom: var(--sp-8); width: 30rem; }
+}
+.v2-selbar__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.v2-selbar__head .v2-btn { padding-inline: var(--sp-3); }
+.v2-selbar__count { font-weight: 800; }
+/* Дії — рівними колонками, іконка над підписом: три в ряд влазять і на 320 px. */
+.v2-selbar__actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--sp-3); }
+.v2-selbar__actions .v2-btn {
+  flex-direction: column;
+  gap: 2px;
+  min-height: 56px;
+  padding: var(--sp-2) var(--sp-2);
+  font-size: var(--t-small);
+  line-height: 1.15;
+  text-align: center;
+}
+/* Тост «Відмінити» стає над панеллю, а не під нею. */
+.v2-page[data-selecting='true'] .v2-toast { bottom: calc(220px + env(safe-area-inset-bottom)); }
+/* Остання картка не ховається під панеллю. */
+.v2-page[data-selecting='true'] { padding-bottom: 200px; }
+
 /* Видалення не вдалося — пояснення в рядку картки, не тостом (F, гілка). */
 .v2-item__failed {
   grid-column: 1 / -1;
@@ -984,6 +1027,21 @@ div.v2-chips { gap: var(--sp-3); }
   border-color: transparent;
 }
 .v2-seg__opt input:focus-visible + span { outline: 2px solid var(--color-accent-700); outline-offset: 2px; }
+/*
+ * Короткий вибір (тема, мова) — завжди один рядок: варіанти ділять ширину,
+ * поля тонші. «Jak w systemie» на 375 px інакше падав на другий рядок.
+ * На зовсім вузькому екрані довгий підпис переноситься всередині кнопки,
+ * а не виносить кнопку вниз.
+ */
+.v2-seg__row--fit { flex-wrap: nowrap; }
+.v2-seg__row--fit .v2-seg__opt { flex: 1 1 auto; min-width: 0; }
+.v2-seg__row--fit .v2-seg__opt span {
+  flex: 1;
+  justify-content: center;
+  padding: var(--sp-2) var(--sp-4);
+  line-height: 1.15;
+  text-align: center;
+}
 
 .v2-radios { display: grid; gap: var(--sp-2); min-width: 0; margin: 0; padding: 0; border: 0; }
 .v2-radios > legend { margin-bottom: var(--sp-5); padding: 0; }

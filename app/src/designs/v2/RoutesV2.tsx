@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import Placeholder from './screens/PlaceholderV2';
 import LoginV2 from './screens/LoginV2';
 import RegisterV2 from './screens/RegisterV2';
@@ -11,7 +11,7 @@ import SharesV2 from './screens/SharesV2';
 import SettingsV2 from './screens/SettingsV2';
 import AddV2 from './screens/AddV2';
 import { RequireAuthV2, ShellV2 } from './ShellV2';
-// Стилі форми v2 їдуть разом із цим лінивим модулем (ADR-039, п. 9).
+// Стилі форми v2 їдуть разом із цим модулем — з ADR-052 у головному пакеті.
 import './v2.css';
 
 /**
@@ -38,6 +38,15 @@ import './v2.css';
  * заглушка з дорогою назад. `/add` — «Додати в Wishlist» із системного
  * «Поділитися» (крок 4б): без каркаса, бо це аркуш поверх магазину.
  */
+/**
+ * `/lists/:id/preview` — окрема сторінка превʼю з v1. У v2 превʼю — аркуш на
+ * сторінці списку, тож стара адреса (закладка, історія) веде туди ж.
+ */
+function PreviewRedirect() {
+  const { id = '' } = useParams();
+  return <Navigate to={`/lists/${id}`} replace />;
+}
+
 export default function DesignV2Routes() {
   return (
     <Routes>
@@ -65,6 +74,7 @@ export default function DesignV2Routes() {
         <Route path="/lists" element={<ListsV2 />} />
         <Route path="/lists/new" element={<NewListV2 />} />
         <Route path="/lists/:id" element={<ListV2 />} />
+        <Route path="/lists/:id/preview" element={<PreviewRedirect />} />
         <Route path="/shares" element={<SharesV2 />} />
         <Route path="/settings" element={<SettingsV2 />} />
       </Route>

@@ -42,12 +42,18 @@ export function ShareSheetV2({
   open,
   list,
   groups,
+  preselect,
   onClose,
 }: {
   open: boolean;
   list: List | null;
   /** Актуальні позиції в порядку гостя, по розділах. */
   groups: PreviewGroup[];
+  /**
+   * Із режиму «Вибрати кілька»: які позиції позначити одразу. Решта лишається
+   * у переліку «Обрати» — додати її можна там само. Без нього — усі актуальні.
+   */
+  preselect?: string[];
   onClose: () => void;
 }) {
   const { t, locale } = useI18n();
@@ -84,7 +90,8 @@ export function ShareSheetV2({
     setShowPrices(true);
     setAllowClaims(true);
     setExpiresOn('');
-    setSelected(new Set(all.map((i) => i.id)));
+    const picked = preselect ? all.filter((i) => preselect.includes(i.id)) : [];
+    setSelected(new Set((picked.length > 0 ? picked : all).map((i) => i.id)));
     setSubmitted(false);
     setServer(null);
     setLink(null);
