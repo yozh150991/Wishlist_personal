@@ -12,16 +12,27 @@ secret-ключем. Тож навіть витеклий секрет сигн�
 - ключа гостя в листі немає (ADR-041, п. 3): сервер має лише його хеш;
 - тема листа нейтральна — «Ваша бронь у Wishlist»: пошта не приватна, а
   сюрприз має лишитись сюрпризом. Назви позиції й списку — лише в тілі;
-- до гостя — на «ви» (README пакета, «Копірайтинг»).
+- до гостя — на «ви» (README пакета, «Копірайтинг»); про власника — безособово
+  («позицію змінено»): ні імені, ні роду.
+
+Види листів: `claim` — на бронь, `code` — код на прохання (ADR-054);
+`changed` і `deleted` — власник змінив чи прибрав позицію, яку взяли (потік J),
+`reminder` — за 7 днів до свята (P5) (ADR-055). Що сказати, для трьох
+останніх лежить знімком у `details`: сервіс позначок не читає ніколи.
+Посилання на список — з посилання, де діяв гість; приховані там ціни не
+з'являються й у листі.
 """
 
 import html
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from typing import Protocol
 
 import httpx
+
+from .jobs_texts import format_date, format_money
 
 log = logging.getLogger("jobs.guestmail")
 
@@ -39,6 +50,19 @@ TEXTS: dict[str, dict[str, str]] = {
         "why.claim": "Ви вказали цю адресу, коли бронювали. Власник списку її не бачить.",
         "why.code": "Код попросили надіслати на цю адресу. Якщо це не ви — просто видаліть лист.",
         "unsubscribe": "Не надсилати листів про цей список",
+        "changed.subject": "Зміни у вашій броні в Wishlist",
+        "changed.lead": "Позицію «{item}», яку ви взяли в списку «{list}», змінено.",
+        "changed.title": "Назва: {old} → {new}",
+        "changed.price": "Ціна: {old} → {new}",
+        "changed.url": "Посилання на магазин змінилось.",
+        "changed.check": "Перевірте, чи бронь ще актуальна: на сторінці списку її можна лишити або зняти.",
+        "deleted.subject": "Зміни у вашій броні в Wishlist",
+        "deleted.lead": "Позицію «{item}» прибрано зі списку «{list}». Бронь знято автоматично.",
+        "deleted.bought": "Якщо ви вже купили її — нічого страшного: подарунок від цього не гірший.",
+        "reminder.subject": "Нагадування від Wishlist",
+        "reminder.lead": "До «{list}» — 7 днів, {date}.",
+        "reminder.items": "Ви берете: {items}.",
+        "noprice": "не вказана",
     },
     "pl": {
         "claim.subject": "Twoja rezerwacja w Wishlist",
@@ -51,6 +75,19 @@ TEXTS: dict[str, dict[str, str]] = {
         "why.claim": "Ten adres został podany przy rezerwacji. Właściciel listy go nie widzi.",
         "why.code": "Ktoś poprosił o wysłanie kodu na ten adres. Jeśli to nie ty — po prostu usuń tę wiadomość.",
         "unsubscribe": "Nie wysyłaj wiadomości o tej liście",
+        "changed.subject": "Zmiany w twojej rezerwacji w Wishlist",
+        "changed.lead": "Pozycja „{item}” z listy „{list}”, którą masz zarezerwowaną, została zmieniona.",
+        "changed.title": "Nazwa: {old} → {new}",
+        "changed.price": "Cena: {old} → {new}",
+        "changed.url": "Link do sklepu się zmienił.",
+        "changed.check": "Sprawdź, czy rezerwacja jest nadal aktualna: na stronie listy możesz ją zostawić albo zdjąć.",
+        "deleted.subject": "Zmiany w twojej rezerwacji w Wishlist",
+        "deleted.lead": "Pozycję „{item}” usunięto z listy „{list}”. Rezerwację zdjęto automatycznie.",
+        "deleted.bought": "Jeśli prezent jest już kupiony — nic się nie stało, nie jest przez to gorszy.",
+        "reminder.subject": "Przypomnienie od Wishlist",
+        "reminder.lead": "Do „{list}” zostało 7 dni — {date}.",
+        "reminder.items": "Masz zarezerwowane: {items}.",
+        "noprice": "nie podana",
     },
     "en": {
         "claim.subject": "Your pick on Wishlist",
@@ -63,6 +100,19 @@ TEXTS: dict[str, dict[str, str]] = {
         "why.claim": "You gave this address when you picked an item. The list's owner can't see it.",
         "why.code": "Someone asked for the code to be sent to this address. If it wasn't you, just delete this email.",
         "unsubscribe": "Stop emails about this list",
+        "changed.subject": "Changes to your pick on Wishlist",
+        "changed.lead": "“{item}”, which you picked on “{list}”, has been changed.",
+        "changed.title": "Name: {old} → {new}",
+        "changed.price": "Price: {old} → {new}",
+        "changed.url": "The shop link has changed.",
+        "changed.check": "Check whether your pick still makes sense: on the list page you can keep it or release it.",
+        "deleted.subject": "Changes to your pick on Wishlist",
+        "deleted.lead": "“{item}” was removed from “{list}”. Your pick was released automatically.",
+        "deleted.bought": "If you've already bought it, no harm done — the gift is just as good.",
+        "reminder.subject": "A reminder from Wishlist",
+        "reminder.lead": "“{list}” is 7 days away — {date}.",
+        "reminder.items": "You're taking: {items}.",
+        "noprice": "not set",
     },
 }
 
@@ -90,14 +140,100 @@ class Letter:
     text: str
 
 
-def render(kind: str, locale: str, *, item: str, list_title: str, code: str, url: str, unsubscribe: str) -> Letter:
-    """Лист гостю: на бронь (`claim`) чи з кодом (`code`)."""
+_QUOTES = {"uk": ("«", "»"), "pl": ("„", "”"), "en": ("“", "”")}
+
+
+def _minor(value: object) -> int | None:
+    """Ціна з details (число чи рядок) у мінорних одиницях; ні — None."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int((Decimal(str(value)) * 100).to_integral_value())
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def _price(value: object, currency: object, locale: str) -> str:
+    minor = _minor(value)
+    if minor is None:
+        return text("noprice", locale)
+    return format_money(minor, currency if isinstance(currency, str) else "PLN", locale)
+
+
+def change_lines(details: dict | None, locale: str, hide_prices: bool) -> list[str]:
+    """Що саме змінилось, рядками; ціна — лише якщо посилання її показує."""
+    if not isinstance(details, dict):
+        return []
+    old = details.get("old") or {}
+    new = details.get("new") or {}
+    out: list[str] = []
+    if old.get("title") != new.get("title") and new.get("title"):
+        out.append(text("changed.title", locale, old=old.get("title") or "", new=new.get("title")))
+    price_moved = _minor(old.get("price")) != _minor(new.get("price")) or (
+        _minor(new.get("price")) is not None and old.get("currency") != new.get("currency")
+    )
+    if price_moved and not hide_prices:
+        out.append(
+            text(
+                "changed.price",
+                locale,
+                old=_price(old.get("price"), old.get("currency"), locale),
+                new=_price(new.get("price"), new.get("currency"), locale),
+            )
+        )
+    if (old.get("url") or None) != (new.get("url") or None):
+        out.append(text("changed.url", locale))
+    return out
+
+
+def render(
+    kind: str,
+    locale: str,
+    *,
+    item: str,
+    list_title: str,
+    code: str,
+    url: str,
+    unsubscribe: str,
+    details: dict | None = None,
+    hide_prices: bool = False,
+) -> Letter:
+    """Лист гостю: бронь, код, зміна, видалення чи нагадування."""
     locale = locale_of(locale)
     esc = html.escape
+    details = details if isinstance(details, dict) else {}
+    why = text("why.claim", locale)
     if kind == "claim":
         subject = text("claim.subject", locale)
         lines = [text("claim.lead", locale, item=item, list=list_title), text("claim.code", locale, code=code)]
-        why = text("why.claim", locale)
+    elif kind == "changed":
+        subject = text("changed.subject", locale)
+        lines = [
+            text("changed.lead", locale, item=item, list=list_title),
+            *change_lines(details, locale, hide_prices),
+            text("changed.check", locale),
+            text("claim.code", locale, code=code),
+        ]
+    elif kind == "deleted":
+        subject = text("deleted.subject", locale)
+        lines = [
+            text("deleted.lead", locale, item=str(details.get("title") or item), list=list_title),
+            text("deleted.bought", locale),
+        ]
+    elif kind == "reminder":
+        subject = text("reminder.subject", locale)
+        left, right = _QUOTES[locale]
+        titles = [str(t) for t in details.get("items") or [] if t]
+        when = details.get("event_date")
+        try:
+            day = format_date(date.fromisoformat(str(when)), locale)
+        except ValueError:
+            day = str(when or "")
+        lines = [
+            text("reminder.lead", locale, list=list_title, date=day),
+            text("reminder.items", locale, items=", ".join(f"{left}{t}{right}" for t in titles)),
+            text("claim.code", locale, code=code),
+        ]
     else:
         subject = text("code.subject", locale)
         lines = [text("code.lead", locale, list=list_title, code=code), text("code.how", locale)]
@@ -140,6 +276,8 @@ class Job:
     mail_off: bool
     code: str | None
     mail_token: str | None
+    details: dict | None = None
+    hide_prices: bool = False
 
     @staticmethod
     def from_row(row: dict, now: datetime) -> "Job":
@@ -161,6 +299,8 @@ class Job:
             mail_off=bool(identity.get("mail_off")),
             code=identity.get("short_code"),
             mail_token=identity.get("mail_token"),
+            details=row.get("details") if isinstance(row.get("details"), dict) else None,
+            hide_prices=bool(share.get("hide_prices")),
         )
 
 
@@ -171,9 +311,9 @@ class GuestMailStore:
     """
 
     SELECT = (
-        "id,kind,locale,attempts,"
+        "id,kind,locale,attempts,details,"
         "item:items(title),"
-        "share:shares(token,title,revoked_at,expires_at),"
+        "share:shares(token,title,revoked_at,expires_at,hide_prices),"
         "identity:guest_identities(email,mail_off,short_code,mail_token)"
     )
 
@@ -261,14 +401,21 @@ def skip_reason(job: Job) -> str | None:
     """Чому листа не буде — або None, якщо його треба надіслати."""
     if not job.email:
         return "no_email"
-    if job.kind == "claim" and job.mail_off:
+    if job.kind != "code" and job.mail_off:
         return "unsubscribed"
     if not job.share_live or not job.token:
         return "share_gone"
-    if job.kind == "claim" and not job.item:
+    if job.kind in ("claim", "changed") and not job.item:
         return "item_gone"
     if not job.code or not job.mail_token:
         return "identity_gone"
+    if job.kind == "changed" and not change_lines(job.details, job.locale, job.hide_prices):
+        # Змінилась лише прихована ціна — гостю нема що сказати.
+        return "nothing_visible"
+    if job.kind == "deleted" and not (job.details or {}).get("title"):
+        return "nothing_visible"
+    if job.kind == "reminder" and not (job.details or {}).get("items"):
+        return "nothing_visible"
     return None
 
 
@@ -293,6 +440,8 @@ async def process(store: StoreLike, mailer: MailerLike, origin: str, now: dateti
             code=job.code or "",
             url=url,
             unsubscribe=f"{url}/u/{job.mail_token}",
+            details=job.details,
+            hide_prices=job.hide_prices,
         )
         if await mailer.send(job.email or "", letter.subject, letter.html, letter.text, tag="wishlist-guest"):
             await store.done(job.id, now, "sent")

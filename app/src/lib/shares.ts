@@ -160,6 +160,11 @@ export type SharedItem = {
   taken_qty: number | null;
   /** Скільки взяв саме цей гість (за ключем); null для власника. */
   mine_qty: number | null;
+  /**
+   * Гостьова v2 (ADR-055): власник змінив назву, посилання чи ціну після того,
+   * як цей гість узяв позицію. Приходить лише йому й лише на його позиції.
+   */
+  changed?: boolean;
 };
 
 export type GuestInfo = { code: string; name?: string | null; email?: string | null };
@@ -331,6 +336,29 @@ export async function sendGuestCode(
 export async function setGuestMail(mailToken: string, on: boolean): Promise<void> {
   const { error } = await supabase.rpc('guest_mail_set', { p_mail_token: mailToken, p_on: on });
   if (error) throw rpcError(error);
+}
+
+/** «Лишити» після зміни позиції (ADR-055): знімає «Змінено» з броні цього гостя. */
+export async function ackClaimChange(token: string, itemId: string, key: string): Promise<void> {
+  const { error } = await supabase.rpc('ack_claim_change', { p_token: token, p_item_id: itemId, p_key: key });
+  if (error) throw rpcError(error);
+}
+
+/**
+ * У скількох живих посиланнях стоїть позиція — для попередження власнику
+ * перед значущою правкою (ADR-040, п. 2 J). Рахується з `share_items`, а не
+ * з позначок: число однакове, взяв хтось позицію чи ні.
+ */
+export async function countLiveShares(itemId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('share_items')
+    .select('share_id, shares!inner(revoked_at, expires_at)')
+    .eq('item_id', itemId);
+  if (error) throw error;
+  const now = Date.now();
+  return ((data ?? []) as unknown as { shares: { revoked_at: string | null; expires_at: string | null } }[]).filter(
+    (r) => !r.shares.revoked_at && (!r.shares.expires_at || Date.parse(r.shares.expires_at) > now),
+  ).length;
 }
 
 export type RedeemResult =

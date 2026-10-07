@@ -1021,7 +1021,8 @@
       "other": "Not in the list currency ({currency}): it shows as a separate amount in the total, unconverted.",
       "fx": "≈ {sum} at the NBP rate of {date}",
       "fromShop": "Price taken from the shop along with its currency: {currency}."
-    }
+    },
+    "guestsWarn": "Guests see this item through links: {n}. If someone picked it, we'll let them know about the new name, link or price. We won't tell you whether anyone did."
   },
   "v2share": {
     "title": "Share",
@@ -1362,6 +1363,9 @@
       "done": "No more emails about this list. Your picks are still in place.",
       "undo": "Turn emails back on",
       "back": "Emails about this list are back on."
-    }
+    },
+    "changed": "Changed",
+    "changedHint": "Check whether your pick still makes sense.",
+    "keep": "Keep"
   }
 }

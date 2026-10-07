@@ -2021,3 +2021,10 @@ div.v2-chips { gap: var(--sp-3); }
 
 /* Тост гостя — над нижнім краєм: навігації застосунку тут немає. */
 .v2-toast--guest { bottom: calc(var(--sp-5) + env(safe-area-inset-bottom)); }
+
+/* «Змінено» на своїй броні (J, ADR-055): тепла мітка, контур лишається акцентним. */
+.v2-gcard[data-changed='true'] { box-shadow: inset 0 0 0 2px var(--color-accent-2-500); }
+.v2-gpicks__changed { display: block; margin-top: var(--sp-1); font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-gpicks__row { flex-wrap: wrap; }
+.v2-gpicks__text { flex: 1 1 12rem; }
+.v2-gpicks__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); margin-inline-start: auto; }

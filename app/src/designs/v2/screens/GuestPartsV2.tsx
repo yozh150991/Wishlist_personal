@@ -63,6 +63,7 @@ export function GuestCardV2({
   flag,
   onTake,
   onRelease,
+  onKeep,
 }: {
   item: SharedItem;
   currency: Currency;
@@ -72,6 +73,8 @@ export function GuestCardV2({
   flag: string | null;
   onTake: (item: SharedItem) => void;
   onRelease: (item: SharedItem) => void;
+  /** «Лишити» після зміни позиції (J, ADR-055). */
+  onKeep: (item: SharedItem) => void;
 }) {
   const { t, locale } = useI18n();
   const priority = usePriorityLabel();
@@ -79,6 +82,8 @@ export function GuestCardV2({
   const host = hostOf(item.url);
   const { left, mine } = counts;
   const state: CardState = !canClaim ? 'free' : mine > 0 ? 'mine' : left > 0 ? 'free' : 'taken';
+  // «Змінено» — лише на своїй броні: сервер іншим гостям цього поля не дає.
+  const changed = state === 'mine' && Boolean(item.changed);
   const multi = item.quantity > 1;
   const taken = item.quantity - left;
 
@@ -90,7 +95,7 @@ export function GuestCardV2({
   ].filter(Boolean);
 
   return (
-    <li className="v2-gcard" data-state={state} id={`v2-g-${item.id}`}>
+    <li className="v2-gcard" data-state={state} data-changed={changed || undefined} id={`v2-g-${item.id}`}>
       {item.image_url ? (
         <img className="v2-gcard__img" src={item.image_url} alt="" loading="lazy" />
       ) : null}
@@ -114,6 +119,11 @@ export function GuestCardV2({
         {item.note && <p className="v2-gcard__note">{item.note}</p>}
         {(state !== 'free' || item.priority === 'high') && (
           <span className="v2-gcard__tags">
+            {changed && (
+              <span className="v2-tag" data-tone="warm">
+                {t('v2guest.changed')}
+              </span>
+            )}
             {state === 'mine' && (
               <span className="v2-tag v2-gcard__mine" data-tone="accent">
                 <Check size={14} strokeWidth={STROKE} aria-hidden="true" />
@@ -142,6 +152,11 @@ export function GuestCardV2({
           )}
           {state === 'mine' && (
             <>
+              {changed && (
+                <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={() => onKeep(item)}>
+                  {t('v2guest.keep')}
+                </button>
+              )}
               <button
                 type="button"
                 className="v2-btn v2-btn--ghost v2-btn--small v2-gcard__release"
@@ -392,6 +407,7 @@ export function MyPicksSheetV2({
   name,
   email,
   onRelease,
+  onKeep,
   onCopyCode,
   onSendLink,
   onClose,
@@ -403,6 +419,7 @@ export function MyPicksSheetV2({
   name: string | null;
   email: string | null;
   onRelease: (item: SharedItem) => void;
+  onKeep: (item: SharedItem) => void;
   onCopyCode: (code: string) => Promise<boolean>;
   onSendLink: () => void;
   onClose: () => void;
@@ -424,7 +441,7 @@ export function MyPicksSheetV2({
         {items.map(({ item, mine }) => {
           const price = moneyShort(item.price, item.currency ?? currency, locale);
           return (
-            <li key={item.id} className="v2-gpicks__row">
+            <li key={item.id} className="v2-gpicks__row" data-changed={item.changed || undefined}>
               <span className="v2-gpicks__text">
                 <span className="v2-gpicks__name">{item.title}</span>
                 {(price || item.quantity > 1) && (
@@ -434,14 +451,29 @@ export function MyPicksSheetV2({
                       .join(' · ')}
                   </span>
                 )}
+                {item.changed && (
+                  <span className="v2-gpicks__changed">
+                    <span className="v2-tag" data-tone="warm">
+                      {t('v2guest.changed')}
+                    </span>{' '}
+                    {t('v2guest.changedHint')}
+                  </span>
+                )}
               </span>
-              <button
-                type="button"
-                className="v2-btn v2-btn--ghost v2-btn--small v2-gcard__release"
-                onClick={() => onRelease(item)}
-              >
-                {t('v2guest.mineSheet.release')}
-              </button>
+              <span className="v2-gpicks__actions">
+                {item.changed && (
+                  <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={() => onKeep(item)}>
+                    {t('v2guest.keep')}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="v2-btn v2-btn--ghost v2-btn--small v2-gcard__release"
+                  onClick={() => onRelease(item)}
+                >
+                  {t('v2guest.mineSheet.release')}
+                </button>
+              </span>
             </li>
           );
         })}

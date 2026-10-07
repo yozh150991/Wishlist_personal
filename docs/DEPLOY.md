@@ -773,7 +773,7 @@ Remove-Variable v
 
 ### 10.1. Розширення в Supabase
 
-Dashboard → **Database → Extensions** → увімкни **pg_net** і **pg_cron**. Міграція створює їх і сама, якщо вони доступні, але з дашборду надійніше.
+Dashboard → **Database → Extensions** → увімкни **pg_net** і **pg_cron** — **до** `db push` (10.5). Міграції створюють розклади `guest-mail-sweep` і `guest-reminders`, лише якщо `pg_cron` уже є; якщо розширення ввімкнено після міграцій — створи розклади вручну (10.6, крок 3).
 
 ### 10.2. Секрет сигналу
 
@@ -827,7 +827,7 @@ select vault.create_secret('<секрет з 10.2>', 'guest_mail_secret');
 
 ### 10.5. Міграції
 
-`20261007090000_guest_contact.sql` (5а) і `20261007100000_guest_mail.sql` (5б-1) — разом із деплоєм фронтенду (розділ 7):
+`20261007090000_guest_contact.sql` (5а), `20261007100000_guest_mail.sql` (5б-1) і `20261008090000_guest_changes.sql` (5б-2). Вони лише додають нове, тож бойовий фронтенд від них не ламається: застосовуй **до** злиття гілки, тоді новий фронтенд одразу знайде свої функції:
 
 ```powershell
 npx supabase db push
@@ -845,7 +845,11 @@ npx supabase db push
    curl.exe -X POST "$MAIL_URL/wake"            # 401
    curl.exe -X POST -H "x-wake-secret: $WAKE" "$MAIL_URL/wake"   # {"sent":0,...}
    ```
-3. Розклад у базі — SQL Editor: `select jobname, schedule from cron.job;` → `guest-mail-sweep`, `*/10 * * * *`.
+3. Розклади в базі — SQL Editor: `select jobname, schedule from cron.job;` → `guest-mail-sweep` (`*/10 * * * *`) і `guest-reminders` (`5 7 * * *`). Якщо їх немає (розширення ввімкнено вже після міграцій) — створи; повторний запуск лише оновлює задачу:
+   ```sql
+   select cron.schedule('guest-mail-sweep', '*/10 * * * *', 'select public.wake_guest_mail()');
+   select cron.schedule('guest-reminders', '5 7 * * *', 'select public.enqueue_guest_reminders()');
+   ```
 4. Наживо: відкрий своє посилання під `/l/…` у приватному вікні (власник не бронює), забронюй позицію зі своєю поштою. Лист «Ваша бронь у Wishlist» має прийти за кілька секунд; у журналі сервісу — `INFO: jobs.guestmail guest mail: {'sent': 1, …}`.
 5. У листі натисни «Не надсилати листів про цей список» — відкриється список із «Листів про цей список більше не буде» і «Повернути листи».
 6. Не прийшло за хвилину — SQL Editor:
@@ -854,6 +858,8 @@ npx supabase db push
    select status_code, error_msg from net._http_response order by created desc limit 5;
    ```
    Рядок без `sent_at` і порожній `net._http_response` — Vault не налаштований (10.4). `status_code` 401 — секрет у Vault і в Secret Manager різний. `attempts` росте — Brevo не приймає (ключ, відправник, IP).
+
+7. Лист про зміну (5б-2): забронюй позицію зі своєю поштою під `/l/…`, потім як власник зміни її назву чи ціну. За кілька секунд — «Зміни у вашій броні в Wishlist» з «було → стало», а на гостьовій — «Змінено» з «Лишити». У формі позиції власник бачить лише «Позицію бачать гості за посиланнями: N».
 
 **Після зміни коду** `services/parser` — передеплой `wishlist-guestmail` тією самою командою з 10.3 (можна без `--set-*`: змінні й секрети зберігаються) і, як і раніше, `wishlist-jobs`.
 

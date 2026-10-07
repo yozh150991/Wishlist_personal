@@ -334,3 +334,84 @@ def test_short_wake_secret_is_a_problem():
     )
     assert "GUEST_MAIL_WAKE_SECRET" in cfg.guest_mail_problems
     assert "VAPID_PRIVATE_KEY" not in cfg.guest_mail_problems
+
+
+# ── 5б-2: зміна, видалення, нагадування (ADR-055) ─
+
+
+CHANGED = {
+    "old": {"title": "Кавоварка", "url": "https://shop.ua/a", "price": 900, "currency": "PLN"},
+    "new": {"title": "Кавоварка Delonghi", "url": "https://shop.ua/b", "price": "1390.50", "currency": "PLN"},
+}
+
+
+def changed_row(**over) -> dict:
+    return row(kind="changed", item={"title": "Кавоварка Delonghi"}, details=CHANGED, **over)
+
+
+def test_changed_letter_says_what_changed():
+    job = Job.from_row(changed_row(), NOW)
+    letter = render("changed", "uk", item="Кавоварка Delonghi", list_title="Новосілля", code="K7M2Q",
+                    url=f"{ORIGIN}/l/t", unsubscribe=f"{ORIGIN}/l/t/u/m", details=job.details)
+    assert "Назва: Кавоварка → Кавоварка Delonghi" in letter.text
+    assert "Ціна: 900\u00a0zł → 1\u00a0390,50\u00a0zł" in letter.text
+    assert "Посилання на магазин змінилось." in letter.text
+    assert "K7M2Q" in letter.text
+    assert "Кавоварка" not in letter.subject
+
+
+def test_changed_letter_hides_prices_when_the_link_does():
+    letter = render("changed", "en", item="X", list_title="L", code="K7M2Q", url="u", unsubscribe="x",
+                    details=CHANGED, hide_prices=True)
+    assert "1,390.50" not in letter.text
+    assert "900" not in letter.text
+    assert "Name: Кавоварка → Кавоварка Delonghi" in letter.text
+
+
+def test_only_hidden_price_changed_is_skipped():
+    details = {"old": {"title": "A", "url": None, "price": 1, "currency": "PLN"},
+               "new": {"title": "A", "url": None, "price": 2, "currency": "PLN"}}
+    hidden = row(kind="changed", details=details, share={**row()["share"], "hide_prices": True})
+    shown = row(kind="changed", details=details)
+    assert skip_reason(Job.from_row(hidden, NOW)) == "nothing_visible"
+    assert skip_reason(Job.from_row(shown, NOW)) is None
+
+
+def test_unsubscribe_applies_to_changes_and_reminders():
+    for kind, details in (("changed", CHANGED), ("deleted", {"title": "A"}), ("reminder", {"items": ["A"], "event_date": "2026-10-25"})):
+        job = Job.from_row(row(kind=kind, details=details, identity={**row()["identity"], "mail_off": True}), NOW)
+        assert skip_reason(job) == "unsubscribed", kind
+
+
+def test_deleted_letter_uses_the_snapshot_title():
+    job = Job.from_row(row(kind="deleted", item=None, details={"title": "Ваза"}), NOW)
+    assert skip_reason(job) is None
+    letter = render("deleted", "pl", item="", list_title="Nowe mieszkanie", code="K7M2Q", url="u", unsubscribe="x",
+                    details=job.details)
+    assert "„Ваза”" in letter.text
+    assert "zdjęto automatycznie" in letter.text
+
+
+def test_reminder_lists_items_and_date():
+    details = {"event_date": "2026-10-25", "items": ["Келихи", "Плед"]}
+    letter = render("reminder", "uk", item="", list_title="Новосілля", code="K7M2Q", url="u", unsubscribe="x",
+                    details=details)
+    assert "До «Новосілля» — 7 днів, 25 жовтня." in letter.text
+    assert "Ви берете: «Келихи», «Плед»." in letter.text
+    assert "Новосілля" not in letter.subject
+    assert skip_reason(Job.from_row(row(kind="reminder", item=None, details={"items": []}), NOW)) == "nothing_visible"
+
+
+@pytest.mark.parametrize("locale", guest_mail.LOCALES)
+def test_new_letters_render_in_every_locale(locale):
+    for kind, details in (("changed", CHANGED), ("deleted", {"title": "A"}), ("reminder", {"items": ["A"], "event_date": "2026-10-25"})):
+        letter = render(kind, locale, item="A", list_title="L", code="K7M2Q", url="u", unsubscribe="x", details=details)
+        assert letter.subject and letter.text and "{" not in letter.text
+
+
+@pytest.mark.asyncio
+async def test_process_sends_changed_with_details():
+    store, mailer = FakeStore([changed_row()]), FakeMailer()
+    counts = await guest_mail.process(store, mailer, ORIGIN, NOW)
+    assert counts["sent"] == 1
+    assert "Кавоварка Delonghi" in mailer.sent[0]["text"]

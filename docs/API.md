@@ -120,6 +120,14 @@ await supabase.rpc('guest_mail_set', { p_mail_token: mailToken, p_on: false }); 
 
 `claim_item_v2` з ADR-054 приймає ще `p_locale` (мова гостьової): є пошта й гість не відписався — лист на бронь стає в чергу цією мовою. Старий виклик без `p_locale` працює — усталено `uk`.
 
+### `ack_claim_change` — anon + authenticated (ADR-055)
+```ts
+await supabase.rpc('ack_claim_change', { p_token: token, p_item_id: itemId, p_key: guestKey });   // 204
+```
+«Лишити» після зміни позиції: знімає `changed_at` з броні цього гостя. `get_guest_list` віддає `changed: true` лише на позиціях, які взяв саме цей гість. Чужий ключ — нічого не змінює. Помилки: `not_found`, `owner_cannot_reserve`, `item_not_in_share`.
+
+Листи J і нагадування ставлять у чергу внутрішні тригери `items_guest_changed` (після зміни назви, посилання, ціни чи валюти), `items_guest_deleted` (перед видаленням), `claims_guest_released` (зняв бронь — лист про зміну прибирається) і `enqueue_guest_reminders` (щодня з `pg_cron`, `guest-reminders`, 07:05 UTC). Клієнтам вони недоступні.
+
 ### `redeem_guest_code` — anon + authenticated
 ```ts
 const { data } = await supabase.rpc('redeem_guest_code', { p_token: token, p_code: '7K4M2' });
@@ -186,7 +194,8 @@ await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoi
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
-| `wake_guest_mail`, `enqueue_guest_mail` | нікому — внутрішні (тригер, гостьові RPC, `pg_cron`) |
+| `ack_claim_change` | `anon`, `authenticated` |
+| `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
 | `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
@@ -443,7 +452,7 @@ x-wake-secret: <секрет>
 
 Що робить: бере до 50 невідправлених рядків (найстаріші першими), кожен — атомарно (`PATCH … sent_at=is.null` з `Prefer: return=representation`), тож дві копії сервісу не надішлють той самий лист. Пропускає (`skipped`): пошти немає, гість відписався (для листа на бронь), посилання відкликане чи протерміноване, позиції немає. Brevo відмовив — `attempts + 1`, після п'ятої спроби рядок лишається в спокої. Наприкінці прибирає рядки, старші за 30 днів. У журнал — лише лічильники: ні адрес, ні токенів, ні секретів відписки.
 
-Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
+Види листів: `claim`, `code` (ADR-054), `changed`, `deleted`, `reminder` (ADR-055). Для трьох останніх зміст — знімком у `details`; ціна — лише якщо посилання її показує (змінилась лише прихована ціна — `skipped`); відписка діє на все, крім коду. Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist» / «Зміни у вашій броні в Wishlist» / «Нагадування від Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
 
 ### `GET /health`
 `{ "status": "ok", "service": "wishlist-guestmail", "configured": true }` — без назв змінних: сервіс відкритий.

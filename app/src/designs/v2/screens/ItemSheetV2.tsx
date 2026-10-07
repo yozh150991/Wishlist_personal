@@ -3,9 +3,9 @@ import type { ClipboardEvent } from 'react';
 import { ClipboardPaste, Plus, X } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { errorText } from '../../../lib/errors';
-import { formatDay, hostOf, moneyShort } from '../../../lib/format';
+import { formatDay, hostOf, moneyShort, num } from '../../../lib/format';
 import { ParseError, parseUrl, parserConfigured } from '../../../lib/parser';
-import { releaseItemClaims } from '../../../lib/shares';
+import { countLiveShares, releaseItemClaims } from '../../../lib/shares';
 import { cleanVariants, variantsError } from '../../../lib/variants';
 import {
   ITEM_NOTE_MAX,
@@ -226,6 +226,24 @@ export function ItemSheetV2({
     // лише перевідкривала б форму й губила вписане.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item, presetTitle]);
+
+  /**
+   * У скількох живих посиланнях стоїть позиція (J; ADR-040, п. 2). Число з
+   * `share_items`, а не з позначок: однакове, взяв хтось позицію чи ні, тож
+   * попередження нічого не видає. Без мережі — просто без попередження.
+   */
+  const [liveShares, setLiveShares] = useState(0);
+  useEffect(() => {
+    setLiveShares(0);
+    if (!open || !item) return;
+    let alive = true;
+    countLiveShares(item.id)
+      .then((n) => alive && setLiveShares(n))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [open, item]);
 
   // Фокус — після того, як вікно вже відкрите (SheetV2 відкриває його в
   // своєму ефекті, який іде раніше за цей).
@@ -528,6 +546,14 @@ export function ItemSheetV2({
   /* ── Розмітка ── */
 
   const heading = editing ? t('v2item.editTitle') : t('v2item.newTitle');
+  /** Назва, посилання, ціна чи валюта не такі, як збережено, — про це дізнаються гості з бронню (ADR-055). */
+  const significant =
+    editing &&
+    item !== null &&
+    (form.title.trim() !== item.title ||
+      (form.url.trim() ? normalizeUrl(form.url) : null) !== (item.url ?? null) ||
+      price.value !== num(item.price) ||
+      form.currency !== itemCurrency(item, currency));
   const showPreview = stage === 'form' && !editing && Boolean(form.url) && (reading || parsed || Boolean(form.image_url));
   const host = hostOf(urlNormal);
   const priceText = price.value !== null ? moneyShort(price.value, form.currency, locale) : null;
@@ -979,6 +1005,12 @@ export function ItemSheetV2({
                     ) : null
                   }
                 />
+
+                {significant && liveShares > 0 && (
+                  <p className="v2-hint v2-hint--start" role="status" data-testid="item-guests-warn">
+                    {t('v2item.guestsWarn', { n: liveShares })}
+                  </p>
+                )}
 
                 {editing && (
                   <div className="v2-reset">

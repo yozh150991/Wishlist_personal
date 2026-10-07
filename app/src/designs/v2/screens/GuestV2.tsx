@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Link2, ListChecks, Palette, X } from 'lucide-react';
 import {
+  ackClaimChange,
   claimItemV2,
   fetchGuestList,
   GoneError,
@@ -422,6 +423,20 @@ export default function GuestV2() {
     }
   }
 
+  /** «Лишити» після зміни (J): позначка «Змінено» знімається, бронь лишається. */
+  async function keep(item: SharedItem) {
+    const k = storedKey(token) ?? key;
+    if (!k) return;
+    setError(null);
+    try {
+      await ackClaimChange(token, item.id, k);
+      setData(await fetchGuestList(token, k));
+    } catch (e) {
+      if (e instanceof GoneError) setGone(true);
+      else setError(t('v2guest.error'));
+    }
+  }
+
   /* ── Забрати доступ із собою ── */
 
   async function copyText(text: string): Promise<boolean> {
@@ -496,6 +511,7 @@ export default function GuestV2() {
       flag={flagOf(i)}
       onTake={openBook}
       onRelease={release}
+      onKeep={(i) => void keep(i)}
     />
   );
   const takenRest = items.filter((i) => countsOf(i).mine === 0);
@@ -791,6 +807,7 @@ export default function GuestV2() {
         name={data.guest?.name ?? null}
         email={data.guest?.email ?? null}
         onRelease={release}
+        onKeep={(i) => void keep(i)}
         onCopyCode={copyText}
         onSendLink={() => void sendLink()}
         onClose={() => setPicksOpen(false)}

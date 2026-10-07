@@ -1021,7 +1021,8 @@
       "other": "Nie w walucie listy ({currency}): w sumie osobno, bez przeliczania.",
       "fx": "≈ {sum} po kursie NBP z {date}",
       "fromShop": "Cenę pobrano ze sklepu razem z walutą: {currency}."
-    }
+    },
+    "guestsWarn": "Tę pozycję widzą goście z linków: {n}. Jeśli ktoś ją zarezerwował, powiadomimy go o nowej nazwie, linku lub cenie. Tobie nie powiemy, czy ktoś taki jest."
   },
   "v2share": {
     "title": "Udostępnij",
@@ -1362,6 +1363,9 @@
       "done": "Nie będzie już wiadomości o tej liście. Rezerwacje zostały na miejscu.",
       "undo": "Przywróć wiadomości",
       "back": "Wiadomości o tej liście znów będą przychodzić."
-    }
+    },
+    "changed": "Zmieniono",
+    "changedHint": "Sprawdź, czy rezerwacja jest nadal aktualna.",
+    "keep": "Zostaw"
   }
 }
