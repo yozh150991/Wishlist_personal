@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Link2, ListChecks, Palette, X } from 'lucide-react';
 import {
@@ -8,6 +9,7 @@ import {
   GoneError,
   registerView,
   releaseClaim,
+  setClaimBought,
   setGuestMail,
 } from '../../../lib/shares';
 import type { SharedItem, SharedList } from '../../../lib/shares';
@@ -39,6 +41,7 @@ import {
   LookSheetV2,
   MyPicksSheetV2,
   RedeemSheetV2,
+  ShopSheetV2,
 } from './GuestPartsV2';
 import type { BookStep, GuestCounts } from './GuestPartsV2';
 // Стилі форми v2 — і тут: гостьова вантажиться окремо від решти застосунку.
@@ -56,6 +59,11 @@ import '../v2.css';
  * «Беру» відкриває аркуш: необовʼязковий підпис (щоб гість упізнав свої
  * броні), пошта (код і лист про бронь, ADR-054) і, для позицій на кілька
  * штук, скільки. Ні власник, ні інші гості ні підпису, ні пошти не бачать.
+ *
+ * Потік S (ADR-056): «Уже куплено» на своїй броні — окремий крок, після
+ * якого «Зняти» ховається; «Ще не куплено» — у «Моїх бронях». Хто йде в
+ * магазин, не взявши позицію, раз за сесію бачить «Забронювати й перейти» —
+ * щоб двоє не купили те саме. Власник покупок не бачить, як і броней.
  *
  * `/l/{токен}/u/{секрет}` — посилання «Не надсилати листів про цей список»
  * з листа: листи вимикаються одразу, секрет зникає з адреси, а на сторінці —
@@ -76,6 +84,24 @@ const LANGUAGE: Record<Locale, string> = { uk: 'Українська', pl: 'Pols
 const UNDO_MS = 6000;
 /** Скільки позицій показати як «схоже за ціною». */
 const SIMILAR_MAX = 6;
+/** «У магазин» без броні — питаємо раз за сесію вкладки, і лише для цього списку. */
+const SHOP_ASKED = (token: string) => `wl.shopask.${token}`;
+
+function shopAsked(token: string): boolean {
+  try {
+    return sessionStorage.getItem(SHOP_ASKED(token)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markShopAsked(token: string) {
+  try {
+    sessionStorage.setItem(SHOP_ASKED(token), '1');
+  } catch {
+    /* без сховища — спитаємо ще раз, це не біда */
+  }
+}
 
 type Filter = 'free' | 'all';
 type Changes = { fresh: Set<string>; freed: Set<string> } | null;
@@ -108,6 +134,10 @@ export default function GuestV2() {
   const [picksOpen, setPicksOpen] = useState(false);
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [lookOpen, setLookOpen] = useState(false);
+  /** «У магазин» без броні: позиція, про яку питаємо «Забронювати й перейти?». */
+  const [shopItem, setShopItem] = useState<SharedItem | null>(null);
+  /** Спитали вже в цій вкладці — далі посилання просто відкривається. */
+  const shopAskedRef = useRef(false);
 
   /** Броні, зняття яких ще відлічує тост: на екрані їх уже немає. */
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -437,6 +467,72 @@ export default function GuestV2() {
     }
   }
 
+  /** «Уже куплено» / «Ще не куплено» (потік S): лише позначка гостя, власник її не бачить. */
+  async function bought(item: SharedItem, on: boolean) {
+    const k = storedKey(token) ?? key;
+    if (!k) return;
+    setError(null);
+    try {
+      await setClaimBought(token, item.id, k, on);
+      setData(await fetchGuestList(token, k));
+    } catch (e) {
+      if (e instanceof GoneError) setGone(true);
+      else setError(t('v2guest.error'));
+    }
+  }
+
+  /* ── «У магазин» без броні ── */
+
+  /**
+   * Перехід за посиланням позиції, яку гість ще не взяв: раз за сесію —
+   * аркуш «Забронювати й перейти». Посилання не блокується: обидві кнопки
+   * аркуша самі відкривають магазин, а вдруге питання не буде.
+   */
+  function handleShop(item: SharedItem, e: ReactMouseEvent<HTMLAnchorElement>) {
+    if (!canClaim || data?.viewer_is_owner) return;
+    const c = countsOf(item);
+    if (c.mine > 0 || c.left <= 0) return;
+    if (shopAskedRef.current || shopAsked(token)) return;
+    e.preventDefault();
+    setShopItem(item);
+  }
+
+  function closeShop() {
+    shopAskedRef.current = true;
+    markShopAsked(token);
+    setShopItem(null);
+  }
+
+  /** «Забронювати й перейти»: одна штука, без аркуша; першій броні — код. */
+  async function quickBook(item: SharedItem) {
+    if (!data) return;
+    const first = !data.guest;
+    const k = ensureKey(token);
+    setKey(k);
+    setError(null);
+    try {
+      const res = await claimItemV2(token, item.id, k, countsOf(item).mine + 1, null, null, locale);
+      setData(await fetchGuestList(token, k));
+      if (first) {
+        setBookError(null);
+        setBook({ item, step: { kind: 'code', code: res.code } });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      if (e instanceof GoneError) {
+        setGone(true);
+        return;
+      }
+      if (msg.includes('not_enough_left')) setBook({ item, step: { kind: 'race' } });
+      else setError(t('v2guest.error'));
+      try {
+        setData(await fetchGuestList(token, k));
+      } catch {
+        /* лишаємо те, що є на екрані */
+      }
+    }
+  }
+
   /* ── Забрати доступ із собою ── */
 
   async function copyText(text: string): Promise<boolean> {
@@ -512,10 +608,15 @@ export default function GuestV2() {
       onTake={openBook}
       onRelease={release}
       onKeep={(i) => void keep(i)}
+      onBought={(i, on) => void bought(i, on)}
+      onShop={handleShop}
     />
   );
   const takenRest = items.filter((i) => countsOf(i).mine === 0);
   const filtersOn = maxPrice !== null || highOnly;
+  /** «Спершу натисніть «Беру»» — доки в гостя немає жодної броні й є куди йти. */
+  const shopHint =
+    canClaim && !data.viewer_is_owner && mineItems.length === 0 && items.some((i) => i.url && countsOf(i).left > 0);
 
   return (
     // <main>: гостьову відкривають сторонні люди, і зчитувачу екрана потрібен орієнтир.
@@ -682,6 +783,7 @@ export default function GuestV2() {
                   {freeSum && ` · ${t('v2guest.freeSum', { sum: freeSum })}`}
                 </p>
               )}
+              {shopHint && <p className="v2-hint v2-hint--start">{t('v2guest.shopHint')}</p>}
             </div>
 
             {similarTo && similar.length > 0 && (
@@ -808,6 +910,7 @@ export default function GuestV2() {
         email={data.guest?.email ?? null}
         onRelease={release}
         onKeep={(i) => void keep(i)}
+        onBought={(i, on) => void bought(i, on)}
         onCopyCode={copyText}
         onSendLink={() => void sendLink()}
         onClose={() => setPicksOpen(false)}
@@ -828,6 +931,16 @@ export default function GuestV2() {
             /* сторінка перечитається при наступній дії */
           }
         }}
+      />
+
+      <ShopSheetV2
+        item={shopItem}
+        onBook={(i) => {
+          closeShop();
+          void quickBook(i);
+        }}
+        onLook={closeShop}
+        onClose={closeShop}
       />
 
       <LookSheetV2 open={lookOpen} onClose={() => setLookOpen(false)} />

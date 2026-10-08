@@ -1366,6 +1366,17 @@
     },
     "changed": "Changed",
     "changedHint": "Check whether your pick still makes sense.",
-    "keep": "Keep"
+    "keep": "Keep",
+    "bought": "Bought",
+    "markBought": "Already bought",
+    "unmarkBought": "Not bought yet",
+    "shop": "To the shop",
+    "shopHint": "Tap “Take” first — then nobody buys the same thing.",
+    "shopSheet": {
+      "title": "Take “{title}”?",
+      "body": "You're heading to the shop. Mark it as yours so other guests see it's taken.",
+      "book": "Take it and go",
+      "look": "Just looking"
+    }
   }
 }

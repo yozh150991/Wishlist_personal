@@ -59,6 +59,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "deleted.subject": "Зміни у вашій броні в Wishlist",
         "deleted.lead": "Позицію «{item}» прибрано зі списку «{list}». Бронь знято автоматично.",
         "deleted.bought": "Якщо ви вже купили її — нічого страшного: подарунок від цього не гірший.",
+        "deleted.boughtOn": "Ви позначили її купленою {date}. Подарунок усе одно доречний — власник не дізнається, що позиції вже немає, якщо ви не скажете.",
+        "reminder.bought": "Уже куплено: {items}.",
         "reminder.subject": "Нагадування від Wishlist",
         "reminder.lead": "До «{list}» — 7 днів, {date}.",
         "reminder.items": "Ви берете: {items}.",
@@ -84,6 +86,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "deleted.subject": "Zmiany w twojej rezerwacji w Wishlist",
         "deleted.lead": "Pozycję „{item}” usunięto z listy „{list}”. Rezerwację zdjęto automatycznie.",
         "deleted.bought": "Jeśli prezent jest już kupiony — nic się nie stało, nie jest przez to gorszy.",
+        "deleted.boughtOn": "Oznaczono ją jako kupioną {date}. Prezent nadal jest trafiony — właściciel nie dowie się, że pozycji już nie ma, jeśli mu nie powiesz.",
+        "reminder.bought": "Już kupione: {items}.",
         "reminder.subject": "Przypomnienie od Wishlist",
         "reminder.lead": "Do „{list}” zostało 7 dni — {date}.",
         "reminder.items": "Masz zarezerwowane: {items}.",
@@ -109,6 +113,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "deleted.subject": "Changes to your pick on Wishlist",
         "deleted.lead": "“{item}” was removed from “{list}”. Your pick was released automatically.",
         "deleted.bought": "If you've already bought it, no harm done — the gift is just as good.",
+        "deleted.boughtOn": "You marked it as bought on {date}. The gift still fits — the owner won't know the item is gone unless you say so.",
+        "reminder.bought": "Already bought: {items}.",
         "reminder.subject": "A reminder from Wishlist",
         "reminder.lead": "“{list}” is 7 days away — {date}.",
         "reminder.items": "You're taking: {items}.",
@@ -158,6 +164,14 @@ def _price(value: object, currency: object, locale: str) -> str:
     if minor is None:
         return text("noprice", locale)
     return format_money(minor, currency if isinstance(currency, str) else "PLN", locale)
+
+
+def _day(value: object, locale: str) -> str | None:
+    """«25 жовтня» з ISO-дати; щось інше — None."""
+    try:
+        return format_date(date.fromisoformat(str(value)), locale) if value else None
+    except ValueError:
+        return None
 
 
 def change_lines(details: dict | None, locale: str, hide_prices: bool) -> list[str]:
@@ -216,24 +230,26 @@ def render(
         ]
     elif kind == "deleted":
         subject = text("deleted.subject", locale)
+        bought_on = _day(details.get("bought"), locale)
         lines = [
             text("deleted.lead", locale, item=str(details.get("title") or item), list=list_title),
-            text("deleted.bought", locale),
+            text("deleted.boughtOn", locale, date=bought_on) if bought_on else text("deleted.bought", locale),
         ]
     elif kind == "reminder":
         subject = text("reminder.subject", locale)
         left, right = _QUOTES[locale]
-        titles = [str(t) for t in details.get("items") or [] if t]
+
+        def quoted(key: str) -> str:
+            return ", ".join(f"{left}{t}{right}" for t in details.get(key) or [] if t)
+
         when = details.get("event_date")
-        try:
-            day = format_date(date.fromisoformat(str(when)), locale)
-        except ValueError:
-            day = str(when or "")
         lines = [
-            text("reminder.lead", locale, list=list_title, date=day),
-            text("reminder.items", locale, items=", ".join(f"{left}{t}{right}" for t in titles)),
-            text("claim.code", locale, code=code),
+            text("reminder.lead", locale, list=list_title, date=_day(when, locale) or str(when or "")),
+            text("reminder.items", locale, items=quoted("items")),
         ]
+        if quoted("bought"):
+            lines.append(text("reminder.bought", locale, items=quoted("bought")))
+        lines.append(text("claim.code", locale, code=code))
     else:
         subject = text("code.subject", locale)
         lines = [text("code.lead", locale, list=list_title, code=code), text("code.how", locale)]

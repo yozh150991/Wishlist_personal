@@ -9,8 +9,8 @@ import { addItem, createList, createShare, hasAccount, signIn, unique } from './
  * власника тут готують наявні помічники, а гості відкривають `/l/…`.
  * Кожен гість — окремий browser context, як рідні на різних телефонах.
  *
- * Головне, що стережемо: підпис гостя бачить лише він сам — ні власник на
- * своєму посиланні, ні інший гість (CLAUDE.md §3.2).
+ * Головне, що стережемо: підпис гостя й позначку «Куплено» бачить лише він
+ * сам — ні власник на своєму посиланні, ні інший гість (CLAUDE.md §3.2).
  */
 const takeBtn = /^(беру|biorę|take)$/i;
 const yours = /ви берете|bierzesz to|you're taking this/i;
@@ -114,6 +114,68 @@ test.describe('з акаунтом власника', () => {
     await expect(e.getByRole('button', { name: /повернути листи|przywróć wiadomości|turn emails back on/i })).toBeVisible();
 
     for (const p of [a, b, c, d, e]) await p.context().close();
+  });
+
+  test('«У магазин» без броні — раз питаємо; «Уже куплено» бачить лише гість (потік S)', async ({ page, browser }) => {
+    await signIn(page);
+    await createList(page, unique('Guest v2 S'));
+    for (const name of ['Чайник', 'Тарілки']) await addItem(page, name);
+    const link = (await createShare(page, ['Чайник', 'Тарілки'], unique('Гостям'))).replace('/s/', '/l/');
+    await page.keyboard.press('Escape');
+
+    // Посилання на магазин підставляємо у відповідь: парсер і форма тут ні до чого.
+    const shopUrl = 'https://shop.example.com/e2e';
+    const ctx = await browser.newContext();
+    await ctx.route('https://shop.example.com/**', (r) => r.fulfill({ body: 'shop' }));
+    await ctx.route('**/rpc/get_guest_list', async (route) => {
+      const res = await route.fetch();
+      const body = await res.json();
+      body.items = (body.items ?? []).map((i: { url: string | null }) => ({ ...i, url: shopUrl }));
+      await route.fulfill({ response: res, json: body });
+    });
+    const g = await ctx.newPage();
+    await g.goto(link);
+    await expect(g.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(g.getByText(/спершу натисніть|najpierw kliknij|tap .take. first/i)).toBeVisible();
+
+    // Перший похід у магазин без броні — аркуш; «Забронювати й перейти» бронює й відкриває магазин.
+    const shop = /^(у магазин|do sklepu|to the shop)$/i;
+    await card(g, 'Чайник').getByRole('link', { name: shop }).click();
+    const ask = g.getByRole('dialog');
+    await expect(ask.getByRole('heading', { name: /чайник/i })).toBeVisible();
+    const popup = g.waitForEvent('popup');
+    await ask.getByRole('link', { name: /забронювати й перейти|zarezerwuj i przejdź|take it and go/i }).click();
+    await (await popup).close();
+    // Перша бронь — код, як і через «Беру».
+    await expect(g.getByRole('dialog').getByRole('heading', { name: /за вами|twoje|is yours/i })).toBeVisible();
+    await g.getByRole('dialog').getByRole('button', { name: /^(готово|gotowe|done)$/i }).click();
+    await expect(card(g, 'Чайник')).toContainText(yours);
+
+    // Удруге за сесію — без питання, магазин просто відкривається.
+    const second = g.waitForEvent('popup');
+    await card(g, 'Тарілки').getByRole('link', { name: shop }).click();
+    await (await second).close();
+    await expect(g.getByRole('link', { name: /просто подивитись|tylko popatrzę|just looking/i })).toHaveCount(0);
+
+    // «Уже куплено»: «Зняти» ховається; назад — лише з «Моїх броней».
+    await card(g, 'Чайник').getByRole('button', { name: /^(уже куплено|już kupione|already bought)$/i }).click();
+    await expect(card(g, 'Чайник').locator('.v2-gcard__mine')).toHaveText(/^(куплено|kupione|bought)$/i);
+    await expect(card(g, 'Чайник').getByRole('button', { name: /^(зняти|zdejmij|release)$/i })).toHaveCount(0);
+    await g.reload();
+    await expect(card(g, 'Чайник')).toHaveAttribute('data-bought', 'true');
+
+    // Власник на своєму посиланні нічого з цього не бачить.
+    await page.goto(link);
+    await expect(page.getByText(/це твоє посилання|to twój link|your own link/i)).toBeVisible();
+    await expect(page.getByText(/^(куплено|kupione|bought)$/i)).toHaveCount(0);
+    await expect(page.locator('[data-bought]')).toHaveCount(0);
+
+    await g.getByRole('button', { name: /мої броні · 1|moje rezerwacje · 1|my picks · 1/i }).click();
+    await g.getByRole('dialog').getByRole('button', { name: /ще не куплено|jeszcze nie kupione|not bought yet/i }).click();
+    await g.keyboard.press('Escape');
+    await expect(card(g, 'Чайник').getByRole('button', { name: /^(зняти|zdejmij|release)$/i })).toBeVisible();
+
+    await ctx.close();
   });
 });
 

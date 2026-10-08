@@ -1366,6 +1366,17 @@
     },
     "changed": "Zmieniono",
     "changedHint": "Sprawdź, czy rezerwacja jest nadal aktualna.",
-    "keep": "Zostaw"
+    "keep": "Zostaw",
+    "bought": "Kupione",
+    "markBought": "Już kupione",
+    "unmarkBought": "Jeszcze nie kupione",
+    "shop": "Do sklepu",
+    "shopHint": "Najpierw kliknij „Biorę” — wtedy nikt nie kupi tego samego.",
+    "shopSheet": {
+      "title": "Zarezerwować „{title}”?",
+      "body": "Idziesz do sklepu. Oznacz to jako swoje — inni goście zobaczą, że jest już wzięte.",
+      "book": "Zarezerwuj i przejdź",
+      "look": "Tylko popatrzę"
+    }
   }
 }

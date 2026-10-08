@@ -165,6 +165,8 @@ export type SharedItem = {
    * як цей гість узяв позицію. Приходить лише йому й лише на його позиції.
    */
   changed?: boolean;
+  /** Гостьова v2 (ADR-056): цей гість позначив свою бронь «Уже куплено». Лише йому. */
+  bought?: boolean;
 };
 
 export type GuestInfo = { code: string; name?: string | null; email?: string | null };
@@ -359,6 +361,17 @@ export async function countLiveShares(itemId: string): Promise<number> {
   return ((data ?? []) as unknown as { shares: { revoked_at: string | null; expires_at: string | null } }[]).filter(
     (r) => !r.shares.revoked_at && (!r.shares.expires_at || Date.parse(r.shares.expires_at) > now),
   ).length;
+}
+
+/** «Уже куплено» / «Ще не куплено» на своїй броні (ADR-056). Власник цього не бачить. */
+export async function setClaimBought(token: string, itemId: string, key: string, bought: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_claim_bought', {
+    p_token: token,
+    p_item_id: itemId,
+    p_key: key,
+    p_bought: bought,
+  });
+  if (error) throw rpcError(error);
 }
 
 export type RedeemResult =

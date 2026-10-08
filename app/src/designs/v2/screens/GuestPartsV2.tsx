@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Check, Minus, Plus } from 'lucide-react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { Check, ExternalLink, Minus, Plus } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { THEMES, useTheme } from '../../../lib/theme';
 import type { Theme } from '../../../lib/theme';
@@ -52,8 +53,10 @@ export type CardState = 'free' | 'mine' | 'taken';
 
 /**
  * Картка гостя: фото → назва (посилання на магазин), ціна й домен, ознаки,
- * нотатка → дія праворуч. Три стани з потоку E: вільна («Беру»), своя
- * (контур, «Ви берете», «Зняти»), чужа («Уже взяли» — без дії).
+ * нотатка → дія праворуч. Три стани з потоку E: вільна («Беру», «У магазин»),
+ * своя (контур, «Ви берете», «Уже куплено», «Зняти»), чужа («Уже взяли» — без
+ * дії). Куплену бронь (S, ADR-056) з картки не зняти: «Зняти» після покупки —
+ * лише в «Моїх бронях», щоб не скасувати її випадково.
  */
 export function GuestCardV2({
   item,
@@ -64,6 +67,8 @@ export function GuestCardV2({
   onTake,
   onRelease,
   onKeep,
+  onBought,
+  onShop,
 }: {
   item: SharedItem;
   currency: Currency;
@@ -75,6 +80,10 @@ export function GuestCardV2({
   onRelease: (item: SharedItem) => void;
   /** «Лишити» після зміни позиції (J, ADR-055). */
   onKeep: (item: SharedItem) => void;
+  /** «Уже куплено» (S, ADR-056). */
+  onBought: (item: SharedItem, bought: boolean) => void;
+  /** Перехід у магазин: сторінка може спершу спитати, чи забронювати (S1). */
+  onShop: (item: SharedItem, event: ReactMouseEvent<HTMLAnchorElement>) => void;
 }) {
   const { t, locale } = useI18n();
   const priority = usePriorityLabel();
@@ -84,6 +93,7 @@ export function GuestCardV2({
   const state: CardState = !canClaim ? 'free' : mine > 0 ? 'mine' : left > 0 ? 'free' : 'taken';
   // «Змінено» — лише на своїй броні: сервер іншим гостям цього поля не дає.
   const changed = state === 'mine' && Boolean(item.changed);
+  const bought = state === 'mine' && Boolean(item.bought);
   const multi = item.quantity > 1;
   const taken = item.quantity - left;
 
@@ -95,7 +105,13 @@ export function GuestCardV2({
   ].filter(Boolean);
 
   return (
-    <li className="v2-gcard" data-state={state} data-changed={changed || undefined} id={`v2-g-${item.id}`}>
+    <li
+      className="v2-gcard"
+      data-state={state}
+      data-changed={changed || undefined}
+      data-bought={bought || undefined}
+      id={`v2-g-${item.id}`}
+    >
       {item.image_url ? (
         <img className="v2-gcard__img" src={item.image_url} alt="" loading="lazy" />
       ) : null}
@@ -103,7 +119,7 @@ export function GuestCardV2({
         {flag && <span className="v2-tag v2-gcard__flag" data-tone="accent">{flag}</span>}
         <h3 className="v2-gcard__title">
           {item.url ? (
-            <a href={item.url} target="_blank" rel="noreferrer noopener">
+            <a href={item.url} target="_blank" rel="noreferrer noopener" onClick={(e) => onShop(item, e)}>
               {item.title}
             </a>
           ) : (
@@ -127,7 +143,11 @@ export function GuestCardV2({
             {state === 'mine' && (
               <span className="v2-tag v2-gcard__mine" data-tone="accent">
                 <Check size={14} strokeWidth={STROKE} aria-hidden="true" />
-                {multi ? t('v2guest.yoursOf', { n: mine, m: item.quantity }) : t('v2guest.yours')}
+                {bought
+                  ? t('v2guest.bought')
+                  : multi
+                    ? t('v2guest.yoursOf', { n: mine, m: item.quantity })
+                    : t('v2guest.yours')}
               </span>
             )}
             {state === 'taken' && (
@@ -143,12 +163,28 @@ export function GuestCardV2({
           </span>
         )}
       </div>
-      {canClaim && state !== 'taken' && (
+      {/* Куплене — без дій: «Ще не куплено» живе в «Моїх бронях», щоб не зняти
+          покупку випадковим дотиком. */}
+      {canClaim && state !== 'taken' && !(bought && !changed) && (
         <div className="v2-gcard__actions">
           {state === 'free' && (
-            <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={() => onTake(item)}>
-              {t('v2guest.take')}
-            </button>
+            <>
+              <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={() => onTake(item)}>
+                {t('v2guest.take')}
+              </button>
+              {item.url && (
+                <a
+                  className="v2-btn v2-btn--ghost v2-btn--small"
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  onClick={(e) => onShop(item, e)}
+                >
+                  <ExternalLink size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  {t('v2guest.shop')}
+                </a>
+              )}
+            </>
           )}
           {state === 'mine' && (
             <>
@@ -157,14 +193,25 @@ export function GuestCardV2({
                   {t('v2guest.keep')}
                 </button>
               )}
-              <button
-                type="button"
-                className="v2-btn v2-btn--ghost v2-btn--small v2-gcard__release"
-                onClick={() => onRelease(item)}
-              >
-                {t('v2guest.release')}
-              </button>
-              {left > 0 && (
+              {!bought && (
+                <>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn--outline v2-btn--small"
+                    onClick={() => onBought(item, true)}
+                  >
+                    {t('v2guest.markBought')}
+                  </button>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn--ghost v2-btn--small v2-gcard__release"
+                    onClick={() => onRelease(item)}
+                  >
+                    {t('v2guest.release')}
+                  </button>
+                </>
+              )}
+              {left > 0 && !bought && (
                 <button type="button" className="v2-btn v2-btn--ghost v2-btn--small" onClick={() => onTake(item)}>
                   {t('v2guest.takeMore')}
                 </button>
@@ -408,6 +455,7 @@ export function MyPicksSheetV2({
   email,
   onRelease,
   onKeep,
+  onBought,
   onCopyCode,
   onSendLink,
   onClose,
@@ -420,6 +468,7 @@ export function MyPicksSheetV2({
   email: string | null;
   onRelease: (item: SharedItem) => void;
   onKeep: (item: SharedItem) => void;
+  onBought: (item: SharedItem, bought: boolean) => void;
   onCopyCode: (code: string) => Promise<boolean>;
   onSendLink: () => void;
   onClose: () => void;
@@ -451,6 +500,13 @@ export function MyPicksSheetV2({
                       .join(' · ')}
                   </span>
                 )}
+                {item.bought && (
+                  <span className="v2-gpicks__changed">
+                    <span className="v2-tag" data-tone="accent">
+                      {t('v2guest.bought')}
+                    </span>
+                  </span>
+                )}
                 {item.changed && (
                   <span className="v2-gpicks__changed">
                     <span className="v2-tag" data-tone="warm">
@@ -466,6 +522,13 @@ export function MyPicksSheetV2({
                     {t('v2guest.keep')}
                   </button>
                 )}
+                <button
+                  type="button"
+                  className="v2-btn v2-btn--ghost v2-btn--small"
+                  onClick={() => onBought(item, !item.bought)}
+                >
+                  {item.bought ? t('v2guest.unmarkBought') : t('v2guest.markBought')}
+                </button>
                 <button
                   type="button"
                   className="v2-btn v2-btn--ghost v2-btn--small v2-gcard__release"
@@ -683,6 +746,66 @@ export function RedeemSheetV2({
           {t('common.close')}
         </button>
       </form>
+    </SheetV2>
+  );
+}
+
+/* ── «У магазин» без броні (S1) ───────────────────────────── */
+
+/**
+ * Гість іде в магазин, не забронювавши позицію: раз на сесію питаємо, чи не
+ * позначити її спершу — інакше двоє можуть купити те саме. Обидві відповіді —
+ * справжні посилання з `target="_blank"`: магазин відкривається одразу, а
+ * бронь іде паралельно в цій вкладці (браузер не блокує вікно, бо його
+ * відкриває сам натиск).
+ */
+export function ShopSheetV2({
+  item,
+  onBook,
+  onLook,
+  onClose,
+}: {
+  item: SharedItem | null;
+  onBook: (item: SharedItem) => void;
+  onLook: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const titleId = useId();
+  const [shown, setShown] = useState<SharedItem | null>(item);
+  useEffect(() => {
+    if (item) setShown(item);
+  }, [item]);
+  const it = item ?? shown;
+
+  return (
+    <SheetV2 open={item !== null} onClose={onClose} labelledBy={titleId}>
+      <h2 className="v2-sheet__title" id={titleId}>
+        {t('v2guest.shopSheet.title', { title: it?.title ?? '' })}
+      </h2>
+      <p className="v2-lede">{t('v2guest.shopSheet.body')}</p>
+      <div className="v2-sheet__actions">
+        <a
+          className="v2-btn v2-btn--primary v2-btn--block"
+          href={it?.url ?? undefined}
+          target="_blank"
+          rel="noreferrer noopener"
+          onClick={() => {
+            if (it) onBook(it);
+          }}
+        >
+          {t('v2guest.shopSheet.book')}
+        </a>
+        <a
+          className="v2-btn v2-btn--ghost"
+          href={it?.url ?? undefined}
+          target="_blank"
+          rel="noreferrer noopener"
+          onClick={onLook}
+        >
+          {t('v2guest.shopSheet.look')}
+        </a>
+      </div>
     </SheetV2>
   );
 }

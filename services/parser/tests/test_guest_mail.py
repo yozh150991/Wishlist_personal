@@ -415,3 +415,23 @@ async def test_process_sends_changed_with_details():
     counts = await guest_mail.process(store, mailer, ORIGIN, NOW)
     assert counts["sent"] == 1
     assert "Кавоварка Delonghi" in mailer.sent[0]["text"]
+
+
+# ── 5в: куплене (ADR-056) ────────────────────
+
+
+def test_deleted_after_purchase_says_so():
+    letter = render("deleted", "uk", item="", list_title="Ювілей", code="K7M2Q", url="u", unsubscribe="x",
+                    details={"title": "Лампа", "bought": "2026-10-03"})
+    assert "Ви позначили її купленою 3 жовтня." in letter.text
+    assert "нічого страшного" not in letter.text
+
+
+def test_reminder_names_what_is_bought_and_what_is_left():
+    letter = render("reminder", "en", item="", list_title="Party", code="K7M2Q", url="u", unsubscribe="x",
+                    details={"event_date": "2026-10-25", "items": ["Lamp"], "bought": ["Cups"]})
+    assert "You're taking: “Lamp”." in letter.text
+    assert "Already bought: “Cups”." in letter.text
+    plain = render("reminder", "en", item="", list_title="Party", code="K7M2Q", url="u", unsubscribe="x",
+                   details={"event_date": "2026-10-25", "items": ["Lamp"]})
+    assert "Already bought" not in plain.text
