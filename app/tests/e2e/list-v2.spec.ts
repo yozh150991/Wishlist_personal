@@ -224,7 +224,7 @@ test.describe('сторінка списку v2: поділитися, поря�
 
     await expect(sheet.getByRole('heading', { name: /посилання готове|link gotowy|link is ready/i })).toBeVisible();
     const link = await sheet.locator('input[readonly]').inputValue();
-    expect(link).toMatch(/\/s\/[A-Za-z0-9_-]{16,}$/);
+    expect(link).toMatch(/\/l\/[A-Za-z0-9_-]{16,}$/);
 
     // Гість без сесії бачить лише вибране. Перегляд реєструється — список «відкривали».
     const guestContext = await browser.newContext();
@@ -535,7 +535,7 @@ test.describe('сторінка списку v2: зміна позиції, як
     const share = page.getByRole('dialog');
     await share.getByRole('button', { name: /^(створити посилання|utwórz link|create link)$/i }).click();
     await expect(share.getByRole('heading', { name: /посилання готове|link gotowy|link is ready/i })).toBeVisible();
-    const link = (await share.locator('input[readonly]').inputValue()).replace('/s/', '/l/');
+    const link = await share.locator('input[readonly]').inputValue();
     await share.getByRole('button', { name: /^(готово|gotowe|done)$/i }).first().click();
 
     // Гість бере позицію.

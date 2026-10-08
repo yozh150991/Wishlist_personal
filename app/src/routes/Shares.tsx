@@ -41,7 +41,7 @@ export default function Shares() {
   }, [load]);
 
   async function copy(token: string) {
-    await navigator.clipboard.writeText(shareUrl(token));
+    await navigator.clipboard.writeText(shareUrl(token, '/s'));
     setCopied(token);
     setTimeout(() => setCopied(null), 2000);
   }

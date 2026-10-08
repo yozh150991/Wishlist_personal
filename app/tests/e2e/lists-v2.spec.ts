@@ -141,6 +141,16 @@ test.describe('«Мої посилання» й «Налаштування» v2 
     // Перегляди — не позначки: число є, а слова про позначки немає.
     await expect(card).toContainText(/перегляд|wyświetle|view/i);
 
+    // «Відкрити» — справжня гостьова v2 під /l/ з банером власника; «Повернутись» — сюди ж (крок 5г).
+    await card.getByRole('link', { name: /відкрити посилання|otwórz link|open the link/i }).click();
+    await expect(page).toHaveURL(/\/l\/[A-Za-z0-9_-]{16,}$/);
+    await expect(page.getByText(/це твоє посилання|to twój link|your own link/i)).toBeVisible();
+    // Власник на своєму посиланні нічого не бронює: «Беру» — лише зображення.
+    await expect(page.locator('.v2-gcard').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^(беру|biorę|take)$/i })).toHaveCount(0);
+    await page.getByRole('button', { name: /^(повернутись|wróć|go back)$/i }).click();
+    await expect(page).toHaveURL(/\/shares$/);
+
     await card.getByRole('button', { name: /^(відкликати|cofnij|revoke)$/i }).click();
     await page.getByRole('dialog').getByRole('button', { name: /^(відкликати|cofnij|revoke)$/i }).click();
     await expect(card).toContainText(/відкликано|cofnięty|odwołany|revoked/i);

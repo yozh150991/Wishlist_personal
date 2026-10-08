@@ -1070,7 +1070,9 @@
     "deleteLabel": "Delete the link “{title}”",
     "emptyBody": "Open a list, tap “{share}”, pick the items and tap “{create}”. Guests will see only those.",
     "copyManual": "The browser didn't let us copy automatically — select the address and copy it.",
-    "subtitle": "Each link shows only the items chosen for it. The main list stays private."
+    "subtitle": "Each link shows only the items chosen for it. The main list stays private.",
+    "open": "Open",
+    "openLabel": "Open the link “{title}” as guests see it"
   },
   "v2settings": {
     "looksHint": "Your own event looks are set on a particular list — in the list menu, “List style”.",
@@ -1377,6 +1379,7 @@
       "body": "You're heading to the shop. Mark it as yours so other guests see it's taken.",
       "book": "Take it and go",
       "look": "Just looking"
-    }
+    },
+    "ownerBack": "Go back"
   }
 }

@@ -38,6 +38,7 @@ import { usePriorityLabel } from './ListPartsV2';
 import {
   BookSheetV2,
   GuestCardV2,
+  GuestHeadV2,
   LookSheetV2,
   MyPicksSheetV2,
   RedeemSheetV2,
@@ -228,6 +229,8 @@ export default function GuestV2() {
 
   const items = useMemo(() => data?.items ?? [], [data]);
   const canClaim = Boolean(data?.allow_reservations);
+  /** Власник на своєму посиланні бачить сторінку гостя, але нічого не бронює (§3.2). */
+  const asOwner = Boolean(data?.viewer_is_owner);
   const listCurrency: Currency = data?.currency ?? 'PLN';
 
   const countsOf = useCallback(
@@ -561,6 +564,13 @@ export default function GuestV2() {
     if (await copyText(url)) setNotice(t('v2guest.copied'));
   }
 
+  /** Власник прийшов зі своїх посилань — туди ж; відкрив адресу напряму — на «Мої посилання». */
+  function ownerBack() {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) navigate(-1);
+    else navigate('/shares');
+  }
+
   /* ── Розмітка ── */
 
   if (loading || urlKey || mailToken) {
@@ -610,6 +620,7 @@ export default function GuestV2() {
       onKeep={(i) => void keep(i)}
       onBought={(i, on) => void bought(i, on)}
       onShop={handleShop}
+      preview={asOwner}
     />
   );
   const takenRest = items.filter((i) => countsOf(i).mine === 0);
@@ -621,10 +632,15 @@ export default function GuestV2() {
   return (
     // <main>: гостьову відкривають сторонні люди, і зчитувачу екрана потрібен орієнтир.
     <main className="v2-guest">
-      <header className="v2-guest__head">
-        <div className="v2-guest__top">
-          {day && <p className="v2-guest__kicker">{day}</p>}
-          {canClaim && (
+      <GuestHeadV2
+        day={day}
+        title={data.title}
+        count={counts.items(items.length)}
+        message={data.message}
+        validUntil={validUntil}
+        action={
+          canClaim &&
+          !asOwner && (
             <button
               type="button"
               className="v2-guest__picks"
@@ -633,16 +649,20 @@ export default function GuestV2() {
               {mineItems.length > 0 && <ListChecks size={18} strokeWidth={2.75} aria-hidden="true" />}
               {mineItems.length > 0 ? t('v2guest.mine', { n: mineItems.length }) : t('v2guest.haveCode')}
             </button>
-          )}
-        </div>
-        <h1 className="v2-guest__title">{data.title}</h1>
-        <p className="v2-guest__meta">{counts.items(items.length)}</p>
-        {data.message && <p className="v2-guest__message">{data.message}</p>}
-        {validUntil && <p className="v2-guest__valid">{validUntil}</p>}
-      </header>
+          )
+        }
+      />
 
       <div className="v2-guest__body">
-        {data.viewer_is_owner && <NoteV2 tone="info">{t('v2guest.ownerBanner')}</NoteV2>}
+        {data.viewer_is_owner && (
+          <div className="v2-gbanner" role="status">
+            <span>{t('v2guest.ownerBanner')}</span>
+            {/* У застосунку з головного екрана немає кнопки «Назад» браузера. */}
+            <button type="button" className="v2-btn v2-btn--ghost v2-btn--small" onClick={ownerBack}>
+              {t('v2guest.ownerBack')}
+            </button>
+          </div>
+        )}
         {error && <NoteV2 tone="error">{error}</NoteV2>}
         {notice && <NoteV2 tone="info">{notice}</NoteV2>}
         {unsubToken && (

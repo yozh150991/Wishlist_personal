@@ -36,8 +36,13 @@ export type ShareInput = {
   expiresOn?: string | null;
 };
 
-export function shareUrl(token: string): string {
-  return `${publicOrigin.replace(/\/$/, '')}/s/${token}`;
+/**
+ * Посилання для гостей. v2 роздає гостьову v2 під `/l/…` (крок 5г, ADR-057);
+ * екрани v1 до свого прибирання (крок 9) — гостьову v1 під `/s/…`. Роздані
+ * раніше `/s/…` працюють і далі: токен той самий (ADR-039, п. 3).
+ */
+export function shareUrl(token: string, base: '/l' | '/s' = '/l'): string {
+  return `${publicOrigin.replace(/\/$/, '')}${base}/${token}`;
 }
 
 export async function createShare(input: ShareInput): Promise<Share> {

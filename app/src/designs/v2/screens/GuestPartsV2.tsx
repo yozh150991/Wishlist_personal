@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { Check, ExternalLink, Minus, Plus } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { THEMES, useTheme } from '../../../lib/theme';
@@ -52,6 +52,44 @@ export type GuestCounts = { left: number; mine: number };
 export type CardState = 'free' | 'mine' | 'taken';
 
 /**
+ * Шапка-листівка гостьової: дата й дія праворуч, назва, кількість позицій,
+ * повідомлення, термін. Та сама в гостя й у превʼю власника (крок 5г): там
+ * назва — не `h1`, бо сторінкою вона не є.
+ */
+export function GuestHeadV2({
+  day,
+  title,
+  count,
+  message,
+  validUntil,
+  action,
+  as: Title = 'h1',
+}: {
+  day: string | null;
+  title: string;
+  count: string;
+  message: string | null;
+  validUntil?: string | null;
+  action?: ReactNode;
+  as?: 'h1' | 'p';
+}) {
+  return (
+    <header className="v2-guest__head">
+      {(day || action) && (
+        <div className="v2-guest__top">
+          {day && <p className="v2-guest__kicker">{day}</p>}
+          {action}
+        </div>
+      )}
+      <Title className="v2-guest__title">{title}</Title>
+      <p className="v2-guest__meta">{count}</p>
+      {message && <p className="v2-guest__message">{message}</p>}
+      {validUntil && <p className="v2-guest__valid">{validUntil}</p>}
+    </header>
+  );
+}
+
+/**
  * Картка гостя: фото → назва (посилання на магазин), ціна й домен, ознаки,
  * нотатка → дія праворуч. Три стани з потоку E: вільна («Беру», «У магазин»),
  * своя (контур, «Ви берете», «Уже куплено», «Зняти»), чужа («Уже взяли» — без
@@ -69,6 +107,7 @@ export function GuestCardV2({
   onKeep,
   onBought,
   onShop,
+  preview = false,
 }: {
   item: SharedItem;
   currency: Currency;
@@ -84,6 +123,11 @@ export function GuestCardV2({
   onBought: (item: SharedItem, bought: boolean) => void;
   /** Перехід у магазин: сторінка може спершу спитати, чи забронювати (S1). */
   onShop: (item: SharedItem, event: ReactMouseEvent<HTMLAnchorElement>) => void;
+  /**
+   * Превʼю власника (крок 5г): та сама картка, але «Беру» — зображення
+   * кнопки, а не кнопка. Позначок у превʼю немає й бути не може (§3.2).
+   */
+  preview?: boolean;
 }) {
   const { t, locale } = useI18n();
   const priority = usePriorityLabel();
@@ -169,9 +213,15 @@ export function GuestCardV2({
         <div className="v2-gcard__actions">
           {state === 'free' && (
             <>
-              <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={() => onTake(item)}>
-                {t('v2guest.take')}
-              </button>
+              {preview ? (
+                <span className="v2-btn v2-btn--outline v2-btn--small v2-gcard__fake" aria-hidden="true">
+                  {t('v2guest.take')}
+                </span>
+              ) : (
+                <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={() => onTake(item)}>
+                  {t('v2guest.take')}
+                </button>
+              )}
               {item.url && (
                 <a
                   className="v2-btn v2-btn--ghost v2-btn--small"

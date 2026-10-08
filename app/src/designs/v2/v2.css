@@ -1242,59 +1242,34 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-order__arrows .v2-iconbtn:disabled { opacity: 0.35; cursor: default; }
 .v2-order__arrows .v2-iconbtn:disabled:hover { background: transparent; }
 
-/* ── Превʼю гостя (D, H, W1) ── */
-
-/* Гостьові токени — тепліше за застосунок, «як листівка». Оформлення списку
-   лягає поверх через змінні в style (overlayVars). */
-.v2-gprev {
+/* ── Превʼю гостя (D, H, W1) ──
+   З кроку 5г — справжня гостьова v2 (.v2-guest нижче) у рамці: та сама
+   шапка й ті самі картки. Тут лише рамка, відступи й ширина: превʼю живе і
+   у вузькій колонці «Поділитися», тож колонки карток — за шириною рамки,
+   а не вікна. */
+.v2-guest.v2-guest--preview {
+  min-height: 0;
   overflow: hidden;
-  color: var(--color-text);
-  background: var(--color-guest-bg);
   border: 1px solid var(--color-divider);
   border-radius: var(--r-card);
+  container: v2-gprev / inline-size;
 }
-.v2-gprev__head { display: grid; gap: var(--sp-2); padding: var(--sp-6); background: var(--color-guest-header); }
-.v2-gprev__kicker {
-  font-size: var(--t-meta);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.v2-gprev__title {
+.v2-guest--preview .v2-guest__head { padding: var(--sp-6); }
+.v2-guest--preview .v2-guest__title {
   font-family: var(--font-heading);
   font-weight: var(--weight-heading);
-  font-size: var(--t-h2);
-  line-height: 1.15;
-  color: var(--color-accent-900);
-  overflow-wrap: anywhere;
+  font-size: 1.875rem;
 }
-.v2-gprev__message { font-size: var(--t-body); overflow-wrap: anywhere; }
-.v2-gprev__body { display: grid; gap: var(--sp-5); padding: var(--sp-5); }
-.v2-gprev__group { display: grid; gap: var(--sp-3); }
-.v2-gprev__section { font-weight: 800; color: var(--color-accent-900); }
-.v2-gprev__items { display: grid; gap: var(--sp-3); margin: 0; padding: 0; list-style: none; }
-.v2-gprev__card {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  padding: var(--sp-4) var(--sp-5);
-  background: var(--color-guest-card);
-  border-radius: 20px;
+.v2-guest--preview .v2-guest__body { gap: var(--sp-5); max-width: none; padding: var(--sp-5); }
+.v2-guest--preview .v2-gcards { grid-template-columns: minmax(0, 1fr); }
+@container v2-gprev (min-width: 40rem) {
+  .v2-guest--preview .v2-gcards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.v2-gprev__img { width: 48px; height: 48px; flex: none; object-fit: cover; border-radius: 14px; }
-.v2-gprev__text { display: grid; gap: 2px; flex: 1; min-width: 0; }
-.v2-gprev__name { font-weight: 700; overflow-wrap: anywhere; }
-.v2-gprev__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
-.v2-gprev__take {
-  flex: none;
-  padding: var(--sp-2) var(--sp-5);
-  font-size: var(--t-small);
-  font-weight: 700;
-  color: var(--color-primary-ink);
-  background: var(--color-primary-fill);
-  border-radius: var(--r-pill);
-}
-.v2-gprev__empty { padding: var(--sp-4); text-align: center; }
+.v2-gcard__fake { cursor: default; pointer-events: none; }
+/* Зразок у «Оформленні»: шматок гостьової, тож відступи менші. */
+.v2-guest--sample .v2-guest__head { padding: var(--sp-5); }
+.v2-guest--sample .v2-guest__title { font-size: var(--t-h2); }
+.v2-guest--sample .v2-guest__body { padding: var(--sp-4); }
 
 /* ── Поділитися ── */
 
@@ -1530,12 +1505,14 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-sharecard__actions > .v2-btn--danger { margin-inline-start: auto; }
 /* Вузька картка (телефон, дві колонки на планшеті): три кнопки в рядок не
    влазять — «Копіювати» й «Відкликати» ділять рядок навпіл, «Видалити» під
-   ними на всю ширину, як «Відкликати доступ» у макеті. Міряємо картку, а не
+   ними на всю ширину, як «Відкликати доступ» у макеті; «Відкрити» (5г) —
+   так само окремим рядком. Міряємо картку, а не
    вікно: ширину картки задає сітка. */
 .v2-sharecard { container-type: inline-size; }
 @container (max-width: 22.5rem) {
   .v2-sharecard__actions > .v2-btn { flex: 1 1 0; }
   .v2-sharecard__actions > .v2-btn--danger { flex-basis: 100%; margin-inline-start: 0; }
+  .v2-sharecard__actions > .v2-sharecard__open { flex-basis: 100%; }
 }
 .v2-sharecard--sk { min-height: 150px; animation: v2-sk 1.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {

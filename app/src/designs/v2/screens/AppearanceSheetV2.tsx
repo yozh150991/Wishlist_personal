@@ -19,6 +19,28 @@ import type { List } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { SheetV2 } from './CommonV2';
 import { ConfirmSheetV2 } from './ListPartsV2';
+import { GuestCardV2 } from './GuestPartsV2';
+import type { SharedItem } from '../../../lib/shares';
+
+const noop = () => undefined;
+
+/** Зразок картки гостя: та сама картка, що на гостьовій, з однією вигаданою позицією. */
+const SAMPLE_ITEM = (title: string): SharedItem => ({
+  id: 'sample',
+  title,
+  url: null,
+  price: null,
+  quantity: 1,
+  priority: 'medium',
+  note: null,
+  variants: [],
+  image_url: null,
+  status: 'active',
+  created_at: '1970-01-01T00:00:00Z',
+  section_id: null,
+  taken_qty: null,
+  mine_qty: null,
+});
 
 const STROKE = 2.75;
 
@@ -333,20 +355,25 @@ export function AppearanceSheetV2({
             <div className="v2-field">
               <p className="v2-field__label">{t('appearance.example')}</p>
               {/* Шматок гостьової в цьому відтінку поверх твоєї схеми. */}
-              <div className="v2-gprev v2-gprev--sample" style={sample}>
-                <div className="v2-gprev__head">
-                  <p className="v2-gprev__title">{list?.title}</p>
-                </div>
-                <div className="v2-gprev__body">
-                  <ul className="v2-gprev__items">
-                    <li className="v2-gprev__card">
-                      <span className="v2-gprev__text">
-                        <span className="v2-gprev__name">{t('appearance.sampleItem')}</span>
-                      </span>
-                      <span className="v2-gprev__take" aria-hidden="true">
-                        {t('guest.take')}
-                      </span>
-                    </li>
+              <div className="v2-guest v2-guest--preview v2-guest--sample" style={sample}>
+                <header className="v2-guest__head">
+                  <p className="v2-guest__title">{list?.title}</p>
+                </header>
+                <div className="v2-guest__body">
+                  <ul className="v2-gcards">
+                    <GuestCardV2
+                      item={SAMPLE_ITEM(t('appearance.sampleItem'))}
+                      currency="PLN"
+                      counts={{ left: 1, mine: 0 }}
+                      canClaim
+                      flag={null}
+                      preview
+                      onTake={noop}
+                      onRelease={noop}
+                      onKeep={noop}
+                      onBought={noop}
+                      onShop={noop}
+                    />
                   </ul>
                 </div>
               </div>

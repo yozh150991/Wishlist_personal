@@ -67,7 +67,7 @@ export function ShareDialog({
         // Лише день: кінець дня за зоною власника рахує база (ADR-037).
         expiresOn: expiresAt || null,
       });
-      setLink(shareUrl(share.token));
+      setLink(shareUrl(share.token, '/s'));
       onCreated();
     } catch (e) {
       // Опівночі між перевіркою вище й відповіддю сервера «сьогодні» могло

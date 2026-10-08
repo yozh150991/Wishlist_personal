@@ -1070,7 +1070,9 @@
     "deleteLabel": "Usuń link „{title}”",
     "emptyBody": "Otwórz listę, naciśnij „{share}”, wybierz pozycje i naciśnij „{create}”. Goście zobaczą tylko je.",
     "copyManual": "Przeglądarka nie pozwoliła skopiować automatycznie — zaznacz adres i skopiuj.",
-    "subtitle": "Każdy link pokazuje tylko wybrane dla niego pozycje. Główna lista pozostaje prywatna."
+    "subtitle": "Każdy link pokazuje tylko wybrane dla niego pozycje. Główna lista pozostaje prywatna.",
+    "open": "Otwórz",
+    "openLabel": "Otwórz link „{title}” tak, jak widzą go goście"
   },
   "v2settings": {
     "looksHint": "Własne wyglądy wydarzeń ustawia się na konkretnej liście — w menu listy, „Wygląd listy”.",
@@ -1377,6 +1379,7 @@
       "body": "Idziesz do sklepu. Oznacz to jako swoje — inni goście zobaczą, że jest już wzięte.",
       "book": "Zarezerwuj i przejdź",
       "look": "Tylko popatrzę"
-    }
+    },
+    "ownerBack": "Wróć"
   }
 }
