@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, Check, Copy, Link2 } from 'lucide-react';
+import { AlertCircle, Check, Copy, Eye, Link2 } from 'lucide-react';
 import { deleteShare, fetchSharesOverview, revokeShare, shareUrl } from '../../../lib/shares';
 import type { ShareOverview } from '../../../lib/shares';
 import { useI18n } from '../../../lib/i18n';
@@ -144,6 +144,15 @@ export default function SharesV2() {
               >
                 {t('share.revoke')}
               </button>
+              {/* Справжня гостьова з банером «Це твоє посилання»: броней там не видно (§3.2). */}
+              <Link
+                to={`/l/${s.token}`}
+                className="v2-btn v2-btn--ghost v2-btn--small v2-sharecard__open"
+                aria-label={t('v2shares.openLabel', { title: s.title })}
+              >
+                <Eye size={18} strokeWidth={STROKE} aria-hidden="true" />
+                {t('v2shares.open')}
+              </Link>
             </>
           )}
           {/* У відкликаного й протермінованого лишається тільки видалення:

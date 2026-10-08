@@ -81,10 +81,13 @@ select is(
   'Київ улітку (UTC+3): літній час враховано'
 );
 
+-- Зсув Ванкувера взято з бази поясів, а не зашито: tzdata 2026c перевела
+-- Британську Колумбію на UTC−7 цілий рік, і зашите «07:59:59» падало на
+-- новій базі. Перевіряємо саме правило — доба за поясом власника.
 select is(
   (select expires_at from shares where token = (select token from tests.created where label = 'vancouver')),
-  (tests.next_year(12, 21) + time '07:59:59') at time zone 'UTC',
-  'Ванкувер (UTC−8): доба власника закінчується вже 21-го за UTC'
+  (tests.next_year(12, 20) + time '23:59:59') at time zone 'America/Vancouver',
+  'Ванкувер: доба власника закінчується за його поясом — за UTC це вже 21-ше'
 );
 
 select is(

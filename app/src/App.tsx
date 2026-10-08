@@ -32,6 +32,8 @@ function Screens() {
       {/* Гостьова v2 (ADR-041): той самий токен і той самий ключ, інший префікс. */}
       <Route path="/l/:token" element={<GuestV2Screen />} />
       <Route path="/l/:token/g/:key" element={<GuestV2Screen />} />
+      {/* Відписка з гостьового листа (ADR-054): секрет зникає з адреси одразу. */}
+      <Route path="/l/:token/u/:mailToken" element={<GuestV2Screen />} />
 
       <Route path="*" element={<DesignRoutes />} />
     </Routes>

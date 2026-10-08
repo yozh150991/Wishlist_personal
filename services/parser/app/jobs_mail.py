@@ -1,5 +1,5 @@
 """
-Листи власникові через Brevo API (ADR-049).
+Листи через Brevo API: власникові (ADR-049) і гостям (ADR-054).
 
 Ключ Brevo — із Secret Manager, у заголовку `api-key`. Адреса отримувача в
 лог не йде ніколи. Brevo вимикає ключ, яким 90 днів не зроблено жодного
@@ -22,14 +22,14 @@ class Mailer:
         self._sender = sender
         self._client = client
 
-    async def send(self, to: str, subject: str, html: str, text: str) -> bool:
+    async def send(self, to: str, subject: str, html: str, text: str, tag: str = "wishlist-notify") -> bool:
         body = {
             "sender": {"email": self._sender, "name": "Wishlist"},
             "to": [{"email": to}],
             "subject": subject,
             "htmlContent": html,
             "textContent": text,
-            "tags": ["wishlist-notify"],
+            "tags": [tag],
         }
         try:
             res = await self._client.post(f"{BREVO_API}/smtp/email", headers=self._headers, json=body)

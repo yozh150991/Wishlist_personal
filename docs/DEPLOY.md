@@ -763,6 +763,106 @@ Remove-Variable v
 
 **Після зміни коду** `services/parser` — передеплой `wishlist-jobs` звичайною командою з розділу 7: змінні й секрети зберігаються.
 
+## 10. Гостьові листи: сервіс `wishlist-guestmail` (ADR-054)
+
+Гість, який при броні вписав пошту, отримує лист про бронь і може попросити код на пошту. Ланцюжок: гостьова RPC кладе рядок у чергу `guest_mail` → тригер через `pg_net` будить сервіс `wishlist-guestmail` → сервіс читає чергу й шле через Brevo. Раз на 10 хвилин `pg_cron` будить його ще раз, щоб підібрати недоставлене.
+
+Сервіс **відкритий** (на відміну від `wishlist-jobs`): `pg_net` не вміє отримати Google ID-токен. Захищає його секрет у заголовку, а запит не несе даних — що й кому писати, сервіс читає з бази сам. Потрібні ключі Brevo з 9.9 і сесія PowerShell зі змінними з 9.0 (`$PROJECT`, `$REGION`, `$JOBS_SA`).
+
+Поки розділ не пройдено, нічого не ламається: броні працюють, листи просто чекають у черзі.
+
+### 10.1. Розширення в Supabase
+
+Dashboard → **Database → Extensions** → увімкни **pg_net** і **pg_cron** — **до** `db push` (10.5). Міграції створюють розклади `guest-mail-sweep` і `guest-reminders`, лише якщо `pg_cron` уже є; якщо розширення ввімкнено після міграцій — створи розклади вручну (10.6, крок 3).
+
+### 10.2. Секрет сигналу
+
+```powershell
+$WAKE = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 48 | ForEach-Object { [char]$_ })
+$WAKE | gcloud secrets create wishlist-guestmail-wake --data-file=-
+gcloud secrets add-iam-policy-binding wishlist-guestmail-wake `
+  --member "serviceAccount:$JOBS_SA" `
+  --role roles/secretmanager.secretAccessor
+$WAKE   # знадобиться в 10.4 — скопіюй
+```
+
+Сервіс виконується тим самим обліковим записом `$JOBS_SA`, що й `wishlist-jobs`: доступ до ключів Supabase і Brevo в нього вже є.
+
+### 10.3. Деплой
+
+```powershell
+cd services\parser
+gcloud run deploy wishlist-guestmail `
+  --source . `
+  --region $REGION `
+  --allow-unauthenticated `
+  --service-account $JOBS_SA `
+  --memory 256Mi `
+  --cpu 1 `
+  --min-instances 0 `
+  --max-instances 1 `
+  --concurrency 4 `
+  --timeout 120 `
+  --set-env-vars "APP_MODULE=app.mail_main:app,SUPABASE_URL=https://<project-ref>.supabase.co,MAIL_FROM=<адреса з Brevo Senders>,APP_ORIGIN=https://wishlist-personal.vercel.app" `
+  --set-secrets "SUPABASE_SECRET_KEY=wishlist-supabase-secret:latest,BREVO_API_KEY=wishlist-brevo-key:latest,GUEST_MAIL_WAKE_SECRET=wishlist-guestmail-wake:latest"
+cd ..\..
+$MAIL_URL = gcloud run services describe wishlist-guestmail --region $REGION --format="value(status.url)"
+$MAIL_URL
+```
+
+- **`--allow-unauthenticated`** — тут навмисно: без цього `pg_net` не достукається. На питання «Allow unauthenticated invocations?» — **y**.
+- **`--max-instances 1`** — одна копія: черга й так береться атомарно, але зайві копії нічого не дають.
+- Якщо Brevo обмежує ключ за IP (9.9, крок 6) — Cloud Run виходить у мережу з різних адрес, тож обмеження доведеться зняти, як і для `wishlist-jobs`.
+
+### 10.4. Адреса й секрет у Vault
+
+Supabase → **SQL Editor** (підстав `$MAIL_URL` і `$WAKE`):
+
+```sql
+select vault.create_secret('https://wishlist-guestmail-…run.app/wake', 'guest_mail_url');
+select vault.create_secret('<секрет з 10.2>', 'guest_mail_secret');
+```
+
+Адреса — з `/wake` у кінці й лише `https://`. Замінити згодом: `select vault.update_secret((select id from vault.secrets where name = 'guest_mail_url'), '<нова адреса>');`.
+
+### 10.5. Міграції
+
+`20261007090000_guest_contact.sql` (5а), `20261007100000_guest_mail.sql` (5б-1) і `20261008090000_guest_changes.sql` (5б-2). Вони лише додають нове, тож бойовий фронтенд від них не ламається: застосовуй **до** злиття гілки, тоді новий фронтенд одразу знайде свої функції:
+
+```powershell
+npx supabase db push
+```
+
+### 10.6. Перевірка
+
+1. Налаштування:
+   ```powershell
+   curl.exe "$MAIL_URL/health"
+   ```
+   Має бути `"configured":true`. `false` — бракує змінної: `gcloud run services logs read wishlist-guestmail --region $REGION --limit 20` покаже, якої.
+2. Без секрету — відмова:
+   ```powershell
+   curl.exe -X POST "$MAIL_URL/wake"            # 401
+   curl.exe -X POST -H "x-wake-secret: $WAKE" "$MAIL_URL/wake"   # {"sent":0,...}
+   ```
+3. Розклади в базі — SQL Editor: `select jobname, schedule from cron.job;` → `guest-mail-sweep` (`*/10 * * * *`) і `guest-reminders` (`5 7 * * *`). Якщо їх немає (розширення ввімкнено вже після міграцій) — створи; повторний запуск лише оновлює задачу:
+   ```sql
+   select cron.schedule('guest-mail-sweep', '*/10 * * * *', 'select public.wake_guest_mail()');
+   select cron.schedule('guest-reminders', '5 7 * * *', 'select public.enqueue_guest_reminders()');
+   ```
+4. Наживо: відкрий своє посилання під `/l/…` у приватному вікні (власник не бронює), забронюй позицію зі своєю поштою. Лист «Ваша бронь у Wishlist» має прийти за кілька секунд; у журналі сервісу — `INFO: jobs.guestmail guest mail: {'sent': 1, …}`.
+5. У листі натисни «Не надсилати листів про цей список» — відкриється список із «Листів про цей список більше не буде» і «Повернути листи».
+6. Не прийшло за хвилину — SQL Editor:
+   ```sql
+   select kind, attempts, sent_at, outcome from guest_mail order by created_at desc limit 5;
+   select status_code, error_msg from net._http_response order by created desc limit 5;
+   ```
+   Рядок без `sent_at` і порожній `net._http_response` — Vault не налаштований (10.4). `status_code` 401 — секрет у Vault і в Secret Manager різний. `attempts` росте — Brevo не приймає (ключ, відправник, IP).
+
+7. Лист про зміну (5б-2): забронюй позицію зі своєю поштою під `/l/…`, потім як власник зміни її назву чи ціну. За кілька секунд — «Зміни у вашій броні в Wishlist» з «було → стало», а на гостьовій — «Змінено» з «Лишити». У формі позиції власник бачить лише «Позицію бачать гості за посиланнями: N».
+
+**Після зміни коду** `services/parser` — передеплой `wishlist-guestmail` тією самою командою з 10.3 (можна без `--set-*`: змінні й секрети зберігаються) і, як і раніше, `wishlist-jobs`.
+
 ---
 
 ## Скільки це коштує

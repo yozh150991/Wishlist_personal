@@ -35,8 +35,8 @@ type Step = 'form' | 'pick' | 'preview' | 'creating' | 'done' | 'revoked';
  * Якщо браузер не дав скопіювати без натиску, лишаються «Копіювати» й
  * «Поділитися». «Відкликати доступ» — одразу тут, з підтвердженням.
  *
- * Жодного слова про позначки — ні скільки, ні чиї (ADR-040). Посилання поки
- * `/s/…`: гостьова v2 ще не готова (ADR-041, ARCHITECTURE).
+ * Жодного слова про позначки — ні скільки, ні чиї (ADR-040). Посилання —
+ * `/l/…`, гостьова v2 (крок 5г); роздані раніше `/s/…` працюють і далі.
  */
 export function ShareSheetV2({
   open,
@@ -245,6 +245,7 @@ export function ShareSheetV2({
       groups={chosenGroups}
       currency={list.currency}
       hidePrices={!showPrices}
+      canClaim={allowClaims}
       hue={hue}
     />
   );

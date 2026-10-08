@@ -224,7 +224,7 @@ test.describe('сторінка списку v2: поділитися, поря�
 
     await expect(sheet.getByRole('heading', { name: /посилання готове|link gotowy|link is ready/i })).toBeVisible();
     const link = await sheet.locator('input[readonly]').inputValue();
-    expect(link).toMatch(/\/s\/[A-Za-z0-9_-]{16,}$/);
+    expect(link).toMatch(/\/l\/[A-Za-z0-9_-]{16,}$/);
 
     // Гість без сесії бачить лише вибране. Перегляд реєструється — список «відкривали».
     const guestContext = await browser.newContext();
@@ -515,5 +515,58 @@ test.describe('сторінка списку v2: «Вибрати кілька»
     await expect(card(page, c)).toHaveCount(0);
     await page.reload();
     await expect(page.getByRole('heading', { name: /жодної позиції|ani jednej pozycji|no items yet/i })).toBeVisible();
+  });
+});
+
+test.describe('сторінка списку v2: зміна позиції, яку могли взяти (ADR-055)', { tag: '@v2' }, () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('власник бачить попередження без жодного слова про броні; гість бачить «Змінено» й «Лишити»', async ({
+    page,
+    browser,
+  }) => {
+    await signInV2(page);
+    await newList(page, unique('V2 changes'));
+    const title = unique('Чайник');
+    await addManual(page, title, '200');
+    await expect(undoButton(page)).toHaveCount(0, { timeout: 10_000 });
+
+    await page.getByRole('button', { name: /^(поділитися|udostępnij|share)$/i }).first().click();
+    const share = page.getByRole('dialog');
+    await share.getByRole('button', { name: /^(створити посилання|utwórz link|create link)$/i }).click();
+    await expect(share.getByRole('heading', { name: /посилання готове|link gotowy|link is ready/i })).toBeVisible();
+    const link = await share.locator('input[readonly]').inputValue();
+    await share.getByRole('button', { name: /^(готово|gotowe|done)$/i }).first().click();
+
+    // Гість бере позицію.
+    const guestCtx = await browser.newContext();
+    const guest = await guestCtx.newPage();
+    await guest.goto(link);
+    await guest.locator('.v2-gcard').filter({ hasText: title }).getByRole('button', { name: /^(беру|biorę|take)$/i }).click();
+    await guest.getByRole('dialog').getByRole('button', { name: /^(забронювати|zarezerwuj|take it)$/i }).click();
+    await guest.getByRole('dialog').getByRole('button', { name: /^(готово|gotowe|done)$/i }).click();
+    const guestCard = guest.locator('.v2-gcard').filter({ hasText: title });
+    await expect(guestCard).toContainText(/ви берете|bierzesz to|you're taking this/i);
+
+    // Власник змінює назву: попередження про посилання — однакове для кожної
+    // позиції в посиланні, і нічого про те, чи її взяли.
+    await card(page, title).getByRole('button').first().click();
+    const sheet = page.getByRole('dialog');
+    const renamed = `${title} XL`;
+    await sheet.locator('input[name="title"]').fill(renamed);
+    const warn = sheet.getByTestId('item-guests-warn');
+    await expect(warn).toContainText(/1/);
+    await expect(warn).not.toContainText(/взял|wzię|took|taken/i);
+    await sheet.getByRole('button', { name: /^(зберегти|zapisz|save)$/i }).click();
+    await expect(card(page, renamed)).toBeVisible();
+
+    // Гість бачить «Змінено», «Лишити» його знімає, бронь лишається.
+    await guest.reload();
+    const changed = guest.locator('.v2-gcard').filter({ hasText: renamed });
+    await expect(changed).toContainText(/змінено|zmieniono|changed/i);
+    await changed.getByRole('button', { name: /^(лишити|zostaw|keep)$/i }).click();
+    await expect(changed).not.toContainText(/змінено|zmieniono|changed/i);
+    await expect(changed).toContainText(/ви берете|bierzesz to|you're taking this/i);
+    await guestCtx.close();
   });
 });

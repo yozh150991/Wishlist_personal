@@ -36,8 +36,13 @@ export type ShareInput = {
   expiresOn?: string | null;
 };
 
-export function shareUrl(token: string): string {
-  return `${publicOrigin.replace(/\/$/, '')}/s/${token}`;
+/**
+ * Посилання для гостей. v2 роздає гостьову v2 під `/l/…` (крок 5г, ADR-057);
+ * екрани v1 до свого прибирання (крок 9) — гостьову v1 під `/s/…`. Роздані
+ * раніше `/s/…` працюють і далі: токен той самий (ADR-039, п. 3).
+ */
+export function shareUrl(token: string, base: '/l' | '/s' = '/l'): string {
+  return `${publicOrigin.replace(/\/$/, '')}${base}/${token}`;
 }
 
 export async function createShare(input: ShareInput): Promise<Share> {
@@ -160,7 +165,16 @@ export type SharedItem = {
   taken_qty: number | null;
   /** Скільки взяв саме цей гість (за ключем); null для власника. */
   mine_qty: number | null;
+  /**
+   * Гостьова v2 (ADR-055): власник змінив назву, посилання чи ціну після того,
+   * як цей гість узяв позицію. Приходить лише йому й лише на його позиції.
+   */
+  changed?: boolean;
+  /** Гостьова v2 (ADR-056): цей гість позначив свою бронь «Уже куплено». Лише йому. */
+  bought?: boolean;
 };
+
+export type GuestInfo = { code: string; name?: string | null; email?: string | null };
 
 export type SharedList = {
   title: string;
@@ -178,8 +192,12 @@ export type SharedList = {
   hide_prices: boolean;
   allow_reservations: boolean;
   viewer_is_owner: boolean;
-  /** Ключ гостя впізнано — ось його короткий код. null — ключа немає або він чужий. */
-  guest: { code: string } | null;
+  /**
+   * Ключ гостя впізнано — ось його короткий код. null — ключа немає або він
+   * чужий. Гостьова v2 (`get_guest_list`) додає підпис і пошту, які гість
+   * вписав сам (ADR-053); v1 їх не отримує й не показує.
+   */
+  guest: GuestInfo | null;
   /** Розділи зі спільними позиціями, у порядку власника (ADR-036). */
   sections: { id: string; title: string }[];
   /** У ручному порядку власника: розділи, усередині — його порядок, «Інше» в кінці. */
@@ -206,6 +224,20 @@ function rpcError(error: { message?: string; code?: string } | null): Error {
 export async function fetchSharedList(token: string, key: string | null): Promise<SharedList> {
   const { data, error } = await supabase.rpc('get_shared_list', { p_token: token, p_key: key });
   if (error) throw rpcError(error);
+  return normalizeShared(data);
+}
+
+/**
+ * Гостьова v2 (ADR-053): те саме, що `get_shared_list`, плюс підпис і пошта
+ * гостя в `guest` — лише для його ключа. Власнику `guest` приходить null.
+ */
+export async function fetchGuestList(token: string, key: string | null): Promise<SharedList> {
+  const { data, error } = await supabase.rpc('get_guest_list', { p_token: token, p_key: key });
+  if (error) throw rpcError(error);
+  return normalizeShared(data);
+}
+
+function normalizeShared(data: unknown): SharedList {
   const list = data as SharedList & { owner_scheme: unknown; appearance_hue: unknown };
   // Старий бекенд або несподіване значення — усталена Шавлія без оформлення,
   // а не зламана сторінка.
@@ -250,11 +282,99 @@ export async function claimItem(
   return data as ClaimResult;
 }
 
+export type ClaimV2Result = ClaimResult & { name: string | null; email: string | null };
+
+/**
+ * «Беру» гостьової v2 (ADR-053, ADR-054): як `claimItem`, плюс підпис і пошта
+ * гостя. `name` / `email`: null — лишити як є, порожній рядок — прибрати.
+ * Помилки `bad_name` і `bad_email` приходять до позначки — тоді її не
+ * зроблено. Є пошта й гість не відписався — сервер ставить лист у чергу
+ * мовою `locale`.
+ */
+export async function claimItemV2(
+  token: string,
+  itemId: string,
+  key: string,
+  quantity: number,
+  name: string | null,
+  email: string | null,
+  locale: string,
+): Promise<ClaimV2Result> {
+  const { data, error } = await supabase.rpc('claim_item_v2', {
+    p_token: token,
+    p_item_id: itemId,
+    p_key: key,
+    p_quantity: quantity,
+    p_name: name,
+    p_email: email,
+    p_locale: locale,
+  });
+  if (error) throw rpcError(error);
+  return data as ClaimV2Result;
+}
+
 export async function releaseClaim(token: string, itemId: string, key: string): Promise<void> {
   const { error } = await supabase.rpc('release_claim', {
     p_token: token,
     p_item_id: itemId,
     p_key: key,
+  });
+  if (error) throw rpcError(error);
+}
+
+/**
+ * «Надіслати код на пошту» (ADR-041, п. 4): відповідь однакова, є така адреса
+ * в цьому списку чи ні. Ліміт — спільний зі спробами коду.
+ */
+export async function sendGuestCode(
+  token: string,
+  email: string,
+  locale: string,
+): Promise<{ ok: true } | { error: 'too_many_attempts' }> {
+  const { data, error } = await supabase.rpc('send_guest_code', { p_token: token, p_email: email, p_locale: locale });
+  if (error) throw rpcError(error);
+  return data as { ok: true } | { error: 'too_many_attempts' };
+}
+
+/**
+ * Листи про цей список: вимкнути (з посилання в листі) чи ввімкнути знову.
+ * Секрет — з адреси листа; відповідь однакова, чи такий секрет є.
+ */
+export async function setGuestMail(mailToken: string, on: boolean): Promise<void> {
+  const { error } = await supabase.rpc('guest_mail_set', { p_mail_token: mailToken, p_on: on });
+  if (error) throw rpcError(error);
+}
+
+/** «Лишити» після зміни позиції (ADR-055): знімає «Змінено» з броні цього гостя. */
+export async function ackClaimChange(token: string, itemId: string, key: string): Promise<void> {
+  const { error } = await supabase.rpc('ack_claim_change', { p_token: token, p_item_id: itemId, p_key: key });
+  if (error) throw rpcError(error);
+}
+
+/**
+ * У скількох живих посиланнях стоїть позиція — для попередження власнику
+ * перед значущою правкою (ADR-040, п. 2 J). Рахується з `share_items`, а не
+ * з позначок: число однакове, взяв хтось позицію чи ні.
+ */
+export async function countLiveShares(itemId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('share_items')
+    .select('share_id, shares!inner(revoked_at, expires_at)')
+    .eq('item_id', itemId);
+  if (error) throw error;
+  const now = Date.now();
+  return ((data ?? []) as unknown as { shares: { revoked_at: string | null; expires_at: string | null } }[]).filter(
+    (r) => !r.shares.revoked_at && (!r.shares.expires_at || Date.parse(r.shares.expires_at) > now),
+  ).length;
+}
+
+/** «Уже куплено» / «Ще не куплено» на своїй броні (ADR-056). Власник цього не бачить. */
+export async function setClaimBought(token: string, itemId: string, key: string, bought: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_claim_bought', {
+    p_token: token,
+    p_item_id: itemId,
+    p_key: key,
+    p_bought: bought,
   });
   if (error) throw rpcError(error);
 }
