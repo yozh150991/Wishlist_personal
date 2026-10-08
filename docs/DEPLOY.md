@@ -842,8 +842,13 @@ npx supabase db push
    Має бути `"configured":true`. `false` — бракує змінної: `gcloud run services logs read wishlist-guestmail --region $REGION --limit 20` покаже, якої.
 2. Без секрету — відмова:
    ```powershell
-   curl.exe -X POST "$MAIL_URL/wake"            # 401
-   curl.exe -X POST -H "x-wake-secret: $WAKE" "$MAIL_URL/wake"   # {"sent":0,...}
+   curl.exe -X POST -d '{}' "$MAIL_URL/wake"            # 401, {"detail":"bad_secret"}
+   curl.exe -X POST -d '{}' -H "x-wake-secret: $WAKE" "$MAIL_URL/wake"   # {"sent":0,...}
+   ```
+   `-d '{}'` обовʼязковий: Cloud Run на POST без тіла відповідає `411 Length Required` ще до сервісу (`pg_net` тіло `{}` надсилає сам). Нове вікно PowerShell — спершу відновити змінні:
+   ```powershell
+   $MAIL_URL = gcloud run services describe wishlist-guestmail --region $REGION --format="value(status.url)"
+   $WAKE     = (gcloud secrets versions access latest --secret wishlist-guestmail-wake).Trim()
    ```
 3. Розклади в базі — SQL Editor: `select jobname, schedule from cron.job;` → `guest-mail-sweep` (`*/10 * * * *`) і `guest-reminders` (`5 7 * * *`). Якщо їх немає (розширення ввімкнено вже після міграцій) — створи; повторний запуск лише оновлює задачу:
    ```sql
