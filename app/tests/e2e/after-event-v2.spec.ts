@@ -272,3 +272,35 @@ test.describe('щорічні свята v2', { tag: '@v2' }, () => {
     await expect(page.getByRole('region', { name: new RegExp(title) })).toHaveCount(0);
   });
 });
+
+test.describe('подяка гостям v2', { tag: '@v2' }, () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('«Подякувати гостям»: зберегти, змінити з меню, прибрати (ADR-059)', async ({ page }) => {
+    await signInV2(page);
+    await newList(page, unique('V2 thanks'));
+    await addManual(page, unique('Свічки'));
+    await setEventDate(page, inDays(-1));
+
+    const step = afterCard(page).getByRole('button', { name: /подякувати гостям|podziękuj gościom|thank your guests/i });
+    await step.click();
+    const sheet = page.getByRole('dialog', { name: /подяка гостям|podziękowanie dla gości|thank-you to guests/i });
+    // Текст однаковий для будь-якого списку: про гостей — нічого (ADR-040).
+    await expect(sheet).toContainText(/не дізнаєшся|nie dowiesz się|won't learn/i);
+    await sheet.locator('textarea[name="thanks_message"]').fill('Дякуємо, що були з нами!');
+    await sheet.getByRole('button', { name: /^(зберегти|zapisz|save)$/i }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.getByText(/подяку збережено|podziękowanie zapisane|thank-you saved/i)).toBeVisible();
+    await expect(step.locator('.v2-after__done')).toBeVisible();
+
+    // Удруге — з меню списку: лист уже пішов, текст на місці.
+    await listMenu(page).click();
+    await page.getByRole('dialog').getByRole('button', { name: /змінити подяку|zmień podziękowanie|edit the thank-you/i }).click();
+    await expect(sheet.locator('textarea[name="thanks_message"]')).toHaveValue('Дякуємо, що були з нами!');
+    await expect(sheet).toContainText(/уже пішов|już poszedł|went out/i);
+    await sheet.getByRole('button', { name: /прибрати подяку|usuń podziękowanie|remove the thank-you/i }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.getByText(/подяку прибрано|podziękowanie usunięte|thank-you removed/i)).toBeVisible();
+    await expect(step.locator('.v2-after__done')).toHaveCount(0);
+  });
+});

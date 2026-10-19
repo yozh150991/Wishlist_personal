@@ -212,3 +212,23 @@ test('архівний список під /l/ — позиції видно, б
   await expect(page.getByRole('button', { name: takeBtn })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /уже маю броні|mam już rezerwacje|already have picks/i })).toHaveCount(0);
 });
+
+test('подяка власника на /l/ — видно всім, з переносами рядків (ADR-059)', { tag: '@both' }, async ({ page }) => {
+  await page.route('**/rpc/get_guest_list', (route) =>
+    route.fulfill({
+      json: {
+        title: 'Річниця', message: null, currency: 'PLN', event_date: '2026-10-10',
+        expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+        hide_prices: false, allow_reservations: false, archived: true, viewer_is_owner: false,
+        guest: null, sections: [], items: [], thanks: 'Дякуємо, що були з нами!\nДо зустрічі',
+      },
+    }),
+  );
+  await page.route('**/rpc/register_share_view', (route) => route.fulfill({ status: 204, body: '' }));
+
+  await page.goto('/l/e2e-thanks-token');
+  const thanks = page.getByRole('region', { name: /подяка від автора|podziękowanie od autora|thank-you from the list/i });
+  await expect(thanks).toBeVisible();
+  await expect(thanks).toContainText('Дякуємо, що були з нами!');
+  await expect(thanks).toContainText('До зустрічі');
+});

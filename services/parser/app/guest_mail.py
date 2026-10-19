@@ -17,8 +17,9 @@ secret-ключем. Тож навіть витеклий секрет сигн�
 
 Види листів: `claim` — на бронь, `code` — код на прохання (ADR-054);
 `changed` і `deleted` — власник змінив чи прибрав позицію, яку взяли (потік J),
-`reminder` — за 7 днів до свята (P5) (ADR-055). Що сказати, для трьох
-останніх лежить знімком у `details`: сервіс позначок не читає ніколи.
+`reminder` — за 7 днів до свята (P5) (ADR-055), `thanks` — подяка власника
+після свята, раз на список (ADR-059). Що сказати, для чотирьох останніх
+лежить знімком у `details`: сервіс позначок не читає ніколи.
 Посилання на список — з посилання, де діяв гість; приховані там ціни не
 з'являються й у листі.
 """
@@ -64,6 +65,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "reminder.subject": "Нагадування від Wishlist",
         "reminder.lead": "До «{list}» — 7 днів, {date}.",
         "reminder.items": "Ви берете: {items}.",
+        "thanks.subject": "Подяка у Wishlist",
+        "thanks.lead": "Автор списку «{list}» дякує вам:",
         "noprice": "не вказана",
     },
     "pl": {
@@ -91,6 +94,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "reminder.subject": "Przypomnienie od Wishlist",
         "reminder.lead": "Do „{list}” zostało 7 dni — {date}.",
         "reminder.items": "Masz zarezerwowane: {items}.",
+        "thanks.subject": "Podziękowanie w Wishlist",
+        "thanks.lead": "Autor listy „{list}” dziękuje:",
         "noprice": "nie podana",
     },
     "en": {
@@ -118,6 +123,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "reminder.subject": "A reminder from Wishlist",
         "reminder.lead": "“{list}” is 7 days away — {date}.",
         "reminder.items": "You're taking: {items}.",
+        "thanks.subject": "A thank-you on Wishlist",
+        "thanks.lead": "The author of “{list}” says thank you:",
         "noprice": "not set",
     },
 }
@@ -200,6 +207,14 @@ def change_lines(details: dict | None, locale: str, hide_prices: bool) -> list[s
     return out
 
 
+def thanks_lines(details: dict | None) -> list[str]:
+    """Подяка власника рядками, без порожніх."""
+    message = (details or {}).get("message")
+    if not isinstance(message, str):
+        return []
+    return [line.strip() for line in message.splitlines() if line.strip()]
+
+
 def render(
     kind: str,
     locale: str,
@@ -212,7 +227,7 @@ def render(
     details: dict | None = None,
     hide_prices: bool = False,
 ) -> Letter:
-    """Лист гостю: бронь, код, зміна, видалення чи нагадування."""
+    """Лист гостю: бронь, код, зміна, видалення, нагадування чи подяка."""
     locale = locale_of(locale)
     esc = html.escape
     details = details if isinstance(details, dict) else {}
@@ -250,6 +265,10 @@ def render(
         if quoted("bought"):
             lines.append(text("reminder.bought", locale, items=quoted("bought")))
         lines.append(text("claim.code", locale, code=code))
+    elif kind == "thanks":
+        # Текст власника — як є, рядками; HTML екранується нижче, як і решта.
+        subject = text("thanks.subject", locale)
+        lines = [text("thanks.lead", locale, list=list_title), *thanks_lines(details)]
     else:
         subject = text("code.subject", locale)
         lines = [text("code.lead", locale, list=list_title, code=code), text("code.how", locale)]
@@ -431,6 +450,8 @@ def skip_reason(job: Job) -> str | None:
     if job.kind == "deleted" and not (job.details or {}).get("title"):
         return "nothing_visible"
     if job.kind == "reminder" and not (job.details or {}).get("items"):
+        return "nothing_visible"
+    if job.kind == "thanks" and not thanks_lines(job.details):
         return "nothing_visible"
     return None
 

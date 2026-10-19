@@ -134,9 +134,9 @@ select is(
 -- ── Те саме, що v1 ───────────────────────────
 
 select is(
-  get_guest_list('guestContactToken000001', 'guestKeyTwoBBBBBBBBBBBBB') - 'guest',
+  get_guest_list('guestContactToken000001', 'guestKeyTwoBBBBBBBBBBBBB') - 'guest' - 'thanks',
   get_shared_list('guestContactToken000001', 'guestKeyTwoBBBBBBBBBBBBB') - 'guest',
-  'get_guest_list — це get_shared_list, крім поля guest'
+  'get_guest_list — це get_shared_list, крім полів guest і thanks (ADR-059)'
 );
 select throws_ok(
   $$ select claim_item_v2('guestContactToken000001', 'a1411111-0000-4000-8000-0000000000c1',

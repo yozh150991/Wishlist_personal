@@ -435,3 +435,35 @@ def test_reminder_names_what_is_bought_and_what_is_left():
     plain = render("reminder", "en", item="", list_title="Party", code="K7M2Q", url="u", unsubscribe="x",
                    details={"event_date": "2026-10-25", "items": ["Lamp"]})
     assert "Already bought" not in plain.text
+
+
+# ── 5д: подяка (ADR-059) ─────────────────────
+
+
+def test_thanks_letter_carries_owner_message():
+    letter = render("thanks", "uk", item="", list_title="Річниця", code="K7M2Q", url="https://w.test/l/t",
+                    unsubscribe="x", details={"message": "Дякуємо, що були з нами!\n\nДо зустрічі <3"})
+    assert "Автор списку «Річниця» дякує вам:" in letter.text
+    assert "Дякуємо, що були з нами!" in letter.text and "До зустрічі <3" in letter.text
+    # Текст власника не стає розміткою.
+    assert "До зустрічі &lt;3" in letter.html
+    assert "Річниця" not in letter.subject
+    # Код гостю тут ні до чого: свято минуло, бронювати нічого.
+    assert "K7M2Q" not in letter.text
+
+
+def test_thanks_without_text_is_skipped_and_unsubscribe_applies():
+    blank = Job.from_row(row(kind="thanks", item=None, details={"message": "  \n "}), NOW)
+    assert skip_reason(blank) == "nothing_visible"
+    off = Job.from_row(row(kind="thanks", item=None, details={"message": "Дякую"},
+                           identity={**row()["identity"], "mail_off": True}), NOW)
+    assert skip_reason(off) == "unsubscribed"
+    ok = Job.from_row(row(kind="thanks", item=None, details={"message": "Дякую"}), NOW)
+    assert skip_reason(ok) is None
+
+
+@pytest.mark.parametrize("locale", guest_mail.LOCALES)
+def test_thanks_renders_in_every_locale(locale):
+    letter = render("thanks", locale, item="", list_title="L", code="K7M2Q", url="u", unsubscribe="x",
+                    details={"message": "Dzięki"})
+    assert letter.subject and "Dzięki" in letter.text and "{" not in letter.text

@@ -34,6 +34,13 @@ export type List = {
   is_archived: boolean;
   /** Щорічне свято (ADR-047): за місяць до дати v2 пропонує повторити список. Старий знімок поля не має. */
   repeats_yearly?: boolean;
+  /**
+   * Подяка гостям (ADR-059): гість бачить її на сторінці списку. Старий знімок
+   * поля не має.
+   */
+  thanks_message?: string | null;
+  /** Коли подяку вперше збережено — тоді ж пішли листи. Ставить лише база. */
+  thanks_sent_at?: string | null;
   created_at: string;
   updated_at: string;
   /**
