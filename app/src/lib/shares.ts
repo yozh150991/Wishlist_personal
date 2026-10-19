@@ -190,7 +190,13 @@ export type SharedList = {
   expires_at: string | null;
   expires_tz: string | null;
   hide_prices: boolean;
+  /** Бронювати можна: посилання дозволяє, список не в архіві й дивиться не власник. */
   allow_reservations: boolean;
+  /**
+   * Список в архіві (ADR-058): гість бачить позиції, але не бронює.
+   * Необовʼязкове — база до міграції `archived_no_claims` поля не віддає.
+   */
+  archived?: boolean;
   viewer_is_owner: boolean;
   /**
    * Ключ гостя впізнано — ось його короткий код. null — ключа немає або він

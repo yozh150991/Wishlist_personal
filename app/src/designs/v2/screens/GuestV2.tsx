@@ -399,6 +399,10 @@ export default function GuestV2() {
       if (msg.includes('not_enough_left')) {
         // Гонка: поки гість думав, позицію взяли. Конфлікт ловимо на записі.
         setBook({ item: target, step: { kind: 'race' } });
+      } else if (msg.includes('list_archived')) {
+        // Список пішов в архів, поки сторінка була відкрита: перечитування
+        // нижче покаже банер і сховає «Беру».
+        setBook(null);
       } else if (msg.includes('bad_name')) {
         setBookError(t('v2guest.book.badName'));
       } else if (msg.includes('bad_email')) {
@@ -527,7 +531,7 @@ export default function GuestV2() {
         return;
       }
       if (msg.includes('not_enough_left')) setBook({ item, step: { kind: 'race' } });
-      else setError(t('v2guest.error'));
+      else if (!msg.includes('list_archived')) setError(t('v2guest.error'));
       try {
         setData(await fetchGuestList(token, k));
       } catch {
@@ -661,6 +665,12 @@ export default function GuestV2() {
             <button type="button" className="v2-btn v2-btn--ghost v2-btn--small" onClick={ownerBack}>
               {t('v2guest.ownerBack')}
             </button>
+          </div>
+        )}
+        {data.archived && (
+          // Свято минуло, власник склав список в архів (ADR-058): дивитись — так, бронювати — ні.
+          <div className="v2-gbanner" role="status">
+            <span>{t('v2guest.archived')}</span>
           </div>
         )}
         {error && <NoteV2 tone="error">{error}</NoteV2>}

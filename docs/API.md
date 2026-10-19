@@ -42,7 +42,8 @@ const { data } = await supabase.rpc('get_shared_list', { p_token: token, p_key: 
   "owner_scheme": "sage",   // схема власника: sage | slyva | polotno | cytrus | nich (ADR-033)
   "appearance_hue": 75,     // відтінок оформлення списку або null (ADR-034)
   "hide_prices": false,
-  "allow_reservations": true,
+  "allow_reservations": true,   // false, якщо посилання не дозволяє, список в архіві або дивиться власник
+  "archived": false,            // список в архіві: позиції видно, бронювати не можна (ADR-058)
   "viewer_is_owner": false,
   "guest": { "code": "7K4M2" },   // ключ упізнано; null — ключа немає або він чужий
   "sections": [{ "id": "…", "title": "Кухня" }],   // лише розділи зі спільними позиціями, у порядку власника (ADR-036)
@@ -92,7 +93,7 @@ await supabase.rpc('release_claim', { p_token: token, p_item_id: itemId, p_key: 
 ```
 Ключ генерує браузер гостя (`lib/guest.ts`) і зберігає **до** виклику: обірвана відповідь не лишить позначку без власника. Перша позначка з новим ключем тихо створює ідентичність і короткий код. `p_quantity` — підсумкова кількість цього гостя, не приріст; позиція блокується на час перевірки, тож двоє одночасних гостей не візьмуть більше, ніж треба.
 
-Помилки `claim_item`: `not_found`, `reservations_disabled`, `owner_cannot_reserve`, `bad_key`, `bad_quantity`, `item_not_in_share`, `not_enough_left` (гонку програно).
+Помилки `claim_item`: `not_found`, `reservations_disabled`, `owner_cannot_reserve`, `bad_key`, `bad_quantity`, `item_not_in_share`, `not_enough_left` (гонку програно), `list_archived` (список в архіві, ADR-058; те саме для `claim_item_v2`, зокрема коли гість додає примірники до наявної броні).
 
 `release_claim` повертає `{ "taken_qty": … }` — суму позначок усіх гостей, тож власнику (увійшов і відкрив своє посилання) відповідає `owner_cannot_reserve`, як і `claim_item` (ADR-038). Решта помилок: `not_found`, `item_not_in_share`.
 

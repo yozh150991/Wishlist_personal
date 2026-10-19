@@ -1104,7 +1104,7 @@
     "archiving": "Archiving…",
     "archived": {
       "title": "This list is archived.",
-      "body": "You can't create a new link to it; guests can still open the old links as before.",
+      "body": "You can't create a new link to it. Old links still open, but guests can no longer reserve through them.",
       "restore": "Restore from archive"
     },
     "received": {
@@ -1251,6 +1251,7 @@
     "mine": "My picks · {n}",
     "haveCode": "I already have picks",
     "ownerBanner": "This is your own link. Guests' picks are hidden here on purpose, so the gift stays a surprise.",
+    "archived": "The celebration is over and the list is archived. You can still look, but not reserve.",
     "take": "Take",
     "takeMore": "Take more",
     "release": "Release",
