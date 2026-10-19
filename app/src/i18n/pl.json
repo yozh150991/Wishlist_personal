@@ -1104,7 +1104,7 @@
     "archiving": "Archiwizuję…",
     "archived": {
       "title": "Lista w archiwum.",
-      "body": "Nowego linku do niej nie utworzysz, a stare linki goście otwierają jak dotąd.",
+      "body": "Nowego linku do niej nie utworzysz. Stare linki się otwierają, ale rezerwować przez nie już nie można.",
       "restore": "Przywróć z archiwum"
     },
     "received": {
@@ -1251,6 +1251,7 @@
     "mine": "Moje rezerwacje · {n}",
     "haveCode": "Mam już rezerwacje",
     "ownerBanner": "To twój link. Rezerwacji gości tu nie widać — celowo, żeby prezent pozostał niespodzianką.",
+    "archived": "Święto już minęło, lista jest w archiwum. Można ją przeglądać, ale rezerwować już nie.",
     "take": "Biorę",
     "takeMore": "Biorę więcej",
     "release": "Zdejmij",

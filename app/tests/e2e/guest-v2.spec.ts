@@ -184,3 +184,31 @@ test('мертве посилання під /l/ — один екран і до
   await expect(page.getByRole('heading', { name: /більше не працює|już nie działa|no longer works/i })).toBeVisible();
   await expect(page.getByText(/бронь знято|rezerwację zdjęto|pick was released/i)).toBeVisible();
 });
+
+test('архівний список під /l/ — позиції видно, бронювати ні (ADR-058)', { tag: '@both' }, async ({ page }) => {
+  // Відповідь бази підставляємо: що архів закриває бронь на сервері, стереже pgTAP 18.
+  const item = (id: string, title: string) => ({
+    id, title, url: null, price: 120, currency: 'PLN', quantity: 1, priority: 'medium', note: null,
+    variants: [], image_url: null, status: 'active', created_at: '2026-10-01T10:00:00Z', section_id: null,
+    taken_qty: 0, mine_qty: 0,
+  });
+  await page.route('**/rpc/get_guest_list', (route) =>
+    route.fulfill({
+      json: {
+        title: 'Новосілля', message: null, currency: 'PLN', event_date: '2026-10-10',
+        expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+        hide_prices: false, allow_reservations: false, archived: true, viewer_is_owner: false,
+        guest: null, sections: [], items: [item('e2e-arch-1', 'Ваза'), item('e2e-arch-2', 'Рушники')],
+      },
+    }),
+  );
+  await page.route('**/rpc/register_share_view', (route) => route.fulfill({ status: 204, body: '' }));
+
+  await page.goto('/l/e2e-archived-token');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByText(/список в архіві|lista jest w archiwum|list is archived/i)).toBeVisible();
+  await expect(card(page, 'Ваза')).toBeVisible();
+  await expect(card(page, 'Рушники')).toBeVisible();
+  await expect(page.getByRole('button', { name: takeBtn })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /уже маю броні|mam już rezerwacje|already have picks/i })).toHaveCount(0);
+});
