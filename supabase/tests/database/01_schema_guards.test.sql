@@ -105,9 +105,10 @@ select set_eq(
         and has_function_privilege('anon', p.oid, 'EXECUTE') $$,
   -- get_guest_list, claim_item_v2 — гостьова v2 (ADR-053): обгортки над v1.
   -- send_guest_code, guest_mail_set — код на пошту й відписка (ADR-054).
+  -- get_share_card — картка посилання для ботів месенджерів (ADR-060).
   array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
         'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set', 'ack_claim_change',
-        'set_claim_bought'],
+        'set_claim_bought', 'get_share_card'],
   'anon може викликати лише гостьові RPC'
 );
 
@@ -128,7 +129,7 @@ select set_eq(
   -- повертають, адреса підписки — у тілі запиту.
   array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
         'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set', 'ack_claim_change',
-        'set_claim_bought', 'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
+        'set_claim_bought', 'get_share_card', 'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
         'reorder_items', 'reorder_sections', 'save_push_subscription', 'forget_push_subscription'],
   'authenticated може викликати лише гостьові RPC і функції власника'
 );
