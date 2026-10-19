@@ -106,6 +106,26 @@ export async function deleteList(id: string): Promise<void> {
  * працюють як і раніше, а нове v2 створити не дає. v1 прапорця не знає й
  * показує такий список серед звичайних.
  */
+/**
+ * Подяка гостям (ADR-059). Порожній текст — прибрати подяку. Перше збереження
+ * ставить у базі `thanks_sent_at` і листи гостям; повертаємо обидва поля, щоб
+ * екран знав, чи лист уже пішов.
+ */
+export async function setListThanks(
+  id: string,
+  message: string | null,
+): Promise<Pick<List, 'thanks_message' | 'thanks_sent_at'>> {
+  const text = message?.trim() || null;
+  const { data, error } = await supabase
+    .from('lists')
+    .update({ thanks_message: text })
+    .eq('id', id)
+    .select('thanks_message, thanks_sent_at')
+    .single();
+  if (error) throw error;
+  return data as Pick<List, 'thanks_message' | 'thanks_sent_at'>;
+}
+
 export async function setListArchived(id: string, archived: boolean): Promise<void> {
   const { error } = await supabase.from('lists').update({ is_archived: archived }).eq('id', id);
   if (error) throw error;

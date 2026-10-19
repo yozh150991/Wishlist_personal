@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Archive, ArchiveRestore, Check, CopyPlus, Gift, Repeat } from 'lucide-react';
-import { copyItems, createListWithItems, fetchListsOverview, repeatList } from '../../../lib/db';
+import { Archive, ArchiveRestore, Check, CopyPlus, Gift, Heart, Repeat } from 'lucide-react';
+import { copyItems, createListWithItems, fetchListsOverview, repeatList, setListThanks } from '../../../lib/db';
 import { copyInput, eventYear, repeatTarget, repeatTitle } from '../../../lib/afterEvent';
 import { itemCurrency } from '../../../lib/itemsView';
 import { useI18n } from '../../../lib/i18n';
@@ -13,8 +13,10 @@ import { SheetV2, SwitchV2, YearlySwitchV2 } from './CommonV2';
 const STROKE = 2.75;
 /** Межа з БД (`lists.title`) — і тут, до відправки. */
 const TITLE_MAX = 120;
+/** Межа з БД (`lists.thanks_message`). */
+export const THANKS_MAX = 1000;
 
-export type AfterStep = 'received' | 'carry' | 'repeat';
+export type AfterStep = 'received' | 'carry' | 'repeat' | 'thanks';
 
 /**
  * «Свято минуло» (потік M, ADR-045) — картка вгорі сторінки списку наступного
@@ -23,8 +25,9 @@ export type AfterStep = 'received' | 'carry' | 'repeat';
  * Свідомо інакше, ніж у макеті (ADR-040): у «Позначити отримане» нічого не
  * позначено наперед, а переносити пропонуємо те, що власник сам не позначив
  * отриманим, — а не «те, що ніхто не взяв». Що брали гості, застосунок не
- * знає за власника й після свята. «Подякувати гостям» — разом із гостьовою v2
- * (крок 5): поки гість подяки не побачить, обіцяти її нема чого.
+ * знає за власника й після свята. «Подякувати гостям» (ADR-059) — одне
+ * повідомлення всім гостям списку, а не тим, хто брав: кому саме пішов лист,
+ * власник не дізнається.
  */
 export function AfterEventCardV2({
   list,
@@ -82,6 +85,16 @@ export function AfterEventCardV2({
             {mark('carry')}
           </button>
         )}
+        <button type="button" className="v2-menu__item" onClick={() => onStep('thanks')}>
+          <Heart size={20} strokeWidth={STROKE} aria-hidden="true" />
+          <span className="v2-after__label">{t('v2after.card.thanks')}</span>
+          {list.thanks_message ? (
+            <span className="v2-after__done">
+              <Check size={20} strokeWidth={STROKE} aria-hidden="true" />
+              <span className="v2-sr">{t('v2after.card.doneMark')}</span>
+            </span>
+          ) : null}
+        </button>
         <button type="button" className="v2-menu__item" onClick={() => onStep('repeat')}>
           <Repeat size={20} strokeWidth={STROKE} aria-hidden="true" />
           <span className="v2-after__label">{t('v2after.card.repeat', { year })}</span>
@@ -289,6 +302,117 @@ export function ReceivedSheetV2({
             label={selected.size > 0 ? t('v2after.received.save', { n: selected.size }) : t('common.done')}
             busyLabel={t('common.saving')}
           />
+        </div>
+      </form>
+    </SheetV2>
+  );
+}
+
+/**
+ * «Подякувати гостям» (потік M, ADR-059): одне повідомлення на список. Гості
+ * бачать його на сторінці за своїм посиланням; тим, хто брав і лишив пошту,
+ * за першим збереженням іде лист. Хто це й чи такі є, власник не дізнається —
+ * і текст тут однаковий для будь-якого списку (ADR-040).
+ */
+export function ThanksSheetV2({
+  open,
+  list,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  list: List;
+  onClose: () => void;
+  onSaved: (fields: Pick<List, 'thanks_message' | 'thanks_sent_at'>) => void;
+}) {
+  const { t, locale } = useI18n();
+  const titleId = useId();
+  const fieldId = useId();
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState<'save' | 'remove' | null>(null);
+  const [server, setServer] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setText(list.thanks_message ?? '');
+    setBusy(null);
+    setServer(null);
+    // Лише на відкриття: чернетку під час набору не перезаписуємо.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  async function save(message: string | null, kind: 'save' | 'remove') {
+    if (busy) return;
+    setBusy(kind);
+    setServer(null);
+    try {
+      onSaved(await setListThanks(list.id, message));
+      onClose();
+    } catch (e) {
+      setServer(errorText(e, t));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // День словом за годинником пристрою: «20 жовтня», без крапки скорочення,
+  // яка збігалася б із крапкою кінця речення.
+  const sentAt = list.thanks_sent_at ? new Date(list.thanks_sent_at) : null;
+  const sentOn = sentAt
+    ? formatDay(
+        `${sentAt.getFullYear()}-${String(sentAt.getMonth() + 1).padStart(2, '0')}-${String(sentAt.getDate()).padStart(2, '0')}`,
+        locale,
+      )
+    : null;
+  const empty = text.trim() === '';
+
+  return (
+    <SheetV2 open={open} onClose={onClose} labelledBy={titleId} className="v2-sheet--full" closeOnBackdrop={false}>
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (empty) return onClose();
+          void save(text, 'save');
+        }}
+      >
+        <Bar titleId={titleId} title={t('v2after.thanks.title')} onClose={onClose} />
+        <div className="v2-itemsheet__body">
+          {server && <NoteV2 tone="error">{server}</NoteV2>}
+          <p className="v2-hint v2-hint--start">{t('v2after.thanks.body')}</p>
+          <div className="v2-field">
+            <label className="v2-field__label" htmlFor={fieldId}>
+              {t('v2after.thanks.label')}
+            </label>
+            <textarea
+              id={fieldId}
+              name="thanks_message"
+              className="v2-input v2-input--area"
+              rows={5}
+              maxLength={THANKS_MAX}
+              placeholder={t('v2after.thanks.placeholder')}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+            <p className="v2-count" data-full={text.length >= THANKS_MAX || undefined}>
+              {text.length} / {THANKS_MAX}
+            </p>
+          </div>
+          <p className="v2-hint v2-hint--start">
+            {sentOn ? t('v2after.thanks.mailSent', { date: sentOn }) : t('v2after.thanks.mail')}
+          </p>
+          <SubmitV2 busy={busy === 'save'} label={t('v2after.thanks.save')} busyLabel={t('common.saving')} />
+          {list.thanks_message && (
+            <button
+              type="button"
+              className="v2-btn v2-btn--ghost v2-btn--block"
+              aria-disabled={busy !== null || undefined}
+              onClick={() => void save(null, 'remove')}
+            >
+              {busy === 'remove' && <span className="v2-spinner" aria-hidden="true" />}
+              {t('v2after.thanks.remove')}
+            </button>
+          )}
         </div>
       </form>
     </SheetV2>

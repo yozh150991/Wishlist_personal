@@ -15,6 +15,7 @@ import {
   MoreHorizontal,
   Palette,
   Plus,
+  Heart,
   Repeat,
   Search,
   SearchX,
@@ -78,7 +79,7 @@ import type { PreviewGroup } from './PreviewV2';
 import { ReorderV2 } from './ReorderV2';
 import type { OrderGroup } from './ReorderV2';
 import { ShareSheetV2 } from './ShareSheetV2';
-import { AfterEventCardV2, ArchivedNoteV2, CarrySheetV2, ReceivedSheetV2, RepeatSheetV2 } from './AfterEventV2';
+import { AfterEventCardV2, ArchivedNoteV2, CarrySheetV2, ReceivedSheetV2, RepeatSheetV2, ThanksSheetV2 } from './AfterEventV2';
 import type { AfterStep } from './AfterEventV2';
 import {
   ConfirmSheetV2,
@@ -1392,6 +1393,19 @@ export default function ListV2() {
               {repeatYear !== null ? t('v2after.card.repeat', { year: repeatYear }) : t('v2after.repeat.titlePlain')}
             </button>
           )}
+          {(archived || past) && (
+            <button
+              type="button"
+              className="v2-menu__item"
+              onClick={() => {
+                setListMenu(false);
+                setAfterStep('thanks');
+              }}
+            >
+              <Heart size={20} strokeWidth={STROKE} aria-hidden="true" />
+              {list?.thanks_message ? t('v2after.thanks.edit') : t('v2after.card.thanks')}
+            </button>
+          )}
           <button
             type="button"
             className="v2-menu__item"
@@ -1508,6 +1522,20 @@ export default function ListV2() {
           onDone={(target, n) => {
             setCarried({ ...target, n });
             setAfterDone((s) => new Set(s).add('carry'));
+          }}
+        />
+      )}
+
+      {list && (
+        <ThanksSheetV2
+          open={afterStep === 'thanks'}
+          list={list}
+          onClose={() => setAfterStep(null)}
+          onSaved={(fields) => {
+            const fresh = { ...list, ...fields };
+            setList(fresh);
+            if (userId) void saveSnapshot(listKey(id), userId, fresh);
+            setFlash(fields.thanks_message ? t('v2after.thanks.saved') : t('v2after.thanks.removed'));
           }}
         />
       )}

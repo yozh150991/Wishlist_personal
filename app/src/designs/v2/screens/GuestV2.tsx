@@ -667,6 +667,15 @@ export default function GuestV2() {
             </button>
           </div>
         )}
+        {data.thanks && (
+          // Подяка власника (ADR-059) — однакова для всіх, хто відкрив посилання.
+          <section className="v2-gthanks" aria-labelledby="v2-gthanks-title">
+            <h2 className="v2-kicker" id="v2-gthanks-title">
+              {t('v2guest.thanksTitle')}
+            </h2>
+            <p className="v2-gthanks__text">{data.thanks}</p>
+          </section>
+        )}
         {data.archived && (
           // Свято минуло, власник склав список в архів (ADR-058): дивитись — так, бронювати — ні.
           <div className="v2-gbanner" role="status">

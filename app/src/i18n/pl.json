@@ -1095,6 +1095,7 @@
       "bodyAllDone": "Wszystko rozliczone. Zostało zarchiwizować listę albo powtórzyć ją za rok.",
       "received": "Oznacz otrzymane",
       "carry": "Przenieś to, czego wciąż chcę",
+      "thanks": "Podziękuj gościom",
       "repeat": "Powtórz na {year}",
       "archive": "Zarchiwizuj",
       "later": "Później",
@@ -1135,6 +1136,19 @@
       "submit": "Utwórz",
       "submitting": "Tworzę…",
       "done": "Powtórzono z listy „{title}”."
+    },
+    "thanks": {
+      "title": "Podziękowanie dla gości",
+      "label": "Treść podziękowania",
+      "placeholder": "Dziękujemy, że byliście z nami!",
+      "body": "Goście zobaczą podziękowanie na stronie listy pod swoim linkiem.",
+      "mail": "Tym, którzy coś wzięli i zostawili adres e-mail, wyślemy je raz mailem. Kto to i czy tacy są — nie dowiesz się.",
+      "mailSent": "Mail do gości już poszedł {date}. Zmiany zobaczą tylko na stronie listy.",
+      "save": "Zapisz",
+      "remove": "Usuń podziękowanie",
+      "edit": "Zmień podziękowanie",
+      "saved": "Podziękowanie zapisane.",
+      "removed": "Podziękowanie usunięte."
     }
   },
   "v2yearly": {
@@ -1252,6 +1266,7 @@
     "haveCode": "Mam już rezerwacje",
     "ownerBanner": "To twój link. Rezerwacji gości tu nie widać — celowo, żeby prezent pozostał niespodzianką.",
     "archived": "Święto już minęło, lista jest w archiwum. Można ją przeglądać, ale rezerwować już nie.",
+    "thanksTitle": "Podziękowanie od autora listy",
     "take": "Biorę",
     "takeMore": "Biorę więcej",
     "release": "Zdejmij",

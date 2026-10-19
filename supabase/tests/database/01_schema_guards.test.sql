@@ -83,9 +83,11 @@ select set_eq(
   -- ADR-055: «Змінено» для гостя (get_guest_list, ack_claim_change), листи J
   -- і нагадування (тригери позицій і enqueue_guest_reminders) — пишуть лише в
   -- гостьові таблиці й нічого не повертають власнику.
+  -- ADR-059: lists_thanks_mail_trg — листи подяки гостям, які брали; тригер
+  -- нічого не повертає й ковтає помилки.
   array['get_shared_list', 'claim_item', 'release_claim', 'redeem_guest_code', 'release_item_claims',
         'get_guest_list', 'ack_claim_change', 'guest_item_changed_trg', 'guest_item_deleted_trg',
-        'enqueue_guest_reminders', 'set_claim_bought'],
+        'enqueue_guest_reminders', 'set_claim_bought', 'lists_thanks_mail_trg'],
   'claims згадують лише гостьові функції й сліпе скидання; нова функція над позначками має бути додана сюди свідомо'
 );
 

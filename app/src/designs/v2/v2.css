@@ -1893,6 +1893,17 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-gfilters__group { display: contents; }
 .v2-chip--toggle[aria-pressed='true'] { color: var(--color-primary-ink); background: var(--color-primary-fill); }
 
+/* Подяка власника гостям (ADR-059): текст як є, з його переносами рядків. */
+.v2-gthanks {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--color-guest-card);
+  border-radius: 20px;
+}
+.v2-gthanks .v2-kicker { margin: 0; }
+.v2-gthanks__text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+
 .v2-gbanner {
   display: flex;
   flex-wrap: wrap;

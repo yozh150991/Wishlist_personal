@@ -1095,6 +1095,7 @@
       "bodyAllDone": "Everything is sorted. All that's left is to archive the list or repeat it next year.",
       "received": "Mark what you received",
       "carry": "Carry over what I still want",
+      "thanks": "Thank your guests",
       "repeat": "Repeat for {year}",
       "archive": "Archive",
       "later": "Later",
@@ -1135,6 +1136,19 @@
       "submit": "Create",
       "submitting": "Creating…",
       "done": "Repeated from “{title}”."
+    },
+    "thanks": {
+      "title": "Thank-you to guests",
+      "label": "Your thank-you note",
+      "placeholder": "Thank you for being with us!",
+      "body": "Guests will see the note on the list page through their link.",
+      "mail": "Anyone who took something and left an email gets it once by email. You won't learn who they are, or whether there are any.",
+      "mailSent": "The email to guests went out on {date}. Changes will only show on the list page.",
+      "save": "Save",
+      "remove": "Remove the thank-you",
+      "edit": "Edit the thank-you",
+      "saved": "Thank-you saved.",
+      "removed": "Thank-you removed."
     }
   },
   "v2yearly": {
@@ -1252,6 +1266,7 @@
     "haveCode": "I already have picks",
     "ownerBanner": "This is your own link. Guests' picks are hidden here on purpose, so the gift stays a surprise.",
     "archived": "The celebration is over and the list is archived. You can still look, but not reserve.",
+    "thanksTitle": "A thank-you from the list's author",
     "take": "Take",
     "takeMore": "Take more",
     "release": "Release",

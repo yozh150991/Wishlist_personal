@@ -197,6 +197,8 @@ export type SharedList = {
    * Необовʼязкове — база до міграції `archived_no_claims` поля не віддає.
    */
   archived?: boolean;
+  /** Подяка власника гостям (ADR-059); лише з `get_guest_list`, null — немає. */
+  thanks?: string | null;
   viewer_is_owner: boolean;
   /**
    * Ключ гостя впізнано — ось його короткий код. null — ключа немає або він
