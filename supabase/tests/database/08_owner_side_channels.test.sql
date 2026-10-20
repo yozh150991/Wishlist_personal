@@ -50,7 +50,7 @@ insert into public.share_items (share_id, item_id) values
 -- Гість бере першу позицію.
 select tests.as_anon();
 select lives_ok(
-  $$ select public.claim_item('sideChannelsToken000000', 'a8a8a8a8-0000-4000-8000-0000000000c1',
+  $$ select public.claim_item_v2('sideChannelsToken000000', 'a8a8a8a8-0000-4000-8000-0000000000c1',
                               'side-channel-guest-key-01', 1) $$,
   'гість позначає позицію'
 );

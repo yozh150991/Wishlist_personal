@@ -30,15 +30,15 @@ begin
   perform set_config('role', 'anon', true);
 end $$;
 
--- Ідентифікатори позицій у відповіді get_shared_list.
+-- Ідентифікатори позицій у відповіді get_guest_list.
 create function tests.shared_ids(p_token text) returns setof uuid language sql as $$
-  select (e->>'id')::uuid from jsonb_array_elements(public.get_shared_list(p_token)->'items') e
+  select (e->>'id')::uuid from jsonb_array_elements(public.get_guest_list(p_token)->'items') e
 $$;
 
 -- Поле позиції у відповіді гостю з певним ключем.
 create function tests.item_field(p_token text, p_key text, p_item uuid, p_field text) returns jsonb
 language sql as $$
-  select e->p_field from jsonb_array_elements(public.get_shared_list(p_token, p_key)->'items') e
+  select e->p_field from jsonb_array_elements(public.get_guest_list(p_token, p_key)->'items') e
    where (e->>'id')::uuid = p_item
 $$;
 
@@ -129,48 +129,48 @@ select set_eq(
   array['cccccccc-0000-4000-8000-0000000000c1', 'cccccccc-0000-4000-8000-0000000000c2']::uuid[],
   'гість бачить лише актуальні вибрані позиції: без купленого, подарованого й невибраного'
 );
-select is(get_shared_list((select token from tests.created))->>'viewer_is_owner', 'false',
+select is(get_guest_list((select token from tests.created))->>'viewer_is_owner', 'false',
           'гість — не власник');
-select is(get_shared_list((select token from tests.created))->>'currency', 'PLN',
+select is(get_guest_list((select token from tests.created))->>'currency', 'PLN',
           'валюта береться зі списку');
 select is_empty(
-  $$ select 1 from jsonb_array_elements(get_shared_list('hiddenPricesToken000000')->'items') e
+  $$ select 1 from jsonb_array_elements(get_guest_list('hiddenPricesToken000000')->'items') e
       where e->'price' <> 'null'::jsonb $$,
   'hide_prices: ціна не їде на клієнт узагалі'
 );
 
 -- Мертве посилання — одна відповідь на всі три причини (ADR-035).
-select throws_ok($$ select get_shared_list('noSuchToken000000000000') $$, 'P0002', 'not_found', 'невідомий токен — not_found');
-select throws_ok($$ select get_shared_list('revokedToken00000000000') $$, 'P0002', 'not_found', 'відкликане посилання — теж not_found');
-select throws_ok($$ select get_shared_list('expiredToken00000000000') $$, 'P0002', 'not_found', 'прострочене посилання — теж not_found');
-select throws_ok($$ select claim_item('revokedToken00000000000', 'cccccccc-0000-4000-8000-0000000000c1', 'guest-one-key-000000000001', 1) $$,
+select throws_ok($$ select get_guest_list('noSuchToken000000000000') $$, 'P0002', 'not_found', 'невідомий токен — not_found');
+select throws_ok($$ select get_guest_list('revokedToken00000000000') $$, 'P0002', 'not_found', 'відкликане посилання — теж not_found');
+select throws_ok($$ select get_guest_list('expiredToken00000000000') $$, 'P0002', 'not_found', 'прострочене посилання — теж not_found');
+select throws_ok($$ select claim_item_v2('revokedToken00000000000', 'cccccccc-0000-4000-8000-0000000000c1', 'guest-one-key-000000000001', 1) $$,
                  'P0002', 'not_found', 'позначка на відкликаному посиланні — та сама відповідь');
 
 -- ── Позначки ─────────────────────────────────
 
 select is(
-  (claim_item((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c1', 'guest-one-key-000000000001', 1)->>'taken_qty')::int,
+  (claim_item_v2((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c1', 'guest-one-key-000000000001', 1)->>'taken_qty')::int,
   1, 'гість 1 бере позицію — взято 1'
 );
 insert into tests.guest (name, value)
-select 'code1', get_shared_list((select token from tests.created), 'guest-one-key-000000000001')->'guest'->>'code';
+select 'code1', get_guest_list((select token from tests.created), 'guest-one-key-000000000001')->'guest'->>'code';
 select ok((select value from tests.guest where name = 'code1') ~ '^[2-9ABCDEFGHJKMNPQRSTUVWXYZ]{5}$',
           'перша позначка тихо створює короткий код із 5 символів');
 
 select throws_ok(
-  $$ select claim_item((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c1', 'guest-two-key-000000000002', 1) $$,
+  $$ select claim_item_v2((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c1', 'guest-two-key-000000000002', 1) $$,
   '22023', 'not_enough_left', 'гість 2 не бере те, що вже розібрано'
 );
 select throws_ok(
-  $$ select claim_item((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c5', 'guest-two-key-000000000002', 1) $$,
+  $$ select claim_item_v2((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c5', 'guest-two-key-000000000002', 1) $$,
   'P0002', 'item_not_in_share', 'не можна позначити позицію, якої немає в посиланні'
 );
 select throws_ok(
-  $$ select claim_item('noReservationsToken0000', 'cccccccc-0000-4000-8000-0000000000c1', 'guest-two-key-000000000002', 1) $$,
+  $$ select claim_item_v2('noReservationsToken0000', 'cccccccc-0000-4000-8000-0000000000c1', 'guest-two-key-000000000002', 1) $$,
   '22023', 'reservations_disabled', 'позначки вимкнені власником'
 );
 select throws_ok(
-  $$ select claim_item((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c2', 'short', 1) $$,
+  $$ select claim_item_v2((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c2', 'short', 1) $$,
   '22023', 'bad_key', 'ключ не тієї форми не приймається'
 );
 select is(
@@ -184,7 +184,7 @@ select is(tests.item_field((select token from tests.created), 'guest-two-key-000
 select is(tests.item_field((select token from tests.created), 'guest-one-key-000000000001', 'cccccccc-0000-4000-8000-0000000000c1', 'mine_qty'),
           '1'::jsonb, 'автор позначки впізнаний за ключем');
 select set_eq(
-  $$ select jsonb_object_keys(e) from jsonb_array_elements(get_shared_list((select token from tests.created), 'guest-two-key-000000000002')->'items') e $$,
+  $$ select jsonb_object_keys(e) from jsonb_array_elements(get_guest_list((select token from tests.created), 'guest-two-key-000000000002')->'items') e $$,
   -- currency — валюта позиції (ADR-051): про гостей нічого не каже.
   array['id', 'title', 'url', 'price', 'currency', 'quantity', 'priority', 'note', 'variants', 'image_url',
         'status', 'created_at', 'section_id', 'taken_qty', 'mine_qty'],
@@ -192,12 +192,12 @@ select set_eq(
 );
 
 -- Часткова кількість: «Візьму 1 з 2» лишається.
-select is((claim_item((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c2', 'guest-one-key-000000000001', 1)->>'taken_qty')::int,
+select is((claim_item_v2((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c2', 'guest-one-key-000000000001', 1)->>'taken_qty')::int,
           1, 'гість 1 бере 1 з 2');
-select is((claim_item((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c2', 'guest-two-key-000000000002', 1)->>'taken_qty')::int,
+select is((claim_item_v2((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c2', 'guest-two-key-000000000002', 1)->>'taken_qty')::int,
           2, 'гість 2 бере другу');
 select throws_ok(
-  $$ select claim_item((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c2', 'guest-one-key-000000000001', 2) $$,
+  $$ select claim_item_v2((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c2', 'guest-one-key-000000000001', 2) $$,
   '22023', 'not_enough_left', 'гість 1 не збільшить свою частку понад те, що лишилось'
 );
 
@@ -207,7 +207,7 @@ insert into public.shares (id, owner_id, source_list_id, token, title) values
   ('dddddddd-0000-4000-8000-0000000000b1', 'bbbbbbbb-0000-4000-8000-000000000001', 'bbbbbbbb-0000-4000-8000-00000000000b', 'otherListToken000000000', 'Список B');
 insert into public.share_items (share_id, item_id) values ('dddddddd-0000-4000-8000-0000000000b1', 'bbbbbbbb-0000-4000-8000-0000000000b1');
 select tests.as_anon();
-select is(get_shared_list('otherListToken000000000', 'guest-one-key-000000000001')->'guest', 'null'::jsonb,
+select is(get_guest_list('otherListToken000000000', 'guest-one-key-000000000001')->'guest', 'null'::jsonb,
           'ключ зі списку A, підставлений у список B, не впізнається');
 select is(tests.item_field('otherListToken000000000', 'guest-one-key-000000000001', 'bbbbbbbb-0000-4000-8000-0000000000b1', 'mine_qty'),
           '0'::jsonb, '…і не повертає жодних позначок');
@@ -233,7 +233,7 @@ select is(redeem_guest_code((select token from tests.created), 'XXXXX')->>'error
           'п''ята спроба за годину ще приймається');
 select is(
   redeem_guest_code((select token from tests.created),
-                    get_shared_list((select token from tests.created), 'guest-one-key-000000000001')->'guest'->>'code')->>'error',
+                    get_guest_list((select token from tests.created), 'guest-one-key-000000000001')->'guest'->>'code')->>'error',
   'too_many_attempts', 'після п''яти спроб не приймається навіть правильний код — і про це сказано прямо'
 );
 
@@ -244,12 +244,12 @@ select tests.as_user('aaaaaaaa-0000-4000-8000-000000000001');
 
 select register_share_view((select token from tests.created));
 
-select is(get_shared_list((select token from tests.created))->>'viewer_is_owner', 'true',
+select is(get_guest_list((select token from tests.created))->>'viewer_is_owner', 'true',
           'власник упізнаний у власному посиланні');
-select is(get_shared_list((select token from tests.created))->>'allow_reservations', 'false',
+select is(get_guest_list((select token from tests.created))->>'allow_reservations', 'false',
           'власнику позначки вимкнені');
 select is_empty(
-  $$ select 1 from jsonb_array_elements(get_shared_list((select token from tests.created), 'guest-one-key-000000000001')->'items') e
+  $$ select 1 from jsonb_array_elements(get_guest_list((select token from tests.created), 'guest-one-key-000000000001')->'items') e
       where e->'taken_qty' <> 'null'::jsonb or e->'mine_qty' <> 'null'::jsonb $$,
   'власник отримує null замість лічильників на кожній позиції — навіть із ключем гостя (ADR-009)'
 );
@@ -261,7 +261,7 @@ select throws_ok(
   '42501', null, 'власник не дістає позначки через JOIN'
 );
 select throws_ok(
-  $$ select claim_item((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c2', 'owner-key-00000000000000', 1) $$,
+  $$ select claim_item_v2((select token from tests.created), 'cccccccc-0000-4000-8000-0000000000c2', 'owner-key-00000000000000', 1) $$,
   '22023', 'owner_cannot_reserve', 'власник не позначає у власному посиланні'
 );
 

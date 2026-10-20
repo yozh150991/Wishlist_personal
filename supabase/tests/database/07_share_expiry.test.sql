@@ -177,20 +177,20 @@ select throws_ok(
 select tests.as_anon();
 
 select is(
-  public.get_shared_list((select token from tests.created where label = 'kyiv-winter'))->>'expires_tz',
+  public.get_guest_list((select token from tests.created where label = 'kyiv-winter'))->>'expires_tz',
   'Europe/Kyiv',
   'гість бачить зону власника'
 );
 
 select is(
-  (public.get_shared_list((select token from tests.created where label = 'kyiv-winter'))->>'expires_at')::timestamptz,
+  (public.get_guest_list((select token from tests.created where label = 'kyiv-winter'))->>'expires_at')::timestamptz,
   (tests.next_year(12, 20) + time '21:59:59') at time zone 'UTC',
   'гість бачить момент, до якого діє посилання'
 );
 
 select ok(
-  public.get_shared_list((select token from tests.created where label = 'forever')) ? 'expires_at'
-  and public.get_shared_list((select token from tests.created where label = 'forever'))->'expires_at' = 'null'::jsonb,
+  public.get_guest_list((select token from tests.created where label = 'forever')) ? 'expires_at'
+  and public.get_guest_list((select token from tests.created where label = 'forever'))->'expires_at' = 'null'::jsonb,
   'без терміну — expires_at: null, а не відсутнє поле'
 );
 
@@ -201,7 +201,7 @@ update shares set expires_at = now() - interval '1 second'
 select tests.as_anon();
 
 select throws_ok(
-  $$ select public.get_shared_list((select token from tests.created where label = 'vancouver')) $$,
+  $$ select public.get_guest_list((select token from tests.created where label = 'vancouver')) $$,
   'P0002', 'not_found', 'доба власника скінчилась — not_found, як у неіснуючого'
 );
 

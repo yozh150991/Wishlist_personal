@@ -75,7 +75,7 @@ select is(
 select is(
   (select array_agg(e->>'title')
      from jsonb_array_elements(
-            get_shared_list((select token from shares where title = 'Для родини'))->'items') as t(e)),
+            get_guest_list((select token from shares where title = 'Для родини'))->'items') as t(e)),
   array['Плед'],
   'гість бачить лише названу позицію'
 );

@@ -143,15 +143,15 @@ select tests.as_anon();
 
 select is(
   (select e->'variants' from jsonb_array_elements(
-      public.get_shared_list('variantsToken0000000000')->'items') e limit 1),
+      public.get_guest_list('variantsToken0000000000')->'items') e limit 1),
   '[{"label":"Розмір","value":"M"}]'::jsonb,
-  'get_shared_list віддає варіанти гостю'
+  'гостьова відповідь віддає варіанти гостю'
 );
 
 -- Варіанти — не ціна: приховування цін їх не стосується.
 select is(
   (select e->'variants' from jsonb_array_elements(
-      public.get_shared_list('variantsNoPrices000000')->'items') e limit 1),
+      public.get_guest_list('variantsNoPrices000000')->'items') e limit 1),
   '[{"label":"Розмір","value":"M"}]'::jsonb,
   'hide_prices не ховає варіанти'
 );

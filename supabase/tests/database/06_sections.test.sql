@@ -106,13 +106,13 @@ select tests.as_anon();
 
 select is(
   (select array_agg(e->>'title' order by ord)
-     from jsonb_array_elements(get_shared_list('sectionsToken0000000000')->'items') with ordinality as t(e, ord)),
+     from jsonb_array_elements(get_guest_list('sectionsToken0000000000')->'items') with ordinality as t(e, ord)),
   array['Дошка', 'Сковорода', 'Постіль', 'Лампа'],
   'гість бачить ручний порядок: розділи за порядком, усередині — як задав власник, «Інше» в кінці'
 );
 select is(
   (select array_agg(e->>'title' order by ord)
-     from jsonb_array_elements(get_shared_list('sectionsToken0000000000')->'sections') with ordinality as t(e, ord)),
+     from jsonb_array_elements(get_guest_list('sectionsToken0000000000')->'sections') with ordinality as t(e, ord)),
   array['Кухня', 'Спальня'],
   'розділи без спільних позицій гостю не віддаються'
 );
@@ -128,7 +128,7 @@ select reorder_sections('a6a6a6a6-0000-4000-8000-00000000000a',
 select tests.as_anon();
 select is(
   (select array_agg(e->>'title' order by ord)
-     from jsonb_array_elements(get_shared_list('sectionsToken0000000000')->'items') with ordinality as t(e, ord)),
+     from jsonb_array_elements(get_guest_list('sectionsToken0000000000')->'items') with ordinality as t(e, ord)),
   array['Постіль', 'Дошка', 'Сковорода', 'Лампа'],
   'порядок розділів теж той, що задав власник'
 );

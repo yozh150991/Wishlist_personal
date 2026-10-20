@@ -11,7 +11,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(10);
+select plan(13);
 
 -- ── Таблиці ──────────────────────────────────
 
@@ -105,12 +105,13 @@ select set_eq(
         and not exists (select 1 from pg_depend d
                          where d.classid = 'pg_proc'::regclass and d.objid = p.oid and d.deptype = 'e')
         and has_function_privilege('anon', p.oid, 'EXECUTE') $$,
-  -- get_guest_list, claim_item_v2 — гостьова v2 (ADR-053): обгортки над v1.
+  -- get_guest_list, claim_item_v2 — гостьова (ADR-053). Їхні внутрішні
+  -- get_shared_list і claim_item закрито від клієнтів (ADR-065) — див. нижче.
   -- send_guest_code, guest_mail_set — код на пошту й відписка (ADR-054).
   -- get_share_card — картка посилання для ботів месенджерів (ADR-060).
   -- report_share — «Поскаржитись» на гостьовій (ADR-061).
   -- start/pledge/leave/close/cancel_pool — спільний подарунок (ADR-063).
-  array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
+  array['register_share_view', 'release_claim', 'redeem_guest_code',
         'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set', 'ack_claim_change',
         'set_claim_bought', 'get_share_card', 'report_share',
         'start_pool', 'pledge_pool', 'leave_pool', 'close_pool', 'cancel_pool'],
@@ -132,12 +133,33 @@ select set_eq(
   -- save_push_subscription / forget_push_subscription — пристрій для push
   -- переходить до того, хто ввімкнув push останнім (ADR-049); нічого не
   -- повертають, адреса підписки — у тілі запиту.
-  array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
+  array['register_share_view', 'release_claim', 'redeem_guest_code',
         'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set', 'ack_claim_change',
         'set_claim_bought', 'get_share_card', 'report_share', 'get_my_gifts', 'attach_guest_key',
         'start_pool', 'pledge_pool', 'leave_pool', 'close_pool', 'cancel_pool', 'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
         'reorder_items', 'reorder_sections', 'save_push_subscription', 'forget_push_subscription'],
   'authenticated може викликати лише гостьові RPC і функції власника'
+);
+
+-- ADR-065: гостьова v1 — лише всередині get_guest_list і claim_item_v2.
+select ok(
+  not has_function_privilege('anon', 'public.get_shared_list(text, text)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.get_shared_list(text, text)', 'EXECUTE')
+  and not has_function_privilege('service_role', 'public.get_shared_list(text, text)', 'EXECUTE'),
+  'get_shared_list — внутрішня, прямого виклику немає'
+);
+select ok(
+  not has_function_privilege('anon', 'public.claim_item(text, uuid, text, integer)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.claim_item(text, uuid, text, integer)', 'EXECUTE')
+  and not has_function_privilege('service_role', 'public.claim_item(text, uuid, text, integer)', 'EXECUTE'),
+  'claim_item — внутрішня, прямого виклику немає'
+);
+select ok(
+  (select p.prosecdef and pg_get_userbyid(p.proowner) = 'postgres'
+     from pg_proc p where p.oid = 'public.get_guest_list(text, text)'::regprocedure)
+  and (select p.prosecdef and pg_get_userbyid(p.proowner) = 'postgres'
+     from pg_proc p where p.oid = 'public.claim_item_v2(text, uuid, text, integer, text, text, text)'::regprocedure),
+  'обгортки v2 — SECURITY DEFINER від postgres: внутрішні функції їм доступні'
 );
 
 select is_empty(

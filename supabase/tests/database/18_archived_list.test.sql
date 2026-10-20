@@ -1,6 +1,6 @@
 -- Гостьова v2, крок 5д (ADR-058): архівний список гості бачать, але не бронюють.
--- Перевіряє обидві гостьові сторінки (get_guest_list — v2, get_shared_list —
--- v1), обидва шляхи броні (claim_item_v2 і claim_item), що власні справи гостя
+-- Перевіряє гостьову відповідь і бронь (get_guest_list, claim_item_v2; до
+-- ADR-065 — ще й v1 напряму, тож деякі перевірки йдуть парами), що власні справи гостя
 -- з бронню на архівному лишаються можливими, а правки власника — тихими, і що
 -- «Повернути з архіву» знову відкриває бронювання.
 
@@ -76,8 +76,8 @@ select is(public.get_guest_list('archivedToken0000000001', 'archivedKeyAAAAAAAAA
           'гостьова v2 знає, що список в архіві');
 select is(public.get_guest_list('archivedToken0000000001', 'archivedKeyAAAAAAAAAAAAA')->>'allow_reservations', 'false',
           'гостьова v2: бронювати не можна');
-select is(public.get_shared_list('archivedToken0000000001', null)->>'allow_reservations', 'false',
-          'гостьова v1 на /s/: бронювати теж не можна');
+select is(public.get_guest_list('archivedToken0000000001', null)->>'allow_reservations', 'false',
+          'і гість без ключа: бронювати не можна');
 select is(jsonb_array_length(public.get_guest_list('archivedToken0000000001', null)->'items'), 3,
           'позиції архівного списку видно');
 
@@ -86,9 +86,9 @@ select throws_ok(
                           'archivedKeyBBBBBBBBBBBBB', 1, null, null, 'uk') $$,
   '22023', 'list_archived', 'нова бронь через v2 — list_archived');
 select throws_ok(
-  $$ select claim_item('archivedToken0000000001', 'a1811111-0000-4000-8000-0000000000c3',
+  $$ select claim_item_v2('archivedToken0000000001', 'a1811111-0000-4000-8000-0000000000c3',
                        'archivedKeyBBBBBBBBBBBBB', 1) $$,
-  '22023', 'list_archived', 'нова бронь через v1 — list_archived');
+  '22023', 'list_archived', 'друга спроба броні — теж list_archived');
 select throws_ok(
   $$ select claim_item_v2('archivedToken0000000001', 'a1811111-0000-4000-8000-0000000000c1',
                           'archivedKeyAAAAAAAAAAAAA', 2, null, null, 'uk') $$,

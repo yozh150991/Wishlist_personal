@@ -26,6 +26,13 @@ begin
   perform set_config('role', 'anon', true);
 end $$;
 
+-- Тіло v1 напряму: get_shared_list закрита від клієнтів (ADR-065), тож
+-- порівнюємо через обгортку з правами власника схеми.
+create function tests.v1_body(p_token text, p_key text) returns jsonb
+language sql security definer set search_path = public as $$
+  select public.get_shared_list(p_token, p_key)
+$$;
+
 grant execute on all functions in schema tests to anon, authenticated;
 
 -- ── Дані ─────────────────────────────────────
@@ -131,11 +138,11 @@ select is(
   'гість без ключа не отримує нічиїх даних'
 );
 
--- ── Те саме, що v1 ───────────────────────────
+-- ── Те саме, що внутрішня v1 ─────────────────
 
 select is(
   get_guest_list('guestContactToken000001', 'guestKeyTwoBBBBBBBBBBBBB') - 'guest' - 'thanks',
-  get_shared_list('guestContactToken000001', 'guestKeyTwoBBBBBBBBBBBBB') - 'guest',
+  tests.v1_body('guestContactToken000001', 'guestKeyTwoBBBBBBBBBBBBB') - 'guest',
   'get_guest_list — це get_shared_list, крім полів guest і thanks (ADR-059)'
 );
 select throws_ok(

@@ -161,7 +161,7 @@ RLS: власник бачить свої й вбудовані, змінює й
 ### `claims`, `guest_identities`, `guest_keys`, `guest_code_attempts`, `guest_mail`
 **Інваріант проєкту** (ADR-035, раніше — `reservations`, ADR-008). Усі п'ять таблиць мають `ENABLE ROW LEVEL SECURITY` і **жодної політики** — у Postgres це «заборонено всім», — плюс явний `REVOKE ALL ... FROM anon, authenticated`.
 
-Читають і пишуть їх лише `SECURITY DEFINER` RPC гостя (`get_shared_list`, `claim_item`, `release_claim`, `redeem_guest_code`; для гостьової v2 — `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set`, ADR-053, ADR-054; `guest_mail` ще читає сервіс листів secret-ключем) і сліпе скидання власника `release_item_claims`, яке нічого не повертає. Власник не має жодного шляху дізнатися, що позначено, — це властивість продукту, а не обмеження, яке треба обійти.
+Читають і пишуть їх лише `SECURITY DEFINER` RPC гостя (`get_guest_list`, `claim_item_v2`, `release_claim`, `redeem_guest_code`, `send_guest_code`, `guest_mail_set`, ADR-053, ADR-054; внутрішні `get_shared_list` і `claim_item` під першими двома клієнтам з ADR-065 недоступні; `guest_mail` ще читає сервіс листів secret-ключем) і сліпе скидання власника `release_item_claims`, яке нічого не повертає. Власник не має жодного шляху дізнатися, що позначено, — це властивість продукту, а не обмеження, яке треба обійти.
 
 | Таблиця | Що тримає |
 |---|---|

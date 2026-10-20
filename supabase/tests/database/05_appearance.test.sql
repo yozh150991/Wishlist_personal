@@ -75,10 +75,10 @@ select is((select scheme::text from profiles where id = 'a5a5a5a5-0000-4000-8000
 
 select tests.as_anon();
 
-select is(public.get_shared_list('appearanceToken00000000')->>'owner_scheme', 'cytrus',
+select is(public.get_guest_list('appearanceToken00000000')->>'owner_scheme', 'cytrus',
           'гість отримує схему власника');
 
-select ok(not (public.get_shared_list('appearanceToken00000000') ? 'high_contrast'),
+select ok(not (public.get_guest_list('appearanceToken00000000') ? 'high_contrast'),
           'контраст власника гостю не віддається: це налаштування глядача, а не списку');
 
 select throws_ok($$ select * from profiles $$, '42501', null, 'anon не читає профілі напряму');
@@ -123,7 +123,7 @@ select throws_ok($$ update lists set appearance_id = 'b5b5b5b5-0000-4000-8000-00
                  '42501', null, 'на чуже оформлення послатися не можна, навіть знаючи id');
 
 select tests.as_anon();
-select is((public.get_shared_list('appearanceToken00000000')->>'appearance_hue')::int, 75,
+select is((public.get_guest_list('appearanceToken00000000')->>'appearance_hue')::int, 75,
           'гість отримує відтінок оформлення');
 
 select tests.as_user('a5a5a5a5-0000-4000-8000-000000000001');
@@ -131,7 +131,7 @@ update lists set appearance_id = 'a5a5a5a5-0000-4000-8000-0000000000e1'
  where id = 'a5a5a5a5-0000-4000-8000-00000000000a';
 
 select tests.as_anon();
-select ok(public.get_shared_list('appearanceToken00000000')::text !~ 'Мамин ювілей',
+select ok(public.get_guest_list('appearanceToken00000000')::text !~ 'Мамин ювілей',
           'назва оформлення гостю не віддається — лише відтінок');
 select throws_ok($$ select * from appearances $$, '42501', null, 'anon не читає оформлення напряму');
 
@@ -141,7 +141,7 @@ select is((select appearance_id from lists where id = 'a5a5a5a5-0000-4000-8000-0
           'видалене оформлення лишає списку null, а не осиротілий id');
 
 select tests.as_anon();
-select is(public.get_shared_list('appearanceToken00000000')->'appearance_hue', 'null'::jsonb,
+select is(public.get_guest_list('appearanceToken00000000')->'appearance_hue', 'null'::jsonb,
           'список без оформлення — гість бачить чисту схему власника');
 
 select * from finish();
