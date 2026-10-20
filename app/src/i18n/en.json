@@ -6,6 +6,7 @@
   "nav": {
     "lists": "Lists",
     "shares": "Links",
+    "gifts": "I'm giving",
     "settings": "Settings",
     "signOut": "Sign out",
     "signedInAs": "Signed in as",
@@ -1073,6 +1074,24 @@
     "subtitle": "Each link shows only the items chosen for it. The main list stays private.",
     "open": "Open",
     "openLabel": "Open the link “{title}” as guests see it"
+  },
+  "v2gifts": {
+    "title": "I'm giving",
+    "subtitle": "What you're taking from other people's lists — from every device where you reserved while signed in or left this account's email.",
+    "upcoming": "Coming up",
+    "past": "Already celebrated",
+    "archived": "Archived",
+    "taking": "Taking",
+    "bought": "Bought",
+    "changed": "Changed",
+    "qty": "{mine} of {n}",
+    "left": "not bought yet: {n}",
+    "code": "Your code for this list: {code}",
+    "open": "Open list",
+    "openLabel": "Open list “{title}”",
+    "emptyTitle": "Nothing here yet",
+    "emptyBody": "Reserve on other people's lists while signed in, or leave this account's email when reserving — your picks will show up here.",
+    "errorTitle": "Couldn't load"
   },
   "v2settings": {
     "looksHint": "Your own event looks are set on a particular list — in the list menu, “List style”.",

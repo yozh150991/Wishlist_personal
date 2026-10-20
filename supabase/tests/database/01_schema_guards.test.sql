@@ -85,9 +85,11 @@ select set_eq(
   -- гостьові таблиці й нічого не повертають власнику.
   -- ADR-059: lists_thanks_mail_trg — листи подяки гостям, які брали; тригер
   -- нічого не повертає й ковтає помилки.
+  -- ADR-062: get_my_gifts — «Я дарую»: лише власні позначки користувача на
+  -- чужих списках.
   array['get_shared_list', 'claim_item', 'release_claim', 'redeem_guest_code', 'release_item_claims',
         'get_guest_list', 'ack_claim_change', 'guest_item_changed_trg', 'guest_item_deleted_trg',
-        'enqueue_guest_reminders', 'set_claim_bought', 'lists_thanks_mail_trg'],
+        'enqueue_guest_reminders', 'set_claim_bought', 'lists_thanks_mail_trg', 'get_my_gifts'],
   'claims згадують лише гостьові функції й сліпе скидання; нова функція над позначками має бути додана сюди свідомо'
 );
 
@@ -130,7 +132,7 @@ select set_eq(
   -- повертають, адреса підписки — у тілі запиту.
   array['get_shared_list', 'register_share_view', 'claim_item', 'release_claim', 'redeem_guest_code',
         'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set', 'ack_claim_change',
-        'set_claim_bought', 'get_share_card', 'report_share', 'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
+        'set_claim_bought', 'get_share_card', 'report_share', 'get_my_gifts', 'attach_guest_key', 'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
         'reorder_items', 'reorder_sections', 'save_push_subscription', 'forget_push_subscription'],
   'authenticated може викликати лише гостьові RPC і функції власника'
 );

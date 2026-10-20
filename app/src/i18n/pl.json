@@ -6,6 +6,7 @@
   "nav": {
     "lists": "Listy",
     "shares": "Linki",
+    "gifts": "Daruję",
     "settings": "Ustawienia",
     "signOut": "Wyloguj",
     "signedInAs": "Zalogowany jako",
@@ -1073,6 +1074,24 @@
     "subtitle": "Każdy link pokazuje tylko wybrane dla niego pozycje. Główna lista pozostaje prywatna.",
     "open": "Otwórz",
     "openLabel": "Otwórz link „{title}” tak, jak widzą go goście"
+  },
+  "v2gifts": {
+    "title": "Daruję",
+    "subtitle": "Co bierzesz z cudzych list — ze wszystkich urządzeń, na których rezerwowałeś po zalogowaniu lub z adresem e-mail tego konta.",
+    "upcoming": "Przed nami",
+    "past": "Po święcie",
+    "archived": "W archiwum",
+    "taking": "Biorę",
+    "bought": "Kupione",
+    "changed": "Zmieniono",
+    "qty": "{mine} z {n}",
+    "left": "jeszcze nie kupione: {n}",
+    "code": "Twój kod do tej listy: {code}",
+    "open": "Otwórz listę",
+    "openLabel": "Otwórz listę „{title}”",
+    "emptyTitle": "Na razie pusto",
+    "emptyBody": "Rezerwuj na cudzych listach po zalogowaniu albo podawaj w rezerwacji adres e-mail tego konta — rezerwacje pojawią się tutaj.",
+    "errorTitle": "Nie udało się wczytać"
   },
   "v2settings": {
     "looksHint": "Własne wyglądy wydarzeń ustawia się na konkretnej liście — w menu listy, „Wygląd listy”.",

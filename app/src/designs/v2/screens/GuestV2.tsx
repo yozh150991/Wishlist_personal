@@ -17,6 +17,7 @@ import {
   ensureKey,
   isGuestKey,
   legacyKey,
+  newKey,
   personalLink,
   readWatch,
   rememberKey,
@@ -25,6 +26,8 @@ import {
   storedKey,
 } from '../../../lib/guest';
 import { useI18n, LOCALES } from '../../../lib/i18n';
+import { useAuth } from '../../../lib/auth';
+import { attachGuestKey } from '../../../lib/gifts';
 import type { Locale } from '../../../lib/i18n';
 import { formatDay, money, num, priceThresholds } from '../../../lib/format';
 import { validUntilText } from '../../../lib/zones';
@@ -113,6 +116,8 @@ export default function GuestV2() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, locale, setLocale } = useI18n();
+  const { session } = useAuth();
+  const userId = session?.user.id ?? null;
   const counts = useCounts();
   const priority = usePriorityLabel();
   const langId = useId();
@@ -188,6 +193,17 @@ export default function GuestV2() {
   }
 
   const load = useCallback(async () => {
+    // Увійшов, а ключа в цьому браузері немає — свої броні підхоплюються за
+    // акаунтом, без коду (ADR-062). Новий ключ запам'ятовуємо, лише якщо
+    // сервер прив'язав його до броней цього користувача.
+    if (userId && !storedKey(token)) {
+      const fresh = newKey();
+      try {
+        if (await attachGuestKey(token, fresh)) rememberKey(token, fresh);
+      } catch {
+        /* мертве посилання чи збій — далі звичайне завантаження скаже своє */
+      }
+    }
     const own = storedKey(token);
     const old = own ? null : legacyKey();
     try {
@@ -204,7 +220,7 @@ export default function GuestV2() {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, userId]);
 
   useEffect(() => {
     if (urlKey || mailToken) return;

@@ -8,6 +8,7 @@ import ListsV2 from './screens/ListsV2';
 import NewListV2 from './screens/NewListV2';
 import ListV2 from './screens/ListV2';
 import SharesV2 from './screens/SharesV2';
+import GiftsV2 from './screens/GiftsV2';
 import SettingsV2 from './screens/SettingsV2';
 import AddV2 from './screens/AddV2';
 import { RequireAuthV2, ShellV2 } from './ShellV2';
@@ -76,6 +77,7 @@ export default function DesignV2Routes() {
         <Route path="/lists/:id" element={<ListV2 />} />
         <Route path="/lists/:id/preview" element={<PreviewRedirect />} />
         <Route path="/shares" element={<SharesV2 />} />
+        <Route path="/gifts" element={<GiftsV2 />} />
         <Route path="/settings" element={<SettingsV2 />} />
       </Route>
 

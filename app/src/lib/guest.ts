@@ -67,16 +67,21 @@ export function rememberKey(token: string, key: string): void {
   if (isGuestKey(key)) write(KEY_PREFIX + token, key);
 }
 
+/** Новий випадковий ключ гостя — ще ніде не збережений. */
+export function newKey(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
 /** Ключ для першої позначки: наявний або новий, збережений до запиту. */
 export function ensureKey(token: string): string {
   const existing = storedKey(token);
   if (existing) return existing;
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  const key = btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  const key = newKey();
   rememberKey(token, key);
   return key;
 }

@@ -128,6 +128,17 @@ await supabase.rpc('ack_claim_change', { p_token: token, p_item_id: itemId, p_ke
 ```
 «Лишити» після зміни позиції: знімає `changed_at` з броні цього гостя. `get_guest_list` віддає `changed: true` лише на позиціях, які взяв саме цей гість. Чужий ключ — нічого не змінює. Помилки: `not_found`, `owner_cannot_reserve`, `item_not_in_share`.
 
+### `get_my_gifts` / `attach_guest_key` — authenticated (ADR-062)
+```ts
+const { data } = await supabase.rpc('get_my_gifts');
+// → [{ token, title, event_date, archived, thanks, code,
+//      items: [{ id, title, url, price, currency, mine_qty, quantity, bought, changed }] }]
+
+const { data: ok } = await supabase.rpc('attach_guest_key', { p_token: token, p_key: newKey });
+// → true — ключ цього браузера додано до броней акаунта на цьому посиланні; false — їх тут немає
+```
+«Я дарую»: спершу прив'язує ідентичності з поштою, що збігається з підтвердженою поштою акаунта, потім віддає списки з живим посиланням, де акаунт щось бере. Власні списки — ніколи. `price` — `null`, якщо посилання ховає ціни. `attach_guest_key` — новий пристрій без коду; чужий ключ не перехоплює, власнику — `false`. Помилки: `not_authenticated`, `not_found` (мертве посилання), `bad_key`.
+
 ### `report_share` — anon + authenticated (ADR-061)
 ```ts
 await supabase.rpc('report_share', { p_token: token, p_reason: 'scam', p_comment: 'Просять гроші', p_locale: 'uk' });   // 204
@@ -218,7 +229,7 @@ await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoi
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
 | `ack_claim_change`, `get_share_card`, `report_share` | `anon`, `authenticated` |
 | `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
-| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription` | `authenticated` |
+| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
 Права задано міграціями `20260910120300_grants.sql` і `20260916220000_revoke_default_function_grants.sql`. Перша відкликала лише `PUBLIC`, і функції власника лишались доступними `anon` через явні гранти Supabase за замовчуванням; друга це закрила. Кожна нова RPC-функція отримує гранти явно й відкликає їх у конкретних ролей (CLAUDE.md §3.4). Таблицю вище перевіряє `supabase/tests/database/01_schema_guards.test.sql`.

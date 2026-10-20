@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Link2, List, SlidersHorizontal } from 'lucide-react';
+import { Gift, Link2, List, SlidersHorizontal } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { useI18n } from '../../lib/i18n';
@@ -13,16 +13,19 @@ import { SignOutV2 } from './screens/CommonV2';
  *
  * На телефоні навігація внизу — під великим пальцем; на десктопі (від 56rem)
  * переїжджає в бічну колонку 232 px з рядком «Акаунт: …» і виходом. Пункти й
- * порядок ті самі: Списки, Посилання, Налаштування.
+ * порядок ті самі: Списки, Посилання, Я дарую (крок 6, ADR-062), Налаштування.
  *
  * Навігація в розмітці одна, а короткий чи довгий підпис вибирає рендер
  * (`useMediaQuery`), не CSS: дві копії дали б зчитувачу екрана два однакові
  * орієнтири (CLAUDE.md §4).
  */
 
-const NAV: { to: string; icon: LucideIcon; short: 'lists' | 'shares' | 'settings'; long: 'lists' | 'sharesLong' | 'settings' }[] = [
+type NavKey = 'lists' | 'shares' | 'sharesLong' | 'gifts' | 'settings';
+
+const NAV: { to: string; icon: LucideIcon; short: NavKey; long: NavKey }[] = [
   { to: '/lists', icon: List, short: 'lists', long: 'lists' },
   { to: '/shares', icon: Link2, short: 'shares', long: 'sharesLong' },
+  { to: '/gifts', icon: Gift, short: 'gifts', long: 'gifts' },
   { to: '/settings', icon: SlidersHorizontal, short: 'settings', long: 'settings' },
 ];
 
@@ -52,8 +55,10 @@ export function ShellV2() {
   const { session } = useAuth();
   const desktop = useMediaQuery(DESKTOP);
 
-  const label = (key: 'lists' | 'shares' | 'sharesLong' | 'settings') => {
+  const label = (key: NavKey) => {
     switch (key) {
+      case 'gifts':
+        return t('nav.gifts');
       case 'lists':
         return t('nav.lists');
       case 'shares':
