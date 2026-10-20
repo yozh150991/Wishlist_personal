@@ -377,6 +377,7 @@ export async function startPool(
   instructions: string,
   goal: number | null,
   locale: string,
+  email: string | null = null,
 ): Promise<{ code: string; pool_id: string }> {
   const { data, error } = await supabase.rpc('start_pool', {
     p_token: token,
@@ -385,6 +386,7 @@ export async function startPool(
     p_name: name,
     p_instructions: instructions,
     p_goal: goal,
+    p_email: email,
     p_locale: locale,
   });
   if (error) throw rpcError(error);
@@ -399,6 +401,7 @@ export async function pledgePool(
   name: string,
   amount: number,
   locale: string,
+  email: string | null = null,
 ): Promise<{ code: string }> {
   const { data, error } = await supabase.rpc('pledge_pool', {
     p_token: token,
@@ -407,6 +410,7 @@ export async function pledgePool(
     p_name: name,
     p_amount: amount,
     p_locale: locale,
+    p_email: email,
   });
   if (error) throw rpcError(error);
   return data as { code: string };

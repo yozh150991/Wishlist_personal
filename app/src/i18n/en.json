@@ -1091,7 +1091,12 @@
     "openLabel": "Open list “{title}”",
     "emptyTitle": "Nothing here yet",
     "emptyBody": "Reserve on other people's lists while signed in, or leave this account's email when reserving — your picks will show up here.",
-    "errorTitle": "Couldn't load"
+    "errorTitle": "Couldn't load",
+    "poolMine": "{raised} of {goal} promised",
+    "poolPledge": "you promised {amount} · collected by {name}",
+    "poolOrganizer": "My collection",
+    "poolIn": "Chipping in",
+    "poolClosed": "Collection closed"
   },
   "v2settings": {
     "looksHint": "Your own event looks are set on a particular list — in the list menu, “List style”.",
@@ -1349,7 +1354,10 @@
       "race": "While you were typing, someone took this item.",
       "closedNow": "The organiser has just closed the collection.",
       "gone": "This collection no longer exists.",
-      "code": "Your code for this list: {code}. You'll need it on another device."
+      "code": "Your code for this list: {code}. You'll need it on another device.",
+      "email": "Email (optional)",
+      "emailOrganizer": "We'll let you know when someone joins. The list's owner can't see it.",
+      "emailJoin": "We'll let you know if the collection is closed or cancelled. Neither the organiser nor the list's owner can see it."
     },
     "take": "Take",
     "takeMore": "Take more",

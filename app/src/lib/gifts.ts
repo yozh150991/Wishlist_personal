@@ -22,6 +22,18 @@ export type GiftItem = {
   quantity: number;
   bought: boolean;
   changed: boolean;
+  /** Спільний збір на позицію (ADR-063, ADR-064): свій чи той, куди скидаюсь. */
+  pool: {
+    organizer: string;
+    instructions: string;
+    goal: number | string;
+    currency: Currency;
+    closed: boolean;
+    raised: number | string;
+    is_organizer: boolean;
+    /** Моя обіцянка; null — я лише організатор. */
+    mine: number | string | null;
+  } | null;
 };
 
 export type GiftList = {

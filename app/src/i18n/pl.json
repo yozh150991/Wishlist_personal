@@ -1091,7 +1091,12 @@
     "openLabel": "Otwórz listę „{title}”",
     "emptyTitle": "Na razie pusto",
     "emptyBody": "Rezerwuj na cudzych listach po zalogowaniu albo podawaj w rezerwacji adres e-mail tego konta — rezerwacje pojawią się tutaj.",
-    "errorTitle": "Nie udało się wczytać"
+    "errorTitle": "Nie udało się wczytać",
+    "poolMine": "obiecano {raised} z {goal}",
+    "poolPledge": "obiecano przez Ciebie {amount} · zbiera {name}",
+    "poolOrganizer": "Moja zrzutka",
+    "poolIn": "Dokładam się",
+    "poolClosed": "Zrzutka zamknięta"
   },
   "v2settings": {
     "looksHint": "Własne wyglądy wydarzeń ustawia się na konkretnej liście — w menu listy, „Wygląd listy”.",
@@ -1349,7 +1354,10 @@
       "race": "Zanim skończyłeś, ktoś już wziął tę pozycję.",
       "closedNow": "Organizator właśnie zamknął zrzutkę.",
       "gone": "Tej zrzutki już nie ma.",
-      "code": "Twój kod do tej listy: {code}. Przyda się na innym urządzeniu."
+      "code": "Twój kod do tej listy: {code}. Przyda się na innym urządzeniu.",
+      "email": "E-mail (opcjonalnie)",
+      "emailOrganizer": "Napiszemy, gdy ktoś dołączy. Właściciel listy go nie widzi.",
+      "emailJoin": "Napiszemy, jeśli zrzutka zostanie zamknięta lub anulowana. Organizator i właściciel listy go nie widzą."
     },
     "take": "Biorę",
     "takeMore": "Biorę więcej",

@@ -1495,6 +1495,8 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-giftrow__meta { grid-area: meta; font-size: var(--t-small); color: var(--color-neutral-700); }
 .v2-giftrow__meta:empty { display: none; }
 .v2-giftrow > .v2-tag { grid-area: tag; }
+.v2-giftrow { grid-template-areas: 'title tag' 'meta tag' 'how how'; }
+.v2-giftrow__how { grid-area: how; font-size: var(--t-small); white-space: pre-line; overflow-wrap: anywhere; }
 .v2-giftthanks { margin: 0; padding: var(--sp-3) var(--sp-4); background: var(--color-accent-100); border-radius: 16px; }
 .v2-giftthanks__text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
 @media (min-width: 56rem) {

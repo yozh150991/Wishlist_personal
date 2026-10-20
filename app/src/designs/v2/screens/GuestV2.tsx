@@ -530,6 +530,7 @@ export default function GuestV2() {
     else if (msg.includes('pool_not_found')) setPoolError(t('v2guest.pool.gone'));
     else if (msg.includes('bad_goal')) setPoolError(t('v2guest.pool.needGoal'));
     else if (msg.includes('bad_amount')) setPoolError(t('v2guest.pool.badAmount'));
+    else if (msg.includes('bad_email')) setPoolError(t('v2guest.book.badEmail'));
     else if (msg.includes('list_archived')) setPoolSheet(null);
     else setPoolError(t('v2guest.error'));
   }
@@ -1068,15 +1069,16 @@ export default function GuestV2() {
         item={poolSheet ? (items.find((i) => i.id === poolSheet.id) ?? null) : null}
         mode={poolSheet?.mode ?? 'join'}
         guestName={data.guest?.name ?? ''}
+        guestEmail={data.guest?.email ?? ''}
         busy={poolBusy}
         error={poolError}
-        onStart={(name, instructions, goal) => {
+        onStart={(name, instructions, goal, email) => {
           const id = poolSheet?.id;
-          if (id) void poolAction((k) => startPool(token, id, k, name, instructions, goal, locale));
+          if (id) void poolAction((k) => startPool(token, id, k, name, instructions, goal, locale, email));
         }}
-        onPledge={(name, amount) => {
+        onPledge={(name, amount, email) => {
           const p = items.find((i) => i.id === poolSheet?.id)?.pool;
-          if (p) void poolAction((k) => pledgePool(token, p.id, k, name, amount, locale));
+          if (p) void poolAction((k) => pledgePool(token, p.id, k, name, amount, locale, email));
         }}
         onLeave={() => {
           const p = items.find((i) => i.id === poolSheet?.id)?.pool;

@@ -132,18 +132,19 @@ await supabase.rpc('ack_claim_change', { p_token: token, p_item_id: itemId, p_ke
 ```ts
 await supabase.rpc('start_pool',  { p_token, p_item_id, p_key, p_name: 'Оля', p_instructions: 'BLIK на …', p_goal: null, p_locale: 'uk' });
 // → { code, pool_id, taken_qty, mine_qty, name, email }  — збір бере позицію, як «Беру»
-await supabase.rpc('pledge_pool', { p_token, p_pool_id, p_key, p_name: 'Тарас', p_amount: 150, p_locale: 'uk' });   // → { code }
+await supabase.rpc('pledge_pool', { p_token, p_pool_id, p_key, p_name: 'Тарас', p_amount: 150, p_locale: 'uk', p_email: null });   // → { code }
 await supabase.rpc('leave_pool',  { p_token, p_pool_id, p_key });
 await supabase.rpc('close_pool',  { p_token, p_pool_id, p_key, p_closed: true });   // лише організатор
 await supabase.rpc('cancel_pool', { p_token, p_pool_id, p_key });                   // лише організатор: знімає бронь
 ```
-`get_guest_list` додає на позицію зі збором `pool`: `{ id, organizer, instructions, goal, currency, closed, raised, count, mine, is_organizer, pledges }` — `mine` лише учаснику, `pledges` (імена й суми) лише організатору. Власник `pool` не отримує ніколи. Помилки: `not_found`, `owner_cannot_reserve`, `bad_key`, `item_not_in_share`, `pool_single_only`, `bad_goal`, `bad_name`, `bad_instructions`, `bad_amount`, `not_enough_left`, `list_archived`, `pool_not_found`, `pool_closed`, `pool_full` (50 учасників), `not_organizer`.
+`get_guest_list` додає на позицію зі збором `pool`: `{ id, organizer, instructions, goal, currency, closed, raised, count, mine, is_organizer, pledges }` — `mine` лише учаснику, `pledges` (імена й суми) лише організатору. Власник `pool` не отримує ніколи. Пошта учасника (`p_email`, ADR-064) — для листів «збір закрито» й «скасовано»; організатор отримує лист про кожного нового учасника. Помилки: `not_found`, `owner_cannot_reserve`, `bad_key`, `bad_email`, `item_not_in_share`, `pool_single_only`, `bad_goal`, `bad_name`, `bad_instructions`, `bad_amount`, `not_enough_left`, `list_archived`, `pool_not_found`, `pool_closed`, `pool_full` (50 учасників), `not_organizer`.
 
 ### `get_my_gifts` / `attach_guest_key` — authenticated (ADR-062)
 ```ts
 const { data } = await supabase.rpc('get_my_gifts');
 // → [{ token, title, event_date, archived, thanks, code,
-//      items: [{ id, title, url, price, currency, mine_qty, quantity, bought, changed }] }]
+//      items: [{ id, title, url, price, currency, mine_qty, quantity, bought, changed,
+//                pool: { organizer, instructions, goal, currency, closed, raised, is_organizer, mine } | null }] }]
 
 const { data: ok } = await supabase.rpc('attach_guest_key', { p_token: token, p_key: newKey });
 // → true — ключ цього браузера додано до броней акаунта на цьому посиланні; false — їх тут немає
@@ -496,7 +497,7 @@ x-wake-secret: <секрет>
 
 Що робить: бере до 50 невідправлених рядків (найстаріші першими), кожен — атомарно (`PATCH … sent_at=is.null` з `Prefer: return=representation`), тож дві копії сервісу не надішлють той самий лист. Пропускає (`skipped`): пошти немає, гість відписався (для листа на бронь), посилання відкликане чи протерміноване, позиції немає. Brevo відмовив — `attempts + 1`, після п'ятої спроби рядок лишається в спокої. Наприкінці прибирає рядки, старші за 30 днів. У журнал — лише лічильники: ні адрес, ні токенів, ні секретів відписки.
 
-Види листів: `claim`, `code` (ADR-054), `changed`, `deleted`, `reminder` (ADR-055), `thanks` (ADR-059, без коду, текст подяки рядками). Для чотирьох останніх зміст — знімком у `details` (з ADR-056 — ще дата покупки для `deleted` і вже куплене для `reminder`); ціна — лише якщо посилання її показує (змінилась лише прихована ціна — `skipped`); відписка діє на все, крім коду. Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist» / «Зміни у вашій броні в Wishlist» / «Нагадування від Wishlist» / «Подяка у Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
+Види листів: `claim`, `code` (ADR-054), `changed`, `deleted`, `reminder` (ADR-055), `thanks` (ADR-059, без коду, текст подяки рядками), `pool_join`, `pool_closed`, `pool_cancel` (ADR-064, зміст збору знімком). Для чотирьох останніх зміст — знімком у `details` (з ADR-056 — ще дата покупки для `deleted` і вже куплене для `reminder`); ціна — лише якщо посилання її показує (змінилась лише прихована ціна — `skipped`); відписка діє на все, крім коду. Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist» / «Зміни у вашій броні в Wishlist» / «Нагадування від Wishlist» / «Подяка у Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
 
 ### `GET /health`
 `{ "status": "ok", "service": "wishlist-guestmail", "configured": true }` — без назв змінних: сервіс відкритий.

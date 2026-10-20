@@ -1116,6 +1116,7 @@ export function PoolSheetV2({
   item,
   mode,
   guestName,
+  guestEmail,
   busy,
   error,
   onStart,
@@ -1128,10 +1129,11 @@ export function PoolSheetV2({
   item: SharedItem | null;
   mode: PoolMode;
   guestName: string;
+  guestEmail: string;
   busy: boolean;
   error: string | null;
-  onStart: (name: string, instructions: string, goal: number | null) => void;
-  onPledge: (name: string, amount: number) => void;
+  onStart: (name: string, instructions: string, goal: number | null, email: string | null) => void;
+  onPledge: (name: string, amount: number, email: string | null) => void;
   onLeave: () => void;
   onToggleClosed: (closed: boolean) => void;
   onCancel: () => void;
@@ -1144,12 +1146,14 @@ export function PoolSheetV2({
   const [name, setName] = useState('');
   const [text, setText] = useState('');
   const [amount, setAmount] = useState('');
+  const [email, setEmail] = useState('');
   const [askCancel, setAskCancel] = useState(false);
   const [local, setLocal] = useState<string | null>(null);
 
   useEffect(() => {
     if (!item) return;
     setName(guestName);
+    setEmail(guestEmail);
     setText('');
     setAskCancel(false);
     setLocal(null);
@@ -1171,18 +1175,20 @@ export function PoolSheetV2({
     if (busy || !item) return;
     const n = name.trim();
     if (!n) return setLocal(t('v2guest.pool.needName'));
+    const mail = email.trim() || null;
+    if (mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return setLocal(t('v2guest.book.badEmail'));
     if (mode === 'start') {
       if (!text.trim()) return setLocal(t('v2guest.pool.needHow'));
       const goal = amount.trim() ? parse(amount) : null;
       if (amount.trim() && goal === null) return setLocal(t('v2guest.pool.badAmount'));
       if (goal === null && num(item.price) === null) return setLocal(t('v2guest.pool.needGoal'));
       setLocal(null);
-      onStart(n, text.trim(), goal);
+      onStart(n, text.trim(), goal, mail);
     } else {
       const sum = parse(amount);
       if (sum === null) return setLocal(t('v2guest.pool.badAmount'));
       setLocal(null);
-      onPledge(n, sum);
+      onPledge(n, sum, mail);
     }
   }
 
@@ -1299,6 +1305,18 @@ export function PoolSheetV2({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
+          <FieldV2
+            label={t('v2guest.pool.email')}
+            name="pool_email"
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <p className="v2-hint v2-hint--start">
+            {mode === 'start' ? t('v2guest.pool.emailOrganizer') : t('v2guest.pool.emailJoin')}
+          </p>
           <SubmitV2
             busy={busy}
             label={

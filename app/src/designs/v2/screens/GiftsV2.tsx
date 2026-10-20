@@ -5,7 +5,7 @@ import { fetchMyGifts } from '../../../lib/gifts';
 import type { GiftItem, GiftList } from '../../../lib/gifts';
 import { useI18n } from '../../../lib/i18n';
 import { errorText } from '../../../lib/errors';
-import { formatDay, localToday, moneyShort } from '../../../lib/format';
+import { formatDay, localToday, moneyShort, num } from '../../../lib/format';
 import { useCounts } from './CommonV2';
 
 const STROKE = 2.75;
@@ -52,11 +52,28 @@ export default function GiftsV2() {
   function itemRow(i: GiftItem) {
     const price = moneyShort(i.price, i.currency, locale);
     const qty = i.quantity > 1 ? t('v2gifts.qty', { mine: i.mine_qty, n: i.quantity }) : null;
+    const p = i.pool;
+    const fmt = (v: number | string | null) => (p ? (moneyShort(num(v), p.currency, locale) ?? '') : '');
+    // Збір: свій — скільки обіцяно; чужий — моя сума, хто збирає й як скинутися.
+    const poolMeta = p
+      ? p.is_organizer
+        ? t('v2gifts.poolMine', { raised: fmt(p.raised), goal: fmt(p.goal) })
+        : t('v2gifts.poolPledge', { amount: fmt(p.mine), name: p.organizer })
+      : null;
     return (
       <li key={i.id} className="v2-giftrow">
         <span className="v2-giftrow__title">{i.title}</span>
-        <span className="v2-giftrow__meta">{[qty, price].filter(Boolean).join(' · ')}</span>
-        {i.changed ? (
+        <span className="v2-giftrow__meta">{[qty, poolMeta ?? price].filter(Boolean).join(' · ')}</span>
+        {p && !p.is_organizer && !p.closed && (
+          <span className="v2-giftrow__how">
+            {t('v2guest.pool.how')} {p.instructions}
+          </span>
+        )}
+        {p ? (
+          <span className="v2-tag" data-tone={p.closed ? 'neutral' : 'accent'}>
+            {p.closed ? t('v2gifts.poolClosed') : p.is_organizer ? t('v2gifts.poolOrganizer') : t('v2gifts.poolIn')}
+          </span>
+        ) : i.changed ? (
           <span className="v2-tag" data-tone="warm">
             {t('v2gifts.changed')}
           </span>
@@ -75,7 +92,7 @@ export default function GiftsV2() {
 
   function card(g: GiftList) {
     const day = formatDay(g.event_date, locale);
-    const left = g.items.filter((i) => !i.bought).length;
+    const left = g.items.filter((i) => !i.bought && !i.pool).length;
     const meta = [day, counts.items(g.items.length), left > 0 && left < g.items.length ? t('v2gifts.left', { n: left }) : null].filter(
       Boolean,
     );
