@@ -344,6 +344,29 @@ export async function sendGuestCode(
   return data as { ok: true } | { error: 'too_many_attempts' };
 }
 
+export type ReportReason = 'spam' | 'scam' | 'offensive' | 'illegal' | 'other';
+export const REPORT_REASONS: ReportReason[] = ['spam', 'scam', 'offensive', 'illegal', 'other'];
+export const REPORT_COMMENT_MAX = 1000;
+
+/**
+ * «Поскаржитись» (ADR-061): скарга йде операторові застосунку, не власнику.
+ * Помилки: GoneError — посилання мертве; `rate_limited` — забагато скарг.
+ */
+export async function reportShare(
+  token: string,
+  reason: ReportReason,
+  comment: string | null,
+  locale: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('report_share', {
+    p_token: token,
+    p_reason: reason,
+    p_comment: comment?.trim() || null,
+    p_locale: locale,
+  });
+  if (error) throw rpcError(error);
+}
+
 /**
  * Листи про цей список: вимкнути (з посилання в листі) чи ввімкнути знову.
  * Секрет — з адреси листа; відповідь однакова, чи такий секрет є.

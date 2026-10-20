@@ -1267,6 +1267,27 @@
     "ownerBanner": "This is your own link. Guests' picks are hidden here on purpose, so the gift stays a surprise.",
     "archived": "The celebration is over and the list is archived. You can still look, but not reserve.",
     "thanksTitle": "A thank-you from the list's author",
+    "report": {
+      "open": "Report",
+      "title": "Report this list",
+      "body": "The report goes to the Wishlist team, not to the list's author — they won't know about it.",
+      "reason": "What's wrong?",
+      "pick": "Choose a reason.",
+      "reasons": {
+        "spam": "Spam or advertising",
+        "scam": "Scam — asking for money or details",
+        "offensive": "Offensive content",
+        "illegal": "Something illegal",
+        "other": "Something else"
+      },
+      "comment": "Comment (optional)",
+      "send": "Send report",
+      "sending": "Sending…",
+      "thanksTitle": "Thank you, report sent",
+      "thanksBody": "We'll take a look at the list. The author won't know it was you.",
+      "gone": "This link no longer works — there's nothing to report.",
+      "tooMany": "Too many reports in a short time. Please try again a little later."
+    },
     "take": "Take",
     "takeMore": "Take more",
     "release": "Release",

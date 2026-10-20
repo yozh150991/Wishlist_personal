@@ -232,3 +232,42 @@ test('подяка власника на /l/ — видно всім, з пер�
   await expect(thanks).toContainText('Дякуємо, що були з нами!');
   await expect(thanks).toContainText('До зустрічі');
 });
+
+test('«Поскаржитись» на /l/ — причина, коментар, подяка; власнику кнопки немає (ADR-061)', { tag: '@both' }, async ({ page }) => {
+  const body = {
+    title: 'Виграй айфон', message: null, currency: 'PLN', event_date: null,
+    expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+    hide_prices: false, allow_reservations: true, archived: false, viewer_is_owner: false,
+    guest: null, sections: [], items: [], thanks: null,
+  };
+  let reported: Record<string, unknown> | null = null;
+  await page.route('**/rpc/get_guest_list', (route) => route.fulfill({ json: body }));
+  await page.route('**/rpc/register_share_view', (route) => route.fulfill({ status: 204, body: '' }));
+  await page.route('**/rpc/report_share', async (route) => {
+    reported = route.request().postDataJSON();
+    await route.fulfill({ status: 204, body: '' });
+  });
+
+  await page.goto('/l/e2e-report-token');
+  await page.getByRole('button', { name: /^(поскаржитись|zgłoś|report)$/i }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toContainText(/не автору списку|nie do autora listy|not to the list's author/i);
+
+  // Без причини запит не йде.
+  await sheet.getByRole('button', { name: /надіслати скаргу|wyślij zgłoszenie|send report/i }).click();
+  await expect(sheet.getByText(/виберіть причину|wybierz powód|choose a reason/i)).toBeVisible();
+  expect(reported).toBeNull();
+
+  await sheet.getByRole('radio', { name: /шахрайство|oszustwo|scam/i }).check();
+  await sheet.locator('textarea[name="report_comment"]').fill('Просять гроші на картку');
+  await sheet.getByRole('button', { name: /надіслати скаргу|wyślij zgłoszenie|send report/i }).click();
+  await expect(sheet.getByRole('heading', { name: /скаргу надіслано|zgłoszenie wysłane|report sent/i })).toBeVisible();
+  expect(reported).toMatchObject({ p_token: 'e2e-report-token', p_reason: 'scam', p_comment: 'Просять гроші на картку' });
+
+  // Власник на своєму посиланні кнопки не бачить.
+  await page.unroute('**/rpc/get_guest_list');
+  await page.route('**/rpc/get_guest_list', (route) => route.fulfill({ json: { ...body, viewer_is_owner: true, allow_reservations: false } }));
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^(поскаржитись|zgłoś|report)$/i })).toHaveCount(0);
+});

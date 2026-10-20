@@ -5,7 +5,8 @@ import { useI18n } from '../../../lib/i18n';
 import { THEMES, useTheme } from '../../../lib/theme';
 import type { Theme } from '../../../lib/theme';
 import { hostOf, moneyShort } from '../../../lib/format';
-import { redeemCode, sendGuestCode } from '../../../lib/shares';
+import { GoneError, REPORT_COMMENT_MAX, REPORT_REASONS, redeemCode, reportShare, sendGuestCode } from '../../../lib/shares';
+import type { ReportReason } from '../../../lib/shares';
 import type { SharedItem } from '../../../lib/shares';
 import type { Currency } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
@@ -904,6 +905,127 @@ export function LookSheetV2({ open, onClose }: { open: boolean; onClose: () => v
           {t('common.close')}
         </button>
       </div>
+    </SheetV2>
+  );
+}
+
+/**
+ * «Поскаржитись» (потік W3, ADR-061). Скарга йде операторові застосунку, а не
+ * власнику списку — і про це сказано прямо, щоб гість не боявся, що власник
+ * дізнається. Причина — з переліку, коментар — за бажанням.
+ */
+export function ReportSheetV2({ open, token, onClose }: { open: boolean; token: string; onClose: () => void }) {
+  const { t, locale } = useI18n();
+  const titleId = useId();
+  const commentId = useId();
+  const [reason, setReason] = useState<ReportReason | null>(null);
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setReason(null);
+    setComment('');
+    setBusy(false);
+    setError(null);
+    setSent(false);
+  }, [open]);
+
+  async function submit() {
+    if (busy) return;
+    if (!reason) {
+      setError(t('v2guest.report.pick'));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await reportShare(token, reason, comment, locale);
+      setSent(true);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      if (e instanceof GoneError) setError(t('v2guest.report.gone'));
+      else if (msg.includes('rate_limited')) setError(t('v2guest.report.tooMany'));
+      else setError(t('v2guest.error'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <SheetV2 open={open} onClose={onClose} labelledBy={titleId}>
+      {sent ? (
+        <>
+          <h2 className="v2-sheet__title" id={titleId}>
+            {t('v2guest.report.thanksTitle')}
+          </h2>
+          <p className="v2-hint v2-hint--start">{t('v2guest.report.thanksBody')}</p>
+          <div className="v2-sheet__actions">
+            <button type="button" className="v2-btn v2-btn--primary" onClick={onClose}>
+              {t('common.close')}
+            </button>
+          </div>
+        </>
+      ) : (
+        <form
+          className="v2-stack"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <h2 className="v2-sheet__title" id={titleId}>
+            {t('v2guest.report.title')}
+          </h2>
+          <p className="v2-hint v2-hint--start">{t('v2guest.report.body')}</p>
+          {error && <NoteV2 tone="error">{error}</NoteV2>}
+          <fieldset className="v2-pick">
+            <legend className="v2-field__label">{t('v2guest.report.reason')}</legend>
+            <ul className="v2-pick__list">
+              {REPORT_REASONS.map((r) => (
+                <li key={r}>
+                  <label className="v2-pick__row" data-on={reason === r || undefined}>
+                    <input
+                      type="radio"
+                      name="report_reason"
+                      value={r}
+                      checked={reason === r}
+                      onChange={() => {
+                        setReason(r);
+                        setError(null);
+                      }}
+                    />
+                    <span className="v2-pick__name">{t(`v2guest.report.reasons.${r}`)}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </fieldset>
+          <div className="v2-field">
+            <label className="v2-field__label" htmlFor={commentId}>
+              {t('v2guest.report.comment')}
+            </label>
+            <textarea
+              id={commentId}
+              name="report_comment"
+              className="v2-input v2-input--area"
+              rows={3}
+              maxLength={REPORT_COMMENT_MAX}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+            />
+          </div>
+          <SubmitV2 busy={busy} label={t('v2guest.report.send')} busyLabel={t('v2guest.report.sending')} />
+          <div className="v2-sheet__actions">
+            <button type="button" className="v2-btn v2-btn--ghost" onClick={onClose}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        </form>
+      )}
     </SheetV2>
   );
 }

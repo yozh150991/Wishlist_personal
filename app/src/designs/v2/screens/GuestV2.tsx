@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Link2, ListChecks, Palette, X } from 'lucide-react';
+import { Flag, Link2, ListChecks, Palette, X } from 'lucide-react';
 import {
   ackClaimChange,
   claimItemV2,
@@ -40,6 +40,7 @@ import {
   GuestCardV2,
   GuestHeadV2,
   LookSheetV2,
+  ReportSheetV2,
   MyPicksSheetV2,
   RedeemSheetV2,
   ShopSheetV2,
@@ -135,6 +136,7 @@ export default function GuestV2() {
   const [picksOpen, setPicksOpen] = useState(false);
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [lookOpen, setLookOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   /** «У магазин» без броні: позиція, про яку питаємо «Забронювати й перейти?». */
   const [shopItem, setShopItem] = useState<SharedItem | null>(null);
   /** Спитали вже в цій вкладці — далі посилання просто відкривається. */
@@ -885,8 +887,8 @@ export default function GuestV2() {
         {canClaim && <p className="v2-hint">{t('v2guest.ownerBlind')}</p>}
         <p className="v2-guest__footer">{t('v2guest.footer')}</p>
 
-        {/* Підвал: лише вигляд і мова. Жодної реєстрації й жодного посилання
-            в застосунок — гість прийшов не за цим (README пакета, правило 3). */}
+        {/* Підвал: вигляд, мова й «Поскаржитись». Жодної реєстрації й жодного
+            посилання в застосунок — гість прийшов не за цим (README пакета, правило 3). */}
         <div className="v2-guest__bar">
           <button type="button" className="v2-btn v2-btn--ghost v2-btn--small" onClick={() => setLookOpen(true)}>
             <Palette size={18} strokeWidth={2.75} aria-hidden="true" />
@@ -907,6 +909,13 @@ export default function GuestV2() {
               </option>
             ))}
           </select>
+          {/* Власник на своєму посиланні на себе не скаржиться (ADR-061). */}
+          {!asOwner && (
+            <button type="button" className="v2-btn v2-btn--ghost v2-btn--small" onClick={() => setReportOpen(true)}>
+              <Flag size={18} strokeWidth={2.75} aria-hidden="true" />
+              {t('v2guest.report.open')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -983,6 +992,7 @@ export default function GuestV2() {
       />
 
       <LookSheetV2 open={lookOpen} onClose={() => setLookOpen(false)} />
+      <ReportSheetV2 open={reportOpen} token={token} onClose={() => setReportOpen(false)} />
     </main>
   );
 }

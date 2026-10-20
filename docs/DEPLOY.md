@@ -868,6 +868,8 @@ npx supabase db push
 
 **Подяка гостям (ADR-059)** додала лист `thanks`. Порядок важливий: **спершу** передеплой `wishlist-guestmail`, **потім** `npx supabase db push` (міграція `20261020100000_list_thanks.sql`). Старий сервіс виду `thanks` не знає й відправив би замість подяки лист із кодом; новий сервіс зі старою базою просто не бачить таких рядків.
 
+**«Поскаржитись» (ADR-061)** — скарги обробляє той самий `wishlist-guestmail`. Порядок: передеплой `wishlist-guestmail` (`gcloud run deploy wishlist-guestmail --source . --region europe-central2` з `services\parser`), потім `npx supabase db push` (міграція `20261020120000_share_reports.sql`). Лист про скаргу приходить на `MAIL_FROM`. Якщо сервіс ще старий, скарги просто чекають у `share_reports` до передеплою.
+
 **Картка посилання в месенджері (ADR-060)** — це `app/api/card.ts` у тому самому деплої Vercel, окремих кроків немає. Функція читає ті самі змінні `VITE_SUPABASE_URL` і `VITE_SUPABASE_PUBLISHABLE_KEY`, що вже стоять у Vercel для збірки; нових змінних не треба. Порядок: спершу `npx supabase db push` (міграція `20261020110000_share_card.sql`), потім деплой фронтенду. Перевірка:
 
 ```powershell

@@ -128,6 +128,12 @@ await supabase.rpc('ack_claim_change', { p_token: token, p_item_id: itemId, p_ke
 ```
 «Лишити» після зміни позиції: знімає `changed_at` з броні цього гостя. `get_guest_list` віддає `changed: true` лише на позиціях, які взяв саме цей гість. Чужий ключ — нічого не змінює. Помилки: `not_found`, `owner_cannot_reserve`, `item_not_in_share`.
 
+### `report_share` — anon + authenticated (ADR-061)
+```ts
+await supabase.rpc('report_share', { p_token: token, p_reason: 'scam', p_comment: 'Просять гроші', p_locale: 'uk' });   // 204
+```
+«Поскаржитись» на гостьовій: скарга операторові застосунку, не власнику. `p_reason` — `spam`, `scam`, `offensive`, `illegal`, `other`; коментар необов'язковий, до 1000 символів (порожній — `null`). Помилки: `not_found` (мертве посилання), `owner_cannot_report`, `bad_reason`, `bad_comment`, `rate_limited` (5 скарг на посилання чи 50 на застосунок за годину).
+
 ### `get_share_card` — anon + authenticated (ADR-060)
 ```ts
 // Викликає лише edge-функція app/api/card.ts для ботів месенджерів.
@@ -210,7 +216,7 @@ await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoi
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
-| `ack_claim_change`, `get_share_card` | `anon`, `authenticated` |
+| `ack_claim_change`, `get_share_card`, `report_share` | `anon`, `authenticated` |
 | `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
 | `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |

@@ -1267,6 +1267,27 @@
     "ownerBanner": "To twój link. Rezerwacji gości tu nie widać — celowo, żeby prezent pozostał niespodzianką.",
     "archived": "Święto już minęło, lista jest w archiwum. Można ją przeglądać, ale rezerwować już nie.",
     "thanksTitle": "Podziękowanie od autora listy",
+    "report": {
+      "open": "Zgłoś",
+      "title": "Zgłoś listę",
+      "body": "Zgłoszenie trafi do zespołu Wishlist, a nie do autora listy — nie dowie się o nim.",
+      "reason": "Co jest nie tak?",
+      "pick": "Wybierz powód.",
+      "reasons": {
+        "spam": "Spam lub reklama",
+        "scam": "Oszustwo — proszą o pieniądze lub dane",
+        "offensive": "Obraźliwe treści",
+        "illegal": "Coś niezgodnego z prawem",
+        "other": "Inne"
+      },
+      "comment": "Komentarz (opcjonalnie)",
+      "send": "Wyślij zgłoszenie",
+      "sending": "Wysyłam…",
+      "thanksTitle": "Dziękujemy, zgłoszenie wysłane",
+      "thanksBody": "Przyjrzymy się liście. Autor nie dowie się, że to Ty.",
+      "gone": "Ten link już nie działa — nie ma czego zgłaszać.",
+      "tooMany": "Za dużo zgłoszeń w krótkim czasie. Spróbuj trochę później."
+    },
     "take": "Biorę",
     "takeMore": "Biorę więcej",
     "release": "Zdejmij",
