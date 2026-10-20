@@ -1,5 +1,7 @@
-import { Navigate, Route, Routes, useParams } from 'react-router-dom';
-import Placeholder from './screens/PlaceholderV2';
+import { Suspense, lazy } from 'react';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { useI18n } from '../../lib/i18n';
+import NotFoundV2 from './screens/NotFoundV2';
 import LoginV2 from './screens/LoginV2';
 import RegisterV2 from './screens/RegisterV2';
 import ResetV2 from './screens/ResetV2';
@@ -12,32 +14,25 @@ import GiftsV2 from './screens/GiftsV2';
 import SettingsV2 from './screens/SettingsV2';
 import AddV2 from './screens/AddV2';
 import { RequireAuthV2, ShellV2 } from './ShellV2';
-// Стилі форми v2 їдуть разом із цим модулем — з ADR-052 у головному пакеті.
+// Стилі v2 — у головному пакеті: інших екранів у застосунку немає (ADR-065).
 import './v2.css';
 
+/** Гостьова — лінива: свій чанк, який власнику, що відкрив застосунок, не потрібен. */
+const GuestV2 = lazy(() => import('./screens/GuestV2'));
+
 /**
- * Таблиця маршрутів дизайну v2.
+ * Таблиця маршрутів застосунку.
  *
- * Свої екрани, свій каркас, свої адреси. Таблиця повна й незалежна саме для
- * цього — v2 переробляє флоу, а не перефарбовує екрани v1, тож ділити з нею
- * таблицю маршрутів означало б прив'язати новий флоу до порядку кроків
- * старого (ADR-032).
+ * З ADR-065 версія дизайну одна: v1 прибрано (ROADMAP, «Дизайн v2», крок 9),
+ * разом із перемикачем у Налаштуваннях, `?design=` і атрибутом `data-design`.
+ * Усе з `src/lib/` — дані, вигляд, офлайн-кеш, черга змін — як і раніше.
  *
- * Що v2 **не** переробляє — дані й палітру. Усе з `src/lib/` (Supabase,
- * автентифікація, вигляд, офлайн-кеш, черга змін, парсер, експорт) спільне з
- * v1 і не дублюється: інакше кожне виправлення довелося б робити двічі, а
- * інваріанти приватності (CLAUDE.md §3) роз'їхалися б між версіями непомітно.
- * Потрібен новий запит — він з'являється в `lib/` і доступний обом версіям.
+ * Гостьові адреси: `/l/…` — гостьова сторінка (ADR-041); старі `/s/…` (їх
+ * роздавала v1 до кроку 5г) ведуть на ту саму `/l/…` — токен, ключ гостя й
+ * броні ті самі (ADR-057, п. 2).
  *
- * Гостьових адрес тут немає: `/s/…` і `/l/…` стоять вище, у `App.tsx`, бо
- * їхню версію визначає адреса, а не вибір власника (ADR-039).
- *
- * Готово: вхід, реєстрація, пароль (крок 2); каркас власника, «Мої списки» й
- * новий список (крок 3а); сторінка списку з позиціями, «Поділитися», порядком,
- * оформленням і налаштуваннями (крок 3б); «Мої посилання» й «Налаштування»
- * (крок 3в). Усі екрани власника v1 мають пару у v2; невідома адреса —
- * заглушка з дорогою назад. `/add` — «Додати в Wishlist» із системного
- * «Поділитися» (крок 4б): без каркаса, бо це аркуш поверх магазину.
+ * `/add` — «Додати в Wishlist» із системного «Поділитися» (крок 4б): без
+ * каркаса, бо це аркуш поверх магазину. Невідома адреса — «Сторінки немає».
  */
 /**
  * `/lists/:id/preview` — окрема сторінка превʼю з v1. У v2 превʼю — аркуш на
@@ -48,9 +43,44 @@ function PreviewRedirect() {
   return <Navigate to={`/lists/${id}`} replace />;
 }
 
-export default function DesignV2Routes() {
+/**
+ * `/s/{токен}…` → `/l/{токен}…` з тим самим хвостом (`/g/{ключ}`) і
+ * параметрами. Особисте посилання з ключем далі обробляє гостьова: ключ ляже
+ * в браузер і зникне з адреси (ADR-035, п. 4).
+ */
+function LegacyGuestRedirect() {
+  const { token = '', '*': rest = '' } = useParams();
+  const { search } = useLocation();
+  return <Navigate to={`/l/${token}${rest ? `/${rest}` : ''}${search}`} replace />;
+}
+
+function Loading() {
+  const { t } = useI18n();
+  return (
+    <div className="v2-boot" role="status" aria-live="polite">
+      <span className="v2-sr">{t('common.loading')}</span>
+    </div>
+  );
+}
+
+function Guest() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <GuestV2 />
+    </Suspense>
+  );
+}
+
+export default function AppRoutes() {
   return (
     <Routes>
+      {/* Гостьова. Особисте посилання: ключ ляже в браузер і зникне з адреси (ADR-035). */}
+      <Route path="/l/:token" element={<Guest />} />
+      <Route path="/l/:token/g/:key" element={<Guest />} />
+      {/* Відписка з гостьового листа (ADR-054): секрет зникає з адреси одразу. */}
+      <Route path="/l/:token/u/:mailToken" element={<Guest />} />
+      <Route path="/s/:token/*" element={<LegacyGuestRedirect />} />
+
       <Route path="/login" element={<LoginV2 />} />
       <Route path="/register" element={<RegisterV2 />} />
       <Route path="/reset" element={<ResetV2 />} />
@@ -82,7 +112,7 @@ export default function DesignV2Routes() {
       </Route>
 
       <Route path="/" element={<Navigate to="/lists" replace />} />
-      <Route path="*" element={<Placeholder />} />
+      <Route path="*" element={<NotFoundV2 />} />
     </Routes>
   );
 }

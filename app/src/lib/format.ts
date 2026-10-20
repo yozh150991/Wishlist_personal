@@ -41,11 +41,6 @@ export function moneyShort(
   }).format(n);
 }
 
-export function formatDate(iso: string | null, locale: string): string | null {
-  if (!iso) return null;
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso));
-}
-
 /**
  * Календарний день словом: «14 червня», а якщо рік не поточний — «14 червня
  * 2027 р.». Числовий формат читається протилежно в en-US і uk-UA.

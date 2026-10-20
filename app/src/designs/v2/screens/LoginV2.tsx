@@ -166,7 +166,7 @@ export default function LoginV2() {
 
   async function google() {
     setServer(null);
-    const { error } = await signInWithGoogle('v2', next);
+    const { error } = await signInWithGoogle(next);
     if (error) setServer(t(authErrorKey(error)));
   }
 
@@ -179,7 +179,7 @@ export default function LoginV2() {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: email.trim(),
-      options: { emailRedirectTo: authReturn('/login', 'v2', { from: 'confirm' }) },
+      options: { emailRedirectTo: authReturn('/login', { from: 'confirm' }) },
     });
     setBusy(false);
     // Відповідь однакова, є така адреса чи ні; кажемо лише про мережу й ліміт.

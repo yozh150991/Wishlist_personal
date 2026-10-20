@@ -6,7 +6,7 @@ import { EMAIL, PASSWORD, hasAccount, unique } from './helpers';
  * Сторінка списку дизайну v2 (ROADMAP, «Дизайн v2», кроки 3б-1, 3б-2 і 4б;
  * потоки C, D, F, L, O, R, V3).
  *
- * Тег `@v2` — лише у v2-проєктах. Правила вигляду (сортування, групи, сума,
+ * Правила вигляду (сортування, групи, сума,
  * посилання, ціна) перевіряє без браузера items-view.spec.ts; тут — те, що
  * бачить людина: додати, відмінити, змінити статус, видалити з «Відмінити»,
  * поділитися вибраним, змінити порядок, видалити список.
@@ -65,13 +65,31 @@ async function addManual(page: Page, title: string, price?: string) {
   await expect(sheet).toHaveCount(0);
 }
 
-test('сторінка списку v2 без сесії веде на вхід із next', { tag: '@v2' }, async ({ page }) => {
+test('сторінка списку v2 без сесії веде на вхід із next', async ({ page }) => {
   await page.goto('/lists/00000000-0000-4000-8000-000000000000');
   await expect(page).toHaveURL(/\/login\?next=%2Flists%2F00000000-0000-4000-8000-000000000000$/);
 });
 
-test.describe('сторінка списку v2 з акаунтом', { tag: '@v2' }, () => {
+test.describe('сторінка списку v2 з акаунтом', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  /**
+   * Набір контролів вибирає рендер, а не CSS (ARCHITECTURE.md): дві копії тих
+   * самих полів дали б два однакові `id`, і `<label for>` вів би на схований.
+   */
+  test('на сторінці списку немає дубльованих id — і з відкритими «Фільтрами»', async ({ page }) => {
+    await signInV2(page);
+    await newList(page, unique('V2 ids'));
+    await addManual(page, unique('Кавоварка'));
+    await page.getByRole('button', { name: /^(фільтри|filtry|filters)/i }).click();
+    await expect(page.getByRole('dialog', { name: /^(фільтри|filtry|filters)$/i })).toBeVisible();
+
+    const dupes = await page.evaluate(() => {
+      const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
+      return [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+    });
+    expect(dupes).toEqual([]);
+  });
 
   test('новий список відкривається порожнім; додана позиція підсвічена, «Відмінити» її прибирає', async ({ page }) => {
     await signInV2(page);
@@ -196,7 +214,7 @@ async function listMenu(page: Page, item: RegExp) {
   await page.getByRole('dialog').getByRole('button', { name: item }).click();
 }
 
-test.describe('сторінка списку v2: поділитися, порядок, видалення', { tag: '@v2' }, () => {
+test.describe('сторінка списку v2: поділитися, порядок, видалення', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('«Поділитися»: прихована позиція не доходить до гостя; відкритий список видаляється лише з назвою', async ({
@@ -316,7 +334,7 @@ test.describe('сторінка списку v2: поділитися, поря�
   });
 });
 
-test.describe('сторінка списку v2: чернетки', { tag: '@v2' }, () => {
+test.describe('сторінка списку v2: чернетки', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('посилання без назви — чернетка «Потрібна назва»: гостям її не запропонувати, назва робить її позицією', async ({
@@ -371,7 +389,7 @@ test.describe('сторінка списку v2: чернетки', { tag: '@v2'
   });
 });
 
-test.describe('сторінка списку v2: те, що прийшло з v1 (ADR-050)', { tag: '@v2' }, () => {
+test.describe('сторінка списку v2: те, що прийшло з v1 (ADR-050)', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('пошук і «Фільтри» є вже на короткому списку; статус звужує, чип «×» знімає', async ({ page }) => {
@@ -437,7 +455,7 @@ test.describe('сторінка списку v2: те, що прийшло з v1
   });
 });
 
-test.describe('сторінка списку v2: валюта позиції (ADR-051)', { tag: '@v2' }, () => {
+test.describe('сторінка списку v2: валюта позиції (ADR-051)', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('позиція в євро — своя валюта на картці й окремий доданок у сумі', async ({ page }) => {
@@ -466,7 +484,7 @@ test.describe('сторінка списку v2: валюта позиції (AD
   });
 });
 
-test.describe('сторінка списку v2: «Вибрати кілька»', { tag: '@v2' }, () => {
+test.describe('сторінка списку v2: «Вибрати кілька»', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('статус вибраним одним рухом; масове видалення — з підтвердженням і переживає F5', async ({ page }) => {
@@ -518,7 +536,7 @@ test.describe('сторінка списку v2: «Вибрати кілька»
   });
 });
 
-test.describe('сторінка списку v2: зміна позиції, яку могли взяти (ADR-055)', { tag: '@v2' }, () => {
+test.describe('сторінка списку v2: зміна позиції, яку могли взяти (ADR-055)', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('власник бачить попередження без жодного слова про броні; гість бачить «Змінено» й «Лишити»', async ({

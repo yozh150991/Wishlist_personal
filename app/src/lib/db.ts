@@ -189,11 +189,6 @@ export async function fetchAllItems(
   }
 }
 
-export async function deleteItem(id: string): Promise<void> {
-  const { error } = await supabase.from('items').delete().eq('id', id);
-  if (error) throw error;
-}
-
 /* ── Масові дії ─────────────────────────── */
 
 /**

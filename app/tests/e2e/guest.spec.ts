@@ -1,18 +1,19 @@
 import { test, expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { addItem, createList, createShare, hasAccount, settledDialog, signIn, unique } from './helpers';
+import { addItem, createList, hasAccount, itemMenu, shareLink, signIn, unique } from './helpers';
 
 /**
- * Гість без акаунта (ADR-035): ключ у браузері й в особистому посиланні,
- * код із 5 символів, програш гонки, «Усе вже розібрали», сліпе скидання.
+ * Гість без акаунта (ADR-035, ADR-053): особисте посилання, програш гонки,
+ * «Усе вже розібрали» зі стеженням, сліпе скидання власником, усталений
+ * фільтр «Вільні». Бронь із підписом і код — у guest-v2.spec.ts.
  *
  * Кожен гість — окремий browser context: саме так рідні відкривають посилання
  * на різних телефонах.
  */
 test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
-const take = /^(я візьму це|biorę to|i'll take this)$/i;
-const yours = /ти береш це|bierzesz to|you are taking this/i;
+const takeBtn = /^(беру|biorę|take)$/i;
+const yours = /ви берете|bierzesz to|you're taking this/i;
 
 async function guest(browser: Browser, link: string): Promise<Page> {
   const ctx = await browser.newContext();
@@ -22,70 +23,32 @@ async function guest(browser: Browser, link: string): Promise<Page> {
   return page;
 }
 
-/** Власник створює список із позиціями й посилання на всі. */
+const card = (page: Page, title: string) => page.locator('.v2-gcard').filter({ hasText: title });
+
+/** «Беру» → підпис → «Забронювати»; перша бронь показує код — закриваємо. */
+async function take(page: Page, title: string) {
+  await card(page, title).getByRole('button', { name: takeBtn }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.locator('input[name="guest_name"]').fill('Гість-e2e');
+  await sheet.getByRole('button', { name: /^(забронювати|zarezerwuj|take it)$/i }).click();
+  await sheet.getByRole('button', { name: /^(готово|gotowe|done)$/i }).click();
+  await expect(card(page, title)).toContainText(yours);
+}
+
+/** Власник створює список із позиціями й посилання на всі; лишається на сторінці списку. */
 async function setup(page: Page, items: string[]): Promise<{ link: string; token: string }> {
   await signIn(page);
   await createList(page, unique('Guest'));
   for (const name of items) await addItem(page, name);
-  const link = await createShare(page, items, unique('Гостям'));
-  await page.keyboard.press('Escape');
-  return { link, token: link.split('/s/')[1]! };
+  const link = await shareLink(page, items, unique('Гостям'));
+  return { link, token: link.split('/l/')[1]! };
 }
 
-test('особисте посилання й код переносять позначку на інший пристрій', async ({ page, browser }) => {
-  const { link, token } = await setup(page, ['Сковорода', 'Рушники']);
-
-  const first = await guest(browser, link);
-  await first.getByRole('listitem').filter({ hasText: 'Сковорода' }).getByRole('button', { name: take }).click();
-  await expect(first.getByText(yours)).toBeVisible();
-
-  // Одразу після першої позначки — «Забери доступ із собою» з кодом.
-  await expect(first.getByRole('heading', { name: /забери доступ|zabierz dostęp|take your access/i })).toBeVisible();
-  const code = await first.locator('.keep__code-value').innerText();
-  expect(code).toMatch(/^[2-9ABCDEFGHJKMNPQRSTUVWXYZ]{5}$/);
-  const key = await first.evaluate((tk) => localStorage.getItem(`wl.gk.${tk}`), token);
-  expect(key).toMatch(/^[A-Za-z0-9_-]{22,64}$/);
-
-  // Особисте посилання: ключ лягає в браузер і зникає з адреси.
-  const second = await guest(browser, `${link}/g/${key}`);
-  await expect(second).toHaveURL(new RegExp(`/s/${token}$`));
-  await expect(second.getByText(yours)).toBeVisible();
-
-  // Код на третьому пристрої: позначки переносяться, старі пристрої лишаються робочими.
-  const third = await guest(browser, link);
-  await expect(third.getByText(yours)).toHaveCount(0);
-  await third.getByRole('button', { name: /у мене вже щось відкладено|mam już coś odłożone|already picked something/i }).click();
-  const dialog = await settledDialog(third);
-  await dialog.getByLabel(/^код$|^kod$|^code$/i).fill(code.toLowerCase());
-  await dialog.getByRole('button', { name: /відновити позначки|przywróć rezerwacje|restore my picks/i }).click();
-  await expect(third.getByText(/позначки відновлено: 1|przywrócono rezerwacje: 1|picks restored: 1/i)).toBeVisible();
-  await expect(third.getByText(yours)).toBeVisible();
-
-  await first.reload();
-  await expect(first.getByText(yours)).toBeVisible();
-
-  // Код одноразовий: вдруге той самий не спрацьовує, і сторінка каже чому.
-  const fourth = await guest(browser, link);
-  await fourth.getByRole('button', { name: /у мене вже щось відкладено|mam już coś odłożone|already picked something/i }).click();
-  const again = await settledDialog(fourth);
-  await again.getByLabel(/^код$|^kod$|^code$/i).fill(code);
-  await again.getByRole('button', { name: /відновити позначки|przywróć rezerwacje|restore my picks/i }).click();
-  await expect(again.getByText(/такого коду|takiego kodu|that code isn't/i)).toBeVisible();
-});
-
-/**
- * Позначка з гостьової v1 видна й у гостьовій v2 під `/l/…` (ADR-041): токен
- * той самий, ключ той самий. Ключ з особистого посилання прибирається на
- * `/l/`, а не перекидає гостя на `/s/`, і «Надіслати собі посилання» в «Моїх
- * бронях» дає посилання під тим самим префіксом. Екрани `/l/` — гостьової v2
- * (ADR-053), тож і підписи тут її: «Ви берете», «Мої броні».
- */
-test('/l/ — та сама позначка за тим самим ключем, особисте посилання лишається під /l/', async ({ page, browser }) => {
+test('особисте посилання переносить броні на інший пристрій, «Надіслати собі» дає його ж', async ({ page, browser }) => {
   const { link, token } = await setup(page, ['Глечик']);
 
   const first = await guest(browser, link);
-  await first.getByRole('button', { name: take }).click();
-  await expect(first.getByText(yours)).toBeVisible();
+  await take(first, 'Глечик');
   const key = await first.evaluate((tk) => localStorage.getItem(`wl.gk.${tk}`), token);
   expect(key).toMatch(/^[A-Za-z0-9_-]{22,64}$/);
 
@@ -106,90 +69,99 @@ test('/l/ — та сама позначка за тим самим ключем
       },
     });
   });
-  const v2 = await ctx.newPage();
-  await v2.goto(`${link.replace('/s/', '/l/')}/g/${key}`);
-  await expect(v2).toHaveURL(new RegExp(`/l/${token}$`));
-  await expect(v2.locator('html')).toHaveAttribute('data-design', 'v2');
-  await expect(v2.getByText(/ви берете|bierzesz to|you're taking this/i)).toBeVisible();
+  const second = await ctx.newPage();
+  await second.goto(`${link}/g/${key}`);
+  // Ключ лягає в браузер і зникає з адреси (ADR-035).
+  await expect(second).toHaveURL(new RegExp(`/l/${token}$`));
+  await expect(card(second, 'Глечик')).toContainText(yours);
 
-  await v2.getByRole('button', { name: /мої броні · 1|moje rezerwacje · 1|my picks · 1/i }).click();
-  await v2
+  await second.getByRole('button', { name: /мої броні · 1|moje rezerwacje · 1|my picks · 1/i }).click();
+  await second
     .getByRole('dialog')
     .getByRole('button', { name: /надіслати собі посилання|wyślij sobie link|send myself the link/i })
     .click();
-  await expect.poll(() => v2.evaluate(() => (window as unknown as { __copied: string[] }).__copied.length)).toBe(1);
-  const copied = await v2.evaluate(() => (window as unknown as { __copied: string[] }).__copied);
+  await expect.poll(() => second.evaluate(() => (window as unknown as { __copied: string[] }).__copied.length)).toBe(1);
+  const copied = await second.evaluate(() => (window as unknown as { __copied: string[] }).__copied);
   expect(copied[0]).toMatch(new RegExp(`/l/${token}/g/${key}$`));
+
+  await first.context().close();
   await ctx.close();
 });
 
-test('програш гонки пояснюється на місці позиції, кнопка зникає', async ({ page, browser }) => {
+test('програш гонки пояснюється аркушем, позиція стає взятою', async ({ page, browser }) => {
   const { link } = await setup(page, ['Кавомолка', 'Дошка']);
 
   const slow = await guest(browser, link);
   const fast = await guest(browser, link);
-  await fast.getByRole('listitem').filter({ hasText: 'Кавомолка' }).getByRole('button', { name: take }).click();
-  await expect(fast.getByText(yours)).toBeVisible();
+  await take(fast, 'Кавомолка');
 
   // Повільний гість ще бачить стару сторінку й тисне.
-  const card = slow.getByRole('listitem').filter({ hasText: 'Кавомолка' });
-  await card.getByRole('button', { name: take }).click();
-  await expect(card.getByRole('status')).toContainText(/поки ти дивився|gdy patrzyłeś|while you were looking/i);
-  await expect(card.getByRole('button', { name: take })).toHaveCount(0);
+  await card(slow, 'Кавомолка').getByRole('button', { name: takeBtn }).click();
+  const sheet = slow.getByRole('dialog');
+  await sheet.locator('input[name="guest_name"]').fill('Повільний');
+  await sheet.getByRole('button', { name: /^(забронювати|zarezerwuj|take it)$/i }).click();
+  await expect(sheet.getByRole('heading', { name: /щойно взяв хтось інший|właśnie wziął|just took/i })).toBeVisible();
+  await sheet.getByRole('button', { name: /повернутись до списку|wróć do listy|back to the list/i }).click();
 
-  // Вихід до вільних: одна вільна лишилась.
-  await card.getByRole('button', { name: /показати вільні · 1|pokaż wolne · 1|show available · 1/i }).click();
-  await expect(slow.getByRole('listitem').filter({ hasText: 'Кавомолка' })).toHaveCount(0);
-  await expect(slow.getByRole('listitem').filter({ hasText: 'Дошка' })).toBeVisible();
+  // Перечитана сторінка: «Кавомолки» серед вільних немає, «Дошка» лишилась.
+  await expect(card(slow, 'Кавомолка')).toHaveCount(0);
+  await expect(card(slow, 'Дошка').getByRole('button', { name: takeBtn })).toBeVisible();
+  await slow.context().close();
+  await fast.context().close();
 });
 
 test('«Усе вже розібрали», стеження й сліпе скидання власником', async ({ page, browser }) => {
   const { link } = await setup(page, ['Постіль']);
 
   const taker = await guest(browser, link);
-  await taker.getByRole('button', { name: take }).click();
-  await expect(taker.getByText(yours)).toBeVisible();
-  // Свої позначки не рахуються як «хтось інший»: нагорі — «з них твої».
-  await expect(taker.getByRole('heading', { name: /1 з них твої|1 z nich twoje|1 of them yours/i })).toBeVisible();
+  await take(taker, 'Постіль');
+  // Свої броні не рахуються як «хтось інший»: нагорі — «з них ваші».
+  await expect(taker.getByRole('heading', { name: /1 з них ваші|1 z tego twoje|1 by you/i })).toBeVisible();
 
   const watcher = await guest(browser, link);
   await expect(watcher.getByRole('heading', { name: /усе вже розібрали|wszystko już rozebrane|everything's been taken/i })).toBeVisible();
-  await expect(watcher.getByText('Постіль', { exact: true })).toBeVisible();
-  await watcher.getByRole('button', { name: /стежити за списком|obserwuj listę|watch this list/i }).click();
-  await expect(watcher.getByText(/стежиш за списком|obserwujesz listę|watching this list/i)).toBeVisible();
+  await expect(watcher.getByText('Постіль')).toBeVisible();
+  await watcher.getByRole('button', { name: /стежити за списком|obserwuj listę|follow this list/i }).click();
+  await expect(watcher.getByText(/ви стежите за списком|obserwujesz listę|following this list/i)).toBeVisible();
 
   // Власник скидає позицію наосліп: нічого не дізнається, лише «скинуто».
-  await page.getByRole('button', { name: /(змінити|zmień|edit).*Постіль/i }).click();
-  const dialog = await settledDialog(page);
-  await dialog.getByRole('button', { name: /скинути позицію|zresetuj pozycję|reset item/i }).click();
-  await page.getByRole('dialog').filter({ hasText: /цього не можна скасувати|nie da się cofnąć|can't be undone/i })
-    .getByRole('button', { name: /скинути позицію|zresetuj pozycję|reset item/i }).click();
-  await expect(dialog.getByText(/позицію скинуто|pozycję zresetowano|item reset/i)).toBeVisible();
+  const menu = await itemMenu(page, 'Постіль');
+  await menu.getByRole('button', { name: /^(змінити|zmień|edit)$/i }).click();
+  const sheet = page.getByRole('dialog').filter({ has: page.locator('input[name="title"]') });
+  await sheet.getByRole('button', { name: /скинути позицію|zresetuj pozycję|reset item/i }).click();
+  await page
+    .getByRole('dialog')
+    .filter({ has: page.getByRole('heading', { name: /скинути позицію «Постіль»|zresetować pozycję „Постіль”|reset “Постіль”/i }) })
+    .getByRole('button', { name: /скинути позицію|zresetuj pozycję|reset item/i })
+    .click();
+  await expect(sheet.getByText(/позицію скинуто|pozycję zresetowano|item reset/i)).toBeVisible();
 
   // Той, хто стежив, наступного разу бачить, що звільнилось.
   await watcher.reload();
-  await expect(watcher.getByText(/звільнилось — 1|zwolniło się — 1|1 freed up/i)).toBeVisible();
-  await expect(watcher.getByRole('button', { name: take })).toBeVisible();
+  await expect(watcher.getByText(/звільнилось — 1|zwolniło się — 1|1 available again/i)).toBeVisible();
+  await expect(card(watcher, 'Постіль').getByRole('button', { name: takeBtn })).toBeVisible();
 
-  // Гість, чию позначку скинуто, бачить позицію вільною.
+  // Гість, чию бронь скинуто, бачить позицію вільною.
   await taker.reload();
-  await expect(taker.getByText(yours)).toHaveCount(0);
-  await expect(taker.getByRole('button', { name: take })).toBeVisible();
+  await expect(card(taker, 'Постіль')).not.toContainText(yours);
+  await expect(card(taker, 'Постіль').getByRole('button', { name: takeBtn })).toBeVisible();
+  await taker.context().close();
+  await watcher.context().close();
 });
 
-test('гість типово бачить вільні, «Усі» поруч', async ({ page, browser }) => {
+test('гість типово бачить вільні, «Усі» поруч; чужа бронь — без імені й без дій', async ({ page, browser }) => {
   const { link } = await setup(page, ['Ваза', 'Лампа']);
   const a = await guest(browser, link);
-  await a.getByRole('listitem').filter({ hasText: 'Ваза' }).getByRole('button', { name: take }).click();
-  await expect(a.getByText(yours)).toBeVisible();
+  await take(a, 'Ваза');
 
   const b = await guest(browser, link);
-  const filters = b.getByRole('radiogroup', { name: /що показати|co pokazać|^show$/i });
-  await expect(filters.getByRole('radio', { name: /вільні 1|wolne 1|available 1/i })).toHaveAttribute('aria-checked', 'true');
-  await expect(b.getByRole('listitem').filter({ hasText: 'Ваза' })).toHaveCount(0);
-  await filters.getByRole('radio', { name: /усі 2|wszystkie 2|all 2/i }).click();
-  const taken = b.getByRole('listitem').filter({ hasText: 'Ваза' });
-  // Чужа позначка: без імені, без дати, без дії.
-  await expect(taken.getByText(/хтось уже взяв|ktoś już to wziął|someone has taken this/i)).toBeVisible();
-  await expect(taken.getByRole('button')).toHaveCount(0);
+  await expect(b.getByRole('radio', { name: /^(вільні|wolne|available) 1$/i })).toBeChecked();
+  await expect(card(b, 'Ваза')).toHaveCount(0);
+  await b.getByRole('radio', { name: /^(усі|wszystkie|all) 2$/i }).click();
+  const taken = card(b, 'Ваза');
+  await expect(taken).toContainText(/уже взяли|już wzięte|already taken/i);
+  await expect(taken).not.toContainText('Гість-e2e');
+  await expect(taken.getByRole('button', { name: takeBtn })).toHaveCount(0);
+  await a.context().close();
+  await b.context().close();
 });

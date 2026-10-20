@@ -6,7 +6,7 @@ import { EMAIL, PASSWORD, hasAccount, unique } from './helpers';
  * Каркас власника, «Мої списки», «Мої посилання» й «Налаштування» дизайну v2
  * (ROADMAP, «Дизайн v2», кроки 3а і 3в).
  *
- * Тег `@v2` — лише у v2-проєктах. Захист маршрутів перевіряється без акаунта;
+ * Захист маршрутів перевіряється без акаунта;
  * решта — з акаунтом, бо головна показує справжні списки.
  */
 
@@ -25,14 +25,14 @@ function inDays(n: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-test('екрани власника v2 без сесії ведуть на вхід із next', { tag: '@v2' }, async ({ page }) => {
+test('екрани власника v2 без сесії ведуть на вхід із next', async ({ page }) => {
   await page.goto('/lists');
   await expect(page).toHaveURL(/\/login\?next=%2Flists$/);
   await page.goto('/settings');
   await expect(page).toHaveURL(/\/login\?next=%2Fsettings$/);
 });
 
-test.describe('«Мої списки» v2 з акаунтом', { tag: '@v2' }, () => {
+test.describe('«Мої списки» v2 з акаунтом', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('новий список з датою зʼявляється серед найближчих; дубль назви — попередження, не заборона', async ({ page }) => {
@@ -100,11 +100,10 @@ test.describe('«Мої списки» v2 з акаунтом', { tag: '@v2' }, 
     await nav.getByRole('link', { name: /налаштування|ustawienia|settings/i }).click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/налаштування|ustawienia|settings/i);
-    await expect(page.locator('html')).toHaveAttribute('data-design', 'v2');
   });
 });
 
-test.describe('«Мої посилання» й «Налаштування» v2 з акаунтом', { tag: '@v2' }, () => {
+test.describe('«Мої посилання» й «Налаштування» v2 з акаунтом', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('посилання, створене зі списку, є в «Моїх посиланнях»; відкликане переходить у «Уже не діють»; видалене зникає', async ({

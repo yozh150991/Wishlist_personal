@@ -627,7 +627,7 @@ export default function GuestV2() {
   async function sendLink() {
     const k = storedKey(token) ?? key;
     if (!k || !data) return;
-    const url = personalLink(token, k, BASE);
+    const url = personalLink(token, k);
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({ title: data.title, url });

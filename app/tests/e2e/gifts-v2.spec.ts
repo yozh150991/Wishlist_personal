@@ -8,7 +8,7 @@ import { EMAIL, PASSWORD, hasAccount } from './helpers';
  * власних списків цього акаунта.
  */
 
-test.describe('«Я дарую» v2', { tag: '@v2' }, () => {
+test.describe('«Я дарую» v2', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('вкладка в навігації; власних списків серед подарунків немає', async ({ page }) => {

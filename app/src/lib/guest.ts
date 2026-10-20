@@ -87,14 +87,11 @@ export function ensureKey(token: string): string {
 }
 
 /**
- * Префікс гостьової адреси: `/s` — гостьова v1, `/l` — гостьова v2 (ADR-039).
- * Сторінка, що будує посилання, передає свій — гість лишається у своїй версії.
+ * Особисте посилання гостя: те саме посилання плюс його ключ. Завжди під
+ * `/l/…`; старі `/s/…/g/…` застосунок переводить туди ж (ADR-065).
  */
-export type GuestBase = '/s' | '/l';
-
-/** Особисте посилання гостя: те саме посилання плюс його ключ. */
-export function personalLink(token: string, key: string, base: GuestBase = '/s'): string {
-  return `${publicOrigin.replace(/\/$/, '')}${base}/${token}/g/${key}`;
+export function personalLink(token: string, key: string): string {
+  return `${publicOrigin.replace(/\/$/, '')}/l/${token}/g/${key}`;
 }
 
 /* ── «Стежити за списком» ─────────────────── */

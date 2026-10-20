@@ -439,7 +439,7 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 | `503 notify_not_configured` | бракує `SUPABASE_*`, `BREVO_API_KEY`, `VAPID_PRIVATE_KEY`, `MAIL_FROM` чи `APP_ORIGIN` — які саме, показує `/health` |
 | `500` | Supabase відхилив ключ чи недоступний |
 
-Посилання в push і листах ведуть у v2: `/lists/…?design=v2`, `/settings?design=v2#notifications`.
+Посилання в push і листах — адреси застосунку: `/lists/…`, `/settings#notifications` (без `?design=` з ADR-065).
 
 **Push** — Web Push: `POST` на адресу підписки з `Authorization: vapid t=<JWT ES256>,k=<публічний ключ>`, `Content-Encoding: aes128gcm`, `TTL: 86400`. Тіло — JSON `{title, body, url, tag}`, зашифроване для браузера (RFC 8291). Адреса — лише https на хостах `fcm.googleapis.com`, `*.push.services.mozilla.com`, `*.push.apple.com`, `*.notify.windows.com`; решта відкидається без запиту.
 

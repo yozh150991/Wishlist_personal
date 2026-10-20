@@ -5,10 +5,6 @@ import { EMAIL, PASSWORD, hasAccount } from './helpers';
 /**
  * Вхід, реєстрація й пароль дизайну v2 (ROADMAP, «Дизайн v2», крок 2).
  *
- * Тег `@v2` — ці тести йдуть лише у v2-проєктах (`chromium-v2`, `mobile-v2`),
- * де `wl.design = v2` уже в сховищі. Перемикач версії на екрані входу —
- * `@both`: він мусить працювати з обох боків.
- *
  * Більшість перевірок не потребує бази: валідація, вимоги до пароля й
  * переходи між екранами живуть на клієнті. Вхід паролем і пауза після
  * трьох невдалих спроб — з акаунтом.
@@ -22,10 +18,9 @@ const submit = (page: Page, name: RegExp) => page.locator('button[type="submit"]
 
 const SIGN_IN = /^(увійти|zaloguj się|sign in)$/i;
 
-test.describe('вхід v2', { tag: '@v2' }, () => {
+test.describe('вхід v2', () => {
   test('помилка під полем на виході з поля; кнопка не блокується й веде до першого хибного поля', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('html')).toHaveAttribute('data-design', 'v2');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       /твій список лишається твоїм|twoja lista zostaje twoja|your list stays yours/i,
     );
@@ -133,28 +128,7 @@ test.describe('вхід v2', { tag: '@v2' }, () => {
   });
 });
 
-/**
- * Вибір версії ще до входу (ADR-039, п. 4): посилання під формою веде на той
- * самий екран в іншій версії й не губить `next`. Іде в усіх проєктах — у
- * v1-проєктах перемикаємо на v2, у v2-проєктах навпаки.
- */
-test('перемикач версії на екрані входу веде на той самий екран і зберігає next', { tag: '@both' }, async ({ page }) => {
-  await page.goto('/login?next=%2Fshares');
-  const html = page.locator('html');
-  const before = await html.getAttribute('data-design');
-  const after = before === 'v2' ? 'v1' : 'v2';
-
-  await page
-    .getByRole('link', { name: /новий вигляд|nowy wygląd|new look|старого вигляду|starego wyglądu|old look/i })
-    .click();
-  await expect(html).toHaveAttribute('data-design', after);
-  await expect(page).toHaveURL(/\/login\?next=%2Fshares$/);
-  // Вибір запамʼятовано: F5 лишає нову версію.
-  await page.reload();
-  await expect(html).toHaveAttribute('data-design', after);
-});
-
-test.describe('вхід v2 з акаунтом', { tag: '@v2' }, () => {
+test.describe('вхід v2 з акаунтом', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('вхід паролем веде на «Мої списки» з «Вітаю!», вихід повертає на вхід', async ({ page }) => {
@@ -163,7 +137,6 @@ test.describe('вхід v2 з акаунтом', { tag: '@v2' }, () => {
     await passwordBox(page).fill(PASSWORD!);
     await submit(page, SIGN_IN).click();
     await expect(page).toHaveURL(/\/lists$/);
-    await expect(page.locator('html')).toHaveAttribute('data-design', 'v2');
     // Стрічка вітання — лише після входу з екрана входу (A4).
     await expect(page.getByRole('status').filter({ hasText: /вітаю|witaj|welcome/i })).toBeVisible();
 
@@ -188,4 +161,30 @@ test.describe('вхід v2 з акаунтом', { tag: '@v2' }, () => {
     // Поля не очищаються: людина повертається до свого тексту.
     await expect(emailBox(page)).toHaveValue(EMAIL!);
   });
+});
+
+test('форми входу й реєстрації впізнає менеджер паролів', async ({ page }) => {
+  // Менеджер паролів шукає <form> із полями username і current-password
+  // (або new-password) та кнопкою submit. Без цього він не пропонує зберегти пароль.
+  await page.goto('/login');
+  const login = page.locator('form').filter({ has: page.locator('input[autocomplete="current-password"]') });
+  await expect(login).toHaveCount(1);
+  await expect(login.locator('input[autocomplete="username"]')).toHaveCount(1);
+  await expect(login.locator('button[type="submit"]')).toHaveCount(1);
+
+  await page.goto('/register');
+  const register = page.locator('form').filter({ has: page.locator('input[autocomplete="new-password"]') });
+  await expect(register).toHaveCount(1);
+  await expect(register.locator('input[autocomplete="username"]')).toHaveCount(1);
+  await expect(register.locator('button[type="submit"]')).toHaveCount(1);
+});
+
+test('мову можна вибрати до входу, і вибір переживає перехід і F5', async ({ page }) => {
+  await page.goto('/register');
+  await page.getByRole('combobox', { name: /мова|język|language/i }).selectOption('pl');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'pl');
+  await page.goto('/login');
+  await expect(page.locator('button[type="submit"]')).toHaveText(/zaloguj się/i);
+  await page.reload();
+  await expect(page.locator('button[type="submit"]')).toHaveText(/zaloguj się/i);
 });

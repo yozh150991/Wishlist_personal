@@ -3,7 +3,7 @@ import { useAuth } from '../../../lib/auth';
 import { useI18n, LOCALES } from '../../../lib/i18n';
 import type { Locale } from '../../../lib/i18n';
 import { SCHEMES, THEMES, useTheme } from '../../../lib/theme';
-import type { Design, Scheme, Theme } from '../../../lib/theme';
+import type { Scheme, Theme } from '../../../lib/theme';
 import { promptInstall, useInstallState } from '../../../lib/install';
 import { useMediaQuery } from '../../../lib/media';
 import { errorText } from '../../../lib/errors';
@@ -64,7 +64,7 @@ function Choice<T extends string>({
 export default function SettingsV2() {
   const { t, locale, setLocale } = useI18n();
   const { session } = useAuth();
-  const { theme, scheme, highContrast, systemContrast, design, setTheme, chooseScheme, setHighContrast, setDesign } =
+  const { theme, scheme, highContrast, systemContrast, setTheme, chooseScheme, setHighContrast } =
     useTheme();
   const install = useInstallState();
   const desktop = useMediaQuery(DESKTOP);
@@ -87,16 +87,6 @@ export default function SettingsV2() {
   };
   const themeLabel = (v: Theme) =>
     v === 'light' ? t('settings.themeLight') : v === 'dark' ? t('settings.themeDark') : t('settings.themeSystem');
-
-  /**
-   * Інша версія — інша таблиця маршрутів, і адреси в них не зобовʼязані
-   * збігатися. Тож перемикання — на корінь із перезавантаженням (ADR-032).
-   */
-  function switchDesign(next: Design) {
-    if (next === design) return;
-    setDesign(next);
-    window.location.assign('/');
-  }
 
   return (
     <main className="v2-page">
@@ -195,24 +185,6 @@ export default function SettingsV2() {
         </section>
 
         <MyDataV2 />
-
-        <section className="v2-settings__card" aria-labelledby="v2-set-design">
-          <h2 className="v2-sr" id="v2-set-design">
-            {t('settings.design.title')}
-          </h2>
-          <Choice
-            name="v2-design"
-            legend={t('settings.design.title')}
-            options={[
-              { value: 'v1' as Design, label: t('settings.design.v1') },
-              { value: 'v2' as Design, label: t('settings.design.v2') },
-            ]}
-            value={design}
-            onChange={switchDesign}
-            testId="design"
-          />
-          <p className="v2-hint v2-hint--start">{t('settings.designHint')}</p>
-        </section>
 
         <section className="v2-settings__card v2-settings__card--wide" aria-labelledby="v2-set-out">
           <h2 className="v2-settings__label" id="v2-set-out">

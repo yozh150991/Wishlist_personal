@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { addItem, createList, hasAccount, settledDialog, signIn, unique } from './helpers';
+import { addItem, createList, createShare, hasAccount, signIn, unique } from './helpers';
 
 /**
  * Термін посилання — доба власника (ADR-037). Власник і гість живуть у різних
@@ -22,19 +22,7 @@ async function shareUntil(page: Page, until: string): Promise<string | null> {
   await signIn(page);
   await createList(page, unique('Expiry'));
   await addItem(page, 'Гірлянда');
-  await page.getByRole('button', { name: /^вибрати$|^zaznacz$|^select$/i }).click();
-  await page.getByRole('checkbox', { name: /Гірлянда/ }).check();
-  await page.getByRole('button', { name: /створити посилання|utwórz link|create link/i }).click();
-
-  const dialog = await settledDialog(page);
-  await dialog.getByLabel(/^заголовок для гостей$|heading for guests|nagłówek/i).fill(unique('Термін'));
-  if (until) await dialog.getByLabel(/^(діє до|ważny do|valid until)$/i).fill(until);
-  await dialog.getByRole('button', { name: /створити посилання|utwórz link|create link/i }).click();
-
-  const link = dialog.locator('#shareLink');
-  const refused = dialog.getByText(/дата вже минула|data już minęła|date has passed/i);
-  await expect(link.or(refused)).toBeVisible();
-  return (await link.count()) ? link.inputValue() : null;
+  return createShare(page, ['Гірлянда'], unique('Термін'), { expires: until || undefined });
 }
 
 async function guestIn(browser: Browser, link: string, timezoneId: string): Promise<Page> {
@@ -54,7 +42,7 @@ test.describe('власник у Києві', () => {
 
     const guest = await guestIn(browser, link!, 'America/Vancouver');
     // У Ванкувері в цей момент 13:59 — але гість має бачити 23:59 за Києвом.
-    await expect(guest.locator('.guest__valid')).toHaveText(
+    await expect(guest.locator('.v2-guest__valid')).toHaveText(
       /^(діє до|ważny do|valid until) .*20.*, (23:59|11:59\sPM) (за києвом|czasu kijowskiego|kyiv time)$/i,
     );
     await guest.context().close();
@@ -69,14 +57,14 @@ test.describe('власник у Києві', () => {
     const link = await shareUntil(page, dayIn('Europe/Kyiv'));
     expect(link).not.toBeNull();
     const guest = await guestIn(browser, link!, 'Europe/Kyiv');
-    await expect(guest.locator('.guest__valid')).toHaveText(/(23:59|11:59\sPM)/);
+    await expect(guest.locator('.v2-guest__valid')).toHaveText(/(23:59|11:59\sPM)/);
     await guest.context().close();
   });
 
   test('без терміну гість не бачить рядка про термін', async ({ page, browser }) => {
     const link = await shareUntil(page, '');
     const guest = await guestIn(browser, link!, 'America/Vancouver');
-    await expect(guest.locator('.guest__valid')).toHaveCount(0);
+    await expect(guest.locator('.v2-guest__valid')).toHaveCount(0);
     await guest.context().close();
   });
 });
@@ -87,7 +75,7 @@ test.describe('власник у Токіо', () => {
   test('зона без власного рядка — назва від браузера в дужках', async ({ page, browser }) => {
     const link = await shareUntil(page, `${nextYear}-12-20`);
     const guest = await guestIn(browser, link!, 'Europe/Warsaw');
-    await expect(guest.locator('.guest__valid')).toHaveText(/, (23:59|11:59\sPM) \(.+\)$/);
+    await expect(guest.locator('.v2-guest__valid')).toHaveText(/, (23:59|11:59\sPM) \(.+\)$/);
     await guest.context().close();
   });
 });

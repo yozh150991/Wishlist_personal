@@ -6,7 +6,7 @@ import { EMAIL, PASSWORD, hasAccount, unique } from './helpers';
  * «Після події», архів і щорічні свята дизайну v2 (ROADMAP, «Дизайн v2»,
  * кроки 4а і 4в; потоки M, S3, U; ADR-045, ADR-047).
  *
- * Тег `@v2` — лише у v2-проєктах. Правила дат, «Пізніше» й копій перевіряє без
+ * Правила дат, «Пізніше» й копій перевіряє без
  * браузера after-event.spec.ts; тут — те, що бачить людина, на справжній базі.
  */
 
@@ -63,7 +63,7 @@ async function setEventDate(page: Page, date: string) {
   await expect(dialog).toHaveCount(0);
 }
 
-test.describe('після свята й архів v2', { tag: '@v2' }, () => {
+test.describe('після свята й архів v2', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('«Як минуло свято?»: отримане позначає власник, «Ще хочу» переносить копії', async ({ page }) => {
@@ -188,7 +188,7 @@ test.describe('після свята й архів v2', { tag: '@v2' }, () => {
   });
 });
 
-test.describe('щорічні свята v2', { tag: '@v2' }, () => {
+test.describe('щорічні свята v2', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   const yearly = (page: Page) => page.getByRole('switch', { name: /повторювати щороку|powtarzaj co roku|repeat every year/i });
@@ -273,7 +273,7 @@ test.describe('щорічні свята v2', { tag: '@v2' }, () => {
   });
 });
 
-test.describe('подяка гостям v2', { tag: '@v2' }, () => {
+test.describe('подяка гостям v2', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('«Подякувати гостям»: зберегти, змінити з меню, прибрати (ADR-059)', async ({ page }) => {

@@ -1,35 +1,22 @@
 import { supabase, publicOrigin } from './supabase';
-import type { Design } from './theme';
 
 /**
- * Кроки автентифікації, спільні для обох версій дизайну (ADR-039, ADR-042).
- *
- * Екрани входу в v1 і v2 різні, а листи, адреси повернення й Google — ті
- * самі: шаблони листів Supabase одні на проєкт, Redirect URLs теж. Тому все,
- * що не розмітка, живе тут.
+ * Кроки автентифікації поза розміткою (ADR-042): адреси повернення з листів і
+ * Google, розбір помилок Supabase, пам'ять пошти між екранами.
  *
  * Кодів із пошти немає (ADR-042): у листах акаунта лише посилання —
  * підтвердження пошти й скидання пароля.
  */
 
 /**
- * Адреса повернення з листа чи з Google.
- *
- * Несе `?design=` — інлайновий скрипт у `<head>` читає його до першого
- * рендера, тож лист, відкритий на іншому пристрої, потрапляє в ту версію, з
- * якої його замовили (ADR-039, п. 5). Параметр не заважає PKCE: Supabase
- * дописує свій `code` поруч, а скрипт знімає лише `design`.
+ * Адреса повернення з листа чи з Google. Supabase дописує свій `code` поруч
+ * (PKCE).
  *
  * Redirect URLs проєкту Supabase мають пускати адреси з параметрами —
  * шаблон `https://<адреса>/**` це робить (DEPLOY.md, розділ 4).
  */
-export function authReturn(
-  path: string,
-  design: Design,
-  opts: { next?: string; from?: 'confirm' } = {},
-): string {
+export function authReturn(path: string, opts: { next?: string; from?: 'confirm' } = {}): string {
   const url = new URL(path, publicOrigin);
-  url.searchParams.set('design', design);
   if (opts.next && opts.next !== '/lists') url.searchParams.set('next', opts.next);
   // Звідки людина прийшла: екран входу v2 каже «пошту підтверджено», якщо
   // сесія з посилання не створилась (інший браузер, PKCE — DEPLOY.md).
@@ -44,10 +31,10 @@ export function authReturn(
  */
 export const googleEnabled = import.meta.env.VITE_AUTH_GOOGLE === '1';
 
-export async function signInWithGoogle(design: Design, next?: string) {
+export async function signInWithGoogle(next?: string) {
   return supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: authReturn('/login', design, { next }) },
+    options: { redirectTo: authReturn('/login', { next }) },
   });
 }
 
@@ -143,17 +130,6 @@ const MAILBOXES: Record<string, string> = {
 export function mailboxUrl(email: string): string | null {
   const domain = email.trim().toLowerCase().split('@')[1];
   return (domain && MAILBOXES[domain]) || null;
-}
-
-/**
- * Посилання на цей самий екран в іншій версії дизайну. Повне перезавантаження
- * через `?design=` — той самий механізм, що й аварійний вихід (ADR-032):
- * параметр читає скрипт у `<head>`, решта параметрів (`next`) лишається.
- */
-export function designSwitchHref(pathname: string, search: string, target: Design): string {
-  const q = new URLSearchParams(search);
-  q.set('design', target);
-  return `${pathname}?${q.toString()}`;
 }
 
 /** Найпростіша перевірка форми адреси — те, що можна сказати людині до запиту. */

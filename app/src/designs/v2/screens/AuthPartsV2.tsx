@@ -1,11 +1,10 @@
 import { forwardRef, useEffect, useId, useState } from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { AlertCircle, CalendarDays, Check, ChevronLeft, Eye, EyeOff, TriangleAlert } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useI18n, LOCALES } from '../../../lib/i18n';
 import type { Locale } from '../../../lib/i18n';
-import { designSwitchHref } from '../../../lib/authFlow';
 import { dateTextToIso, isoToDateText, maskDateText } from '../../../lib/dateText';
 import type { EmailProblem } from '../../../lib/authFlow';
 
@@ -30,7 +29,6 @@ const LANGUAGE: Record<Locale, string> = { uk: 'Українська', pl: 'Pols
  */
 export function AuthFrameV2({ children }: { children: ReactNode }) {
   const { t, locale, setLocale } = useI18n();
-  const { pathname, search } = useLocation();
   const id = useId();
   return (
     <div className="v2-auth">
@@ -56,10 +54,6 @@ export function AuthFrameV2({ children }: { children: ReactNode }) {
       <main className="v2-auth__main">
         <div className="v2-auth__col">{children}</div>
       </main>
-      <p className="v2-auth__design">
-        {/* Звичайне <a>: інша версія — інша таблиця маршрутів (ADR-039, п. 4). */}
-        <a href={designSwitchHref(pathname, search, 'v1')}>{t('design.backToV1Link')}</a>
-      </p>
     </div>
   );
 }

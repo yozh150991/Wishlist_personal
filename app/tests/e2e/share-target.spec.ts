@@ -53,14 +53,8 @@ test.describe('розбір поширеного', () => {
   });
 });
 
-test('/add у v1 — місток у новий вигляд із тим самим поширеним', async ({ page }) => {
+test('/add без сесії — вхід, а поширене чекає в next', async ({ page }) => {
   await page.goto('/add?title=%D0%9B%D0%B0%D0%BC%D0%BF%D0%B0&url=https%3A%2F%2Fshop.ua%2Flampa');
-  await expect(page.locator('html')).toHaveAttribute('data-design', 'v1');
-  const go = page.getByRole('link', { name: /перемкнути й додати|przełącz i dodaj|switch and add/i });
-  await expect(go).toHaveAttribute('href', /^\/add\?.*url=https%3A%2F%2Fshop\.ua%2Flampa.*design=v2/);
-  await go.click();
-  // Новий вигляд, вхід — і поширене чекає в `next`.
-  await expect(page.locator('html')).toHaveAttribute('data-design', 'v2');
   await expect(page).toHaveURL(/\/login\?next=%2Fadd%3F.*shop\.ua/);
 });
 
@@ -81,7 +75,7 @@ async function newList(page: Page, title: string) {
 
 const card = (page: Page, title: string) => page.getByRole('listitem').filter({ hasText: title });
 
-test.describe('«Додати в Wishlist» з акаунтом', { tag: '@v2' }, () => {
+test.describe('«Додати в Wishlist» з акаунтом', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   // Магазин «не віддав опису», хоч би який парсер стояв.

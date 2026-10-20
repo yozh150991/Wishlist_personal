@@ -2,10 +2,9 @@ import { VARIANTS_MAX, VARIANT_LABEL_MAX, VARIANT_VALUE_MAX } from './types';
 import type { ItemVariant } from './types';
 
 /**
- * Ознаки товару перед відправкою (ADR-030) — спільно для обох версій дизайну.
- * Редактори в кожної версії свої (`components/VariantsField.tsx` у v1,
- * `designs/v2/screens/ItemSheetV2.tsx` у v2), а межі й перевірка — одні,
- * ті самі, що в check-обмеженні `items_variants_shape`.
+ * Ознаки товару перед відправкою (ADR-030). Редактор —
+ * `designs/v2/screens/ItemSheetV2.tsx`; межі й перевірка — ті самі, що в
+ * check-обмеженні `items_variants_shape`.
  */
 
 /**

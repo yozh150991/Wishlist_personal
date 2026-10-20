@@ -59,11 +59,11 @@ async function shareFreshList(page: Page) {
 
 const askHeading = /сказати, коли настане час|powiedzieć, kiedy nadejdzie czas|heads-up when it's time/i;
 
-test.describe('сповіщення v2 з акаунтом', { tag: '@v2' }, () => {
+test.describe('сповіщення v2 з акаунтом', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
   test('запит після посилання, «Не зараз», увімкнення листом і вибір каналів у Налаштуваннях', async ({ page }, info) => {
-    test.skip(info.project.name !== 'chromium-v2', 'Налаштування одні на акаунт — лише один проєкт');
+    test.skip(info.project.name !== 'chromium', 'Налаштування одні на акаунт — лише один проєкт');
     await signInV2(page);
     await ensureOff(page);
     try {

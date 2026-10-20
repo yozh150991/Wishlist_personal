@@ -1,12 +1,11 @@
 import { test, expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { addItem, createList, createShare, hasAccount, signIn, unique } from './helpers';
+import { addItem, createList, hasAccount, shareLink, signIn, unique } from './helpers';
 
 /**
  * Гостьова v2 під `/l/…` (крок 5а; ADR-041, ADR-053; потік E).
  *
- * Версію гостьової визначає адреса, а не сховище (ADR-039, п. 11), тож
- * власника тут готують наявні помічники, а гості відкривають `/l/…`.
+ * Власника готують спільні помічники, гості відкривають `/l/…`.
  * Кожен гість — окремий browser context, як рідні на різних телефонах.
  *
  * Головне, що стережемо: підпис гостя й позначку «Куплено» бачить лише він
@@ -34,14 +33,11 @@ test.describe('з акаунтом власника', () => {
     await signIn(page);
     await createList(page, unique('Guest v2'));
     for (const name of ['Сковорода', 'Рушники']) await addItem(page, name);
-    const sLink = await createShare(page, ['Сковорода', 'Рушники'], unique('Гостям'));
-    await page.keyboard.press('Escape');
-    const link = sLink.replace('/s/', '/l/');
+    const link = await shareLink(page, ['Сковорода', 'Рушники'], unique('Гостям'));
     const token = link.split('/l/')[1]!;
 
     // Гість A: «Беру» → аркуш із підписом → код після першої броні.
     const a = await guest(browser, link);
-    await expect(a.locator('html')).toHaveAttribute('data-design', 'v2');
     await card(a, 'Сковорода').getByRole('button', { name: takeBtn }).click();
     const sheet = a.getByRole('dialog');
     await expect(sheet.getByRole('heading', { name: /сковорода/i })).toBeVisible();
@@ -120,8 +116,7 @@ test.describe('з акаунтом власника', () => {
     await signIn(page);
     await createList(page, unique('Guest v2 S'));
     for (const name of ['Чайник', 'Тарілки']) await addItem(page, name);
-    const link = (await createShare(page, ['Чайник', 'Тарілки'], unique('Гостям'))).replace('/s/', '/l/');
-    await page.keyboard.press('Escape');
+    const link = await shareLink(page, ['Чайник', 'Тарілки'], unique('Гостям'));
 
     // Посилання на магазин підставляємо у відповідь: парсер і форма тут ні до чого.
     const shopUrl = 'https://shop.example.com/e2e';
@@ -179,13 +174,13 @@ test.describe('з акаунтом власника', () => {
   });
 });
 
-test('мертве посилання під /l/ — один екран і доля броней', { tag: '@both' }, async ({ page }) => {
+test('мертве посилання під /l/ — один екран і доля броней', async ({ page }) => {
   await page.goto('/l/e2e-nonexistent-token');
   await expect(page.getByRole('heading', { name: /більше не працює|już nie działa|no longer works/i })).toBeVisible();
   await expect(page.getByText(/бронь знято|rezerwację zdjęto|pick was released/i)).toBeVisible();
 });
 
-test('архівний список під /l/ — позиції видно, бронювати ні (ADR-058)', { tag: '@both' }, async ({ page }) => {
+test('архівний список під /l/ — позиції видно, бронювати ні (ADR-058)', async ({ page }) => {
   // Відповідь бази підставляємо: що архів закриває бронь на сервері, стереже pgTAP 18.
   const item = (id: string, title: string) => ({
     id, title, url: null, price: 120, currency: 'PLN', quantity: 1, priority: 'medium', note: null,
@@ -213,7 +208,7 @@ test('архівний список під /l/ — позиції видно, б
   await expect(page.getByRole('button', { name: /уже маю броні|mam już rezerwacje|already have picks/i })).toHaveCount(0);
 });
 
-test('подяка власника на /l/ — видно всім, з переносами рядків (ADR-059)', { tag: '@both' }, async ({ page }) => {
+test('подяка власника на /l/ — видно всім, з переносами рядків (ADR-059)', async ({ page }) => {
   await page.route('**/rpc/get_guest_list', (route) =>
     route.fulfill({
       json: {
@@ -233,7 +228,7 @@ test('подяка власника на /l/ — видно всім, з пер�
   await expect(thanks).toContainText('До зустрічі');
 });
 
-test('«Поскаржитись» на /l/ — причина, коментар, подяка; власнику кнопки немає (ADR-061)', { tag: '@both' }, async ({ page }) => {
+test('«Поскаржитись» на /l/ — причина, коментар, подяка; власнику кнопки немає (ADR-061)', async ({ page }) => {
   const body = {
     title: 'Виграй айфон', message: null, currency: 'PLN', event_date: null,
     expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
@@ -272,7 +267,7 @@ test('«Поскаржитись» на /l/ — причина, коментар
   await expect(page.getByRole('button', { name: /^(поскаржитись|zgłoś|report)$/i })).toHaveCount(0);
 });
 
-test('спільний збір на /l/ — відкрити, долучитися; власник збору не бачить (ADR-063)', { tag: '@both' }, async ({ page }) => {
+test('спільний збір на /l/ — відкрити, долучитися; власник збору не бачить (ADR-063)', async ({ page }) => {
   const base = (id: string, title: string, price: number | null) => ({
     id, title, url: null, price, currency: 'PLN', quantity: 1, priority: 'medium', note: null,
     variants: [], image_url: null, status: 'active', created_at: '2026-10-01T10:00:00Z', section_id: null,

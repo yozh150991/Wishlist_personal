@@ -37,12 +37,11 @@ export type ShareInput = {
 };
 
 /**
- * Посилання для гостей. v2 роздає гостьову v2 під `/l/…` (крок 5г, ADR-057);
- * екрани v1 до свого прибирання (крок 9) — гостьову v1 під `/s/…`. Роздані
- * раніше `/s/…` працюють і далі: токен той самий (ADR-039, п. 3).
+ * Посилання для гостей — під `/l/…` (ADR-057). Роздані раніше `/s/…` працюють
+ * і далі: застосунок переводить їх на `/l/…` з тим самим токеном (ADR-065).
  */
-export function shareUrl(token: string, base: '/l' | '/s' = '/l'): string {
-  return `${publicOrigin.replace(/\/$/, '')}${base}/${token}`;
+export function shareUrl(token: string): string {
+  return `${publicOrigin.replace(/\/$/, '')}/l/${token}`;
 }
 
 export async function createShare(input: ShareInput): Promise<Share> {
@@ -81,6 +80,7 @@ export async function createShare(input: ShareInput): Promise<Share> {
   return data as Share;
 }
 
+/** Запасний шлях «Моїх посилань»: без назви списку, якщо сервер не прийме вкладення. */
 export async function fetchShares(): Promise<ShareWithCount[]> {
   const { data, error } = await supabase
     .from('shares')
@@ -231,12 +231,6 @@ function rpcError(error: { message?: string; code?: string } | null): Error {
   return new Error(error?.message || 'unknown');
 }
 
-export async function fetchSharedList(token: string, key: string | null): Promise<SharedList> {
-  const { data, error } = await supabase.rpc('get_shared_list', { p_token: token, p_key: key });
-  if (error) throw rpcError(error);
-  return normalizeShared(data);
-}
-
 /**
  * Гостьова v2 (ADR-053): те саме, що `get_shared_list`, плюс підпис і пошта
  * гостя в `guest` — лише для його ключа. Власнику `guest` приходить null.
@@ -269,28 +263,6 @@ export async function registerView(token: string): Promise<void> {
 }
 
 export type ClaimResult = { taken_qty: number; mine_qty: number; code: string };
-
-/**
- * «Я візьму це». `quantity` — підсумкова кількість цього гостя, не приріст:
- * сервер робить upsert і рахує межу як «чужі позначки + твоя нова».
- * Помилки, які сторінка показує по-людськи: `not_enough_left` (гонку
- * програно), `reservations_disabled`.
- */
-export async function claimItem(
-  token: string,
-  itemId: string,
-  key: string,
-  quantity = 1,
-): Promise<ClaimResult> {
-  const { data, error } = await supabase.rpc('claim_item', {
-    p_token: token,
-    p_item_id: itemId,
-    p_key: key,
-    p_quantity: quantity,
-  });
-  if (error) throw rpcError(error);
-  return data as ClaimResult;
-}
 
 export type ClaimV2Result = ClaimResult & { name: string | null; email: string | null };
 

@@ -19,12 +19,12 @@
     <meta name="theme-color" content="#221f1b" media="(prefers-color-scheme: dark)" />
     <title>Wishlist</title>
     <script>
-      // Схема, тема й версія дизайну застосовуються до першого рендера, щоб не
-      // блимав чужий вигляд. Усі три атрибути ставляться завжди: токени лежать
-      // під [data-scheme][data-theme], і без пари селектор не влучить, а шар v2
-      // чіпляється за [data-design]. Це скорочене правило з lib/appearance.ts:
-      // висока контрастність (своя чи системна) дає Вугіль, інакше — свій смак.
-      // Оформлення списку тут не ставиться: його знає лише сторінка списку.
+      // Схема й тема застосовуються до першого рендера, щоб не блимав чужий
+      // вигляд. Обидва атрибути ставляться завжди: токени лежать під
+      // [data-scheme][data-theme], і без пари селектор не влучить. Це скорочене
+      // правило з lib/appearance.ts: висока контрастність (своя чи системна)
+      // дає Вугіль, інакше — свій смак. Оформлення списку тут не ставиться:
+      // його знає лише сторінка списку.
       try {
         var d = document.documentElement.dataset;
         var t = localStorage.getItem('wl.theme') || 'system';
@@ -36,29 +36,18 @@
           matchMedia('(prefers-contrast: more)').matches;
         d.scheme = hc ? 'vuhil'
           : /^(slyva|polotno|cytrus|nich)$/.test(s || '') ? s : 'sage';
-        // Усталена версія — v2 (ADR-052). ?design=v1 — аварійний вихід на
-        // стару: v2 має власні екрани, тож перемкнутися зсередини не буде
-        // чим, якщо вона впаде на першому рендері. Тут це працює ще до React.
-        // Параметр одразу прибираємо з адреси, щоб він не поїхав далі в
-        // чужому посиланні.
-        var u = new URL(location.href);
-        var q = u.searchParams.get('design');
-        if (q === 'v1' || q === 'v2') {
-          localStorage.setItem('wl.design', q);
-          u.searchParams.delete('design');
-          history.replaceState(null, '', u.pathname + u.search + u.hash);
+        // Версії дизайну більше немає (ADR-065): старий вибір не потрібен, а
+        // `?design=` зі старих листів і push знімаємо з адреси до React.
+        localStorage.removeItem('wl.design');
+        var q = new URLSearchParams(location.search);
+        if (q.has('design')) {
+          q.delete('design');
+          var rest = q.toString();
+          history.replaceState(history.state, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
         }
-        // Гостьова адреса сама каже, чия вона: /s/… — v1, /l/… — v2. Вибір
-        // власника в сховищі тут не діє — у гостя цього сховища немає
-        // (ADR-039). Те саме правило — designOfPath() у lib/theme.tsx.
-        d.design = /^\/s\//.test(location.pathname) ? 'v1'
-          : /^\/l\//.test(location.pathname) ? 'v2'
-          : localStorage.getItem('wl.design') === 'v1' ? 'v1' : 'v2';
       } catch (_) {
         document.documentElement.dataset.theme = 'light';
         document.documentElement.dataset.scheme = 'sage';
-        document.documentElement.dataset.design =
-          /^\/s\//.test(location.pathname) ? 'v1' : 'v2';
       }
     </script>
   </head>

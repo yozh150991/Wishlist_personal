@@ -14,10 +14,6 @@ export type { Scheme, Theme };
  * `scheme`       — схема смаку: Шавлія (усталена), Слива, Полотно, Цитрус, Ніч.
  * `highContrast` — тумблер доступності, єдиний вхід у Вугіль. Не перезаписує
  *                  `scheme`: вимкнув — повернувся до свого смаку.
- * `design`       — версія дизайну, яку обрала людина: v1 або v2 (ADR-032).
- *                  Гостьова адреса її перекриває: `/s/…` — завжди v1, `/l/…` —
- *                  завжди v2 (ADR-039). Тому `data-design` на <html> — це
- *                  версія екрана, що зараз показаний, а не вибір у сховищі.
  * `surface`      — де глядач зараз: свої екрани, гостьова чи превʼю гостьової.
  *
  * Що з цього стане атрибутами `data-scheme` / `data-theme` / `data-appearance`,
@@ -32,17 +28,11 @@ export type { Scheme, Theme };
  * Гість акаунта не має: у нього в localStorage живуть **лише** тема й контраст.
  * Схеми гість не обирає — він бачить схему власника й оформлення списку, і
  * жодного ендпоінта, що писав би вигляд від гостя, не існує.
- *
- * Версія дизайну в профіль не їде і лишається в браузері (ADR-032).
  */
-
-export type Design = 'v1' | 'v2';
-export const DESIGNS: readonly Design[] = ['v1', 'v2'];
 
 const THEME_KEY = 'wl.theme';
 const SCHEME_KEY = 'wl.scheme';
 const CONTRAST_KEY = 'wl.contrast';
-const DESIGN_KEY = 'wl.design';
 
 type Value = {
   theme: Theme;
@@ -50,7 +40,6 @@ type Value = {
   highContrast: boolean;
   /** Система просить посилений контраст — Вугіль увімкнено за неї. */
   systemContrast: boolean;
-  design: Design;
   /** Що зараз стоїть на <html>. */
   resolved: Resolved;
   setTheme: (t: Theme) => void;
@@ -64,17 +53,10 @@ type Value = {
    */
   chooseScheme: (s: Scheme) => void;
   setHighContrast: (on: boolean) => void;
-  setDesign: (d: Design) => void;
   setSurface: (s: Surface) => void;
-  /** Версія, яку диктує адреса (`useRouteDesign`), або null — тоді діє вибір. */
-  setRouteDesign: (d: Design | null) => void;
 };
 
 const Ctx = createContext<Value | null>(null);
-
-function isDesign(v: unknown): v is Design {
-  return v === 'v1' || v === 'v2';
-}
 
 /** Читання зі сховища ніколи не валить застосунок: приватний режим може кинути. */
 function read<T>(key: string, guard: (v: unknown) => v is T, fallback: T): T {
@@ -119,49 +101,6 @@ function initialSchemeAndContrast(): { scheme: Scheme; highContrast: boolean } {
   };
 }
 
-/**
- * Версія дизайну на старті: спершу адреса, потім сховище.
- *
- * `?design=v1` — аварійний вихід із v2 (ADR-032). Скрипт у `<head>` прибирає
- * параметр з адреси одразу після читання, тож сюди він доходить лише тоді,
- * коли скрипт не відпрацював.
- */
-function initialDesign(): Design {
-  try {
-    const q = new URLSearchParams(window.location.search).get('design');
-    if (isDesign(q)) {
-      write(DESIGN_KEY, q);
-      return q;
-    }
-  } catch {
-    /* адреса без параметрів або заборонене сховище — просто йдемо далі */
-  }
-  // Усталена — v2 (ADR-052); v1 лишається тим, хто обрав її сам.
-  return read(DESIGN_KEY, isDesign, 'v2');
-}
-
-/**
- * Гостьова адреса сама каже, чия вона: `/s/…` — v1, `/l/…` — v2 (ADR-039,
- * п. 2–3). Для решти адрес — null, і діє вибір людини.
- *
- * Те саме правило повторює інлайновий скрипт у `index.html` — до першого
- * рендера, щоб гостьова не блимнула чужою версією. Змінюєш тут — зміни й там.
- */
-export function designOfPath(pathname: string): Design | null {
-  if (/^\/s\//.test(pathname)) return 'v1';
-  if (/^\/l\//.test(pathname)) return 'v2';
-  return null;
-}
-
-/** Адреса на старті. Без `window` (не буває в застосунку, але буває в тестах) — нічого. */
-function initialRouteDesign(): Design | null {
-  try {
-    return designOfPath(window.location.pathname);
-  } catch {
-    return null;
-  }
-}
-
 /** Живий медіазапит: значення й підписка на зміну. */
 function useMedia(query: string): boolean {
   const get = () => {
@@ -202,7 +141,7 @@ function useMedia(query: string): boolean {
  * палітри, тож лишається одне джерело значень — tokens.css. Оформлення полотна
  * не чіпає, тому панелі від нього не залежать.
  */
-function apply(r: Resolved, design: Design) {
+function apply(r: Resolved) {
   const root = document.documentElement;
   // Перемикання — без анімації переходу кольорів: інакше кнопки й картки
   // пів секунди перетікали б зі старої палітри в нову. Переходи вимикаються
@@ -213,7 +152,6 @@ function apply(r: Resolved, design: Design) {
   );
   root.dataset.theme = r.theme;
   root.dataset.scheme = r.scheme;
-  root.dataset.design = design;
 
   if (r.hue === null) {
     delete root.dataset.appearance;
@@ -240,8 +178,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [start] = useState(initialSchemeAndContrast);
   const [scheme, setSchemeState] = useState<Scheme>(start.scheme);
   const [highContrast, setContrastState] = useState<boolean>(start.highContrast);
-  const [design, setDesignState] = useState<Design>(initialDesign);
-  const [routeDesign, setRouteDesignState] = useState<Design | null>(initialRouteDesign);
   const [surface, setSurfaceState] = useState<Surface>(OWN);
 
   const systemDark = useMedia('(prefers-color-scheme: dark)');
@@ -252,12 +188,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [theme, scheme, highContrast, systemContrast, systemDark, surface],
   );
 
-  // На <html> — версія показаного екрана: гостьова адреса перемагає вибір.
-  const shown = routeDesign ?? design;
-
   useEffect(() => {
-    apply(resolved, shown);
-  }, [resolved, shown]);
+    apply(resolved);
+  }, [resolved]);
 
   const setTheme = useCallback((t: Theme) => {
     write(THEME_KEY, t);
@@ -282,17 +215,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setContrastState(on);
   }, []);
 
-  const setDesign = useCallback((d: Design) => {
-    write(DESIGN_KEY, d);
-    setDesignState(d);
-  }, []);
-
   /** Порівняння за значенням: інакше кожен рендер сторінки давав би новий обʼєкт і цикл. */
   const setSurface = useCallback((s: Surface) => {
     setSurfaceState((prev) => (JSON.stringify(prev) === JSON.stringify(s) ? prev : s));
   }, []);
-
-  const setRouteDesign = useCallback((d: Design | null) => setRouteDesignState(d), []);
 
   const value = useMemo(
     () => ({
@@ -300,30 +226,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       scheme,
       highContrast,
       systemContrast,
-      design,
       resolved,
       setTheme,
       setScheme,
       chooseScheme,
       setHighContrast,
-      setDesign,
       setSurface,
-      setRouteDesign,
     }),
     [
       theme,
       scheme,
       highContrast,
       systemContrast,
-      design,
       resolved,
       setTheme,
       setScheme,
       chooseScheme,
       setHighContrast,
-      setDesign,
       setSurface,
-      setRouteDesign,
     ],
   );
 
@@ -351,28 +271,4 @@ export function useSurface(surface: Surface | null) {
     setSurface(JSON.parse(key) as Surface);
   }, [key, setSurface]);
   useEffect(() => () => setSurface(OWN), [setSurface]);
-}
-
-/**
- * Каже провайдеру, яку версію диктує поточна адреса (`designOfPath`).
- * Викликається рівно в одному місці — у верхній таблиці маршрутів `App.tsx`,
- * яка бачить адресу при кожному переході.
- */
-export function useRouteDesign(design: Design | null) {
-  const { setRouteDesign } = useTheme();
-  useEffect(() => {
-    setRouteDesign(design);
-  }, [design, setRouteDesign]);
-}
-
-/**
- * Версія дизайну для того, хто вибирає таблицю маршрутів.
- *
- * Окремий хук, а не поле з `useTheme()`, свідомо: так у коді видно кожне
- * місце, яке залежить від версії. Таких місць має бути рівно одне —
- * `designs/DesignRoutes.tsx` (ADR-032). Це вибір людини; гостьових адрес він
- * не стосується — їх розводить `App.tsx` за префіксом (ADR-039).
- */
-export function useDesign(): Design {
-  return useTheme().design;
 }
