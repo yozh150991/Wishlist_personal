@@ -128,6 +128,14 @@ await supabase.rpc('ack_claim_change', { p_token: token, p_item_id: itemId, p_ke
 ```
 «Лишити» після зміни позиції: знімає `changed_at` з броні цього гостя. `get_guest_list` віддає `changed: true` лише на позиціях, які взяв саме цей гість. Чужий ключ — нічого не змінює. Помилки: `not_found`, `owner_cannot_reserve`, `item_not_in_share`.
 
+### `get_share_card` — anon + authenticated (ADR-060)
+```ts
+// Викликає лише edge-функція app/api/card.ts для ботів месенджерів.
+POST /rest/v1/rpc/get_share_card  { "p_token": "…" }
+// → { "title": "Різдво в Кракові", "event_date": "2026-12-24", "locale": "pl" } або null
+```
+Назва посилання, дата події й мова власника — і більше нічого: ні позицій, ні цін, ні позначок. Мертве, відкликане чи неіснуюче посилання — `null`, однаково. Перегляду не рахує, ідентичностей не створює.
+
 ### `set_claim_bought` — anon + authenticated (ADR-056)
 ```ts
 await supabase.rpc('set_claim_bought', { p_token: token, p_item_id: itemId, p_key: guestKey, p_bought: true });   // 204
@@ -202,7 +210,7 @@ await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoi
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
-| `ack_claim_change` | `anon`, `authenticated` |
+| `ack_claim_change`, `get_share_card` | `anon`, `authenticated` |
 | `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
 | `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |

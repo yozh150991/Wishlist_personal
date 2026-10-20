@@ -5,7 +5,29 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/((?!assets/).*)",
+      "source": "/l/:token/:rest*",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(.*)(TelegramBot|Viber|WhatsApp|facebookexternalhit|Facebot|Twitterbot|Slackbot|Discordbot|LinkedInBot|SkypeUriPreview|vkShare|redditbot|Iframely|Embedly|Mastodon)(.*)"
+        }
+      ],
+      "destination": "/api/card?p=l&t=:token"
+    },
+    {
+      "source": "/s/:token/:rest*",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(.*)(TelegramBot|Viber|WhatsApp|facebookexternalhit|Facebot|Twitterbot|Slackbot|Discordbot|LinkedInBot|SkypeUriPreview|vkShare|redditbot|Iframely|Embedly|Mastodon)(.*)"
+        }
+      ],
+      "destination": "/api/card?p=s&t=:token"
+    },
+    {
+      "source": "/((?!assets/|api/).*)",
       "destination": "/index.html"
     }
   ],

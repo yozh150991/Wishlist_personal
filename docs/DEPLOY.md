@@ -868,6 +868,14 @@ npx supabase db push
 
 **Подяка гостям (ADR-059)** додала лист `thanks`. Порядок важливий: **спершу** передеплой `wishlist-guestmail`, **потім** `npx supabase db push` (міграція `20261020100000_list_thanks.sql`). Старий сервіс виду `thanks` не знає й відправив би замість подяки лист із кодом; новий сервіс зі старою базою просто не бачить таких рядків.
 
+**Картка посилання в месенджері (ADR-060)** — це `app/api/card.ts` у тому самому деплої Vercel, окремих кроків немає. Функція читає ті самі змінні `VITE_SUPABASE_URL` і `VITE_SUPABASE_PUBLISHABLE_KEY`, що вже стоять у Vercel для збірки; нових змінних не треба. Порядок: спершу `npx supabase db push` (міграція `20261020110000_share_card.sql`), потім деплой фронтенду. Перевірка:
+
+```powershell
+curl.exe -A "TelegramBot (like TwitterBot)" "https://wishlist-personal.vercel.app/l/<токен>"   # сторінка з og:title — назвою посилання
+curl.exe -A "TelegramBot (like TwitterBot)" "https://wishlist-personal.vercel.app/l/nope"      # og:title «Wishlist»
+curl.exe -I "https://wishlist-personal.vercel.app/l/<токен>"                                   # звичайний браузер — застосунок, як раніше
+```
+
 **Після зміни коду** `services/parser` — передеплой `wishlist-guestmail` тією самою командою з 10.3 (можна без `--set-*`: змінні й секрети зберігаються) і, як і раніше, `wishlist-jobs`.
 
 ---
