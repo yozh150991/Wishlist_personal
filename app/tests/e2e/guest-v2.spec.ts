@@ -271,3 +271,77 @@ test('«Поскаржитись» на /l/ — причина, коментар
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: /^(поскаржитись|zgłoś|report)$/i })).toHaveCount(0);
 });
+
+test('спільний збір на /l/ — відкрити, долучитися; власник збору не бачить (ADR-063)', { tag: '@both' }, async ({ page }) => {
+  const base = (id: string, title: string, price: number | null) => ({
+    id, title, url: null, price, currency: 'PLN', quantity: 1, priority: 'medium', note: null,
+    variants: [], image_url: null, status: 'active', created_at: '2026-10-01T10:00:00Z', section_id: null,
+    taken_qty: 0, mine_qty: 0,
+  });
+  const pool = {
+    id: 'pool-1', organizer: 'Оля', instructions: 'BLIK на +48 500 000 000', goal: 1200, currency: 'PLN',
+    closed: false, raised: 300, count: 2, mine: null as number | null, is_organizer: false, pledges: null,
+  };
+  let bike = { ...base('i-bike', 'Велосипед', 1200), taken_qty: 1, pool };
+  let lamp: Record<string, unknown> = base('i-lamp', 'Лампа', 400);
+  let owner = false;
+  const calls: Record<string, unknown>[] = [];
+  const body = () => ({
+    title: 'Ювілей тата', message: null, currency: 'PLN', event_date: null, expires_at: null, expires_tz: null,
+    owner_scheme: null, appearance_hue: null, hide_prices: false, allow_reservations: !owner, archived: false,
+    viewer_is_owner: owner, guest: null, sections: [], thanks: null,
+    items: owner
+      ? [{ ...bike, pool: undefined, taken_qty: null, mine_qty: null }, { ...lamp, pool: undefined, taken_qty: null, mine_qty: null }]
+      : [bike, lamp],
+  });
+  await page.route('**/rpc/get_guest_list', (r) => r.fulfill({ json: body() }));
+  await page.route('**/rpc/register_share_view', (r) => r.fulfill({ status: 204, body: '' }));
+  await page.route('**/rpc/start_pool', async (r) => {
+    const req = r.request().postDataJSON();
+    calls.push({ fn: 'start', ...req });
+    lamp = { ...lamp, taken_qty: 1, mine_qty: 1, pool: { ...pool, id: 'pool-2', organizer: req.p_name, instructions: req.p_instructions,
+      goal: req.p_goal ?? 400, raised: 0, count: 0, is_organizer: true, pledges: [] } };
+    await r.fulfill({ json: { code: 'K7M2Q', pool_id: 'pool-2', taken_qty: 1, mine_qty: 1 } });
+  });
+  await page.route('**/rpc/pledge_pool', async (r) => {
+    const req = r.request().postDataJSON();
+    calls.push({ fn: 'pledge', ...req });
+    bike = { ...bike, pool: { ...pool, mine: req.p_amount, raised: 300 + req.p_amount, count: 3 } };
+    await r.fulfill({ json: { code: 'K7M2Q' } });
+  });
+
+  await page.goto('/l/e2e-pool-token');
+  const card = (title: string) => page.locator('.v2-gcard').filter({ hasText: title });
+
+  // Чужий збір: хто збирає, скільки, як скинутися — без імен учасників.
+  await expect(card('Велосипед')).toContainText(/збирає оля|zbiera оля|collected by оля/i);
+  await expect(card('Велосипед')).toContainText('BLIK на +48 500 000 000');
+  await card('Велосипед').getByRole('button', { name: /^(долучитися|dołącz|chip in)$/i }).click();
+  let sheet = page.getByRole('dialog');
+  await sheet.locator('input[name="pool_name"]').fill('Тарас');
+  await sheet.locator('input[name="pool_amount"]').fill('150');
+  await sheet.getByRole('button', { name: /^(долучитися|dołączam|count me in)$/i }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(card('Велосипед')).toContainText(/ви скидаєтесь|dokładasz|you're chipping in/i);
+  expect(calls.at(-1)).toMatchObject({ fn: 'pledge', p_pool_id: 'pool-1', p_name: 'Тарас', p_amount: 150 });
+
+  // Свій збір: ціль за замовчуванням — ціна позиції.
+  await card('Лампа').getByRole('button', { name: /зібрати разом|zrzućmy się|chip in together/i }).click();
+  sheet = page.getByRole('dialog');
+  await expect(sheet.locator('input[name="pool_amount"]')).toHaveValue('400');
+  await sheet.locator('input[name="pool_name"]').fill('Ігор');
+  await sheet.getByRole('button', { name: /відкрити збір|otwórz zrzutkę|start the collection/i }).click();
+  await expect(sheet.getByText(/напишіть, як скинутися|napisz, jak się dołożyć|write how to chip in/i)).toBeVisible();
+  await sheet.locator('textarea[name="pool_instructions"]').fill('Переказ на картку');
+  await sheet.getByRole('button', { name: /відкрити збір|otwórz zrzutkę|start the collection/i }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(calls.at(-1)).toMatchObject({ fn: 'start', p_item_id: 'i-lamp', p_name: 'Ігор', p_instructions: 'Переказ на картку', p_goal: 400 });
+  await expect(card('Лампа').getByRole('button', { name: /керувати збором|zarządzaj zrzutką|manage collection/i })).toBeVisible();
+
+  // Власник на своєму посиланні: ні збору, ні кнопок.
+  owner = true;
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('.v2-gpool')).toHaveCount(0);
+  await expect(page.getByText(/оля|ігор|blik/i)).toHaveCount(0);
+});

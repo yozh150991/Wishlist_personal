@@ -4,13 +4,18 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Flag, Link2, ListChecks, Palette, X } from 'lucide-react';
 import {
   ackClaimChange,
+  cancelPool,
   claimItemV2,
+  closePool,
   fetchGuestList,
   GoneError,
+  leavePool,
+  pledgePool,
   registerView,
   releaseClaim,
   setClaimBought,
   setGuestMail,
+  startPool,
 } from '../../../lib/shares';
 import type { SharedItem, SharedList } from '../../../lib/shares';
 import {
@@ -43,12 +48,13 @@ import {
   GuestCardV2,
   GuestHeadV2,
   LookSheetV2,
+  PoolSheetV2,
   ReportSheetV2,
   MyPicksSheetV2,
   RedeemSheetV2,
   ShopSheetV2,
 } from './GuestPartsV2';
-import type { BookStep, GuestCounts } from './GuestPartsV2';
+import type { BookStep, GuestCounts, PoolMode } from './GuestPartsV2';
 // Стилі форми v2 — і тут: гостьова вантажиться окремо від решти застосунку.
 import '../v2.css';
 
@@ -138,6 +144,10 @@ export default function GuestV2() {
   const [book, setBook] = useState<{ item: SharedItem; step: BookStep } | null>(null);
   const [bookBusy, setBookBusy] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
+  /** Аркуш спільного збору (ADR-063): за id, щоб після перечитування бачити свіжий збір. */
+  const [poolSheet, setPoolSheet] = useState<{ id: string; mode: PoolMode } | null>(null);
+  const [poolBusy, setPoolBusy] = useState(false);
+  const [poolError, setPoolError] = useState<string | null>(null);
   const [picksOpen, setPicksOpen] = useState(false);
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [lookOpen, setLookOpen] = useState(false);
@@ -264,7 +274,9 @@ export default function GuestV2() {
 
   const freeItems = items.filter((i) => countsOf(i).left > 0);
   const mineItems = items.filter((i) => countsOf(i).mine > 0);
-  const allTaken = canClaim && items.length > 0 && freeItems.length === 0;
+  /** Збори, до яких ще можна долучитися: вони не «розібрані» (ADR-063). */
+  const joinable = items.filter((i) => i.pool && !i.pool.closed && !i.pool.is_organizer && i.pool.mine === null);
+  const allTaken = canClaim && items.length > 0 && freeItems.length === 0 && joinable.length === 0;
 
   /** «Стежити» живе на пристрої; наступного разу — що нового й що звільнилось. */
   useEffect(() => {
@@ -326,7 +338,7 @@ export default function GuestV2() {
     () =>
       items.filter((i) => {
         const c = countsOf(i);
-        if (canClaim && filter === 'free' && !(c.left > 0 || c.mine > 0)) return false;
+        if (canClaim && filter === 'free' && !(c.left > 0 || c.mine > 0 || (i.pool && !i.pool.closed))) return false;
         if (maxPrice !== null) {
           const p = num(i.price);
           if (p === null || foreign(i) || p > maxPrice) return false;
@@ -506,6 +518,47 @@ export default function GuestV2() {
     }
   }
 
+  /* ── Спільний збір (N, ADR-063) ── */
+
+  function poolFail(e: unknown) {
+    const msg = e instanceof Error ? e.message : '';
+    if (e instanceof GoneError) {
+      setPoolSheet(null);
+      setGone(true);
+    } else if (msg.includes('not_enough_left')) setPoolError(t('v2guest.pool.race'));
+    else if (msg.includes('pool_closed')) setPoolError(t('v2guest.pool.closedNow'));
+    else if (msg.includes('pool_not_found')) setPoolError(t('v2guest.pool.gone'));
+    else if (msg.includes('bad_goal')) setPoolError(t('v2guest.pool.needGoal'));
+    else if (msg.includes('bad_amount')) setPoolError(t('v2guest.pool.badAmount'));
+    else if (msg.includes('list_archived')) setPoolSheet(null);
+    else setPoolError(t('v2guest.error'));
+  }
+
+  /** Спільне для всіх дій збору: ключ, запит, перечитування, код після першої дії. */
+  async function poolAction(run: (k: string) => Promise<{ code?: string } | void>, keepOpen = false) {
+    if (poolBusy || !data) return;
+    const first = !data.guest;
+    const k = ensureKey(token);
+    setKey(k);
+    setPoolBusy(true);
+    setPoolError(null);
+    try {
+      const res = await run(k);
+      setData(await fetchGuestList(token, k));
+      if (!keepOpen) setPoolSheet(null);
+      if (first && res && res.code) setNotice(t('v2guest.pool.code', { code: res.code }));
+    } catch (e) {
+      poolFail(e);
+      try {
+        setData(await fetchGuestList(token, k));
+      } catch {
+        /* лишаємо те, що є на екрані */
+      }
+    } finally {
+      setPoolBusy(false);
+    }
+  }
+
   /* ── «У магазин» без броні ── */
 
   /**
@@ -642,6 +695,10 @@ export default function GuestV2() {
       onKeep={(i) => void keep(i)}
       onBought={(i, on) => void bought(i, on)}
       onShop={handleShop}
+      onPool={canClaim && !asOwner ? (i, mode) => {
+        setPoolError(null);
+        setPoolSheet({ id: i.id, mode });
+      } : undefined}
       preview={asOwner}
     />
   );
@@ -1007,6 +1064,36 @@ export default function GuestV2() {
         onClose={closeShop}
       />
 
+      <PoolSheetV2
+        item={poolSheet ? (items.find((i) => i.id === poolSheet.id) ?? null) : null}
+        mode={poolSheet?.mode ?? 'join'}
+        guestName={data.guest?.name ?? ''}
+        busy={poolBusy}
+        error={poolError}
+        onStart={(name, instructions, goal) => {
+          const id = poolSheet?.id;
+          if (id) void poolAction((k) => startPool(token, id, k, name, instructions, goal, locale));
+        }}
+        onPledge={(name, amount) => {
+          const p = items.find((i) => i.id === poolSheet?.id)?.pool;
+          if (p) void poolAction((k) => pledgePool(token, p.id, k, name, amount, locale));
+        }}
+        onLeave={() => {
+          const p = items.find((i) => i.id === poolSheet?.id)?.pool;
+          if (p) void poolAction((k) => leavePool(token, p.id, k));
+        }}
+        onToggleClosed={(closed) => {
+          const p = items.find((i) => i.id === poolSheet?.id)?.pool;
+          if (p) void poolAction((k) => closePool(token, p.id, k, closed), true);
+        }}
+        onCancel={() => {
+          const p = items.find((i) => i.id === poolSheet?.id)?.pool;
+          if (p) void poolAction((k) => cancelPool(token, p.id, k));
+        }}
+        onClose={() => {
+          if (!poolBusy) setPoolSheet(null);
+        }}
+      />
       <LookSheetV2 open={lookOpen} onClose={() => setLookOpen(false)} />
       <ReportSheetV2 open={reportOpen} token={token} onClose={() => setReportOpen(false)} />
     </main>

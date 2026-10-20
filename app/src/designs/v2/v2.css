@@ -1934,6 +1934,23 @@ div.v2-chips { gap: var(--sp-3); }
   border-radius: 20px;
 }
 
+/* Спільний збір на картці (ADR-063): хто збирає, смужка, підсумок, як скинутися. */
+.v2-gpool {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-accent-100);
+  border-radius: 16px;
+}
+.v2-gpool__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0; font-weight: 700; }
+.v2-gpool__bar { height: 8px; background: color-mix(in srgb, var(--color-accent) 18%, transparent); border-radius: 999px; overflow: hidden; }
+.v2-gpool__bar > span { display: block; height: 100%; background: var(--color-accent-700); border-radius: inherit; }
+.v2-gpool[data-closed] .v2-gpool__bar > span { background: var(--color-neutral-700); }
+.v2-gpool__sum, .v2-gpool__mine, .v2-gpool__how { margin: 0; font-size: var(--t-small); }
+.v2-gpool__mine { font-weight: 700; }
+.v2-gpool__how { overflow-wrap: anywhere; white-space: pre-line; }
+
 /* Картка гостя: фото → текст → дія. Своя — контур і мітка шавлією;
    чужа — приглушене чорнило, а не заливка (README пакета, «Коли брати нічого»). */
 .v2-gcards { display: grid; gap: var(--sp-3); margin: 0; padding: 0; list-style: none; }
@@ -1974,6 +1991,10 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-gcard__actions { display: grid; justify-items: end; gap: var(--sp-1); flex: none; }
 .v2-gcard__actions .v2-btn { padding-inline: var(--sp-5); }
 .v2-gcard__release { color: var(--color-danger-ink); }
+/* Збір (ADR-063): блок на всю ширину картки, дія — під ним. */
+.v2-gcard[data-state='pool'] { flex-wrap: wrap; }
+.v2-gcard[data-state='pool'] .v2-gcard__text { flex: 1 1 100%; }
+.v2-gcard[data-state='pool'] .v2-gcard__actions { flex: 1 1 100%; justify-items: stretch; }
 
 /* Аркуші гостя. */
 .v2-gbook { display: grid; gap: var(--sp-5); }

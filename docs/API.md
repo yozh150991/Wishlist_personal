@@ -128,6 +128,17 @@ await supabase.rpc('ack_claim_change', { p_token: token, p_item_id: itemId, p_ke
 ```
 «Лишити» після зміни позиції: знімає `changed_at` з броні цього гостя. `get_guest_list` віддає `changed: true` лише на позиціях, які взяв саме цей гість. Чужий ключ — нічого не змінює. Помилки: `not_found`, `owner_cannot_reserve`, `item_not_in_share`.
 
+### Спільний збір — anon + authenticated (ADR-063)
+```ts
+await supabase.rpc('start_pool',  { p_token, p_item_id, p_key, p_name: 'Оля', p_instructions: 'BLIK на …', p_goal: null, p_locale: 'uk' });
+// → { code, pool_id, taken_qty, mine_qty, name, email }  — збір бере позицію, як «Беру»
+await supabase.rpc('pledge_pool', { p_token, p_pool_id, p_key, p_name: 'Тарас', p_amount: 150, p_locale: 'uk' });   // → { code }
+await supabase.rpc('leave_pool',  { p_token, p_pool_id, p_key });
+await supabase.rpc('close_pool',  { p_token, p_pool_id, p_key, p_closed: true });   // лише організатор
+await supabase.rpc('cancel_pool', { p_token, p_pool_id, p_key });                   // лише організатор: знімає бронь
+```
+`get_guest_list` додає на позицію зі збором `pool`: `{ id, organizer, instructions, goal, currency, closed, raised, count, mine, is_organizer, pledges }` — `mine` лише учаснику, `pledges` (імена й суми) лише організатору. Власник `pool` не отримує ніколи. Помилки: `not_found`, `owner_cannot_reserve`, `bad_key`, `item_not_in_share`, `pool_single_only`, `bad_goal`, `bad_name`, `bad_instructions`, `bad_amount`, `not_enough_left`, `list_archived`, `pool_not_found`, `pool_closed`, `pool_full` (50 учасників), `not_organizer`.
+
 ### `get_my_gifts` / `attach_guest_key` — authenticated (ADR-062)
 ```ts
 const { data } = await supabase.rpc('get_my_gifts');
@@ -227,7 +238,7 @@ await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoi
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
-| `ack_claim_change`, `get_share_card`, `report_share` | `anon`, `authenticated` |
+| `ack_claim_change`, `get_share_card`, `report_share`, `start_pool`, `pledge_pool`, `leave_pool`, `close_pool`, `cancel_pool` | `anon`, `authenticated` |
 | `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
 | `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |

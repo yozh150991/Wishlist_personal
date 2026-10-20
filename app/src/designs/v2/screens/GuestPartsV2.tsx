@@ -1,12 +1,21 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
-import { Check, ExternalLink, Minus, Plus } from 'lucide-react';
+import { Check, ExternalLink, Minus, Plus, Users } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { THEMES, useTheme } from '../../../lib/theme';
 import type { Theme } from '../../../lib/theme';
-import { hostOf, moneyShort } from '../../../lib/format';
-import { GoneError, REPORT_COMMENT_MAX, REPORT_REASONS, redeemCode, reportShare, sendGuestCode } from '../../../lib/shares';
-import type { ReportReason } from '../../../lib/shares';
+import { hostOf, moneyShort, num } from '../../../lib/format';
+import {
+  GoneError,
+  POOL_NAME_MAX,
+  POOL_TEXT_MAX,
+  REPORT_COMMENT_MAX,
+  REPORT_REASONS,
+  redeemCode,
+  reportShare,
+  sendGuestCode,
+} from '../../../lib/shares';
+import type { GuestPool, ReportReason } from '../../../lib/shares';
 import type { SharedItem } from '../../../lib/shares';
 import type { Currency } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
@@ -50,7 +59,9 @@ function useCopied(): [boolean, (ok: Promise<boolean>) => void] {
 /** Скільки ще можна взяти й скільки взяв цей гість — з урахуванням знятого тостом. */
 export type GuestCounts = { left: number; mine: number };
 
-export type CardState = 'free' | 'mine' | 'taken';
+export type CardState = 'free' | 'mine' | 'taken' | 'pool';
+
+export type PoolMode = 'start' | 'join' | 'manage';
 
 /**
  * Шапка-листівка гостьової: дата й дія праворуч, назва, кількість позицій,
@@ -108,6 +119,7 @@ export function GuestCardV2({
   onKeep,
   onBought,
   onShop,
+  onPool,
   preview = false,
 }: {
   item: SharedItem;
@@ -124,6 +136,8 @@ export function GuestCardV2({
   onBought: (item: SharedItem, bought: boolean) => void;
   /** Перехід у магазин: сторінка може спершу спитати, чи забронювати (S1). */
   onShop: (item: SharedItem, event: ReactMouseEvent<HTMLAnchorElement>) => void;
+  /** Спільний збір (ADR-063): відкрити, долучитися чи керувати своїм. */
+  onPool?: (item: SharedItem, mode: PoolMode) => void;
   /**
    * Превʼю власника (крок 5г): та сама картка, але «Беру» — зображення
    * кнопки, а не кнопка. Позначок у превʼю немає й бути не може (§3.2).
@@ -135,7 +149,10 @@ export function GuestCardV2({
   const price = moneyShort(item.price, item.currency ?? currency, locale);
   const host = hostOf(item.url);
   const { left, mine } = counts;
-  const state: CardState = !canClaim ? 'free' : mine > 0 ? 'mine' : left > 0 ? 'free' : 'taken';
+  // Збір — окремий стан: позиція взята організатором, але до неї можна долучитися.
+  const pool = canClaim && !preview ? (item.pool ?? null) : null;
+  const state: CardState = pool ? 'pool' : !canClaim ? 'free' : mine > 0 ? 'mine' : left > 0 ? 'free' : 'taken';
+  const canStartPool = Boolean(onPool) && !preview && item.quantity === 1;
   // «Змінено» — лише на своїй броні: сервер іншим гостям цього поля не дає.
   const changed = state === 'mine' && Boolean(item.changed);
   const bought = state === 'mine' && Boolean(item.bought);
@@ -178,7 +195,8 @@ export function GuestCardV2({
           </p>
         )}
         {item.note && <p className="v2-gcard__note">{item.note}</p>}
-        {(state !== 'free' || item.priority === 'high') && (
+        {pool && <PoolBoxV2 pool={pool} />}
+        {state !== 'pool' && (state !== 'free' || item.priority === 'high') && (
           <span className="v2-gcard__tags">
             {changed && (
               <span className="v2-tag" data-tone="warm">
@@ -210,7 +228,24 @@ export function GuestCardV2({
       </div>
       {/* Куплене — без дій: «Ще не куплено» живе в «Моїх бронях», щоб не зняти
           покупку випадковим дотиком. */}
-      {canClaim && state !== 'taken' && !(bought && !changed) && (
+      {pool && onPool && (
+        <div className="v2-gcard__actions">
+          {pool.is_organizer ? (
+            <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={() => onPool(item, 'manage')}>
+              {t('v2guest.pool.manage')}
+            </button>
+          ) : pool.mine !== null ? (
+            <button type="button" className="v2-btn v2-btn--ghost v2-btn--small" onClick={() => onPool(item, 'join')}>
+              {t('v2guest.pool.change')}
+            </button>
+          ) : !pool.closed ? (
+            <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={() => onPool(item, 'join')}>
+              {t('v2guest.pool.join')}
+            </button>
+          ) : null}
+        </div>
+      )}
+      {canClaim && state !== 'taken' && state !== 'pool' && !(bought && !changed) && (
         <div className="v2-gcard__actions">
           {state === 'free' && (
             <>
@@ -221,6 +256,12 @@ export function GuestCardV2({
               ) : (
                 <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={() => onTake(item)}>
                   {t('v2guest.take')}
+                </button>
+              )}
+              {canStartPool && (
+                <button type="button" className="v2-btn v2-btn--ghost v2-btn--small" onClick={() => onPool?.(item, 'start')}>
+                  <Users size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  {t('v2guest.pool.start')}
                 </button>
               )}
               {item.url && (
@@ -1026,6 +1067,266 @@ export function ReportSheetV2({ open, token, onClose }: { open: boolean; token: 
           </div>
         </form>
       )}
+    </SheetV2>
+  );
+}
+
+/* ── Спільний збір (N, ADR-063) ─────────────────────────────── */
+
+/** Підсумок збору на картці: хто збирає, скільки обіцяно, як скинутися. */
+function PoolBoxV2({ pool }: { pool: GuestPool }) {
+  const { t, locale } = useI18n();
+  const goal = num(pool.goal) ?? 0;
+  const raised = num(pool.raised) ?? 0;
+  const pct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+  const mine = num(pool.mine);
+  const fmt = (v: number) => moneyShort(v, pool.currency, locale) ?? String(v);
+  return (
+    <div className="v2-gpool" data-closed={pool.closed || undefined}>
+      <p className="v2-gpool__head">
+        <Users size={16} strokeWidth={STROKE} aria-hidden="true" />
+        <span>{pool.is_organizer ? t('v2guest.pool.yours') : t('v2guest.pool.by', { name: pool.organizer })}</span>
+        {pool.closed && (
+          <span className="v2-tag" data-tone="neutral">
+            {t('v2guest.pool.closed')}
+          </span>
+        )}
+      </p>
+      <div className="v2-gpool__bar" aria-hidden="true">
+        <span style={{ width: `${pct}%` }} />
+      </div>
+      <p className="v2-gpool__sum">
+        {t('v2guest.pool.raised', { raised: fmt(raised), goal: fmt(goal) })} · {t('v2guest.pool.count', { n: pool.count })}
+      </p>
+      {mine !== null && <p className="v2-gpool__mine">{t('v2guest.pool.mine', { amount: fmt(mine) })}</p>}
+      <p className="v2-gpool__how">
+        <strong>{t('v2guest.pool.how')}</strong> {pool.instructions}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Аркуш збору: відкрити (організатор — ім'я, «як скинутися», ціль),
+ * долучитися чи змінити свою суму (учасник — ім'я й сума, «Вийти зі збору»)
+ * і керувати своїм (організатор — хто скільки обіцяв, закрити, скасувати).
+ * Застосунок грошей не переказує — про це сказано в кожному режимі.
+ */
+export function PoolSheetV2({
+  item,
+  mode,
+  guestName,
+  busy,
+  error,
+  onStart,
+  onPledge,
+  onLeave,
+  onToggleClosed,
+  onCancel,
+  onClose,
+}: {
+  item: SharedItem | null;
+  mode: PoolMode;
+  guestName: string;
+  busy: boolean;
+  error: string | null;
+  onStart: (name: string, instructions: string, goal: number | null) => void;
+  onPledge: (name: string, amount: number) => void;
+  onLeave: () => void;
+  onToggleClosed: (closed: boolean) => void;
+  onCancel: () => void;
+  onClose: () => void;
+}) {
+  const { t, locale } = useI18n();
+  const titleId = useId();
+  const textId = useId();
+  const pool = item?.pool ?? null;
+  const [name, setName] = useState('');
+  const [text, setText] = useState('');
+  const [amount, setAmount] = useState('');
+  const [askCancel, setAskCancel] = useState(false);
+  const [local, setLocal] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!item) return;
+    setName(guestName);
+    setText('');
+    setAskCancel(false);
+    setLocal(null);
+    const price = num(item.price);
+    const mine = num(item.pool?.mine ?? null);
+    setAmount(mode === 'start' ? (price !== null ? String(price) : '') : mine !== null ? String(mine) : '');
+    // Лише на відкриття аркуша.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id, mode]);
+
+  const parse = (v: string) => {
+    const n = Number(v.replace(',', '.').replace(/\s/g, ''));
+    return Number.isFinite(n) && n > 0 && n <= 1_000_000 ? Math.round(n * 100) / 100 : null;
+  };
+  const currency = pool?.currency ?? item?.currency ?? 'PLN';
+  const fmt = (v: number | string | null) => moneyShort(num(v), currency, locale) ?? String(v ?? '');
+
+  function submit() {
+    if (busy || !item) return;
+    const n = name.trim();
+    if (!n) return setLocal(t('v2guest.pool.needName'));
+    if (mode === 'start') {
+      if (!text.trim()) return setLocal(t('v2guest.pool.needHow'));
+      const goal = amount.trim() ? parse(amount) : null;
+      if (amount.trim() && goal === null) return setLocal(t('v2guest.pool.badAmount'));
+      if (goal === null && num(item.price) === null) return setLocal(t('v2guest.pool.needGoal'));
+      setLocal(null);
+      onStart(n, text.trim(), goal);
+    } else {
+      const sum = parse(amount);
+      if (sum === null) return setLocal(t('v2guest.pool.badAmount'));
+      setLocal(null);
+      onPledge(n, sum);
+    }
+  }
+
+  const shown = local ?? error;
+
+  return (
+    <SheetV2 open={item !== null} onClose={onClose} labelledBy={titleId}>
+      {item && mode === 'manage' && pool ? (
+        <div className="v2-stack">
+          <h2 className="v2-sheet__title" id={titleId}>
+            {t('v2guest.pool.manageTitle', { title: item.title })}
+          </h2>
+          {shown && <NoteV2 tone="error">{shown}</NoteV2>}
+          <PoolBoxV2 pool={pool} />
+          <section aria-labelledby={`${titleId}-who`}>
+            <h3 className="v2-field__label" id={`${titleId}-who`}>
+              {t('v2guest.pool.who')}
+            </h3>
+            {pool.pledges && pool.pledges.length > 0 ? (
+              <ul className="v2-giftrows">
+                {pool.pledges.map((p, i) => (
+                  <li key={i} className="v2-giftrow">
+                    <span className="v2-giftrow__title">{p.name}</span>
+                    <span className="v2-tag" data-tone="accent">
+                      {fmt(p.amount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="v2-hint v2-hint--start">{t('v2guest.pool.nobody')}</p>
+            )}
+          </section>
+          <p className="v2-hint v2-hint--start">{t('v2guest.pool.noMoney')}</p>
+          <button
+            type="button"
+            className="v2-btn v2-btn--primary v2-btn--block"
+            aria-disabled={busy || undefined}
+            onClick={() => !busy && onToggleClosed(!pool.closed)}
+          >
+            {pool.closed ? t('v2guest.pool.reopen') : t('v2guest.pool.close')}
+          </button>
+          {askCancel ? (
+            <div className="v2-stack">
+              <p className="v2-hint v2-hint--start">{t('v2guest.pool.cancelAsk')}</p>
+              <button
+                type="button"
+                className="v2-btn v2-btn--danger v2-btn--block"
+                aria-disabled={busy || undefined}
+                onClick={() => !busy && onCancel()}
+              >
+                {t('v2guest.pool.cancelYes')}
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="v2-btn v2-btn--ghost v2-btn--block" onClick={() => setAskCancel(true)}>
+              {t('v2guest.pool.cancel')}
+            </button>
+          )}
+        </div>
+      ) : item ? (
+        <form
+          className="v2-stack"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <h2 className="v2-sheet__title" id={titleId}>
+            {mode === 'start'
+              ? t('v2guest.pool.startTitle', { title: item.title })
+              : t('v2guest.pool.joinTitle', { title: item.title })}
+          </h2>
+          <p className="v2-hint v2-hint--start">
+            {mode === 'start' ? t('v2guest.pool.startBody') : t('v2guest.pool.joinBody')}
+          </p>
+          {shown && <NoteV2 tone="error">{shown}</NoteV2>}
+          {mode === 'join' && pool && <PoolBoxV2 pool={pool} />}
+          <FieldV2
+            label={mode === 'start' ? t('v2guest.pool.organizerName') : t('v2guest.pool.yourName')}
+            name="pool_name"
+            autoComplete="given-name"
+            maxLength={POOL_NAME_MAX}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          {mode === 'start' && (
+            <div className="v2-field">
+              <label className="v2-field__label" htmlFor={textId}>
+                {t('v2guest.pool.howLabel')}
+              </label>
+              <textarea
+                id={textId}
+                name="pool_instructions"
+                className="v2-input v2-input--area"
+                rows={3}
+                maxLength={POOL_TEXT_MAX}
+                placeholder={t('v2guest.pool.howPlaceholder')}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+              />
+              <p className="v2-hint v2-hint--start">{t('v2guest.pool.howPublic')}</p>
+            </div>
+          )}
+          <FieldV2
+            label={
+              mode === 'start'
+                ? t('v2guest.pool.goal', { currency })
+                : t('v2guest.pool.amount', { currency })
+            }
+            name="pool_amount"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          <SubmitV2
+            busy={busy}
+            label={
+              mode === 'start'
+                ? t('v2guest.pool.startSubmit')
+                : pool?.mine !== null && pool?.mine !== undefined
+                  ? t('common.save')
+                  : t('v2guest.pool.joinSubmit')
+            }
+            busyLabel={t('common.saving')}
+          />
+          {mode === 'join' && pool && pool.mine !== null && (
+            <button
+              type="button"
+              className="v2-btn v2-btn--ghost v2-btn--block"
+              aria-disabled={busy || undefined}
+              onClick={() => !busy && onLeave()}
+            >
+              {t('v2guest.pool.leave')}
+            </button>
+          )}
+          <div className="v2-sheet__actions">
+            <button type="button" className="v2-btn v2-btn--ghost" onClick={onClose}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        </form>
+      ) : null}
     </SheetV2>
   );
 }

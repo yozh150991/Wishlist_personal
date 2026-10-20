@@ -172,6 +172,8 @@ export type SharedItem = {
   changed?: boolean;
   /** Гостьова v2 (ADR-056): цей гість позначив свою бронь «Уже куплено». Лише йому. */
   bought?: boolean;
+  /** Спільний збір на позицію (ADR-063). Лише гостям; власник цього поля не отримує ніколи. */
+  pool?: GuestPool;
 };
 
 export type GuestInfo = { code: string; name?: string | null; email?: string | null };
@@ -342,6 +344,87 @@ export async function sendGuestCode(
   const { data, error } = await supabase.rpc('send_guest_code', { p_token: token, p_email: email, p_locale: locale });
   if (error) throw rpcError(error);
   return data as { ok: true } | { error: 'too_many_attempts' };
+}
+
+/**
+ * Спільний збір (ADR-063): ім'я організатора, «як скинутися», ціль і скільки
+ * обіцяно. `mine` — своя сума учасника; `pledges` — імена й суми, лише
+ * організатору.
+ */
+export type GuestPool = {
+  id: string;
+  organizer: string;
+  instructions: string;
+  goal: number | string;
+  currency: Currency;
+  closed: boolean;
+  raised: number | string;
+  count: number;
+  mine: number | string | null;
+  is_organizer: boolean;
+  pledges: { name: string; amount: number | string }[] | null;
+};
+
+export const POOL_NAME_MAX = 60;
+export const POOL_TEXT_MAX = 500;
+
+/** Відкрити збір: позиція стає твоєю, як після «Беру». */
+export async function startPool(
+  token: string,
+  itemId: string,
+  key: string,
+  name: string,
+  instructions: string,
+  goal: number | null,
+  locale: string,
+): Promise<{ code: string; pool_id: string }> {
+  const { data, error } = await supabase.rpc('start_pool', {
+    p_token: token,
+    p_item_id: itemId,
+    p_key: key,
+    p_name: name,
+    p_instructions: instructions,
+    p_goal: goal,
+    p_locale: locale,
+  });
+  if (error) throw rpcError(error);
+  return data as { code: string; pool_id: string };
+}
+
+/** Долучитися чи змінити свою суму. */
+export async function pledgePool(
+  token: string,
+  poolId: string,
+  key: string,
+  name: string,
+  amount: number,
+  locale: string,
+): Promise<{ code: string }> {
+  const { data, error } = await supabase.rpc('pledge_pool', {
+    p_token: token,
+    p_pool_id: poolId,
+    p_key: key,
+    p_name: name,
+    p_amount: amount,
+    p_locale: locale,
+  });
+  if (error) throw rpcError(error);
+  return data as { code: string };
+}
+
+export async function leavePool(token: string, poolId: string, key: string): Promise<void> {
+  const { error } = await supabase.rpc('leave_pool', { p_token: token, p_pool_id: poolId, p_key: key });
+  if (error) throw rpcError(error);
+}
+
+export async function closePool(token: string, poolId: string, key: string, closed: boolean): Promise<void> {
+  const { error } = await supabase.rpc('close_pool', { p_token: token, p_pool_id: poolId, p_key: key, p_closed: closed });
+  if (error) throw rpcError(error);
+}
+
+export async function cancelPool(token: string, poolId: string, key: string): Promise<void> {
+  const { error } = await supabase.rpc('cancel_pool', { p_token: token, p_pool_id: poolId, p_key: key });
+  if (error) throw rpcError(error);
 }
 
 export type ReportReason = 'spam' | 'scam' | 'offensive' | 'illegal' | 'other';
