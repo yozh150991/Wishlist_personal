@@ -293,7 +293,7 @@ export default function RegisterV2() {
 
         <SubmitV2 busy={busy} label={t('v2auth.register.submit')} busyLabel={t('v2auth.register.submitting')} />
 
-        <p className="v2-switch">
+        <p className="v2-authswitch">
           {t('v2auth.register.toLogin')}{' '}
           <Link to="/login" state={{ email: email.trim() }} className="v2-link">
             {t('v2auth.register.toLoginCta')}

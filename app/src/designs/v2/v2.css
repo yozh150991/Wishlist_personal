@@ -85,20 +85,41 @@
 .v2-prose__list { margin: 0; padding-inline-start: 1.25rem; display: grid; gap: var(--sp-2); }
 .v2-prose a { color: var(--color-accent-700); }
 
-/* Вибір мови — рідний <select>: доступний з клавіатури й на телефоні без
-   жодного коду. Стрілку лишаємо браузерну: власна була б картинкою з
-   літеральним кольором, а кольори живуть лише в tokens.css. */
+/* Вибір мови (LangSelectV2) — рідний <select> без браузерної стрілки.
+   Браузер міряє <select> за найдовшою назвою («Українська»), і його стрілка
+   стояла далеко від «English». Тепер поле міряється за обраною назвою, а
+   стрілка — Lucide у `currentColor`, тож жодного літерального кольору.
+   Фон і колір опцій задано явно: з прозорим фоном Chrome на Windows малював
+   список білим, а текст брав світлий з темної теми — і назв не було видно. */
 .v2-lang {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text);
+}
+.v2-lang__select {
+  appearance: none;
+  field-sizing: content;
   min-height: 40px;
-  padding: 0 var(--sp-5);
+  padding-block: 0;
+  padding-inline: var(--sp-5) calc(var(--sp-5) + 22px);
   font: inherit;
   font-size: var(--t-body);
   font-weight: 600;
-  color: var(--color-text);
+  color: inherit;
   background: transparent;
   border: 1px solid var(--color-divider);
   border-radius: var(--r-pill);
   cursor: pointer;
+}
+.v2-lang__select option {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+.v2-lang__arrow {
+  position: absolute;
+  inset-inline-end: var(--sp-4);
+  pointer-events: none;
 }
 
 /* ── Композиція ───────────────────────────────────────────── */
@@ -114,7 +135,10 @@
 .v2-lede { font-size: var(--t-item); color: var(--color-neutral-700); }
 .v2-hint { font-size: var(--t-small); color: var(--color-neutral-700); text-align: center; }
 
-.v2-switch {
+/* «Немає акаунта? Зареєструватися» під формою входу й навпаки. Окреме ім'я:
+   `.v2-switch` — це повзунок перемикача нижче, і його 48×28 з рамкою
+   стискали цей рядок у «пігулку» з текстом у стовпчик. */
+.v2-authswitch {
   text-align: center;
   font-size: var(--t-body);
   color: var(--color-neutral-700);

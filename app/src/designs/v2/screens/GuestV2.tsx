@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Flag, Link2, ListChecks, Palette, X } from 'lucide-react';
@@ -30,17 +30,16 @@ import {
   stopWatch,
   storedKey,
 } from '../../../lib/guest';
-import { useI18n, LOCALES } from '../../../lib/i18n';
+import { useI18n } from '../../../lib/i18n';
 import { useAuth } from '../../../lib/auth';
 import { attachGuestKey } from '../../../lib/gifts';
-import type { Locale } from '../../../lib/i18n';
 import { formatDay, money, num, priceThresholds } from '../../../lib/format';
 import { validUntilText } from '../../../lib/zones';
 import { useSurface } from '../../../lib/theme';
 import { useUndo } from '../../../lib/undo';
 import { CURRENCIES } from '../../../lib/types';
 import type { Currency } from '../../../lib/types';
-import { NoteV2, useCountdown } from './AuthPartsV2';
+import { LangSelectV2, NoteV2, useCountdown } from './AuthPartsV2';
 import { useCounts } from './CommonV2';
 import { usePriorityLabel } from './ListPartsV2';
 import {
@@ -90,8 +89,6 @@ import '../v2.css';
  */
 
 const BASE = '/l';
-/** Назва мови її ж мовою — як у перемикачах застосунку. */
-const LANGUAGE: Record<Locale, string> = { uk: 'Українська', pl: 'Polski', en: 'English' };
 const UNDO_MS = 6000;
 /** Скільки позицій показати як «схоже за ціною». */
 const SIMILAR_MAX = 6;
@@ -121,12 +118,11 @@ export default function GuestV2() {
   const { token = '', key: urlKey, mailToken } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale } = useI18n();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const counts = useCounts();
   const priority = usePriorityLabel();
-  const langId = useId();
 
   const [data, setData] = useState<SharedList | null>(null);
   const [loading, setLoading] = useState(true);
@@ -971,21 +967,7 @@ export default function GuestV2() {
             <Palette size={18} strokeWidth={2.75} aria-hidden="true" />
             {t('v2guest.look')}
           </button>
-          <label className="v2-sr" htmlFor={langId}>
-            {t('v2guest.language')}
-          </label>
-          <select
-            id={langId}
-            className="v2-lang"
-            value={locale}
-            onChange={(e) => setLocale(e.target.value as Locale)}
-          >
-            {LOCALES.map((l) => (
-              <option key={l} value={l} lang={l}>
-                {LANGUAGE[l]}
-              </option>
-            ))}
-          </select>
+          <LangSelectV2 label={t('v2guest.language')} />
           <Link to="/privacy" className="v2-btn v2-btn--ghost v2-btn--small">
             {t('privacy.link')}
           </Link>

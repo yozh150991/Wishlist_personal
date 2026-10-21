@@ -321,7 +321,7 @@ export default function LoginV2() {
           </button>
         )}
 
-        <p className="v2-switch">
+        <p className="v2-authswitch">
           {t('v2auth.login.toRegister')}{' '}
           <Link to="/register" state={{ email: email.trim() }} className="v2-link">
             {t('v2auth.login.toRegisterCta')}
