@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useId, useState } from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, CalendarDays, Check, ChevronLeft, Eye, EyeOff, TriangleAlert } from 'lucide-react';
+import { AlertCircle, CalendarDays, Check, ChevronDown, ChevronLeft, Eye, EyeOff, TriangleAlert } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useI18n, LOCALES } from '../../../lib/i18n';
 import type { Locale } from '../../../lib/i18n';
@@ -28,28 +28,13 @@ const LANGUAGE: Record<Locale, string> = { uk: 'Українська', pl: 'Pols
  * потоки 2.0 окремої десктопної композиції для входу не дають.
  */
 export function AuthFrameV2({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
-  const { t, locale, setLocale } = useI18n();
-  const id = useId();
+  const { t } = useI18n();
   return (
     <div className={wide ? 'v2-auth v2-auth--wide' : 'v2-auth'}>
       <div className="v2-auth__top">
         {/* Мова потрібна ще до входу: обрана тут, вона їде в user_metadata
             і визначає мову листа підтвердження (ADR-024). */}
-        <label className="v2-sr" htmlFor={id}>
-          {t('v2auth.language')}
-        </label>
-        <select
-          id={id}
-          className="v2-lang"
-          value={locale}
-          onChange={(e) => setLocale(e.target.value as Locale)}
-        >
-          {LOCALES.map((l) => (
-            <option key={l} value={l} lang={l}>
-              {LANGUAGE[l]}
-            </option>
-          ))}
-        </select>
+        <LangSelectV2 label={t('v2auth.language')} />
       </div>
       <main className="v2-auth__main">
         <div className="v2-auth__col">{children}</div>
@@ -60,6 +45,41 @@ export function AuthFrameV2({ children, wide = false }: { children: ReactNode; w
         </Link>
       </footer>
     </div>
+  );
+}
+
+/**
+ * Вибір мови — рідний <select> (клавіатура й телефон без жодного коду), але
+ * без браузерної стрілки: та стоїть у кінці поля завширшки з найдовшою
+ * назвою («Українська»), і біля «English» лишалася порожнеча. Стрілка —
+ * Lucide поверх поля, колір — `currentColor`, ширина — за обраною назвою
+ * (`field-sizing: content`; де його нема — як раніше, за найдовшою).
+ * Спільний для рамки входу й підвалу гостьової сторінки.
+ */
+export function LangSelectV2({ label }: { label: string }) {
+  const { locale, setLocale } = useI18n();
+  const id = useId();
+  return (
+    <>
+      <label className="v2-sr" htmlFor={id}>
+        {label}
+      </label>
+      <span className="v2-lang">
+        <select
+          id={id}
+          className="v2-lang__select"
+          value={locale}
+          onChange={(e) => setLocale(e.target.value as Locale)}
+        >
+          {LOCALES.map((l) => (
+            <option key={l} value={l} lang={l}>
+              {LANGUAGE[l]}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="v2-lang__arrow" size={18} strokeWidth={STROKE} aria-hidden="true" />
+      </span>
+    </>
   );
 }
 
