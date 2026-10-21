@@ -101,6 +101,7 @@ export function ImportSheetV2({
           description: parsedList?.description ?? null,
           currency,
           event_date: parsedList?.event_date ?? null,
+          sections: parsedList?.sections ?? [],
         },
         items,
       );
@@ -179,6 +180,8 @@ export function ImportSheetV2({
             <section className="v2-import" aria-label={t('transfer.import.region')}>
               <p className="v2-import__lead">
                 {items.length > 0 ? t('transfer.import.preview', { n: items.length }) : t('transfer.import.nothing')}
+                {items.length > 0 && (parsedList?.sections.length ?? 0) > 0 &&
+                  ` · ${t('transfer.import.sections', { n: parsedList?.sections.length ?? 0 })}`}
               </p>
               {items.length > 0 && (
                 <ul className="v2-import__rows">
@@ -189,6 +192,7 @@ export function ImportSheetV2({
                         {[
                           i.price !== null ? moneyShort(i.price, currency, locale) : null,
                           i.quantity > 1 ? `× ${i.quantity}` : null,
+                          i.section,
                         ]
                           .filter(Boolean)
                           .join(' · ')}

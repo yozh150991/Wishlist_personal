@@ -73,3 +73,39 @@ test('розділи й ручний порядок власника — сам�
   await expect(page.getByRole('region', { name: /^Спальня · / })).toHaveCount(0);
   await expect(ownerTitles(page, 'Інше|Inne|Other')).toContainText(['Постіль']);
 });
+
+test('розділи й порядок переживають експорт у JSON та імпорт (ADR-036)', async ({ page }) => {
+  test.setTimeout(90_000);
+  await signIn(page);
+  await createList(page, unique('Sections file'));
+  for (const name of ['Сковорода', 'Дошка', 'Лампа']) await addItem(page, name);
+  await newSection(page, 'Кухня');
+  await newSection(page, 'Балкон');
+  await moveTo(page, 'Сковорода', 'Кухня');
+  await moveTo(page, 'Дошка', 'Кухня');
+  // Нові зверху: Дошка, Сковорода — переставляємо, щоб порядок був саме ручний.
+  await listMenu(page, /^(змінити порядок|zmień kolejność|change order)$/i);
+  await page.getByRole('button', { name: /Сковорода.*(вище|wyżej|up)$/i }).click();
+  await page.getByRole('button', { name: /^(готово|gotowe|done)$/i }).click();
+  await expect(ownerTitles(page, 'Кухня')).toHaveText(['Сковорода', 'Дошка']);
+
+  await listMenu(page, /експортувати список|eksportuj listę|export list/i);
+  const download = page.waitForEvent('download');
+  await page.getByRole('dialog').getByRole('button', { name: /json/i }).click();
+  const path = await (await download).path();
+
+  await page.goto('/lists');
+  await page.getByRole('button', { name: /імпорт із файлу|import z pliku|import from a file/i }).first().click();
+  const sheet = page.getByRole('dialog', { name: /імпортувати список|importuj listę|import list/i });
+  await sheet.locator('input[type="file"]').setInputFiles(path);
+  await expect(sheet.getByText(/розділів: 2|działów: 2|sections: 2/i)).toBeVisible();
+  const imported = unique('Sections imported');
+  await sheet.locator('input[name="import_title"]').fill(imported);
+  await sheet.getByRole('button', { name: /\(3\)/ }).click();
+
+  await expect(page.getByRole('heading', { level: 1, name: imported })).toBeVisible();
+  await expect(ownerTitles(page, 'Кухня')).toHaveText(['Сковорода', 'Дошка']);
+  await expect(ownerTitles(page, 'Інше|Inne|Other')).toHaveText(['Лампа']);
+  // Порожній розділ теж приїхав: JSON його зберігає.
+  await expect(page.getByRole('region', { name: /^Балкон · 0$/ })).toBeVisible();
+});

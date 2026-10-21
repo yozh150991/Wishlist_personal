@@ -10,7 +10,7 @@ import {
   toCsv,
   toJson,
 } from '../../src/lib/transfer';
-import type { Item, List } from '../../src/lib/types';
+import type { Item, List, Section } from '../../src/lib/types';
 
 // Чисті функції: ні сторінки, ні браузера. Як і safe-next.spec.ts, ці тести
 // йдуть під Playwright лише щоб не заводити другий запускач.
@@ -58,6 +58,7 @@ test.describe('вивантаження', () => {
       description: 'Подарунки',
       currency: 'PLN',
       event_date: '2026-05-01',
+      sections: [],
     });
     expect(parsed.items[0]).toEqual({
       title: 'Кавоварка',
@@ -70,6 +71,7 @@ test.describe('вивантаження', () => {
       image_url: null,
       variants: [],
       currency: null,
+      section: null,
     });
   });
 
@@ -84,7 +86,7 @@ test.describe('вивантаження', () => {
     const csv = toCsv([item()]);
     expect(csv.startsWith('﻿')).toBe(true);
     expect(csv.split('\r\n')[0]).toBe(
-      '﻿title,url,price,quantity,priority,status,note,image_url,variants,currency',
+      '﻿title,url,price,quantity,priority,status,note,image_url,variants,currency,section',
     );
   });
 
@@ -133,6 +135,7 @@ test.describe('повний оберт', () => {
       image_url: i.image_url,
       variants: i.variants,
       currency: null,
+      section: null,
     })));
   });
 
@@ -144,6 +147,7 @@ test.describe('повний оберт', () => {
       description: 'Подарунки',
       currency: 'PLN',
       event_date: '2026-05-01',
+      sections: [],
     });
     expect(back.items).toHaveLength(1);
   });
@@ -409,5 +413,90 @@ test.describe('валюта позиції (ADR-051)', () => {
     const r = parseCsvFile('title,price,currency\r\nЧайник,30,gbp\r\nЛампа,100,eur\r\n', 'Список');
     expect(r.items.map((i) => i.currency)).toEqual([null, 'EUR']);
     expect(r.issues.map((i) => i.key)).toEqual(['transfer.issues.itemCurrency']);
+  });
+});
+
+test.describe('розділи (ADR-036)', () => {
+  const section = (id: string, title: string, position: number): Section => ({
+    id,
+    list_id: 'l1',
+    title,
+    position,
+    created_at: '2026-01-01T00:00:00Z',
+  });
+  // Порядок власника: Спальня (1), Кухня (2) і порожній Балкон (3).
+  const sections = [section('s2', 'Кухня', 2), section('s1', 'Спальня', 1), section('s3', 'Балкон', 3)];
+  const items = [
+    item({ id: 'a', title: 'Лампа', section_id: null }),
+    item({ id: 'b', title: 'Сковорода', section_id: 's2', position: 2 }),
+    item({ id: 'c', title: 'Дошка', section_id: 's2', position: 1 }),
+    item({ id: 'd', title: 'Плед', section_id: 's1', position: 1 }),
+  ];
+
+  test('файл — у порядку гостя: розділи за порядком власника, усередині — ручний, «Інше» в кінці', () => {
+    const json = JSON.parse(toJson(list, items, sections));
+    expect(json.list.sections).toEqual(['Спальня', 'Кухня', 'Балкон']);
+    expect(json.items.map((i: { title: string; section: string | null }) => `${i.section ?? '—'}:${i.title}`)).toEqual([
+      'Спальня:Плед',
+      'Кухня:Дошка',
+      'Кухня:Сковорода',
+      '—:Лампа',
+    ]);
+    const csv = parseCsv(toCsv(items, sections).replace(/^\uFEFF/, ''), ',');
+    expect(csv.slice(1).map((r) => `${r[10] || '—'}:${r[0]}`)).toEqual([
+      'Спальня:Плед',
+      'Кухня:Дошка',
+      'Кухня:Сковорода',
+      '—:Лампа',
+    ]);
+  });
+
+  test('повний оберт: JSON зберігає й порожній розділ, CSV — лише ті, де є позиції', () => {
+    const json = parseJsonFile(toJson(list, items, sections), 'Список');
+    expect(json.issues).toEqual([]);
+    expect(json.list.sections).toEqual(['Спальня', 'Кухня', 'Балкон']);
+    expect(json.items.map((i) => i.section)).toEqual(['Спальня', 'Кухня', 'Кухня', null]);
+
+    const csv = parseCsvFile(toCsv(items, sections), 'Список');
+    expect(csv.issues).toEqual([]);
+    expect(csv.list.sections).toEqual(['Спальня', 'Кухня']);
+    expect(csv.items.map((i) => i.section)).toEqual(['Спальня', 'Кухня', 'Кухня', null]);
+  });
+
+  test('назву розділу в клітинці чистимо: пробіли згорнуто, задовга — обрізано з попередженням', () => {
+    const long = 'Д'.repeat(70);
+    const r = parseCsvFile(`title,section\r\nЛампа,"  Вітальня   біля  вікна "\r\nПлед,${long}\r\nЧайник,\r\n`, 'Список');
+    expect(r.items.map((i) => i.section)).toEqual(['Вітальня біля вікна', 'Д'.repeat(60), null]);
+    expect(r.list.sections).toEqual(['Вітальня біля вікна', 'Д'.repeat(60)]);
+    expect(r.issues.map((i) => i.key)).toEqual(['transfer.issues.sectionLong']);
+  });
+
+  test('однакові назви — один розділ; розділ із позиції, якого немає в переліку, додається в кінець', () => {
+    const r = parseJsonFile(
+      JSON.stringify({
+        list: { title: 'Х', sections: ['Кухня', 'Кухня', '  ', 'Спальня'] },
+        items: [
+          { title: 'Плед', section: 'Спальня' },
+          { title: 'Килим', section: 'Вітальня' },
+          { title: 'Дошка', section: 'Кухня' },
+        ],
+      }),
+      'Список',
+    );
+    expect(r.list.sections).toEqual(['Кухня', 'Спальня', 'Вітальня']);
+    expect(r.issues).toEqual([]);
+  });
+
+  test('файл без розділів читається як раніше — пласким списком', () => {
+    const r = parseCsvFile('title,price\r\nЛампа,100\r\n', 'Список');
+    expect(r.list.sections).toEqual([]);
+    expect(r.items[0]?.section).toBeNull();
+  });
+
+  test('«Мої дані» несуть розділи кожного списку', () => {
+    const json = JSON.parse(toAccountJson([{ list, items, sections }], [], '2026-10-21T00:00:00Z'));
+    expect(json.lists[0].list.sections).toEqual(['Спальня', 'Кухня', 'Балкон']);
+    expect(json.lists[0].items[0]).toMatchObject({ title: 'Плед', section: 'Спальня' });
+    expect(JSON.stringify(json)).not.toContain('"s1"');
   });
 });

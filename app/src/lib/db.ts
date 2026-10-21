@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { CURRENCIES } from './types';
 import type { Currency, Item, ItemInput, ItemQuery, ItemStatus, List, Totals } from './types';
+import type { TransferItem, TransferList } from './transfer';
 import { isNetworkError } from './errors';
 import { copyInput } from './afterEvent';
 
@@ -237,6 +238,53 @@ export async function createListWithItems(
       const { error } = await supabase
         .from('items')
         .insert(part.map((i) => ({ ...i, list_id: list.id })));
+      if (error) throw error;
+    }
+  } catch (e) {
+    await deleteList(list.id).catch(() => {});
+    throw e;
+  }
+  return list;
+}
+
+/**
+ * Імпорт файлу (ROADMAP 6.3, ADR-036): список, його розділи в порядку з файлу
+ * й позиції — у своїх розділах, на місцях за порядком у файлі. Наш експорт
+ * пише позиції в порядку гостя (`exportItems`), тож місця 1…n у кожному
+ * розділі відтворюють ручний порядок; чужий файл — порядок своїх рядків.
+ *
+ * Як і `createListWithItems`, без транзакції: не вдалося — список видаляється
+ * разом із розділами й позиціями, що встигли лягти.
+ */
+export async function importList(
+  file: { list: TransferList; items: TransferItem[] },
+  ownerId: string,
+): Promise<List> {
+  const { sections: titles, ...input } = file.list;
+  const list = await createList(input, ownerId);
+  try {
+    const ids = new Map<string, string>();
+    if (titles.length > 0) {
+      // owner_id проставляє тригер sections_sync_owner; порядок — position.
+      const { data, error } = await supabase
+        .from('sections')
+        .insert(titles.map((title, at) => ({ list_id: list.id, title, position: at + 1 })))
+        .select('id, title');
+      if (error) throw error;
+      for (const row of (data ?? []) as { id: string; title: string }[]) ids.set(row.title, row.id);
+    }
+    const next = new Map<string, number>();
+    const rows: ItemInput[] = file.items.map(({ section, ...item }) => {
+      const sectionId = section ? (ids.get(section) ?? null) : null;
+      // Місця — і в пласкому списку: без них позиції, вставлені одним запитом
+      // з однаковим created_at, стали б у випадковому порядку, а не як у файлі.
+      const key = sectionId ?? '';
+      const position = (next.get(key) ?? 0) + 1;
+      next.set(key, position);
+      return { ...item, section_id: sectionId, position };
+    });
+    for (const part of chunks(ownCurrency(rows, list.currency), BULK_CHUNK)) {
+      const { error } = await supabase.from('items').insert(part.map((i) => ({ ...i, list_id: list.id })));
       if (error) throw error;
     }
   } catch (e) {

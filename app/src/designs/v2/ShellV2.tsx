@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Gift, Link2, List, SlidersHorizontal } from 'lucide-react';
@@ -7,6 +8,7 @@ import { useI18n } from '../../lib/i18n';
 import { useMediaQuery } from '../../lib/media';
 import { useOutbox } from '../../lib/useOutbox';
 import { SignOutV2 } from './screens/CommonV2';
+import { ChunkBoundary } from './ChunkBoundary';
 
 /**
  * Каркас екранів власника v2.
@@ -48,6 +50,15 @@ export function RequireAuthV2({ children }: { children: ReactNode }) {
   }
   if (!session) return <Navigate to={`/login?next=${encodeURIComponent(pathname + search)}`} replace />;
   return <>{children}</>;
+}
+
+function ScreenLoading() {
+  const { t } = useI18n();
+  return (
+    <div className="v2-boot" role="status" aria-live="polite">
+      <span className="v2-sr">{t('common.loading')}</span>
+    </div>
+  );
 }
 
 export function ShellV2() {
@@ -94,7 +105,12 @@ export function ShellV2() {
       </nav>
       <div className="v2-shell__main">
         <OutboxNoteV2 />
-        <Outlet />
+        {/* Екрани власника — лінивий чанк: навігація лишається на місці, поки він їде. */}
+        <ChunkBoundary>
+          <Suspense fallback={<ScreenLoading />}>
+            <Outlet />
+          </Suspense>
+        </ChunkBoundary>
       </div>
     </div>
   );

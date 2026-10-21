@@ -923,6 +923,9 @@ export default function GuestV2() {
             {shown.length > 0 ? (
               groups.map((g) => (
                 <section key={g.id ?? '__other'} className="v2-group" aria-label={g.title ?? undefined}>
+                  {/* Без розділів заголовка групи немає, а картки — h3: невидимий h2
+                      тримає порядок заголовків для зчитувача (Lighthouse, «heading-order»). */}
+                  {!g.title && <h2 className="v2-sr">{t('v2guest.itemsHeading')}</h2>}
                   {g.title && (
                     <div className="v2-group__head">
                       <h2 className="v2-kicker v2-group__title">{g.title}</h2>

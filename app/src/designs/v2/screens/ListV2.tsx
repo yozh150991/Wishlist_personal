@@ -1307,7 +1307,13 @@ export default function ListV2() {
 
       <SortSheetV2 open={sortOpen} value={sort} onClose={() => setSortOpen(false)} onChange={changeSort} />
       <FiltersSheetV2 open={filtersOpen} value={range} onClose={() => setFiltersOpen(false)} onApply={setRange} />
-      <ExportSheetV2 open={exportOpen} list={list} items={live} onClose={() => setExportOpen(false)} />
+      <ExportSheetV2
+        open={exportOpen}
+        list={list}
+        items={live}
+        sections={sections}
+        onClose={() => setExportOpen(false)}
+      />
 
       <SheetV2 open={listMenu} onClose={() => setListMenu(false)} labelledBy="v2-list-menu-title">
         <h2 className="v2-sheet__title v2-sheet__title--item" id="v2-list-menu-title">
