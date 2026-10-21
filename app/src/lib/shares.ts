@@ -37,12 +37,11 @@ export type ShareInput = {
 };
 
 /**
- * Посилання для гостей. v2 роздає гостьову v2 під `/l/…` (крок 5г, ADR-057);
- * екрани v1 до свого прибирання (крок 9) — гостьову v1 під `/s/…`. Роздані
- * раніше `/s/…` працюють і далі: токен той самий (ADR-039, п. 3).
+ * Посилання для гостей — під `/l/…` (ADR-057). Роздані раніше `/s/…` працюють
+ * і далі: застосунок переводить їх на `/l/…` з тим самим токеном (ADR-065).
  */
-export function shareUrl(token: string, base: '/l' | '/s' = '/l'): string {
-  return `${publicOrigin.replace(/\/$/, '')}${base}/${token}`;
+export function shareUrl(token: string): string {
+  return `${publicOrigin.replace(/\/$/, '')}/l/${token}`;
 }
 
 export async function createShare(input: ShareInput): Promise<Share> {
@@ -81,6 +80,7 @@ export async function createShare(input: ShareInput): Promise<Share> {
   return data as Share;
 }
 
+/** Запасний шлях «Моїх посилань»: без назви списку, якщо сервер не прийме вкладення. */
 export async function fetchShares(): Promise<ShareWithCount[]> {
   const { data, error } = await supabase
     .from('shares')
@@ -172,6 +172,8 @@ export type SharedItem = {
   changed?: boolean;
   /** Гостьова v2 (ADR-056): цей гість позначив свою бронь «Уже куплено». Лише йому. */
   bought?: boolean;
+  /** Спільний збір на позицію (ADR-063). Лише гостям; власник цього поля не отримує ніколи. */
+  pool?: GuestPool;
 };
 
 export type GuestInfo = { code: string; name?: string | null; email?: string | null };
@@ -229,12 +231,6 @@ function rpcError(error: { message?: string; code?: string } | null): Error {
   return new Error(error?.message || 'unknown');
 }
 
-export async function fetchSharedList(token: string, key: string | null): Promise<SharedList> {
-  const { data, error } = await supabase.rpc('get_shared_list', { p_token: token, p_key: key });
-  if (error) throw rpcError(error);
-  return normalizeShared(data);
-}
-
 /**
  * Гостьова v2 (ADR-053): те саме, що `get_shared_list`, плюс підпис і пошта
  * гостя в `guest` — лише для його ключа. Власнику `guest` приходить null.
@@ -267,28 +263,6 @@ export async function registerView(token: string): Promise<void> {
 }
 
 export type ClaimResult = { taken_qty: number; mine_qty: number; code: string };
-
-/**
- * «Я візьму це». `quantity` — підсумкова кількість цього гостя, не приріст:
- * сервер робить upsert і рахує межу як «чужі позначки + твоя нова».
- * Помилки, які сторінка показує по-людськи: `not_enough_left` (гонку
- * програно), `reservations_disabled`.
- */
-export async function claimItem(
-  token: string,
-  itemId: string,
-  key: string,
-  quantity = 1,
-): Promise<ClaimResult> {
-  const { data, error } = await supabase.rpc('claim_item', {
-    p_token: token,
-    p_item_id: itemId,
-    p_key: key,
-    p_quantity: quantity,
-  });
-  if (error) throw rpcError(error);
-  return data as ClaimResult;
-}
 
 export type ClaimV2Result = ClaimResult & { name: string | null; email: string | null };
 
@@ -342,6 +316,114 @@ export async function sendGuestCode(
   const { data, error } = await supabase.rpc('send_guest_code', { p_token: token, p_email: email, p_locale: locale });
   if (error) throw rpcError(error);
   return data as { ok: true } | { error: 'too_many_attempts' };
+}
+
+/**
+ * Спільний збір (ADR-063): ім'я організатора, «як скинутися», ціль і скільки
+ * обіцяно. `mine` — своя сума учасника; `pledges` — імена й суми, лише
+ * організатору.
+ */
+export type GuestPool = {
+  id: string;
+  organizer: string;
+  instructions: string;
+  goal: number | string;
+  currency: Currency;
+  closed: boolean;
+  raised: number | string;
+  count: number;
+  mine: number | string | null;
+  is_organizer: boolean;
+  pledges: { name: string; amount: number | string }[] | null;
+};
+
+export const POOL_NAME_MAX = 60;
+export const POOL_TEXT_MAX = 500;
+
+/** Відкрити збір: позиція стає твоєю, як після «Беру». */
+export async function startPool(
+  token: string,
+  itemId: string,
+  key: string,
+  name: string,
+  instructions: string,
+  goal: number | null,
+  locale: string,
+  email: string | null = null,
+): Promise<{ code: string; pool_id: string }> {
+  const { data, error } = await supabase.rpc('start_pool', {
+    p_token: token,
+    p_item_id: itemId,
+    p_key: key,
+    p_name: name,
+    p_instructions: instructions,
+    p_goal: goal,
+    p_email: email,
+    p_locale: locale,
+  });
+  if (error) throw rpcError(error);
+  return data as { code: string; pool_id: string };
+}
+
+/** Долучитися чи змінити свою суму. */
+export async function pledgePool(
+  token: string,
+  poolId: string,
+  key: string,
+  name: string,
+  amount: number,
+  locale: string,
+  email: string | null = null,
+): Promise<{ code: string }> {
+  const { data, error } = await supabase.rpc('pledge_pool', {
+    p_token: token,
+    p_pool_id: poolId,
+    p_key: key,
+    p_name: name,
+    p_amount: amount,
+    p_locale: locale,
+    p_email: email,
+  });
+  if (error) throw rpcError(error);
+  return data as { code: string };
+}
+
+export async function leavePool(token: string, poolId: string, key: string): Promise<void> {
+  const { error } = await supabase.rpc('leave_pool', { p_token: token, p_pool_id: poolId, p_key: key });
+  if (error) throw rpcError(error);
+}
+
+export async function closePool(token: string, poolId: string, key: string, closed: boolean): Promise<void> {
+  const { error } = await supabase.rpc('close_pool', { p_token: token, p_pool_id: poolId, p_key: key, p_closed: closed });
+  if (error) throw rpcError(error);
+}
+
+export async function cancelPool(token: string, poolId: string, key: string): Promise<void> {
+  const { error } = await supabase.rpc('cancel_pool', { p_token: token, p_pool_id: poolId, p_key: key });
+  if (error) throw rpcError(error);
+}
+
+export type ReportReason = 'spam' | 'scam' | 'offensive' | 'illegal' | 'other';
+export const REPORT_REASONS: ReportReason[] = ['spam', 'scam', 'offensive', 'illegal', 'other'];
+export const REPORT_COMMENT_MAX = 1000;
+
+/**
+ * «Поскаржитись» (ADR-061): скарга йде операторові застосунку, не власнику.
+ * Помилки: GoneError — посилання мертве; `rate_limited` — забагато скарг.
+ */
+export async function reportShare(
+  token: string,
+  reason: ReportReason,
+  comment: string | null,
+  locale: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('report_share', {
+    p_token: token,
+    p_reason: reason,
+    p_comment: comment?.trim() || null,
+    p_locale: locale,
+  });
+  if (error) throw rpcError(error);
 }
 
 /**

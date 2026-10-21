@@ -1,29 +1,27 @@
 /* ─────────────────────────────────────────────────────────────
-   Дизайн v2 — стилі форми (ADR-039, п. 8–9).
+   Стилі екранів (ADR-039, п. 8–9; з ADR-065 — єдиного дизайну).
 
-   Цей файл імпортують модулі v2 (`RoutesV2.tsx`, `screens/GuestV2.tsx`),
-   тож він їде в лінивий чанк: користувач v1 його не завантажує.
-   Поки екранів v2 немає, правил тут теж немає.
+   Цей файл імпортують `RoutesV2.tsx` і `screens/GuestV2.tsx`. База —
+   скидання, шрифти, токени й смуга оновлення — у `src/styles.css`.
 
    ПРАВИЛА
 
    1. Кожен клас починається з `v2-` (`.v2-card`, `.v2-card__title`).
-      Гостьова v2 може відкритися в документі, де вже працювала v1, і тоді
-      обидва набори стилів живуть поруч. Префікс не дає їм зачепити одне
-      одного — і не дає v2 перевизначати класи v1 (`.btn`, `.card`…).
+      Префікс лишився від часів двох дизайнів і тепер просто відрізняє
+      класи екранів від базових (`.update-banner` у `styles.css`).
 
-   2. Жодного літерального кольору. Палітра спільна з v1: ті самі
-      дванадцять наборів у `styles/tokens.css`, та сама resolveAppearance(),
-      ті самі змінні `var(--color-…)`. `npm run check:contrast` падає на
-      будь-якому hex у `src/` поза `tokens.css` — і цей файл не виняток.
+   2. Жодного літерального кольору. Палітра — дванадцять наборів у
+      `styles/tokens.css`, resolveAppearance() і змінні `var(--color-…)`.
+      `npm run check:contrast` падає на будь-якому hex у `src/` поза
+      `tokens.css` — і цей файл не виняток.
 
-   3. Ритм, радіуси й тіні — із тих самих змінних, що й у v1
-      (`--sp-1…8`, `--r-field`, `--r-card`, `--r-panel`, `--r-pill`,
-      `--shadow-sm/md/lg`), якщо макет v2 не каже інакше. Нова змінна
-      форми — тут, під префіксом `--v2-`.
+   3. Ритм, радіуси й тіні — із загальних змінних (`--sp-1…8`,
+      `--r-field`, `--r-card`, `--r-panel`, `--r-pill`, `--shadow-sm/md/lg`),
+      якщо макет не каже інакше. Нова змінна форми — тут, під префіксом
+      `--v2-`.
 
    4. Правило, яке має сенс лише в одній палітрі, — помилка ревʼю:
-      v2 працює з усіма п'ятьма схемами, Вугіллям і обома темами.
+      екрани працюють з усіма п'ятьма схемами, Вугіллям і обома темами.
    ───────────────────────────────────────────────────────────── */
 
 /* ── Службове ─────────────────────────────────────────────── */
@@ -368,7 +366,7 @@
 }
 .v2-nav__list {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--sp-3);
   margin: 0;
   padding: 0;
@@ -1479,6 +1477,26 @@ div.v2-chips { gap: var(--sp-3); }
 
 /* Десктоп — дві колонки, не три: рядок дій довший за картку списку. */
 .v2-sharegrid { display: grid; gap: var(--sp-4); margin: 0; padding: 0; list-style: none; }
+
+/* «Я дарую» (ADR-062): мої позиції в картці посилання — назва, «1 з 6 · ціна», стан. */
+.v2-giftrows { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.v2-giftrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'title tag' 'meta tag';
+  align-items: center;
+  column-gap: var(--sp-3);
+  padding-block: var(--sp-2);
+  border-top: 1px solid var(--color-divider);
+}
+.v2-giftrow__title { grid-area: title; font-weight: 700; overflow-wrap: anywhere; }
+.v2-giftrow__meta { grid-area: meta; font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-giftrow__meta:empty { display: none; }
+.v2-giftrow > .v2-tag { grid-area: tag; }
+.v2-giftrow { grid-template-areas: 'title tag' 'meta tag' 'how how'; }
+.v2-giftrow__how { grid-area: how; font-size: var(--t-small); white-space: pre-line; overflow-wrap: anywhere; }
+.v2-giftthanks { margin: 0; padding: var(--sp-3) var(--sp-4); background: var(--color-accent-100); border-radius: 16px; }
+.v2-giftthanks__text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
 @media (min-width: 56rem) {
   .v2-sharegrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -1916,6 +1934,23 @@ div.v2-chips { gap: var(--sp-3); }
   border-radius: 20px;
 }
 
+/* Спільний збір на картці (ADR-063): хто збирає, смужка, підсумок, як скинутися. */
+.v2-gpool {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-accent-100);
+  border-radius: 16px;
+}
+.v2-gpool__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0; font-weight: 700; }
+.v2-gpool__bar { height: 8px; background: color-mix(in srgb, var(--color-accent) 18%, transparent); border-radius: 999px; overflow: hidden; }
+.v2-gpool__bar > span { display: block; height: 100%; background: var(--color-accent-700); border-radius: inherit; }
+.v2-gpool[data-closed] .v2-gpool__bar > span { background: var(--color-neutral-700); }
+.v2-gpool__sum, .v2-gpool__mine, .v2-gpool__how { margin: 0; font-size: var(--t-small); }
+.v2-gpool__mine { font-weight: 700; }
+.v2-gpool__how { overflow-wrap: anywhere; white-space: pre-line; }
+
 /* Картка гостя: фото → текст → дія. Своя — контур і мітка шавлією;
    чужа — приглушене чорнило, а не заливка (README пакета, «Коли брати нічого»). */
 .v2-gcards { display: grid; gap: var(--sp-3); margin: 0; padding: 0; list-style: none; }
@@ -1956,6 +1991,10 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-gcard__actions { display: grid; justify-items: end; gap: var(--sp-1); flex: none; }
 .v2-gcard__actions .v2-btn { padding-inline: var(--sp-5); }
 .v2-gcard__release { color: var(--color-danger-ink); }
+/* Збір (ADR-063): блок на всю ширину картки, дія — під ним. */
+.v2-gcard[data-state='pool'] { flex-wrap: wrap; }
+.v2-gcard[data-state='pool'] .v2-gcard__text { flex: 1 1 100%; }
+.v2-gcard[data-state='pool'] .v2-gcard__actions { flex: 1 1 100%; justify-items: stretch; }
 
 /* Аркуші гостя. */
 .v2-gbook { display: grid; gap: var(--sp-5); }

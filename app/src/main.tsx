@@ -6,8 +6,7 @@ import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/rubik';
 import '@fontsource-variable/manrope';
 import './styles.css';
-// Стилів v2 тут немає навмисно: вони імпортуються з модулів v2 і їдуть у її
-// лінивий чанк, тож користувач v1 їх не завантажує (ADR-039, п. 9).
+// Стилі екранів (`designs/v2/v2.css`) імпортує таблиця маршрутів.
 // Слухач beforeinstallprompt має зʼявитися до того, як браузер надішле подію.
 import './lib/install';
 import App from './App';

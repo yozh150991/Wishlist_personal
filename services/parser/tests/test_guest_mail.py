@@ -467,3 +467,52 @@ def test_thanks_renders_in_every_locale(locale):
     letter = render("thanks", locale, item="", list_title="L", code="K7M2Q", url="u", unsubscribe="x",
                     details={"message": "Dzięki"})
     assert letter.subject and "Dzięki" in letter.text and "{" not in letter.text
+
+
+# ── 7б: листи про збір (ADR-064) ─────────────
+
+POOL = {"title": "Кавоварка", "organizer": "Оля", "instructions": "BLIK на +48 500 000 000\nабо картка", "goal": "400.00",
+        "currency": "PLN", "raised": "250.00"}
+
+
+def test_pool_join_letter_names_participant_and_total():
+    letter = render("pool_join", "uk", item="", list_title="Новосілля", code="K7M2Q", url="u", unsubscribe="x",
+                    details={**POOL, "name": "Тарас", "amount": "100.00"})
+    assert "«Кавоварка»" in letter.text and "«Новосілля»" in letter.text and "Тарас" in letter.text
+    assert "100" in letter.text and "250" in letter.text and "400" in letter.text
+    assert "Тарас" not in letter.subject and "Кавоварка" not in letter.subject
+
+
+def test_pool_closed_letter_reminds_amount_and_how():
+    letter = render("pool_closed", "uk", item="", list_title="Новосілля", code="K7M2Q", url="u", unsubscribe="x",
+                    details={**POOL, "amount": "120.00"})
+    assert "Оля купує подарунок" in letter.text
+    assert "Ви обіцяли 120" in letter.text
+    assert "Як скинутися: BLIK на +48 500 000 000" in letter.text and "або картка" in letter.text
+
+
+def test_pool_cancel_letter_says_why():
+    cancelled = render("pool_cancel", "en", item="", list_title="Party", code="K7M2Q", url="u", unsubscribe="x",
+                       details={**POOL, "reason": "cancelled", "amount": "50"})
+    assert "was cancelled" in cancelled.text and "Оля" in cancelled.text
+    deleted = render("pool_cancel", "pl", item="", list_title="Impreza", code="K7M2Q", url="u", unsubscribe="x",
+                     details={**POOL, "reason": "deleted", "amount": "50"})
+    assert "zniknęła z listy" in deleted.text
+
+
+def test_pool_letters_skip_without_snapshot_and_respect_unsubscribe():
+    assert skip_reason(Job.from_row(row(kind="pool_join", item=None, details={"name": "Т"}), NOW)) == "nothing_visible"
+    assert skip_reason(Job.from_row(row(kind="pool_join", item=None, details={**POOL}), NOW)) == "nothing_visible"
+    ok = Job.from_row(row(kind="pool_cancel", item=None, details={**POOL, "reason": "cancelled"}), NOW)
+    assert skip_reason(ok) is None
+    off = Job.from_row(row(kind="pool_closed", item=None, details={**POOL},
+                           identity={**row()["identity"], "mail_off": True}), NOW)
+    assert skip_reason(off) == "unsubscribed"
+
+
+@pytest.mark.parametrize("locale", guest_mail.LOCALES)
+@pytest.mark.parametrize("kind", ["pool_join", "pool_closed", "pool_cancel"])
+def test_pool_letters_render_in_every_locale(locale, kind):
+    letter = render(kind, locale, item="", list_title="L", code="K7M2Q", url="u", unsubscribe="x",
+                    details={**POOL, "name": "N", "amount": "10", "reason": "deleted"})
+    assert letter.subject and letter.text and "{" not in letter.text

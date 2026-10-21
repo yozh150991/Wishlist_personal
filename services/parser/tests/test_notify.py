@@ -162,10 +162,10 @@ class TestMessages:
     def test_one_event_is_specific_many_are_one_digest(self):
         found = notify.find_events(owner(link=(True, False), after_event=(True, False)), LISTS, ITEMS, [], today=TODAY, logged=set())
         single = notify.push_message(found[:1], "uk")
-        assert single["title"] == "Як минуло свято?" and single["url"] == "/lists/L1?design=v2"
+        assert single["title"] == "Як минуло свято?" and single["url"] == "/lists/L1"
         digest = notify.push_message(found, "uk")
         assert digest["title"] == "Нове у твоїх списках: 2"
-        assert "«Лампа»" in digest["body"] and digest["url"] == "/lists/L1?design=v2"
+        assert "«Лампа»" in digest["body"] and digest["url"] == "/lists/L1"
 
     def test_email_escapes_names_and_links_to_settings(self):
         evil = [{**LISTS[0], "title": '<script>alert(1)</script>'}]
@@ -175,9 +175,9 @@ class TestMessages:
         assert "<script>" not in html_body and "&lt;script&gt;" in html_body
         # Сповіщення — функція v2, а вибір версії живе в браузері: без параметра
         # пошта на телефоні відкрила б v1, де картки «Сповіщення» немає.
-        assert 'href="https://wishlist.example/lists/L1?design=v2"' in html_body
-        assert "https://wishlist.example/settings?design=v2#notifications" in html_body
-        assert "https://wishlist.example/lists/L1?design=v2" in text_body
+        assert 'href="https://wishlist.example/lists/L1"' in html_body
+        assert "https://wishlist.example/settings#notifications" in html_body
+        assert "https://wishlist.example/lists/L1" in text_body
 
     def test_no_gendered_verbs_in_owner_texts(self):
         # Власник — «ти» без роду: «отримав», «зробила», «dostałeś» — ні.

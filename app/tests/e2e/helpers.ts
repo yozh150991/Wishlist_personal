@@ -1,24 +1,21 @@
 import { expect } from '@playwright/test';
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
- * Спільні кроки для сценаріїв, яким потрібен акаунт.
+ * Спільні кроки для сценаріїв, яким потрібен акаунт. Дизайн один (ADR-065),
+ * тож помічники ходять тими самими дорогами, що й людина в застосунку.
  *
- * Два правила, на яких трималась більшість падінь:
+ * Правила, на яких трималась більшість падінь:
  *
- * 1. Поля шукаються всередині відкритого діалогу. Діалоги — нативні <dialog>,
- *    і закриті лишаються в DOM. На сторінці списку одночасно живуть форма
- *    позиції й форма списку, обидві з полем «Назва», тож getByLabel на всю
- *    сторінку знаходить два поля. getByRole('dialog') бачить лише відкритий.
+ * 1. Поля шукаються за `name`, а не за підписом. Аркуші — нативні <dialog>,
+ *    і форм з полем «Назва» на сторінці списку кілька; `name` у кожної свій.
  *
- * 2. Після відкриття діалогу треба дочекатися фокусу на першому полі.
- *    Dialog ставить його в requestAnimationFrame, уже після того, як діалог
- *    видно. Якщо заповнити поле раніше, фокус перескакує посеред введення,
- *    і текст опиняється в полі «Посилання» — так «399» потрапляло в URL.
- *
- * 3. Кожен тест створює собі дані сам. Playwright запускає тести паралельно
+ * 2. Кожен тест створює собі дані сам. Playwright запускає тести паралельно
  *    і в довільному порядку, тож тест, що чекає на список, створений іншим
  *    тестом, падає або проходить випадково.
+ *
+ * 3. Кожне очікування, що може не настати, — з обмеженням часу
+ *    (TESTING.md, правило 4).
  */
 
 export const EMAIL = process.env.E2E_EMAIL;
@@ -30,123 +27,136 @@ export function unique(prefix: string): string {
   return `${prefix} ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export function openDialog(page: Page): Locator {
-  return page.getByRole('dialog');
-}
-
-/** Відкритий діалог, у якому Dialog уже поставив фокус на перше поле. */
-export async function settledDialog(page: Page): Promise<Locator> {
-  const dialog = openDialog(page);
-  await expect(dialog.locator('input:not([type="hidden"]), select, textarea').first()).toBeFocused();
-  return dialog;
-}
-
-function escapeRegExp(s: string): string {
+export function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Вхід паролем; кінцева точка — «Мої списки». */
 export async function signIn(page: Page) {
   await page.goto('/login');
-  await page.getByLabel(/пошта|e-mail|email/i).fill(EMAIL!);
-  await page.getByLabel(/пароль|hasło|password/i).fill(PASSWORD!);
-  await page.getByRole('button', { name: /увійти|zaloguj|sign in/i }).click();
-  await expect(page).toHaveURL(/\/lists/);
+  await page.locator('input[name="email"]').fill(EMAIL!);
+  await page.locator('input[name="password"]').fill(PASSWORD!);
+  await page.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(/\/lists$/);
 }
 
-/** Створює список і відкриває його. Очікує, що відкрита сторінка /lists. */
+/** Новий список через «Новий список» — одразу всередині нього. */
 export async function createList(page: Page, title: string) {
-  await page.getByRole('button', { name: /створити список|utwórz listę|create list/i }).first().click();
-  const dialog = await settledDialog(page);
-  await dialog.getByLabel(/^назва$|^nazwa$|^title$/i).fill(title);
-  await dialog.getByRole('button', { name: /^зберегти$|^zapisz$|^save$/i }).click();
-  await expect(dialog).toHaveCount(0);
-  await page.getByRole('link', { name: title }).click();
+  await page.goto('/lists/new');
+  await page.locator('input[name="title"]').fill(title);
+  await page.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(/\/lists\/[0-9a-f-]{36}$/);
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
 }
 
-/** Додає позицію лише з назвою на відкритій сторінці списку. */
-export async function addItem(page: Page, title: string) {
-  await page.getByRole('button', { name: /додати позицію|dodaj pozycję|add item/i }).click();
-  const dialog = await settledDialog(page);
-  await dialog.getByLabel(/^назва$|^nazwa$|^title$/i).fill(title);
-  await dialog.getByRole('button', { name: /^зберегти$|^zapisz$|^save$/i }).click();
-  await expect(dialog).toHaveCount(0);
-  await expect(page.getByText(title, { exact: true })).toBeVisible();
+/** Картка позиції на сторінці списку. */
+export function itemCard(page: Page, title: string) {
+  return page.getByRole('listitem').filter({ hasText: title });
 }
 
+/** Позиція вручну на відкритій сторінці списку: «Вписати вручну» → назва → «Додати». */
+export async function addItem(page: Page, title: string) {
+  await page.getByRole('button', { name: /^(додати позицію|dodaj pozycję|add item)$/i }).first().click();
+  const sheet = page.getByRole('dialog', { name: /нова позиція|nowa pozycja|new item/i });
+  await expect(sheet.locator('input[name="link"]')).toBeFocused();
+  await sheet.getByRole('button', { name: /вписати вручну|wpisz ręcznie|type it in/i }).click();
+  await expect(sheet.locator('input[name="title"]')).toBeFocused();
+  await sheet.locator('input[name="title"]').fill(title);
+  await sheet.getByRole('button', { name: /^(додати|dodaj|add)$/i }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(itemCard(page, title).first()).toBeVisible();
+}
+
+/** Меню «⋯» позиції — аркуш, названий її назвою. */
+export async function itemMenu(page: Page, title: string) {
+  const t = escapeRegExp(title);
+  await page
+    .getByRole('button', {
+      name: new RegExp(`(дії з позицією «${t}»|działania na pozycji „${t}”|actions for “${t}”)`, 'i'),
+    })
+    .click();
+  return page.getByRole('dialog', { name: title });
+}
+
+/** Статус позиції з меню «⋯». */
+export async function setStatus(page: Page, title: string, status: RegExp) {
+  const menu = await itemMenu(page, title);
+  // click, а не check: вибір одразу закриває меню.
+  await menu.getByRole('radio', { name: status }).click();
+  await expect(menu).toHaveCount(0);
+}
+
+/** Пункт меню «Дії зі списком». */
+export async function listMenu(page: Page, item: RegExp) {
+  await page.getByRole('button', { name: /^(дії зі списком|działania na liście|list actions)$/i }).click();
+  await page.getByRole('dialog').getByRole('button', { name: item }).click();
+}
+
+export type ShareOptions = {
+  /** «Діє до» — `YYYY-MM-DD`. */
+  expires?: string;
+};
+
 /**
- * Створює посилання з вибраних позицій і повертає його адресу.
- * Адреса читається з поля в діалозі, а не з буфера обміну: читання буфера
- * потребує дозволу браузера, якого в тестовому профілі немає.
+ * Відкриває «Поділитися», лишає вибраними рівно `pick`, вписує заголовок і
+ * створює посилання. Повертає адресу з поля аркуша (а не з буфера: читання
+ * буфера потребує дозволу, якого в тестовому профілі немає) — або null, якщо
+ * форма відмовила (дата в минулому). Аркуш лишається відкритим.
  */
-export async function createShare(page: Page, pick: string[], title: string): Promise<string> {
-  await page.getByRole('button', { name: /^вибрати$|^zaznacz$|^select$/i }).click();
-  // Роль checkbox обовʼязкова: назва позиції є і в підписі чекбокса вибору,
-  // і в підписі списку статусу тієї ж картки.
-  for (const name of pick) {
-    await page.getByRole('checkbox', { name: new RegExp(escapeRegExp(name)) }).check();
+export async function createShare(
+  page: Page,
+  pick: string[],
+  title: string,
+  opts: ShareOptions = {},
+): Promise<string | null> {
+  await page.getByRole('button', { name: /^(поділитися|udostępnij|share)$/i }).first().click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.locator('input[name="share_title"]')).toBeVisible();
+
+  // На телефоні вибір — окремий крок «Обрати», на десктопі — поруч із превʼю.
+  const boxes = sheet.getByRole('checkbox');
+  if (!(await boxes.first().isVisible())) await sheet.getByRole('button', { name: /^(обрати|wybierz|choose)$/i }).click();
+  await expect(boxes.first()).toBeVisible();
+  for (const box of await boxes.all()) {
+    const label = await box.locator('xpath=ancestor::label[1]').innerText();
+    const want = pick.some((name) => label.includes(name));
+    if ((await box.isChecked()) !== want) await box.setChecked(want);
   }
-  await page.getByRole('button', { name: /створити посилання|utwórz link|create link/i }).click();
+  const done = sheet.getByRole('button', { name: /^(готово|gotowe|done)$/i });
+  if (await done.isVisible()) await done.click();
 
-  const dialog = await settledDialog(page);
-  await dialog.getByLabel(/^заголовок для гостей$|heading for guests|nagłówek/i).fill(title);
-  await dialog.getByRole('button', { name: /створити посилання|utwórz link|create link/i }).click();
+  await sheet.locator('input[name="share_title"]').fill(title);
+  if (opts.expires) await sheet.locator('input[name="share_expires"]').fill(opts.expires);
+  await sheet.getByRole('button', { name: /^(створити посилання|utwórz link|create link)$/i }).click();
 
-  // Саме #shareLink: підпис «Посилання» має ще й поле URL у формі позиції.
-  const link = await dialog.locator('#shareLink').inputValue();
-  expect(link).toMatch(/\/s\/[A-Za-z0-9_-]{22}$/);
+  const ready = sheet.getByRole('heading', { name: /посилання готове|link gotowy|link is ready/i });
+  const refused = sheet.getByText(/дата вже минула|data już minęła|date has passed/i);
+  await expect(ready.or(refused)).toBeVisible();
+  if (!(await ready.isVisible())) return null;
+  const link = await sheet.locator('input[readonly]').inputValue();
+  expect(link).toMatch(/\/l\/[A-Za-z0-9_-]{16,}$/);
   return link;
 }
 
-/**
- * Лічильник режиму вибору. Живе в шапці екрана, а не в панелі дій унизу,
- * тому шукається на рівні сторінки: прив'язка до панелі ламалась би від
- * кожного перенесення лічильника між блоками, хоч число на екрані є.
- */
-export function selectedCount(page: Page, n: number): Locator {
-  return page.getByText(new RegExp(`^(вибрано|zaznaczono|selected): ${n}$`, 'i'));
+/** Посилання, яке мусить створитись; аркуш закрито. */
+export async function shareLink(page: Page, pick: string[], title: string, opts: ShareOptions = {}): Promise<string> {
+  const link = await createShare(page, pick, title, opts);
+  expect(link).not.toBeNull();
+  await page.getByRole('dialog').getByRole('button', { name: /^(готово|gotowe|done)$/i }).first().click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  return link!;
 }
 
 /**
- * Відкриває фільтри, якщо на цій ширині вони сховані в нижній лист.
- * На широкому екрані панель уже розгорнута, а кнопки «Фільтри» там немає —
- * тоді нічого робити не треба. Так один і той самий сценарій проходить
- * і в десктопній, і в телефонній розкладці.
- */
-export async function openFilters(page: Page) {
-  // Пошук стоїть поруч із кнопкою й на екрані завжди: поки його немає,
-  // сторінка ще не готова, і питання «чи видно кнопку Фільтри» отримало б
-  // відповідь «ні» просто тому, що її ще не намалювали.
-  await expect(page.getByRole('searchbox')).toBeVisible();
-  // Підпис якірний і з необовʼязковим числом: у кнопці сидить значок
-  // кількості активних фільтрів («Фільтри 1»). Без якорів сюди ж потрапляли
-  // «Скинути фільтри» в панелі й «Скинути все» в листі — щойно фільтр стає
-  // активним, їх на екрані одразу дві, і помічник падав на strict mode.
-  const toggle = page.getByRole('button', { name: /^(фільтри|filtry|filters)(\s+\d+)?$/i });
-  if (!(await toggle.isVisible())) return;
-  await toggle.click();
-  await expect(openDialog(page)).toBeVisible();
-}
-
-/** Закриває лист фільтрів, якщо він відкритий: під ним список недосяжний. */
-export async function closeFilters(page: Page) {
-  const sheet = openDialog(page);
-  if (!(await sheet.isVisible())) return;
-  await page.keyboard.press('Escape');
-  await expect(sheet).toHaveCount(0);
-}
-
-/**
- * Виходить з акаунта. На телефоні кнопки виходу в нижній смузі немає — там
- * лише три розділи, а акаунт живе в Налаштуваннях; на десктопі вона поруч
- * із поштою в бічній колонці. Перехід саме посиланням, а не `goto`: тест
+ * Виходить з акаунта. На телефоні кнопка живе в Налаштуваннях, на десктопі —
+ * поруч із поштою в бічній колонці. Перехід саме посиланням, а не `goto`: тест
  * може бути офлайн, і перезавантаження сторінки йому нізвідки взяти.
  */
 export async function signOut(page: Page) {
   const button = page.getByRole('button', { name: /^вийти$|^wyloguj$|^sign out$/i });
-  if (!(await button.isVisible())) {
+  if (!(await button.first().isVisible())) {
     await page.getByRole('link', { name: /^налаштування$|^ustawienia$|^settings$/i }).click();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   }
-  await button.click();
+  await button.first().click();
 }

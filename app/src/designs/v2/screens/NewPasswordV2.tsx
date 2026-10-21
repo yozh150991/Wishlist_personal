@@ -101,7 +101,7 @@ export default function NewPasswordV2() {
     if (problem) return emailRef.current?.focus();
     setBusy(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: authReturn('/update-password', 'v2'),
+      redirectTo: authReturn('/update-password'),
     });
     setBusy(false);
     const key = error ? authErrorKey(error) : null;

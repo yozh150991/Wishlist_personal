@@ -7,8 +7,8 @@ import { nextOccurrence } from '../../../lib/afterEvent';
 import { formatDay, localToday } from '../../../lib/format';
 
 /**
- * Частини екранів власника v2, спільні для кількох екранів: модальне вікно,
- * множина, вихід з акаунта. Лише v2 — у v1 свої (`components/`).
+ * Частини екранів власника, спільні для кількох екранів: модальне вікно,
+ * множина, вихід з акаунта.
  */
 
 /**
@@ -151,7 +151,7 @@ export function SignOutV2({ className = 'v2-btn v2-btn--ghost' }: { className?: 
   return (
     <>
       <button type="button" className={className} onClick={() => void request()}>
-        {t('design.signOut')}
+        {t('v2app.signOut.action')}
       </button>
       <SheetV2 open={waiting > 0} onClose={() => setWaiting(0)} labelledBy="v2-signout-title">
         <h2 className="v2-sheet__title" id="v2-signout-title">

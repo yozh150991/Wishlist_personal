@@ -67,29 +67,31 @@ export function rememberKey(token: string, key: string): void {
   if (isGuestKey(key)) write(KEY_PREFIX + token, key);
 }
 
+/** Новий випадковий ключ гостя — ще ніде не збережений. */
+export function newKey(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
 /** Ключ для першої позначки: наявний або новий, збережений до запиту. */
 export function ensureKey(token: string): string {
   const existing = storedKey(token);
   if (existing) return existing;
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  const key = btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  const key = newKey();
   rememberKey(token, key);
   return key;
 }
 
 /**
- * Префікс гостьової адреси: `/s` — гостьова v1, `/l` — гостьова v2 (ADR-039).
- * Сторінка, що будує посилання, передає свій — гість лишається у своїй версії.
+ * Особисте посилання гостя: те саме посилання плюс його ключ. Завжди під
+ * `/l/…`; старі `/s/…/g/…` застосунок переводить туди ж (ADR-065).
  */
-export type GuestBase = '/s' | '/l';
-
-/** Особисте посилання гостя: те саме посилання плюс його ключ. */
-export function personalLink(token: string, key: string, base: GuestBase = '/s'): string {
-  return `${publicOrigin.replace(/\/$/, '')}${base}/${token}/g/${key}`;
+export function personalLink(token: string, key: string): string {
+  return `${publicOrigin.replace(/\/$/, '')}/l/${token}/g/${key}`;
 }
 
 /* ── «Стежити за списком» ─────────────────── */

@@ -128,6 +128,35 @@ await supabase.rpc('ack_claim_change', { p_token: token, p_item_id: itemId, p_ke
 ```
 «Лишити» після зміни позиції: знімає `changed_at` з броні цього гостя. `get_guest_list` віддає `changed: true` лише на позиціях, які взяв саме цей гість. Чужий ключ — нічого не змінює. Помилки: `not_found`, `owner_cannot_reserve`, `item_not_in_share`.
 
+### Спільний збір — anon + authenticated (ADR-063)
+```ts
+await supabase.rpc('start_pool',  { p_token, p_item_id, p_key, p_name: 'Оля', p_instructions: 'BLIK на …', p_goal: null, p_locale: 'uk' });
+// → { code, pool_id, taken_qty, mine_qty, name, email }  — збір бере позицію, як «Беру»
+await supabase.rpc('pledge_pool', { p_token, p_pool_id, p_key, p_name: 'Тарас', p_amount: 150, p_locale: 'uk', p_email: null });   // → { code }
+await supabase.rpc('leave_pool',  { p_token, p_pool_id, p_key });
+await supabase.rpc('close_pool',  { p_token, p_pool_id, p_key, p_closed: true });   // лише організатор
+await supabase.rpc('cancel_pool', { p_token, p_pool_id, p_key });                   // лише організатор: знімає бронь
+```
+`get_guest_list` додає на позицію зі збором `pool`: `{ id, organizer, instructions, goal, currency, closed, raised, count, mine, is_organizer, pledges }` — `mine` лише учаснику, `pledges` (імена й суми) лише організатору. Власник `pool` не отримує ніколи. Пошта учасника (`p_email`, ADR-064) — для листів «збір закрито» й «скасовано»; організатор отримує лист про кожного нового учасника. Помилки: `not_found`, `owner_cannot_reserve`, `bad_key`, `bad_email`, `item_not_in_share`, `pool_single_only`, `bad_goal`, `bad_name`, `bad_instructions`, `bad_amount`, `not_enough_left`, `list_archived`, `pool_not_found`, `pool_closed`, `pool_full` (50 учасників), `not_organizer`.
+
+### `get_my_gifts` / `attach_guest_key` — authenticated (ADR-062)
+```ts
+const { data } = await supabase.rpc('get_my_gifts');
+// → [{ token, title, event_date, archived, thanks, code,
+//      items: [{ id, title, url, price, currency, mine_qty, quantity, bought, changed,
+//                pool: { organizer, instructions, goal, currency, closed, raised, is_organizer, mine } | null }] }]
+
+const { data: ok } = await supabase.rpc('attach_guest_key', { p_token: token, p_key: newKey });
+// → true — ключ цього браузера додано до броней акаунта на цьому посиланні; false — їх тут немає
+```
+«Я дарую»: спершу прив'язує ідентичності з поштою, що збігається з підтвердженою поштою акаунта, потім віддає списки з живим посиланням, де акаунт щось бере. Власні списки — ніколи. `price` — `null`, якщо посилання ховає ціни. `attach_guest_key` — новий пристрій без коду; чужий ключ не перехоплює, власнику — `false`. Помилки: `not_authenticated`, `not_found` (мертве посилання), `bad_key`.
+
+### `report_share` — anon + authenticated (ADR-061)
+```ts
+await supabase.rpc('report_share', { p_token: token, p_reason: 'scam', p_comment: 'Просять гроші', p_locale: 'uk' });   // 204
+```
+«Поскаржитись» на гостьовій: скарга операторові застосунку, не власнику. `p_reason` — `spam`, `scam`, `offensive`, `illegal`, `other`; коментар необов'язковий, до 1000 символів (порожній — `null`). Помилки: `not_found` (мертве посилання), `owner_cannot_report`, `bad_reason`, `bad_comment`, `rate_limited` (5 скарг на посилання чи 50 на застосунок за годину).
+
 ### `get_share_card` — anon + authenticated (ADR-060)
 ```ts
 // Викликає лише edge-функція app/api/card.ts для ботів месенджерів.
@@ -210,9 +239,9 @@ await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoi
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
-| `ack_claim_change`, `get_share_card` | `anon`, `authenticated` |
+| `ack_claim_change`, `get_share_card`, `report_share`, `start_pool`, `pledge_pool`, `leave_pool`, `close_pool`, `cancel_pool` | `anon`, `authenticated` |
 | `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
-| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription` | `authenticated` |
+| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
 Права задано міграціями `20260910120300_grants.sql` і `20260916220000_revoke_default_function_grants.sql`. Перша відкликала лише `PUBLIC`, і функції власника лишались доступними `anon` через явні гранти Supabase за замовчуванням; друга це закрила. Кожна нова RPC-функція отримує гранти явно й відкликає їх у конкретних ролей (CLAUDE.md §3.4). Таблицю вище перевіряє `supabase/tests/database/01_schema_guards.test.sql`.
@@ -410,7 +439,7 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 | `503 notify_not_configured` | бракує `SUPABASE_*`, `BREVO_API_KEY`, `VAPID_PRIVATE_KEY`, `MAIL_FROM` чи `APP_ORIGIN` — які саме, показує `/health` |
 | `500` | Supabase відхилив ключ чи недоступний |
 
-Посилання в push і листах ведуть у v2: `/lists/…?design=v2`, `/settings?design=v2#notifications`.
+Посилання в push і листах — адреси застосунку: `/lists/…`, `/settings#notifications` (без `?design=` з ADR-065).
 
 **Push** — Web Push: `POST` на адресу підписки з `Authorization: vapid t=<JWT ES256>,k=<публічний ключ>`, `Content-Encoding: aes128gcm`, `TTL: 86400`. Тіло — JSON `{title, body, url, tag}`, зашифроване для браузера (RFC 8291). Адреса — лише https на хостах `fcm.googleapis.com`, `*.push.services.mozilla.com`, `*.push.apple.com`, `*.notify.windows.com`; решта відкидається без запиту.
 
@@ -468,7 +497,7 @@ x-wake-secret: <секрет>
 
 Що робить: бере до 50 невідправлених рядків (найстаріші першими), кожен — атомарно (`PATCH … sent_at=is.null` з `Prefer: return=representation`), тож дві копії сервісу не надішлють той самий лист. Пропускає (`skipped`): пошти немає, гість відписався (для листа на бронь), посилання відкликане чи протерміноване, позиції немає. Brevo відмовив — `attempts + 1`, після п'ятої спроби рядок лишається в спокої. Наприкінці прибирає рядки, старші за 30 днів. У журнал — лише лічильники: ні адрес, ні токенів, ні секретів відписки.
 
-Види листів: `claim`, `code` (ADR-054), `changed`, `deleted`, `reminder` (ADR-055), `thanks` (ADR-059, без коду, текст подяки рядками). Для чотирьох останніх зміст — знімком у `details` (з ADR-056 — ще дата покупки для `deleted` і вже куплене для `reminder`); ціна — лише якщо посилання її показує (змінилась лише прихована ціна — `skipped`); відписка діє на все, крім коду. Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist» / «Зміни у вашій броні в Wishlist» / «Нагадування від Wishlist» / «Подяка у Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
+Види листів: `claim`, `code` (ADR-054), `changed`, `deleted`, `reminder` (ADR-055), `thanks` (ADR-059, без коду, текст подяки рядками), `pool_join`, `pool_closed`, `pool_cancel` (ADR-064, зміст збору знімком). Для чотирьох останніх зміст — знімком у `details` (з ADR-056 — ще дата покупки для `deleted` і вже куплене для `reminder`); ціна — лише якщо посилання її показує (змінилась лише прихована ціна — `skipped`); відписка діє на все, крім коду. Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist» / «Зміни у вашій броні в Wishlist» / «Нагадування від Wishlist» / «Подяка у Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
 
 ### `GET /health`
 `{ "status": "ok", "service": "wishlist-guestmail", "configured": true }` — без назв змінних: сервіс відкритий.

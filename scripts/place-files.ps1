@@ -101,17 +101,11 @@ $map = @{
 
   'uk.json' = 'app\src\i18n'; 'pl.json' = 'app\src\i18n'; 'en.json' = 'app\src\i18n'
 
-  'RequireAuth.tsx' = 'app\src\components'; 'AppShell.tsx' = 'app\src\components'
   'AuthLayout.tsx'  = 'app\src\components'; 'ui.tsx'       = 'app\src\components'
-  'Dialog.tsx' = 'app\src\components'; 'ItemCard.tsx' = 'app\src\components'
-  'ItemDialog.tsx' = 'app\src\components'; 'ListDialog.tsx' = 'app\src\components'
-  'ShareDialog.tsx' = 'app\src\components'
-  'LocaleSync.tsx' = 'app\src\components'; 'LanguagePicker.tsx' = 'app\src\components'
+  'LocaleSync.tsx' = 'app\src\components'
   'UpdatePrompt.tsx' = 'app\src\components'; 'install.ts' = 'app\src\lib'; 'errors.ts' = 'app\src\lib'
-  'EventSummary.tsx' = 'app\src\components'; 'env-local.mjs' = 'app\scripts'
-  'ExportDialog.tsx' = 'app\src\components'; 'ImportDialog.tsx' = 'app\src\components'
+  'env-local.mjs' = 'app\scripts'
   'transfer.ts' = 'app\src\lib'; 'download.ts' = 'app\src\lib'
-  'VariantsField.tsx' = 'app\src\components'
   'cache.ts' = 'app\src\lib'
   'idb.ts' = 'app\src\lib'; 'outbox.ts' = 'app\src\lib'; 'outboxOps.ts' = 'app\src\lib'
   'outbox.spec.ts' = 'app\tests\e2e'
@@ -120,38 +114,26 @@ $map = @{
   # Redesign (ADR-031): tokens, icons, banners, filters, appearance.
   'tokens.css' = 'app\src\styles'
   'check-contrast.mjs' = 'app\scripts'; 'check-i18n.mjs' = 'app\scripts'
-  'Icon.tsx' = 'app\src\components'; 'Banners.tsx' = 'app\src\components'
-  'Filters.tsx' = 'app\src\components'; 'media.ts' = 'app\src\lib'
+  'media.ts' = 'app\src\lib'
   'AppearanceSync.tsx' = 'app\src\components'
-  'AppearanceSheet.tsx' = 'app\src\components'
   'transfer.spec.ts' = 'app\tests\e2e'; 'date-text.spec.ts' = 'app\tests\e2e'
   'check-pwa.mjs' = 'app\scripts'; 'generate-icons.mjs' = 'app\scripts'
   'icon.svg' = 'app\public\icons'; 'maskable.svg' = 'app\public\icons'
   'icon-192.png' = 'app\public\icons'; 'icon-512.png' = 'app\public\icons'
   'maskable-512.png' = 'app\public\icons'; 'apple-touch-icon.png' = 'app\public\icons'
 
-  'Login.tsx' = 'app\src\routes'; 'Register.tsx' = 'app\src\routes'
-  'ResetPassword.tsx' = 'app\src\routes'; 'UpdatePassword.tsx' = 'app\src\routes'
-  'Lists.tsx' = 'app\src\routes'; 'Settings.tsx' = 'app\src\routes'
-  'NotFound.tsx' = 'app\src\routes'; 'ListDetail.tsx' = 'app\src\routes'
-  'Shares.tsx' = 'app\src\routes'; 'SharedList.tsx' = 'app\src\routes'
 
   'database.ts' = 'app\src\types'
-  'auth.spec.ts' = 'app\tests\e2e'; 'items.spec.ts' = 'app\tests\e2e'
-  'sharing.spec.ts' = 'app\tests\e2e'
+  'sharing.spec.ts' = 'app\tests\e2e'; 'routes.spec.ts' = 'app\tests\e2e'
   'parser.ts' = 'app\src\lib'; 'guest.ts' = 'app\src\lib'
   'shares.ts' = 'app\src\lib'; 'safeNext.ts' = 'app\src\lib'
   'safe-next.spec.ts' = 'app\tests\e2e'; 'helpers.ts' = 'app\tests\e2e'
   'session.spec.ts' = 'app\tests\e2e'; 'global-setup.ts' = 'app\tests'
 
-  # Design version switch (ADR-032). File names here are unique across the
-  # whole repository on purpose: this table maps by file name alone, so two
-  # files both called Routes.tsx could not be placed.
-  'design.spec.ts' = 'app\tests\e2e'
-  'DesignRoutes.tsx' = 'app\src\designs'
-  'RoutesV1.tsx' = 'app\src\designs\v1'
-  'RoutesV2.tsx' = 'app\src\designs\v2'
-  'PlaceholderV2.tsx' = 'app\src\designs\v2\screens'
+  # Single design (ADR-065). File names here are unique across the whole
+  # repository on purpose: this table maps by file name alone, so two files
+  # both called Routes.tsx could not be placed.
+  'RoutesV2.tsx' = 'app\src\designs\v2'; 'NotFoundV2.tsx' = 'app\src\designs\v2\screens'
   # Design v2 foundation (ADR-039): lazy v2 styles, /l/ guest route.
   'v2.css' = 'app\src\designs\v2'; 'GuestV2.tsx' = 'app\src\designs\v2\screens'
   # Design v2 sign-in (ADR-042): shared auth helpers and v2 screens.
@@ -180,7 +162,7 @@ $map = @{
   'AfterEventV2.tsx' = 'app\src\designs\v2\screens'; 'afterEvent.ts' = 'app\src\lib'
   'after-event.spec.ts' = 'app\tests\e2e'; 'after-event-v2.spec.ts' = 'app\tests\e2e'
   # Design v2 step 4b: drafts, share target (/add), v1 bridge.
-  'AddV2.tsx' = 'app\src\designs\v2\screens'; 'AddBridgeV1.tsx' = 'app\src\designs\v1'
+  'AddV2.tsx' = 'app\src\designs\v2\screens'
   'shareTarget.ts' = 'app\src\lib'; 'share-target.spec.ts' = 'app\tests\e2e'
   # notifications v2, step 4g-2 (ADR-049)
   'NotifyV2.tsx' = 'app\src\designs\v2\screens'
@@ -190,13 +172,12 @@ $map = @{
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
   'appearance.ts' = 'app\src\lib'; 'hue-ramp.js' = 'app\src\lib'
-  'hue-ramp.d.ts' = 'app\src\lib'; 'Switch.tsx' = 'app\src\components'
+  'hue-ramp.d.ts' = 'app\src\lib'
   'appearance.spec.ts' = 'app\tests\e2e'
-  'appearances.ts' = 'app\src\lib'; 'AppearanceDialog.tsx' = 'app\src\components'
-  'GuestParts.tsx' = 'app\src\components'; 'GuestPreview.tsx' = 'app\src\routes'
+  'appearances.ts' = 'app\src\lib'
   'guest.spec.ts' = 'app\tests\e2e'
-  'sections.ts' = 'app\src\lib'; 'SectionsView.tsx' = 'app\src\components'
-  'SectionDialog.tsx' = 'app\src\components'; 'sections.spec.ts' = 'app\tests\e2e'
+  'sections.ts' = 'app\src\lib'
+  'sections.spec.ts' = 'app\tests\e2e'
   'thresholds.spec.ts' = 'app\tests\e2e'
   'zones.ts' = 'app\src\lib'; 'expiry.spec.ts' = 'app\tests\e2e'
 

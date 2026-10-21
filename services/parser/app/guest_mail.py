@@ -18,7 +18,8 @@ secret-ключем. Тож навіть витеклий секрет сигн�
 Види листів: `claim` — на бронь, `code` — код на прохання (ADR-054);
 `changed` і `deleted` — власник змінив чи прибрав позицію, яку взяли (потік J),
 `reminder` — за 7 днів до свята (P5) (ADR-055), `thanks` — подяка власника
-після свята, раз на список (ADR-059). Що сказати, для чотирьох останніх
+після свята, раз на список (ADR-059), `pool_join` / `pool_closed` /
+`pool_cancel` — спільний збір (ADR-064). Що сказати, для чотирьох останніх
 лежить знімком у `details`: сервіс позначок не читає ніколи.
 Посилання на список — з посилання, де діяв гість; приховані там ціни не
 з'являються й у листі.
@@ -67,6 +68,18 @@ TEXTS: dict[str, dict[str, str]] = {
         "reminder.items": "Ви берете: {items}.",
         "thanks.subject": "Подяка у Wishlist",
         "thanks.lead": "Автор списку «{list}» дякує вам:",
+        "pool_join.subject": "Новий учасник збору у Wishlist",
+        "pool_join.lead": "До вашого збору на «{item}» у списку «{list}» долучилися: {name}, {amount}.",
+        "pool_join.total": "Разом обіцяно {raised} з {goal}.",
+        "pool_closed.subject": "Збір у Wishlist закрито",
+        "pool_closed.lead": "Збір на «{item}» у списку «{list}» закрито — {organizer} купує подарунок.",
+        "pool_closed.amount": "Ви обіцяли {amount}.",
+        "pool_closed.how": "Як скинутися: {how}",
+        "pool_cancel.subject": "Збір у Wishlist скасовано",
+        "pool_cancel.cancelled": "Збір на «{item}» у списку «{list}» скасовано. Обіцянка більше не діє — переказувати нічого не треба.",
+        "pool_cancel.deleted": "Позицію «{item}» прибрано зі списку «{list}», тож збору на неї більше немає. Переказувати нічого не треба.",
+        "pool_cancel.paid": "Якщо ви вже переказали {amount}, напишіть організатору — {organizer}.",
+        "why.pool": "Ви вказали цю адресу, коли долучалися до збору. Власник списку її не бачить.",
         "noprice": "не вказана",
     },
     "pl": {
@@ -96,6 +109,18 @@ TEXTS: dict[str, dict[str, str]] = {
         "reminder.items": "Masz zarezerwowane: {items}.",
         "thanks.subject": "Podziękowanie w Wishlist",
         "thanks.lead": "Autor listy „{list}” dziękuje:",
+        "pool_join.subject": "Nowy uczestnik zrzutki w Wishlist",
+        "pool_join.lead": "Do Twojej zrzutki na „{item}” z listy „{list}” dołączył(a): {name}, {amount}.",
+        "pool_join.total": "Razem obiecano {raised} z {goal}.",
+        "pool_closed.subject": "Zrzutka w Wishlist zamknięta",
+        "pool_closed.lead": "Zrzutka na „{item}” z listy „{list}” jest zamknięta — {organizer} kupuje prezent.",
+        "pool_closed.amount": "Obiecano przez Ciebie: {amount}.",
+        "pool_closed.how": "Jak się dołożyć: {how}",
+        "pool_cancel.subject": "Zrzutka w Wishlist anulowana",
+        "pool_cancel.cancelled": "Zrzutka na „{item}” z listy „{list}” została anulowana. Obietnica już nie obowiązuje — nie trzeba nic przelewać.",
+        "pool_cancel.deleted": "Pozycja „{item}” zniknęła z listy „{list}”, więc zrzutki już nie ma. Nie trzeba nic przelewać.",
+        "pool_cancel.paid": "Jeśli już przelano {amount}, napisz do organizatora — {organizer}.",
+        "why.pool": "Ten adres podano przy dołączaniu do zrzutki. Właściciel listy go nie widzi.",
         "noprice": "nie podana",
     },
     "en": {
@@ -125,6 +150,18 @@ TEXTS: dict[str, dict[str, str]] = {
         "reminder.items": "You're taking: {items}.",
         "thanks.subject": "A thank-you on Wishlist",
         "thanks.lead": "The author of “{list}” says thank you:",
+        "pool_join.subject": "Someone joined your collection on Wishlist",
+        "pool_join.lead": "Someone joined your collection for “{item}” on “{list}”: {name}, {amount}.",
+        "pool_join.total": "{raised} of {goal} promised so far.",
+        "pool_closed.subject": "Collection closed on Wishlist",
+        "pool_closed.lead": "The collection for “{item}” on “{list}” is closed — {organizer} is buying the gift.",
+        "pool_closed.amount": "You promised {amount}.",
+        "pool_closed.how": "How to chip in: {how}",
+        "pool_cancel.subject": "Collection cancelled on Wishlist",
+        "pool_cancel.cancelled": "The collection for “{item}” on “{list}” was cancelled. Your promise no longer stands — there's nothing to transfer.",
+        "pool_cancel.deleted": "“{item}” was removed from “{list}”, so there's no collection for it any more. There's nothing to transfer.",
+        "pool_cancel.paid": "If you've already sent {amount}, get in touch with the organiser — {organizer}.",
+        "why.pool": "You gave this address when joining the collection. The list's owner can't see it.",
         "noprice": "not set",
     },
 }
@@ -207,6 +244,11 @@ def change_lines(details: dict | None, locale: str, hide_prices: bool) -> list[s
     return out
 
 
+def _title(details: dict, item: str) -> str:
+    """Назва позиції: зі знімка в листі, інакше — поточна."""
+    return str(details.get("title") or item or "")
+
+
 def thanks_lines(details: dict | None) -> list[str]:
     """Подяка власника рядками, без порожніх."""
     message = (details or {}).get("message")
@@ -265,6 +307,36 @@ def render(
         if quoted("bought"):
             lines.append(text("reminder.bought", locale, items=quoted("bought")))
         lines.append(text("claim.code", locale, code=code))
+    elif kind == "pool_join":
+        subject = text("pool_join.subject", locale)
+        cur = details.get("currency")
+        lines = [
+            text("pool_join.lead", locale, item=_title(details, item), list=list_title,
+                 name=str(details.get("name") or ""), amount=_price(details.get("amount"), cur, locale)),
+            text("pool_join.total", locale, raised=_price(details.get("raised"), cur, locale),
+                 goal=_price(details.get("goal"), cur, locale)),
+        ]
+        why = text("why.claim", locale)
+    elif kind == "pool_closed":
+        subject = text("pool_closed.subject", locale)
+        cur = details.get("currency")
+        lines = [
+            text("pool_closed.lead", locale, item=_title(details, item), list=list_title,
+                 organizer=str(details.get("organizer") or "")),
+            text("pool_closed.amount", locale, amount=_price(details.get("amount"), cur, locale)),
+            *[text("pool_closed.how", locale, how=line) if i == 0 else line
+              for i, line in enumerate(thanks_lines({"message": details.get("instructions")}))],
+        ]
+        why = text("why.pool", locale)
+    elif kind == "pool_cancel":
+        subject = text("pool_cancel.subject", locale)
+        key = "pool_cancel.deleted" if details.get("reason") == "deleted" else "pool_cancel.cancelled"
+        lines = [
+            text(key, locale, item=_title(details, item), list=list_title),
+            text("pool_cancel.paid", locale, amount=_price(details.get("amount"), details.get("currency"), locale),
+                 organizer=str(details.get("organizer") or "")),
+        ]
+        why = text("why.pool", locale)
     elif kind == "thanks":
         # Текст власника — як є, рядками; HTML екранується нижче, як і решта.
         subject = text("thanks.subject", locale)
@@ -452,6 +524,10 @@ def skip_reason(job: Job) -> str | None:
     if job.kind == "reminder" and not (job.details or {}).get("items"):
         return "nothing_visible"
     if job.kind == "thanks" and not thanks_lines(job.details):
+        return "nothing_visible"
+    if job.kind.startswith("pool_") and not (job.details or {}).get("title"):
+        return "nothing_visible"
+    if job.kind == "pool_join" and not (job.details or {}).get("name"):
         return "nothing_visible"
     return None
 

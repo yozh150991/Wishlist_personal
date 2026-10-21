@@ -70,7 +70,7 @@ export default function RegisterV2() {
   const emailError = useEmailError(problem, emailTouched, submitted);
   const checks = passwordChecks(password, email);
   const passwordError = submitted && !passwordOk(checks) ? t('v2auth.passwordRules') : null;
-  const confirmUrl = authReturn('/login', 'v2', { from: 'confirm' });
+  const confirmUrl = authReturn('/login', { from: 'confirm' });
 
   async function onSubmit() {
     if (busy) return;
@@ -132,7 +132,7 @@ export default function RegisterV2() {
   async function sendReset() {
     setBusy(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: authReturn('/update-password', 'v2'),
+      redirectTo: authReturn('/update-password'),
     });
     setBusy(false);
     const key = error ? authErrorKey(error) : null;
@@ -147,7 +147,7 @@ export default function RegisterV2() {
 
   async function google() {
     setServer(null);
-    const { error } = await signInWithGoogle('v2');
+    const { error } = await signInWithGoogle();
     if (error) setServer(t(authErrorKey(error)));
   }
 

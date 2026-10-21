@@ -1,91 +1,28 @@
 {
   "app": {
-    "name": "Wishlist",
-    "tagline": "A wish list you reveal piece by piece."
+    "name": "Wishlist"
   },
   "nav": {
     "lists": "Lists",
     "shares": "Links",
+    "gifts": "I'm giving",
     "settings": "Settings",
-    "signOut": "Sign out",
-    "signedInAs": "Signed in as",
-    "label": "Sections",
     "sharesLong": "My links"
   },
   "auth": {
-    "email": "Email",
-    "password": "Password",
-    "passwordAgain": "Password again",
-    "passwordHint": "At least 8 characters",
     "login": {
-      "title": "Sign in",
-      "submit": "Sign in",
-      "toRegister": "No account yet?",
-      "toRegisterCta": "Create one",
-      "forgot": "Forgot password",
-      "submitting": "Signing in…"
-    },
-    "register": {
-      "title": "Create account",
-      "submit": "Create account",
-      "toLogin": "Already have an account?",
-      "toLoginCta": "Sign in",
-      "checkEmail": "We sent a confirmation email to {email}. Open the link to finish signing up.",
-      "submitting": "Creating account…"
-    },
-    "reset": {
-      "title": "Reset password",
-      "body": "We'll send a link for setting a new password.",
-      "submit": "Send link",
-      "sent": "If an account for {email} exists, the link is in the inbox.",
-      "back": "Back to sign in",
-      "submitting": "Sending…"
-    },
-    "update": {
-      "title": "New password",
-      "submit": "Save password",
-      "done": "Password changed.",
-      "expired": "This link expired or was already used. Request a new one.",
-      "submitting": "Saving…"
-    },
-    "hero": {
-      "title": "Your list stays yours",
-      "body": "You decide who sees what. A guest only sees the items you pick."
+      "title": "Sign in"
     }
   },
   "lists": {
     "title": "Lists",
-    "emptyTitle": "Nothing here yet",
-    "emptyBody": "Create your first list — a birthday, say. It stays private until you share individual items yourself.",
-    "create": "Create list",
-    "edit": "Edit list",
     "fields": {
-      "title": "Title",
-      "description": "Description",
-      "currency": "Currency",
-      "eventDate": "Event date",
-      "eventDateHint": "Optional. After it we'll offer to wrap things up."
+      "currency": "Currency"
     },
-    "errors": {
-      "titleRequired": "Enter a list title."
-    },
-    "loading": "Loading lists",
-    "errorTitle": "Lists did not load",
-    "itemCount": "items: {n}",
-    "deleteLabel": "Delete list {title}",
-    "confirmTitle": "Delete the list and all items ({n})?",
-    "confirmBody": "The links you shared will stop working along with the list. This cannot be undone.",
-    "confirmCta": "Delete list",
     "deleting": "Deleting…"
   },
   "settings": {
     "title": "Settings",
-    "design": {
-      "title": "Design",
-      "v1": "v1 — current",
-      "v2": "v2 — new"
-    },
-    "designHint": "v2 has its own screens and its own flow, not just different colors. Switching reopens the app from the start; lists, links and guests' picks are shared by both versions.",
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
@@ -97,7 +34,6 @@
     "scheme": {
       "sage": "Sage",
       "slyva": "Plum",
-      "vuhil": "Charcoal",
       "polotno": "Canvas",
       "cytrus": "Citrus",
       "nich": "Night"
@@ -109,16 +45,6 @@
     "schemeLocked": "While high contrast is on, the scheme doesn't apply. Your choice is kept for when you turn it off.",
     "nichHint": "Night is dark by default. You can pick the light theme under Theme."
   },
-  "design": {
-    "emptyTitle": "Design v2 is not here yet",
-    "emptyBody": "The new screens will live here. Your data is fine — it is this version that is empty.",
-    "backToV1": "Back to v1",
-    "tryV2": "Try the new look",
-    "backToV1Link": "Back to the old look",
-    "signedInAs": "Account: {email}",
-    "signOut": "Sign out",
-    "toLogin": "Sign in"
-  },
   "errors": {
     "invalidCredentials": "That email and password don't match.",
     "emailNotConfirmed": "Confirm your email first — check the inbox.",
@@ -126,17 +52,12 @@
     "weakPassword": "Password is too short or too simple.",
     "rateLimited": "Too many attempts. Try again in a few minutes.",
     "validation": "Check the details you entered.",
-    "passwordsDiffer": "Passwords don't match.",
-    "passwordShort": "Use at least 8 characters.",
-    "emailRequired": "Enter your email.",
     "unknown": "Something went wrong. Try again.",
     "noResponse": "The server is not responding. Please try again.",
     "offline": "No internet connection. Your data will appear once you're back online."
   },
   "common": {
     "loading": "Loading",
-    "notFound": "No such page",
-    "backHome": "To lists",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -144,94 +65,27 @@
     "retry": "Try again",
     "keep": "Keep",
     "saving": "Saving…",
-    "notFoundBody": "The address may be out of date, or have a typo in it.",
     "done": "Done"
   },
   "item": {
-    "add": "Add item",
-    "edit": "Edit item",
-    "noPrice": "No price",
-    "loadMore": "Show more",
-    "end": "That's every item",
-    "emptyTitle": "No items yet",
-    "emptyBody": "Paste a product link — we will pull the name and price ourselves.",
-    "fields": {
-      "url": "Link",
-      "urlHint": "Auto-fill arrives in the next step",
-      "title": "Title",
-      "price": "Price",
-      "priceHint": "Can be left empty",
-      "quantity": "Quantity",
-      "priority": "Priority",
-      "status": "Status",
-      "imageUrl": "Image link",
-      "note": "Note",
-      "section": "Section",
-      "sectionNone": "No section (Other)",
-      "priceCurrency": "Price in {currency} — the currency is changed in the new design"
-    },
-    "variants": {
-      "legend": "Product details",
-      "empty": "Size, colour, model — what a gift otherwise has to be guessed from.",
-      "add": "Add detail",
-      "remove": "Remove",
-      "removeAria": "Remove detail {n}",
-      "labelPlaceholder": "Label",
-      "valuePlaceholder": "Value",
-      "labelAria": "Label of detail {n}",
-      "valueAria": "Value of detail {n}",
-      "max": "At most {max} details per item.",
-      "hints": {
-        "size": "Size",
-        "color": "Colour",
-        "model": "Model"
-      }
-    },
-    "priority": {
-      "low": "Low",
-      "medium": "Medium",
-      "high": "High"
-    },
     "status": {
       "active": "Active",
       "purchased": "Purchased",
       "gifted": "Gifted"
     },
-    "actions": {
-      "edit": "Edit",
-      "delete": "Delete",
-      "statusLabel": "Status of “{title}”",
-      "editLabel": "Edit “{title}”",
-      "deleteLabel": "Delete “{title}”"
-    },
     "errors": {
-      "titleRequired": "Enter an item title.",
-      "badUrl": "Link must start with http:// or https://",
-      "badPrice": "Price must be a number of zero or more.",
       "badQuantity": "Quantity must be a whole number from 1 to 999.",
       "priceTooBig": "That price is too large.",
       "variantsHalf": "Fill in both the label and the value — or remove the detail.",
       "variantsLong": "Label up to 40 characters, value up to 80.",
       "variantsMany": "Five details at most."
     },
-    "priorityLabel": "Priority: {value}",
-    "loading": "Loading items",
-    "errorTitle": "Items did not load",
-    "errorBody": "The list itself is fine — only its contents could not be fetched.",
-    "countAll": "items: {n}",
-    "counter": "Showing {n} of {m}",
-    "noResultsTitle": "Nothing found",
-    "noResultsBody": "The items are still there — filters are hiding them. Drop one or clear them all.",
-    "resetFilters": "Clear all filters",
     "chip": {
-      "search": "Search: “{q}”",
       "price": "Price {from}–{to}",
       "status": "Status: {list}",
-      "clearSearch": "Clear search filter",
       "clearPrice": "Clear price filter",
       "clearStatus": "Clear status filter"
     },
-    "listLabel": "List items",
     "reset": "Reset item",
     "resetHint": "Clears guests' picks, if there are any, so the item is free again. You won't find out whether there were any — that keeps the gift a surprise.",
     "resetConfirmTitle": "Reset “{title}”?",
@@ -239,60 +93,21 @@
     "resetting": "Resetting…",
     "resetDone": "Item reset: it's free for guests."
   },
-  "toolbar": {
-    "search": "Search by title",
-    "sort": "Sort",
-    "pageSize": "Per page",
-    "price": "Price",
-    "from": "from",
-    "to": "to",
-    "asc": "Ascending",
-    "desc": "Descending",
-    "sortBy": {
-      "created_at": "By date",
-      "title": "By title",
-      "price": "By price",
-      "priority": "By priority"
-    },
-    "status": "Status",
-    "filters": "Filters",
-    "reset": "Clear filters",
-    "resetAll": "Clear all",
-    "done": "Done"
-  },
-  "totals": {
-    "active": "across {n} active items",
-    "noPrice": "{n} without a price",
-    "gifted": "{n} gifted"
-  },
-  "summary": {
-    "region": "Event summary",
-    "start": "Wrap up",
-    "later": "Later",
-    "done": "Event is over · {gifted} of {n} gifted",
-    "was": "The event was on {date}",
-    "ask": "Mark what has been gifted?"
-  },
   "transfer": {
     "export": {
-      "open": "Export",
       "title": "Export list",
       "body": "Reservations and guest links stay out of the file — they never leave the app.",
       "csv": "CSV for a spreadsheet",
       "csvHint": "Opens in Excel, Numbers and Google Sheets.",
       "json": "JSON for moving the list",
-      "jsonHint": "Also keeps the list name, currency and event date.",
-      "working": "Exporting… {done} of {total}",
-      "workingPlain": "Exporting…"
+      "jsonHint": "Also keeps the list name, currency and event date."
     },
     "import": {
-      "open": "Import",
       "title": "Import list",
       "file": "CSV or JSON file",
       "choose": "Choose file",
       "noFile": "No file chosen",
       "hint": "A title column is required. Up to {max} items at a time.",
-      "pick": "Pick a file and you will see exactly what gets created.",
       "fallbackTitle": "Imported list",
       "region": "Preview",
       "preview": "Items to create: {n}",
@@ -330,13 +145,7 @@
       "itemCurrency": "Unknown currency “{value}” — the price is taken in the list currency"
     }
   },
-  "offline": {
-    "stale": "No connection. Showing a saved copy from {when} — changes will not be saved right now.",
-    "title": "No connection",
-    "savedAt": "Showing a saved copy from {when} — changes will not be saved right now."
-  },
   "outbox": {
-    "pending": "Changes waiting for the network: {n}. They will be saved as soon as the connection is back.",
     "retry": "Try now",
     "sending": "Sending…",
     "dropped": "The server rejected {n} change(s). Check the list — you will have to make them again.",
@@ -345,7 +154,6 @@
     "pendingBody": "They will be saved as soon as the connection is back."
   },
   "parser": {
-    "fill": "Fill in",
     "partial": "Some fields came back empty — fill the rest in yourself.",
     "gotCurrency": "Price found in {currency}. Check it against the list currency.",
     "errors": {
@@ -367,34 +175,20 @@
   },
   "share": {
     "title": "My links",
-    "subtitle": "Each one shows only the items you picked. The main list stays private.",
     "create": "Create link",
-    "selectItem": "Select “{title}”",
-    "intro": "{n} items will go into this link. The rest of the list stays hidden.",
     "ready": "Link is ready",
     "link": "Link",
-    "linkHint": "Anyone with this link sees the selected items. No sign-up needed.",
     "copy": "Copy",
     "copied": "Copied",
     "revoke": "Revoke",
-    "itemCount": "items: {n}",
-    "views": "views: {n}",
     "until": "valid until {date}",
     "emptyTitle": "No links yet",
-    "emptyBody": "Open a list, pick the items and press “Create link”. A guest sees only those.",
     "state": {
       "revoked": "Revoked",
       "expired": "Expired"
     },
     "fields": {
-      "title": "Heading for guests",
-      "message": "Message",
-      "messageHint": "Optional. Everyone who opens the link will see it.",
-      "allowReservations": "Allow reservations",
-      "allowReservationsHint": "Guests can mark what they're taking. You won't see it — so the surprise holds.",
-      "hidePrices": "Hide prices",
-      "expiresAt": "Valid until",
-      "expiresAtHint": "Optional. Until the end of that day in your time zone; empty means until you revoke it."
+      "title": "Heading for guests"
     },
     "errors": {
       "titleRequired": "Enter a heading.",
@@ -404,102 +198,20 @@
     "loading": "Loading links",
     "errorTitle": "Links did not load",
     "confirmRevokeTitle": "Revoke the link “{title}”?",
-    "confirmRevokeBody": "It stops opening for everyone you sent it to. The stats stay.",
     "confirmDeleteTitle": "Delete the link “{title}”?",
     "confirmDeleteBody": "The view stats go with it. This cannot be undone.",
-    "creating": "Creating…",
     "copyLink": "Copy link",
     "untilPast": "was valid until {date}"
   },
   "select": {
-    "start": "Select",
     "region": "Actions for selected items",
     "selected": "Selected: {n}",
     "selectAll": "Select all shown",
-    "statusLabel": "Change status of selected",
-    "statusPlaceholder": "Mark as…",
     "shareActiveOnly": "Only active items go into the link: {n}.",
     "confirmTitle": "Delete the selected items ({n})?",
-    "confirmBody": "They also disappear from every link they were in. This cannot be undone.",
-    "exit": "Leave selection mode",
-    "activeAmong": "Active among them: {n}"
+    "confirmBody": "They also disappear from every link they were in. This cannot be undone."
   },
   "guest": {
-    "goneTitle": "This link isn't available",
-    "goneBody": "Check the address or ask whoever shared it for a new one.",
-    "ownerBanner": "This is your own link. Reservations are hidden on purpose — so the gift stays a surprise.",
-    "take": "I'll take this",
-    "yours": "You are taking this",
-    "error": "That didn't work. Try again.",
-    "emptyTitle": "Nothing here yet",
-    "emptyBody": "Every item from this link is already unavailable.",
-    "footer": "This list is private. You only see what was shared with you.",
-    "yoursPartial": "You are taking {n} · {left} left",
-    "takeSome": "Take {n} of {of}",
-    "takeMore": "Take one more",
-    "taking": "Taking…",
-    "needed": "{n} needed",
-    "less": "Fewer",
-    "more": "More",
-    "appearance": "Appearance",
-    "forMe": "Just for you",
-    "forMeHint": "doesn't change the list",
-    "appearanceNote": "The list's author chose its look. The color scheme can't be changed here.",
-    "release": "Release",
-    "releasing": "Releasing…",
-    "takenByOther": "Someone has taken this",
-    "takenAll": "All {n} are taken",
-    "neededLeft": "{n} needed · {left} left",
-    "raceTitle": "Someone took this while you were looking",
-    "raceBody": "We removed the button so there won't be two identical gifts.",
-    "showFree": "Show available · {n}",
-    "filterLabel": "Show",
-    "filterFree": "Available {n}",
-    "filterAll": "All {n}",
-    "freeCounter": "{n} of {m} available",
-    "freeEmpty": "Nothing is available right now — yours stay here, the rest are under All.",
-    "allTakenTitle": "Everything's been taken",
-    "allTakenMine": "Everything's taken · {n} of them yours",
-    "allTakenBody": "Other guests have taken every item. No worries: the author may add more, and someone may release theirs.",
-    "allTakenBodyMine": "You took some, other guests took the rest. The author may add more, and someone may release theirs.",
-    "watch": "Watch this list",
-    "watchHint": "We'll remember on this device and show what changed next time you visit. No email needed.",
-    "watching": "You're watching this list on this device.",
-    "unwatch": "Stop watching",
-    "changes": "Since last time: {new} new, {freed} freed up.",
-    "noChanges": "Nothing has changed since last time.",
-    "tagNew": "new",
-    "tagFreed": "freed up",
-    "allTakenList": "All taken",
-    "itemsCount": "items: {n}",
-    "takenPill": "taken",
-    "keepKicker": "So you don't lose it",
-    "keepTitle": "Take your access with you",
-    "keepBody": "This link shows what you're taking — to you alone. On another phone without it, your pick will look like someone else's.",
-    "sendSelf": "Send to myself",
-    "copyLink": "Copy",
-    "copied": "Copied",
-    "codeHint": "Or write down the code — it restores your picks anywhere",
-    "codeLabel": "Your code: {code}",
-    "ownerBlind": "The list's author can't see who took what — or whether anything was taken at all.",
-    "haveCode": "I've already picked something",
-    "redeemBody": "Enter the code we showed after your first pick. It moves your picks to this device — and keeps them on the old one.",
-    "redeemCode": "Code",
-    "redeem": "Restore my picks",
-    "redeeming": "Restoring…",
-    "redeemShort": "The code has five characters.",
-    "redeemNotFound": "That code isn't on this list. Check the letters and digits.",
-    "redeemTooMany": "Too many attempts for this list. Try again in an hour — until then even the right code won't work.",
-    "redeemDone": "Picks restored: {n}. They're on this device now too.",
-    "noCodeTitle": "No code?",
-    "noCodeBody": "Then your picks stay anonymous: only the list's author can release them — without seeing what they release. Just pick again and save the link this time.",
-    "sectionFree": "{n} of {m} available",
-    "priceUpTo": "up to {price}",
-    "freeSum": "worth {sum}",
-    "filterPrice": "Price",
-    "filterEmpty": "Nothing matches these filters.",
-    "filterReset": "Clear filters",
-    "filterPriority": "High priority only",
     "validUntil": "Valid until {date}",
     "validUntilCity": "Valid until {date}, {time} {zone}",
     "validUntilZone": "Valid until {date}, {time} ({zone})"
@@ -517,17 +229,10 @@
     "qrShow": "Show QR code",
     "qrHint": "It is handier on a phone — scan the address."
   },
-  "banners": {
-    "more": "More messages: {n}",
-    "less": "Collapse"
-  },
   "undo": {
-    "itemDeleted": "Item deleted",
-    "action": "Undo",
     "offline": "It will be saved later — there is no connection right now"
   },
   "appearance": {
-    "open": "Style",
     "title": "List style",
     "none": "No style",
     "noneHint": "your scheme as is",
@@ -562,33 +267,15 @@
     "deleting": "Deleting…",
     "a11yLocked": "High contrast turns styles off on your screen. Guests without it will see the list styled.",
     "previewBanner": "This is how guests see the list. No reservations here — you never see them, so the gift stays a surprise.",
-    "previewBack": "Back to the list",
     "previewEmpty": "No current items yet — there's nothing to share with guests."
   },
   "sections": {
-    "view": "List view",
-    "bySections": "Sections",
-    "byPriority": "By priority",
-    "byPrice": "By price",
-    "new": "New section",
     "other": "Other",
-    "count": "items: {n}",
-    "noFreeTitle": "There's no “available” filter here",
-    "noFreeBody": "You can't see guests' picks, so there's nothing to filter by. Instead there's “Reset item” in the item dialog if you need to start over.",
-    "dismiss": "Got it",
-    "name": "Section name",
-    "nameRequired": "Give the section a name so guests can find their part of the list.",
-    "create": "Create section",
-    "creating": "Creating…",
-    "renameTitle": "Rename section",
-    "rename": "Rename section “{title}”",
-    "delete": "Delete section “{title}”",
     "confirmDeleteTitle": "Delete section “{title}”?",
     "confirmDeleteBody": "Its items won't disappear — they move to “Other”. The section itself and its place in the order can't be restored.",
     "confirmDelete": "Delete section",
     "deleting": "Deleting…",
     "dragItem": "Drag “{title}”",
-    "dragSection": "Drag section “{title}”",
     "dnd": {
       "instructions": "To move, press Space or Enter, choose a place with the up and down arrows, press Space or Enter again to drop, or Escape to cancel.",
       "picked": "Picked up “{title}”.",
@@ -596,9 +283,6 @@
       "dropped": "“{title}” dropped at position {n}.",
       "cancelled": "Move cancelled."
     },
-    "filteredNoDrag": "The order can only change without filters: some items are hidden right now.",
-    "orderHint": "Guests see exactly this order. Drag by the handle to change it.",
-    "viewOnlyHint": "This is only your view — guests see the order from “Sections”.",
     "saveError": "The order wasn't saved. Try again when you're back online."
   },
   "zone": {
@@ -710,6 +394,7 @@
       "account": "Account"
     },
     "signOut": {
+      "action": "Sign out",
       "title": "Sign out?",
       "confirm": "Sign out anyway",
       "stay": "Stay"
@@ -782,6 +467,11 @@
       "withList": "Create a list for an occasion",
       "withListHint": "Birthday, wedding, housewarming…",
       "skip": "Skip"
+    },
+    "notFound": {
+      "title": "There's no such page",
+      "body": "The address may be incomplete, or the page has been removed.",
+      "home": "To my lists"
     }
   },
   "v2list": {
@@ -1074,6 +764,29 @@
     "open": "Open",
     "openLabel": "Open the link “{title}” as guests see it"
   },
+  "v2gifts": {
+    "title": "I'm giving",
+    "subtitle": "What you're taking from other people's lists — from every device where you reserved while signed in or left this account's email.",
+    "upcoming": "Coming up",
+    "past": "Already celebrated",
+    "archived": "Archived",
+    "taking": "Taking",
+    "bought": "Bought",
+    "changed": "Changed",
+    "qty": "{mine} of {n}",
+    "left": "not bought yet: {n}",
+    "code": "Your code for this list: {code}",
+    "open": "Open list",
+    "openLabel": "Open list “{title}”",
+    "emptyTitle": "Nothing here yet",
+    "emptyBody": "Reserve on other people's lists while signed in, or leave this account's email when reserving — your picks will show up here.",
+    "errorTitle": "Couldn't load",
+    "poolMine": "{raised} of {goal} promised",
+    "poolPledge": "you promised {amount} · collected by {name}",
+    "poolOrganizer": "My collection",
+    "poolIn": "Chipping in",
+    "poolClosed": "Collection closed"
+  },
   "v2settings": {
     "looksHint": "Your own event looks are set on a particular list — in the list menu, “List style”.",
     "data": {
@@ -1175,11 +888,6 @@
     "nothingTitle": "Nothing to add",
     "nothingBody": "What was shared has neither a link nor a name. Try “Share” again from the product page."
   },
-  "v1add": {
-    "title": "Adding from other apps is in the new design",
-    "body": "To add what you shared, switch to the new design. You can switch back in Settings.",
-    "switch": "Switch and add"
-  },
   "v2notify": {
     "title": "Notifications",
     "intro": "We'll remind you of what matters: after the celebration, a month before a yearly one, when a product disappears from the shop or a link is about to expire. Nothing promotional.",
@@ -1267,6 +975,74 @@
     "ownerBanner": "This is your own link. Guests' picks are hidden here on purpose, so the gift stays a surprise.",
     "archived": "The celebration is over and the list is archived. You can still look, but not reserve.",
     "thanksTitle": "A thank-you from the list's author",
+    "report": {
+      "open": "Report",
+      "title": "Report this list",
+      "body": "The report goes to the Wishlist team, not to the list's author — they won't know about it.",
+      "reason": "What's wrong?",
+      "pick": "Choose a reason.",
+      "reasons": {
+        "spam": "Spam or advertising",
+        "scam": "Scam — asking for money or details",
+        "offensive": "Offensive content",
+        "illegal": "Something illegal",
+        "other": "Something else"
+      },
+      "comment": "Comment (optional)",
+      "send": "Send report",
+      "sending": "Sending…",
+      "thanksTitle": "Thank you, report sent",
+      "thanksBody": "We'll take a look at the list. The author won't know it was you.",
+      "gone": "This link no longer works — there's nothing to report.",
+      "tooMany": "Too many reports in a short time. Please try again a little later."
+    },
+    "pool": {
+      "start": "Chip in together",
+      "startTitle": "Chip in together for “{title}”",
+      "startBody": "You're organising: the item becomes yours, and other guests can chip in. The app doesn't move money — you sort that out yourselves.",
+      "organizerName": "Your name — participants will see it",
+      "howLabel": "How to chip in",
+      "howPlaceholder": "For example: BLIK to +48 500 000 000 or account 1234…",
+      "howPublic": "Everyone with the link will see this. The list's author won't.",
+      "goal": "Target, {currency}",
+      "startSubmit": "Start the collection",
+      "joinTitle": "Chip in for “{title}”",
+      "joinBody": "Only the organiser sees your name and amount. You send the money to them yourself, the way they described.",
+      "yourName": "Your name",
+      "amount": "Your amount, {currency}",
+      "joinSubmit": "Count me in",
+      "leave": "Leave the collection",
+      "join": "Chip in",
+      "change": "Change amount",
+      "manage": "Manage collection",
+      "by": "Collected by {name}",
+      "yours": "Your collection",
+      "closed": "Collection closed",
+      "raised": "{raised} of {goal} promised",
+      "count": "participants: {n}",
+      "mine": "You're chipping in: {amount}",
+      "how": "How to chip in:",
+      "manageTitle": "Your collection for “{title}”",
+      "who": "Who promised what",
+      "nobody": "Nobody has joined yet.",
+      "noMoney": "The app doesn't move or check money — these are just promises.",
+      "close": "Close collection — I'm buying",
+      "reopen": "Reopen collection",
+      "cancel": "Cancel collection",
+      "cancelAsk": "The collection and its promises will disappear, and the item becomes free again. Let the participants know yourself.",
+      "cancelYes": "Yes, cancel the collection",
+      "needName": "Enter a name.",
+      "needHow": "Write how to chip in.",
+      "needGoal": "Set a target — the item has no price.",
+      "badAmount": "The amount must be a number above zero.",
+      "race": "While you were typing, someone took this item.",
+      "closedNow": "The organiser has just closed the collection.",
+      "gone": "This collection no longer exists.",
+      "code": "Your code for this list: {code}. You'll need it on another device.",
+      "email": "Email (optional)",
+      "emailOrganizer": "We'll let you know when someone joins. The list's owner can't see it.",
+      "emailJoin": "We'll let you know if the collection is closed or cancelled. Neither the organiser nor the list's owner can see it."
+    },
     "take": "Take",
     "takeMore": "Take more",
     "release": "Release",

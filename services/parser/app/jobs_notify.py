@@ -50,10 +50,6 @@ KEEPALIVE_UTC_HOUR = 3
 # Запуски за розкладом плавають на секунди: без запасу «рівно 3 години тому»
 # через раз виходило б 2:59:5x, і все чекало б ще годину.
 GROUP_SLACK = timedelta(minutes=10)
-# Усі адреси з push і листів ведуть у v2: сповіщення — її функція, а вибір
-# версії живе в браузері, тож без параметра пошта на телефоні відкрила б v1
-# (CLAUDE.md §7: адреси з листів несуть `?design=`).
-DESIGN_QUERY = "?design=v2"
 
 _QUOTES = {"uk": ("«", "»"), "pl": ("„", "”"), "en": ("“", "”")}
 
@@ -245,8 +241,10 @@ def _common_path(events: list[Event]) -> str:
 
 
 def app_path(path: str, fragment: str = "") -> str:
-    """Адреса всередині застосунку — у v2: `/lists/…?design=v2#…`."""
-    return f"{path}{DESIGN_QUERY}{('#' + fragment) if fragment else ''}"
+    """Адреса всередині застосунку: `/lists/…#…`. Версії дизайну більше немає
+    (ADR-065), тож і параметра `?design=` теж; у старих листах його знімає
+    сам застосунок."""
+    return f"{path}{('#' + fragment) if fragment else ''}"
 
 
 def push_message(events: list[Event], locale: str) -> dict[str, str]:

@@ -12,6 +12,8 @@ pg_net у базі не має Google ID-токена, яким закрито w
   витеклий секрет дає лише зайву обробку тієї самої черги;
 - одночасно черга обробляється один раз: другий сигнал, що прийшов під час
   обробки, отримує `busy` і нічого не робить.
+Той самий сигнал розбирає й скарги гостей на посилання (ADR-061): лист
+oператорові на MAIL_FROM.
 Модулі jobs_* (перевірка посилань, сповіщення власника) тут не імпортуються.
 """
 
@@ -23,7 +25,7 @@ from datetime import datetime, timezone
 import httpx
 from fastapi import FastAPI, HTTPException, Request, status
 
-from . import guest_mail
+from . import guest_mail, share_reports
 from .jobs_config import job_settings
 from .jobs_mail import Mailer
 
@@ -72,9 +74,25 @@ async def wake(request: Request) -> dict[str, int]:
         return {"busy": 1}
     async with _lock:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            return await guest_mail.process(
+            now = datetime.now(timezone.utc)
+            mailer = Mailer(cfg.brevo_api_key, cfg.mail_from, client)
+            counts = await guest_mail.process(
                 guest_mail.GuestMailStore(cfg.supabase_url, cfg.supabase_secret_key, client),
-                Mailer(cfg.brevo_api_key, cfg.mail_from, client),
+                mailer,
                 origin=cfg.app_origin,
-                now=datetime.now(timezone.utc),
+                now=now,
             )
+            # Скарги — після гостьових листів: збій тут не зупиняє листи гостям.
+            try:
+                counts = {
+                    **counts,
+                    **await share_reports.process(
+                        share_reports.ReportStore(cfg.supabase_url, cfg.supabase_secret_key, client),
+                        mailer,
+                        to=cfg.mail_from,
+                        now=now,
+                    ),
+                }
+            except httpx.HTTPError as exc:
+                log.warning("Скарги не оброблено: %s", type(exc).__name__)
+            return counts

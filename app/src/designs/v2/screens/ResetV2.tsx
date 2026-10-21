@@ -55,7 +55,7 @@ export default function ResetV2() {
     setBusy(true);
     setServer(null);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: authReturn('/update-password', 'v2'),
+      redirectTo: authReturn('/update-password'),
     });
     setBusy(false);
     const key = error ? authErrorKey(error) : null;
