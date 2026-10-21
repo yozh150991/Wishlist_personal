@@ -41,6 +41,19 @@ test('`?design=` зі старих листів знімається з адре
   await expect(page).toHaveURL(/\/login\?next=%2Fshares$/);
 });
 
+test('політика конфіденційності — без входу, з усіма розділами; посилання є на екрані входу', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByRole('link', { name: /політика конфіденційності|polityka prywatności|privacy policy/i }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole('heading', { level: 1, name: /політика конфіденційності|polityka prywatności|privacy policy/i })).toBeVisible();
+  // Дев'ять розділів — те, що перевіряє екран згоди Google: що, навіщо, кому, скільки, права.
+  await expect(page.getByRole('heading', { level: 2 })).toHaveCount(9);
+  await expect(page.getByText(/limited use/i)).toBeVisible();
+  // Пошуковик і Google мусять її бачити: жодного noindex.
+  const robots = await (await page.request.get('/robots.txt')).text();
+  expect(robots).not.toMatch(/^Disallow:\s*\/privacy/m);
+});
+
 test.describe('стара гостьова адреса /s/', () => {
   test('веде на /l/ з тим самим токеном і параметрами', async ({ page }) => {
     await page.goto(`/s/${DEAD}?utm=e2e`);

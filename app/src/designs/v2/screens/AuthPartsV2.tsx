@@ -23,15 +23,15 @@ const STROKE = 2.75;
 const LANGUAGE: Record<Locale, string> = { uk: 'Українська', pl: 'Polski', en: 'English' };
 
 /**
- * Рамка: одна колонка по центру, мова вгорі праворуч, дорога до старого
- * вигляду внизу. На десктопі та сама колонка, лише ширше полотно довкола:
+ * Рамка: одна колонка по центру, мова вгорі праворуч, посилання на політику
+ * конфіденційності внизу. `wide` — ширша колонка для довгого тексту. На десктопі та сама колонка, лише ширше полотно довкола:
  * потоки 2.0 окремої десктопної композиції для входу не дають.
  */
-export function AuthFrameV2({ children }: { children: ReactNode }) {
+export function AuthFrameV2({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   const { t, locale, setLocale } = useI18n();
   const id = useId();
   return (
-    <div className="v2-auth">
+    <div className={wide ? 'v2-auth v2-auth--wide' : 'v2-auth'}>
       <div className="v2-auth__top">
         {/* Мова потрібна ще до входу: обрана тут, вона їде в user_metadata
             і визначає мову листа підтвердження (ADR-024). */}
@@ -54,6 +54,11 @@ export function AuthFrameV2({ children }: { children: ReactNode }) {
       <main className="v2-auth__main">
         <div className="v2-auth__col">{children}</div>
       </main>
+      <footer className="v2-auth__foot">
+        <Link to="/privacy" className="v2-link">
+          {t('privacy.link')}
+        </Link>
+      </footer>
     </div>
   );
 }

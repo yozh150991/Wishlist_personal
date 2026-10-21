@@ -1180,5 +1180,51 @@
     },
     "ownerBack": "Go back",
     "itemsHeading": "Items on the list"
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "updated": "Effective from 21 October 2026.",
+    "intro": "Wishlist is a personal wish-list app: you keep lists and give your family a secret link that shows only what you shared. This page explains what the app stores, why, who else processes it and how to delete it all.",
+    "contact": "For questions and data requests, write to {email}.",
+    "s": {
+      "owner": {
+        "title": "What we store about account owners",
+        "body": "• Email and password. The password is stored only as a protected hash in the sign-in service — nobody can read it.\n• If you sign in with Google — your email, plus the profile name and photo Google passes on at sign-in. The app uses only the email.\n• Your lists, items, sections, guest links, list style, language, theme and notification settings.\n• For push notifications — this device's subscription address; signing out removes it."
+      },
+      "guests": {
+        "title": "What we store about guests",
+        "body": "Guests don't need an account. Their browser creates a random key, and the server stores only a hash of it.\n\n• Picks (what was taken and how many) and pledges in shared gifts.\n• Name and email — only if the guest typed them in. The email is used for the access code and emails about their pick; every email has an unsubscribe link.\n• Reports about a link: the reason and an optional comment, with nothing about who reported it.\n\nThe list's owner never sees guests' picks, names or emails — anywhere, ever, even after the celebration. That's how the gift stays a surprise."
+      },
+      "use": {
+        "title": "Why",
+        "body": "Only to make the app work: to show and save lists, open links for guests, and send the emails and notifications you turned on. We don't sell data, show ads, run analytics or set advertising or tracking cookies."
+      },
+      "google": {
+        "title": "Data from your Google account",
+        "body": "When you sign in with Google, we receive your email and basic profile and use the email only for signing in and app emails. This data isn't shared with third parties, isn't used for advertising and isn't used to train models. Our use complies with the Google API Services User Data Policy, including the Limited Use requirements."
+      },
+      "processors": {
+        "title": "Who else processes data",
+        "body": "• Supabase — database and sign-in (EU, Frankfurt).\n• Vercel — hosting of the app's pages.\n• Google Cloud (Warsaw) — services that read a shop page from a link you paste, check links and send emails. The shop sees a request from our server, not from you.\n• Brevo — sending emails. Open and click tracking in emails runs in anonymous mode.\n• Browser push services (Google, Mozilla, Apple, Microsoft) — receive only the encrypted notification."
+      },
+      "device": {
+        "title": "What stays on your device",
+        "body": "In browser storage — your sign-in session, language and look, the guest key for links you opened, and a copy of your lists so they open offline. Signing out erases the copy of your lists and the queue of changes. The app uses no tracking cookies."
+      },
+      "keep": {
+        "title": "How long we keep it",
+        "body": "For as long as the account and lists exist. Deleting a list deletes its items, guest links, and the picks, names and emails of that list's guests. Reports are kept until they're reviewed. Hosting providers keep technical logs (such as IP address and request time) for a limited period."
+      },
+      "rights": {
+        "title": "Your rights",
+        "body": "• Get your data: Settings → My data — a file with all your lists and items.\n• Correct or delete: lists and items — right in the app; the whole account — by request to the contact address.\n• Unsubscribe: guest emails — with the link in every email; owner notifications — in Settings.\n• Complain to a data protection authority — in Poland that's the President of the Personal Data Protection Office (UODO)."
+      },
+      "changes": {
+        "title": "Changes",
+        "body": "If the policy changes, the effective date at the top will be updated. We'll announce significant changes in the app."
+      }
+    },
+    "link": "Privacy policy",
+    "back": "Back"
   }
 }

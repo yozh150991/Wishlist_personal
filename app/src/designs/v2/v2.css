@@ -59,12 +59,31 @@
 .v2-auth__main { display: flex; align-items: center; justify-content: center; }
 .v2-auth__col { width: 100%; max-width: 25rem; }
 
-.v2-auth__design {
+.v2-auth--wide .v2-auth__col { max-width: 42rem; }
+
+/* Підвал рамки входу: посилання на політику конфіденційності. */
+.v2-auth__foot {
   text-align: center;
   font-size: var(--t-small);
   color: var(--color-neutral-700);
 }
-.v2-auth__design a { color: inherit; }
+.v2-auth__foot a { color: inherit; }
+
+/* Довгий текст (політика конфіденційності): звичайний ритм читання. */
+.v2-prose {
+  display: grid;
+  gap: var(--sp-4);
+  color: var(--color-neutral-900);
+  line-height: 1.55;
+}
+.v2-prose h2 {
+  font-size: var(--t-lead);
+  margin-top: var(--sp-4);
+}
+.v2-prose section { display: grid; gap: var(--sp-3); }
+.v2-prose__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-prose__list { margin: 0; padding-inline-start: 1.25rem; display: grid; gap: var(--sp-2); }
+.v2-prose a { color: var(--color-accent-700); }
 
 /* Вибір мови — рідний <select>: доступний з клавіатури й на телефоні без
    жодного коду. Стрілку лишаємо браузерну: власна була б картинкою з

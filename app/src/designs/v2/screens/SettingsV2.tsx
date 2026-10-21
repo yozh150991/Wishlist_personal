@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../../lib/auth';
 import { useI18n, LOCALES } from '../../../lib/i18n';
 import type { Locale } from '../../../lib/i18n';
@@ -195,6 +196,11 @@ export default function SettingsV2() {
           {/* Пошта вже у верхній картці профілю — тут лише дії з акаунтом. */}
           <SignOutV2 className="v2-btn v2-btn--outline v2-btn--start" />
           <p className="v2-hint v2-hint--start">{t('v2settings.deleteLater')}</p>
+          <p className="v2-hint v2-hint--start">
+            <Link to="/privacy" className="v2-link">
+              {t('privacy.link')}
+            </Link>
+          </p>
         </section>
       </div>
     </main>

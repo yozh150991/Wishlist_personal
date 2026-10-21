@@ -6,6 +6,7 @@ import LoginV2 from './screens/LoginV2';
 import RegisterV2 from './screens/RegisterV2';
 import ResetV2 from './screens/ResetV2';
 import NewPasswordV2 from './screens/NewPasswordV2';
+import PrivacyV2 from './screens/PrivacyV2';
 import { RequireAuthV2, ShellV2 } from './ShellV2';
 import { ChunkBoundary } from './ChunkBoundary';
 // Стилі — у головному пакеті: їх ділять усі екрани (ADR-065).
@@ -91,6 +92,8 @@ export default function AppRoutes() {
       <Route path="/register" element={<RegisterV2 />} />
       <Route path="/reset" element={<ResetV2 />} />
       <Route path="/update-password" element={<NewPasswordV2 />} />
+      {/* Публічна: на неї посилається екран згоди Google (DEPLOY.md, 4.1). */}
+      <Route path="/privacy" element={<PrivacyV2 />} />
 
       <Route
         path="/add"

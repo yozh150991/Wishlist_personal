@@ -1180,5 +1180,51 @@
     },
     "ownerBack": "Wróć",
     "itemsHeading": "Pozycje listy"
+  },
+  "privacy": {
+    "title": "Polityka prywatności",
+    "updated": "Obowiązuje od 21 października 2026 r.",
+    "intro": "Wishlist to osobista aplikacja do list życzeń: prowadzisz listy, a bliskim dajesz sekretny link, pod którym widać tylko to, co udostępniłeś. Tutaj opisujemy, co aplikacja przechowuje, po co, kto jeszcze to przetwarza i jak wszystko usunąć.",
+    "contact": "Z pytaniami i wnioskami dotyczącymi danych pisz na {email}.",
+    "s": {
+      "owner": {
+        "title": "Co przechowujemy o właścicielu konta",
+        "body": "• E-mail i hasło. Hasło jest przechowywane wyłącznie jako zabezpieczony skrót w usłudze logowania — nikt nie może go odczytać.\n• Jeśli logujesz się przez Google — e-mail oraz imię i zdjęcie profilu, które Google przekazuje przy logowaniu. Aplikacja korzysta tylko z e-maila.\n• Twoje listy, pozycje, działy, linki dla gości, wygląd, język, motyw i ustawienia powiadomień.\n• Dla powiadomień push — adres subskrypcji tego urządzenia; wylogowanie go usuwa."
+      },
+      "guests": {
+        "title": "Co przechowujemy o gościach",
+        "body": "Gość nie potrzebuje konta. Jego przeglądarka tworzy losowy klucz, a serwer przechowuje tylko skrót tego klucza.\n\n• Rezerwacje (co i ile wzięto) oraz deklaracje we wspólnych zbiórkach.\n• Imię i e-mail — tylko jeśli gość sam je wpisał. E-mail służy do kodu dostępu i wiadomości o rezerwacji; z każdej wiadomości można się wypisać.\n• Zgłoszenia linków: powód i opcjonalny komentarz, bez danych osoby zgłaszającej.\n\nWłaściciel listy nie widzi rezerwacji, imion ani e-maili gości — nigdzie i nigdy, nawet po święcie. Dzięki temu prezent pozostaje niespodzianką."
+      },
+      "use": {
+        "title": "Po co",
+        "body": "Wyłącznie po to, by aplikacja działała: pokazywać i zapisywać listy, otwierać linki gościom, wysyłać wiadomości i powiadomienia, które włączyłeś. Nie sprzedajemy danych, nie wyświetlamy reklam, nie prowadzimy analityki i nie używamy reklamowych ani śledzących plików cookie."
+      },
+      "google": {
+        "title": "Dane z konta Google",
+        "body": "Przy logowaniu przez Google otrzymujemy e-mail i podstawowy profil i używamy e-maila wyłącznie do logowania oraz wiadomości aplikacji. Dane te nie są przekazywane osobom trzecim, nie służą do reklamy ani do trenowania modeli. Sposób użycia jest zgodny z Google API Services User Data Policy, w tym z wymogami Limited Use."
+      },
+      "processors": {
+        "title": "Kto jeszcze przetwarza dane",
+        "body": "• Supabase — baza danych i logowanie (UE, Frankfurt).\n• Vercel — hosting stron aplikacji.\n• Google Cloud (Warszawa) — usługi, które odczytują stronę sklepu pod wklejonym przez ciebie linkiem, sprawdzają linki i wysyłają wiadomości. Sklep widzi zapytanie od naszego serwera, a nie od ciebie.\n• Brevo — wysyłka wiadomości. Śledzenie otwarć i kliknięć w wiadomościach działa w trybie anonimowym.\n• Usługi push przeglądarek (Google, Mozilla, Apple, Microsoft) — otrzymują wyłącznie zaszyfrowane powiadomienie."
+      },
+      "device": {
+        "title": "Co jest przechowywane na twoim urządzeniu",
+        "body": "W pamięci przeglądarki — sesja logowania, język i wygląd, klucz gościa dla otwieranych linków oraz kopia twoich list, aby otwierały się bez sieci. Wylogowanie usuwa kopię list i kolejkę zmian. Aplikacja nie używa plików cookie do śledzenia."
+      },
+      "keep": {
+        "title": "Jak długo przechowujemy",
+        "body": "Dopóki istnieją konto i listy. Usunięcie listy usuwa jej pozycje, linki dla gości oraz rezerwacje, imiona i e-maile gości tej listy. Zgłoszenia są przechowywane do czasu ich rozpatrzenia. Techniczne logi hostingu (np. adres IP i czas zapytania) dostawcy przechowują przez ograniczony czas."
+      },
+      "rights": {
+        "title": "Twoje prawa",
+        "body": "• Otrzymać swoje dane: „Ustawienia” → „Moje dane” — plik ze wszystkimi listami i pozycjami.\n• Poprawić lub usunąć: listy i pozycje — bezpośrednio w aplikacji; całe konto — prośbą na adres kontaktowy.\n• Wypisać się: wiadomości dla gości — linkiem w każdej wiadomości; powiadomienia właściciela — w „Ustawieniach”.\n• Złożyć skargę do organu ochrony danych — w Polsce to Prezes Urzędu Ochrony Danych Osobowych (UODO)."
+      },
+      "changes": {
+        "title": "Zmiany",
+        "body": "Jeśli polityka się zmieni, zaktualizujemy datę obowiązywania na górze. O istotnych zmianach poinformujemy w aplikacji."
+      }
+    },
+    "link": "Polityka prywatności",
+    "back": "Wstecz"
   }
 }
