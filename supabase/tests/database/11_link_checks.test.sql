@@ -80,14 +80,14 @@ update items set link_status = 'gone', link_price = 1 where id = 'a1111111-0000-
 select tests.as_user('b1111111-0000-4000-8000-000000000001');
 select is(
   (select count(*)::int
-     from jsonb_array_elements(get_shared_list('linksToken000000000000')->'items') as t(e),
+     from jsonb_array_elements(get_guest_list('linksToken000000000000')->'items') as t(e),
           jsonb_object_keys(e) as k
     where k like 'link%'),
   0,
   'у гостьовій відповіді немає жодного поля перевірки'
 );
 select is(
-  jsonb_array_length(get_shared_list('linksToken000000000000')->'items'),
+  jsonb_array_length(get_guest_list('linksToken000000000000')->'items'),
   1,
   'і позиція лишається видимою гостю: висновок перевірки нічого не ховає'
 );

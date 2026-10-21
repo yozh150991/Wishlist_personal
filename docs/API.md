@@ -27,9 +27,10 @@ const { data } = await supabase.rpc('create_share', {
 
 `p_expires_at` (момент без зони) лишився для вкладок зі старою версією застосунку.
 
-### `get_shared_list` — anon + authenticated
+### Гостьова відповідь — тіло `get_shared_list` (внутрішня, ADR-065)
+Клієнти кличуть `get_guest_list` (нижче) — вона повертає це тіло плюс підпис гостя, подяку й збори. Сама `get_shared_list` з кроку 9б закрита від `anon`, `authenticated` і `service_role`: її викликає лише `get_guest_list` з правами власника схеми.
 ```ts
-const { data } = await supabase.rpc('get_shared_list', { p_token: token, p_key: guestKey /* або null */ });
+const { data } = await supabase.rpc('get_guest_list', { p_token: token, p_key: guestKey /* або null */ });
 ```
 ```jsonc
 {
@@ -83,19 +84,20 @@ await supabase.rpc('register_share_view', { p_token: token });
 ```
 Викликати один раз на сесію перегляду. Перегляди власника не рахуються.
 
-### `claim_item` / `release_claim` — anon + authenticated
+### Бронь і зняття — `claim_item_v2` / `release_claim` — anon + authenticated
+Тіло броні — внутрішня `claim_item` (з кроку 9б без прямого доступу, ADR-065); клієнти кличуть `claim_item_v2`, яка додає підпис і пошту (нижче).
 ```ts
-const { data } = await supabase.rpc('claim_item', {
+const { data } = await supabase.rpc('claim_item_v2', {
   p_token: token, p_item_id: itemId, p_key: guestKey, p_quantity: 1,
 });
-// → { "taken_qty": 1, "mine_qty": 1, "code": "7K4M2" }
+// → { "taken_qty": 1, "mine_qty": 1, "code": "7K4M2", "name": null, "email": null }
 await supabase.rpc('release_claim', { p_token: token, p_item_id: itemId, p_key: guestKey });
 ```
 Ключ генерує браузер гостя (`lib/guest.ts`) і зберігає **до** виклику: обірвана відповідь не лишить позначку без власника. Перша позначка з новим ключем тихо створює ідентичність і короткий код. `p_quantity` — підсумкова кількість цього гостя, не приріст; позиція блокується на час перевірки, тож двоє одночасних гостей не візьмуть більше, ніж треба.
 
-Помилки `claim_item`: `not_found`, `reservations_disabled`, `owner_cannot_reserve`, `bad_key`, `bad_quantity`, `item_not_in_share`, `not_enough_left` (гонку програно), `list_archived` (список в архіві, ADR-058; те саме для `claim_item_v2`, зокрема коли гість додає примірники до наявної броні).
+Помилки броні: `not_found`, `reservations_disabled`, `owner_cannot_reserve`, `bad_key`, `bad_quantity`, `item_not_in_share`, `not_enough_left` (гонку програно), `list_archived` (список в архіві, ADR-058; зокрема коли гість додає примірники до наявної броні).
 
-`release_claim` повертає `{ "taken_qty": … }` — суму позначок усіх гостей, тож власнику (увійшов і відкрив своє посилання) відповідає `owner_cannot_reserve`, як і `claim_item` (ADR-038). Решта помилок: `not_found`, `item_not_in_share`.
+`release_claim` повертає `{ "taken_qty": … }` — суму позначок усіх гостей, тож власнику (увійшов і відкрив своє посилання) відповідає `owner_cannot_reserve`, як і бронь (ADR-038). Решта помилок: `not_found`, `item_not_in_share`.
 
 ### `get_guest_list` / `claim_item_v2` — anon + authenticated (гостьова v2, ADR-053)
 ```ts
@@ -108,7 +110,7 @@ const { data } = await supabase.rpc('claim_item_v2', {
 });
 // → { "taken_qty": 1, "mine_qty": 1, "code": "7K4M2", "name": "Іра", "email": null }
 ```
-Обгортки над замороженими `get_shared_list` і `claim_item` (ADR-039, п. 10): позначки, гонка, мертве посилання й власник поводяться рівно як у v1, додаються лише підпис і пошта гостя. `get_guest_list` віддає їх тільки гостю з ключем цієї ідентичності; власнику на власному посиланні `guest` — `null`, як і в v1. У `claim_item_v2` `p_name` / `p_email`: `null` — лишити як є, `''` — прибрати, інше — записати (пошта — у нижньому регістрі). Перевірка йде **до** позначки: `bad_name` (понад 60 символів чи перенос рядка) і `bad_email` позначки не роблять. Решта помилок — як у `claim_item`. Коли v1 піде (крок 9), тіла переїдуть у ці функції.
+Обгортки над внутрішніми `get_shared_list` і `claim_item` (ADR-039, п. 10; з ADR-065 клієнтам ці дві недоступні): позначки, гонка, мертве посилання й власник поводяться так само, додаються підпис і пошта гостя. `get_guest_list` віддає їх тільки гостю з ключем цієї ідентичності; власнику на власному посиланні `guest` — `null`. У `claim_item_v2` `p_name` / `p_email`: `null` — лишити як є, `''` — прибрати, інше — записати (пошта — у нижньому регістрі). Перевірка йде **до** позначки: `bad_name` (понад 60 символів чи перенос рядка) і `bad_email` позначки не роблять. Решта помилок — як вище. Перенести тіла в ці функції й видалити внутрішні — окремим рішенням: зараз вони лише закриті.
 
 ### `send_guest_code` / `guest_mail_set` — anon + authenticated (ADR-054)
 ```ts

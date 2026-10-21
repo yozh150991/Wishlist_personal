@@ -69,18 +69,18 @@ select token from public.create_share('a1311111-0000-4000-8000-00000000000a',
 select tests.as_anon();
 
 select is(
-  (select x->>'currency' from jsonb_array_elements(get_shared_list((select token from tests.created))->'items') x
+  (select x->>'currency' from jsonb_array_elements(get_guest_list((select token from tests.created))->'items') x
     where x->>'id' = 'a1311111-0000-4000-8000-0000000000c2'),
   'EUR',
   'гість бачить валюту позиції'
 );
 select is(
-  (select x->>'currency' from jsonb_array_elements(get_shared_list((select token from tests.created))->'items') x
+  (select x->>'currency' from jsonb_array_elements(get_guest_list((select token from tests.created))->'items') x
     where x->>'id' = 'a1311111-0000-4000-8000-0000000000c1'),
   'PLN',
   'позиція без своєї валюти приходить гостю з валютою списку'
 );
-select is(get_shared_list((select token from tests.created))->>'currency', 'PLN',
+select is(get_guest_list((select token from tests.created))->>'currency', 'PLN',
           'валюта списку у відповіді лишилась на місці');
 
 -- ── Курс НБП ────────────────────────────────
