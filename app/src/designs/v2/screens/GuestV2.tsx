@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Flag, Link2, ListChecks, Palette, X } from 'lucide-react';
 import {
   ackClaimChange,
@@ -986,6 +986,9 @@ export default function GuestV2() {
               </option>
             ))}
           </select>
+          <Link to="/privacy" className="v2-btn v2-btn--ghost v2-btn--small">
+            {t('privacy.link')}
+          </Link>
           {/* Власник на своєму посиланні на себе не скаржиться (ADR-061). */}
           {!asOwner && (
             <button type="button" className="v2-btn v2-btn--ghost v2-btn--small" onClick={() => setReportOpen(true)}>

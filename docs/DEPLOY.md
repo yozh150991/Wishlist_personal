@@ -149,12 +149,42 @@ Authentication → URL Configuration:
 
 ### 4.1. Вхід через Google
 
-Кнопка «Продовжити з Google» на екранах входу й реєстрації з'являється тільки тоді, коли у Vercel стоїть `VITE_AUTH_GOOGLE=1`. Спершу провайдер, потім змінна: кнопка, що веде на «provider is not enabled», гірша за відсутню.
+Кнопка «Продовжити з Google» на екранах входу й реєстрації з'являється тільки тоді, коли у Vercel стоїть `VITE_AUTH_GOOGLE=1`. Спершу провайдер, потім змінна: кнопка, що веде на «provider is not enabled», гірша за відсутню. Інтерфейс Google — **Google Auth Platform** (Branding, Audience, Data access, Clients), стан на жовтень 2026.
 
-1. **Google Cloud Console** (той самий проєкт, що й для парсера, або окремий) → **APIs & Services → OAuth consent screen**: тип *External*, назва застосунку, пошта підтримки. Досить базових доступів `openid`, `email`, `profile`. Поки застосунок у статусі *Testing*, увійти зможуть лише додані тестові користувачі — для рідних або додай їхні адреси, або переведи застосунок у *Production*.
-2. **APIs & Services → Credentials → Create credentials → OAuth client ID**: тип *Web application*. У **Authorized redirect URIs** — рівно одна адреса: `https://<project-ref>.supabase.co/auth/v1/callback`. Google повертає людину до Supabase, а вже Supabase — у застосунок за Redirect URLs з розділу 4.
-3. **Supabase → Authentication → Sign In / Providers → Google**: увімкнути, вставити *Client ID* і *Client Secret*, зберегти. Секрет живе лише тут — ні в репозиторії, ні у Vercel його немає.
-4. **Vercel → Settings → Environment Variables**: `VITE_AUTH_GOOGLE` = `1`, далі **Redeploy** — змінні `VITE_*` вшиваються під час збірки.
+**0. Callback URL.** Supabase → проєкт → **Authentication → Sign In / Providers → Google** → поле **Callback URL (for OAuth)** вгорі — скопіювати (`https://<project-ref>.supabase.co/auth/v1/callback`). Провайдера поки не вмикати.
+
+**1. Проєкт Google Cloud** — `wishlist-parser-yozh`, той, де Cloud Run `wishlist-parser`, `wishlist-jobs`, `wishlist-guestmail`. **Не** проєкт іншого застосунку: екран згоди один на проєкт, і його назву бачать усі, хто входить.
+
+**2. Branding** (☰ → APIs & Services → OAuth consent screen → Get started, якщо попросить):
+- **App name** — `Wishlist`; **User support email** і **Developer contact** — твоя пошта; **Audience** — *External*;
+- **Application home page** — `https://wishlist-personal.vercel.app`;
+- **Application privacy policy link** — `https://wishlist-personal.vercel.app/privacy` (сторінка в застосунку, ADR-068);
+- **Authorized domains** — `wishlist-personal.vercel.app`;
+- **App logo — порожньо.** Логотип вимагає перевірки бренду перед публікацією, а домен `vercel.app` не твій — підтвердити його в Search Console не вийде.
+
+**3. Data access** → **Add or remove scopes**: `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile` → **Update** → **Save**. Нічого більше: ці три не «чутливі» й перевірки не потребують.
+
+**4. Audience.** Новий застосунок — у статусі *Testing*: входять лише **Test users** (до 100 адрес) — **Add users** → Gmail-адреси рідних. Для всіх — **Publish app**: кнопка оживає, щойно Branding заповнено повністю (зокрема посилання на політику); з трьома базовими доступами і без логотипа перехід у *In production* — одразу.
+
+**5. Clients** → **Create client**: *Web application*, назва довільна (`Wishlist Supabase`).
+- **Authorized JavaScript origins** — `https://wishlist-personal.vercel.app`;
+- **Authorized redirect URIs** — **рівно** Callback URL з кроку 0. Адреси Vercel тут немає: Google повертає людину до Supabase, а Supabase — у застосунок за Redirect URLs з розділу 4;
+- **Create** → скопіювати **Client ID** і **Client secret**.
+
+**6. Supabase** → **Authentication → Sign In / Providers → Google**: **Enable**, вставити *Client ID* і *Client Secret*, **Skip nonce checks** не чіпати (це для мобільних) → **Save**. Секрет живе лише тут — ні в репозиторії, ні у Vercel його немає. Перевірити **Authentication → URL Configuration**: Site URL і `https://wishlist-personal.vercel.app/**` у Redirect URLs (розділ 4).
+
+**7. Vercel** → проєкт → **Settings → Environment Variables**:
+- `VITE_AUTH_GOOGLE` = `1` (Production; за бажанням і Preview);
+- `VITE_CONTACT_EMAIL` = пошта для запитів щодо даних — її показує сторінка `/privacy`; без змінної рядка з контактом там немає, а RODO вимагає, щоб людина знала, куди писати;
+- **Deployments** → останній → **⋯** → **Redeploy**: змінні `VITE_*` вшиваються під час збірки.
+
+**8. Перевірка** у приватному вікні: `/login` → «Продовжити з Google» → «Мої списки».
+
+| Бачиш | Що виправити |
+|---|---|
+| `redirect_uri_mismatch` | redirect URI у кроці 5 не збігається символ у символ з Callback URL |
+| `provider is not enabled` | не збережено крок 6 |
+| «застосунок не перевірено» / `access_denied` | статус *Testing*, а акаунта немає в Test users (крок 4) |
 
 Хто зареєструвався через Google, пароля не має: увійти паролем він зможе лише після «Не памʼятаєш пароль?» (ADR-039, п. 7). Apple — окремим рішенням: для нього потрібен платний Apple Developer Program.
 

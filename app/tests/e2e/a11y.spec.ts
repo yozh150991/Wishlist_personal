@@ -99,7 +99,7 @@ test.describe('три мови на 360 px', () => {
   for (const locale of ['uk', 'pl', 'en'] as const) {
     test(`${locale}: нічого не їде вбік і не обрізано`, async ({ page }) => {
       await page.addInitScript((l) => localStorage.setItem('wl.locale', l), locale);
-      const paths = ['/login', '/register', '/такої-сторінки-немає'];
+      const paths = ['/login', '/register', '/privacy', '/такої-сторінки-немає'];
       if (localDb) paths.push(SEED_GUEST);
       for (const path of paths) {
         await page.goto(path);
