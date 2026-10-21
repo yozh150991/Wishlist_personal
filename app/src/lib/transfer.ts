@@ -6,7 +6,8 @@ import {
   VARIANT_LABEL_MAX,
   VARIANT_VALUE_MAX,
 } from './types';
-import type { Currency, Item, ItemPriority, ItemStatus, ItemVariant, List } from './types';
+import { groupItems } from './order';
+import type { Currency, Item, ItemPriority, ItemStatus, ItemVariant, List, Section } from './types';
 
 /**
  * Експорт та імпорт списків (ROADMAP 6.3).
@@ -21,6 +22,11 @@ import type { Currency, Item, ItemPriority, ItemStatus, ItemVariant, List } from
  *   (CLAUDE.md §3.5);
  * - **id, owner_id, created_at** — файл описує вміст, а не рядки конкретної
  *   бази, тож його можна внести в інший акаунт.
+ *
+ * Розділи (ADR-036) їдуть назвами: колонка `section` у CSV, `list.sections`
+ * і `section` позиції в JSON. Позиції у файлі стоять у порядку гостя —
+ * розділи по черзі, «Інше» в кінці, — тож імпорт відтворює і розділи, і
+ * ручний порядок, не знаючи жодного `id`.
  *
  * Перевірки нижче повторюють `check`-обмеження зі схеми (CLAUDE.md §4): людина
  * має побачити зрозумілу підказку в попередньому перегляді, а не `400` від бази.
@@ -46,6 +52,8 @@ export const CSV_COLUMNS = [
   'variants',
   // Валюта ціни позиції (ADR-051). Порожньо — валюта списку, як у файлах до неї.
   'currency',
+  // Назва розділу (ADR-036). Порожньо — «Інше», як у файлах до розділів.
+  'section',
 ] as const;
 
 export type TransferItem = {
@@ -60,6 +68,8 @@ export type TransferItem = {
   variants: ItemVariant[];
   /** Валюта ціни (ADR-051); null — валюта списку. */
   currency: Currency | null;
+  /** Назва розділу (ADR-036); null — «Інше». */
+  section: string | null;
 };
 
 export type TransferList = {
@@ -67,6 +77,8 @@ export type TransferList = {
   description: string | null;
   currency: Currency;
   event_date: string | null;
+  /** Розділи в порядку власника, назвами; порожні теж — їх створив власник. */
+  sections: string[];
 };
 
 /**
@@ -98,6 +110,8 @@ const DESCRIPTION_MAX = 2000;
 const NOTE_MAX = 1000;
 const URL_MAX = 2048;
 const QUANTITY_MAX = 999;
+/** Межа з `sections.title` (той самий `SECTION_TITLE_MAX` у `sections.ts`). */
+const SECTION_TITLE_MAX = 60;
 /** numeric(12,2): десять цифр до крапки й дві після. */
 const PRICE_MAX = 9_999_999_999.99;
 
@@ -107,7 +121,7 @@ function priceOut(value: number | string | null): string {
   return Number.isFinite(n) ? n.toFixed(2) : '';
 }
 
-export function toTransferItem(item: Item): TransferItem {
+export function toTransferItem(item: Item, section: string | null = null): TransferItem {
   const n = item.price === null || item.price === '' ? null : Number(item.price);
   return {
     title: item.title,
@@ -120,7 +134,28 @@ export function toTransferItem(item: Item): TransferItem {
     image_url: item.image_url,
     variants: item.variants ?? [],
     currency: item.currency ?? null,
+    section,
   };
+}
+
+/**
+ * Позиції в порядку гостя з назвою розділу: розділи за порядком власника,
+ * усередині — ручний порядок, «Інше» в кінці (`groupItems`). Так файл
+ * читається як сторінка списку, а імпорт відтворює порядок без `position`.
+ */
+export function exportItems(items: Item[], sections: Section[] = []): TransferItem[] {
+  return groupItems(items, ordered(sections)).flatMap((g) =>
+    g.items.map((i) => toTransferItem(i, g.section?.title ?? null)),
+  );
+}
+
+/** Порядок розділів власника — той самий, що віддає `fetchSections`. */
+function ordered(sections: Section[]): Section[] {
+  return [...sections].sort((a, b) => a.position - b.position || (a.created_at < b.created_at ? -1 : 1));
+}
+
+function sectionTitles(sections: Section[]): string[] {
+  return ordered(sections).map((s) => s.title);
 }
 
 /**
@@ -135,7 +170,7 @@ function variantsOut(variants: ItemVariant[]): string {
   return variants.length ? JSON.stringify(variants) : '';
 }
 
-export function toJson(list: List, items: Item[]): string {
+export function toJson(list: List, items: Item[], sections: Section[] = []): string {
   const payload = {
     format: TRANSFER_FORMAT,
     version: TRANSFER_VERSION,
@@ -145,8 +180,9 @@ export function toJson(list: List, items: Item[]): string {
       description: list.description,
       currency: list.currency,
       event_date: list.event_date,
+      sections: sectionTitles(sections),
     },
-    items: items.map(toTransferItem),
+    items: exportItems(items, sections),
   };
   return JSON.stringify(payload, null, 2) + '\n';
 }
@@ -173,7 +209,7 @@ export type AccountShare = {
 };
 
 export function toAccountJson(
-  lists: { list: List; items: Item[] }[],
+  lists: { list: List; items: Item[]; sections?: Section[] }[],
   shares: AccountShare[],
   now = new Date().toISOString(),
 ): string {
@@ -181,14 +217,15 @@ export function toAccountJson(
     format: ACCOUNT_FORMAT,
     version: TRANSFER_VERSION,
     exported_at: now,
-    lists: lists.map(({ list, items }) => ({
+    lists: lists.map(({ list, items, sections = [] }) => ({
       list: {
         title: list.title,
         description: list.description,
         currency: list.currency,
         event_date: list.event_date,
+        sections: sectionTitles(sections),
       },
-      items: items.map(toTransferItem),
+      items: exportItems(items, sections),
     })),
     shares,
   };
@@ -205,10 +242,9 @@ function csvCell(value: string | number | null): string {
   return /[",;\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function toCsv(items: Item[]): string {
+export function toCsv(items: Item[], sections: Section[] = []): string {
   const rows = [CSV_COLUMNS.join(',')];
-  for (const item of items) {
-    const t = toTransferItem(item);
+  for (const t of exportItems(items, sections)) {
     rows.push(
       [
         csvCell(t.title),
@@ -221,6 +257,7 @@ export function toCsv(items: Item[]): string {
         csvCell(t.image_url),
         csvCell(variantsOut(t.variants)),
         csvCell(t.currency),
+        csvCell(t.section),
       ].join(','),
     );
   }
@@ -380,6 +417,17 @@ function parseVariants(raw: string, row: number, issues: Issue[]): ItemVariant[]
 }
 
 /** Один рядок таблиці → позиція. `null`, якщо рядок непридатний. */
+/** Назва розділу з клітинки: пробіли згорнуто, задовга — обрізано з попередженням. */
+function parseSection(raw: string, row: number, issues: Issue[]): string | null {
+  const title = raw.replace(/\s+/g, ' ').trim();
+  if (!title) return null;
+  if (title.length > SECTION_TITLE_MAX) {
+    issues.push({ level: 'warning', row, key: 'transfer.issues.sectionLong', vars: { max: SECTION_TITLE_MAX } });
+    return title.slice(0, SECTION_TITLE_MAX).trim();
+  }
+  return title;
+}
+
 function rowToItem(
   get: (column: (typeof CSV_COLUMNS)[number]) => string,
   row: number,
@@ -454,10 +502,37 @@ function rowToItem(
     note,
     image_url: checkUrl(get('image_url'), row, 'image_url', issues),
     variants: parseVariants(get('variants'), row, issues),
+    section: parseSection(get('section'), row, issues),
   };
 }
 
-function checkList(raw: Partial<TransferList>, fallbackTitle: string, issues: Issue[]): TransferList {
+/**
+ * Розділи списку: спершу ті, що перелічено у файлі (`list.sections` — разом
+ * із порожніми), далі — назви з позицій у порядку першої появи. Однакові
+ * назви — один розділ: у файлі їх нічим іншим не розрізнити.
+ */
+function collectSections(declared: unknown, items: TransferItem[], issues: Issue[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const add = (title: string | null) => {
+    if (title && !seen.has(title)) {
+      seen.add(title);
+      out.push(title);
+    }
+  };
+  if (Array.isArray(declared)) {
+    for (const entry of declared) add(parseSection(trimmed(entry), 0, issues));
+  }
+  for (const item of items) add(item.section);
+  return out;
+}
+
+function checkList(
+  raw: Partial<Omit<TransferList, 'sections'>>,
+  fallbackTitle: string,
+  issues: Issue[],
+  sections: string[] = [],
+): TransferList {
   let title = trimmed(raw.title) || fallbackTitle;
   if (title.length > LIST_TITLE_MAX) {
     title = title.slice(0, LIST_TITLE_MAX);
@@ -482,7 +557,7 @@ function checkList(raw: Partial<TransferList>, fallbackTitle: string, issues: Is
     issues.push({ level: 'warning', row: 0, key: 'transfer.issues.eventDate', vars: { value: rawDate } });
   }
 
-  return { title, description, currency, event_date: eventDate };
+  return { title, description, currency, event_date: eventDate, sections };
 }
 
 function capItems(items: TransferItem[], issues: Issue[]): TransferItem[] {
@@ -528,7 +603,8 @@ export function parseCsvFile(text: string, fallbackTitle: string): ParseResult {
     if (item) items.push(item);
   }
 
-  return { list: checkList({}, fallbackTitle, issues), items: capItems(items, issues), issues };
+  const kept = capItems(items, issues);
+  return { list: checkList({}, fallbackTitle, issues, collectSections(null, kept, issues)), items: kept, issues };
 }
 
 export function parseJsonFile(text: string, fallbackTitle: string): ParseResult {
@@ -572,8 +648,13 @@ export function parseJsonFile(text: string, fallbackTitle: string): ParseResult 
     if (item) items.push(item);
   });
 
-  const listRaw = (obj.list && typeof obj.list === 'object' ? obj.list : {}) as Partial<TransferList>;
-  return { list: checkList(listRaw, fallbackTitle, issues), items: capItems(items, issues), issues };
+  const listRaw = (obj.list && typeof obj.list === 'object' ? obj.list : {}) as Record<string, unknown>;
+  const kept = capItems(items, issues);
+  return {
+    list: checkList(listRaw as Partial<TransferList>, fallbackTitle, issues, collectSections(listRaw.sections, kept, issues)),
+    items: kept,
+    issues,
+  };
 }
 
 /** Формат обираємо за розширенням, а якщо його немає — за вмістом. */

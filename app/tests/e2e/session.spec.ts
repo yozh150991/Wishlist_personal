@@ -56,6 +56,24 @@ test('без мережі — зрозуміла помилка, а не «[obje
   await context.setOffline(false);
 });
 
+/**
+ * Екрани власника — лінивий чанк (ADR-067). Якщо він не приїхав (немає мережі,
+ * а Service Worker його ще не має, або старий файл зник після деплою), людина
+ * бачить пояснення й «Спробувати ще раз» на місці екрана, а навігація лишається.
+ * Без запобіжника React знімав би все дерево — порожня сторінка.
+ */
+test('чанк екранів не приїхав — пояснення на місці екрана, навігація лишається', async ({ page }) => {
+  await page.route(/OwnerScreens/, (route) => route.abort());
+  await page.goto('/login');
+  await page.locator('input[name="email"]').fill(EMAIL!);
+  await page.locator('input[name="password"]').fill(PASSWORD!);
+  await page.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(/\/lists$/);
+  await expect(page.getByRole('heading', { level: 1, name: /екран не завантажився|ekran się nie wczytał|screen didn't load/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /спробувати ще раз|spróbuj ponownie|try again/i })).toBeVisible();
+  await expect(navLists(page)).toBeVisible();
+});
+
 test('у налаштуваннях є розділ встановлення застосунку', async ({ page }) => {
   await signIn(page);
   await page.goto('/settings');

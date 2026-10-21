@@ -19,7 +19,7 @@ export function manualOrder(a: Item, b: Item): number {
   if (pa !== null && pb === null) return 1;
   if (pa !== null && pb !== null && pa !== pb) return pa - pb;
   if (a.created_at !== b.created_at) return a.created_at < b.created_at ? 1 : -1;
-  return a.id < b.id ? -1 : 1;
+  return a.id === b.id ? 0 : a.id < b.id ? -1 : 1;
 }
 
 export type Group = { section: Section | null; items: Item[] };

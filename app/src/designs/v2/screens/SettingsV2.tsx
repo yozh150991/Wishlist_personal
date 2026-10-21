@@ -10,6 +10,8 @@ import { errorText } from '../../../lib/errors';
 import { fetchAllItems, fetchLists } from '../../../lib/db';
 import { fetchSharesOverview } from '../../../lib/shares';
 import { toAccountJson } from '../../../lib/transfer';
+import { fetchSections } from '../../../lib/sections';
+import type { Section } from '../../../lib/sections';
 import { downloadText } from '../../../lib/download';
 import { DESKTOP } from '../ShellV2';
 import { NoteV2 } from './AuthPartsV2';
@@ -266,11 +268,15 @@ function MyDataV2() {
     try {
       const lists = await fetchLists();
       setProgress({ done: 0, total: lists.length });
-      const out: { list: (typeof lists)[number]; items: Awaited<ReturnType<typeof fetchAllItems>> }[] = [];
+      const out: {
+        list: (typeof lists)[number];
+        items: Awaited<ReturnType<typeof fetchAllItems>>;
+        sections: Section[];
+      }[] = [];
       for (const list of lists) {
         if (cancelled.current) return;
-        const items = await fetchAllItems(list.id);
-        out.push({ list, items });
+        const [items, sections] = await Promise.all([fetchAllItems(list.id), fetchSections(list.id)]);
+        out.push({ list, items, sections });
         setProgress({ done: out.length, total: lists.length });
       }
       if (cancelled.current) return;

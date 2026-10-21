@@ -218,9 +218,8 @@ RLS: власник бачить свої й вбудовані, змінює й
 |---|---|
 | `items_list_created_idx (list_id, created_at desc, id desc)` | сортування за замовчуванням |
 | `items_list_title_idx (list_id, title, id)` | сортування за назвою |
-| `items_list_price_key_idx (list_id, coalesce(price, -1), id)` | сортування за ціною; позиції без ціни не випадають із курсора (ADR-017) |
+| `items_list_price_key_idx (list_id, coalesce(price, -1), id)` | сортування за ціною (старий `items_list_price_idx` прибрано: заміри без нього не повільніші, `20261021090000`); позиції без ціни не випадають із курсора (ADR-017) |
 | `items_list_priority_idx (list_id, priority, id)` | сортування за пріоритетом |
-| `items_list_price_idx (list_id, price, id)` | з першої міграції; сортування за ціною після ADR-017 іде за індексом вище, цей лишається корисним хіба що для фільтру діапазону ціни |
 | `items_owner_idx (owner_id)` | RLS-політика `owner_id = auth.uid()` |
 | `items_list_status_idx` | фільтр по статусу |
 | `items_title_trgm_idx` (GIN trgm) | пошук `ILIKE '%...%'` без seq scan |

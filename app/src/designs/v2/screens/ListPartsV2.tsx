@@ -606,20 +606,22 @@ export function FiltersSheetV2({
 /* ── Експорт у файл (ADR-050) ─────────────────────────────── */
 
 /**
- * «Експорт у файл» — ті самі CSV і JSON, що у v1 (`lib/transfer.ts`), тож
- * файл з однієї версії імпортується в іншу. Позиції вже на сторінці цілим
- * списком, тож нічого не дозавантажуємо. Позначок гостей у файлі немає — їх
- * власник не бачить ніде (ADR-040).
+ * «Експорт у файл» — CSV і JSON з `lib/transfer.ts`. Позиції й розділи вже
+ * на сторінці цілим списком, тож нічого не дозавантажуємо; файл стоїть у
+ * порядку гостя з назвами розділів (ADR-036). Позначок гостей у файлі немає —
+ * їх власник не бачить ніде (ADR-040).
  */
 export function ExportSheetV2({
   open,
   list,
   items,
+  sections,
   onClose,
 }: {
   open: boolean;
   list: List | null;
   items: Item[];
+  sections: Section[];
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -632,7 +634,7 @@ export function ExportSheetV2({
   function save(kind: 'csv' | 'json') {
     if (!list) return;
     try {
-      const text = kind === 'csv' ? toCsv(items) : toJson(list, items);
+      const text = kind === 'csv' ? toCsv(items, sections) : toJson(list, items, sections);
       downloadText(fileName(list.title, kind), text, kind === 'csv' ? 'text/csv' : 'application/json');
       onClose();
     } catch (e) {

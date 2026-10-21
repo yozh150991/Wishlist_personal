@@ -100,7 +100,7 @@
       "csv": "CSV do arkusza",
       "csvHint": "Otwiera się w Excelu, Numbers i Arkuszach Google.",
       "json": "JSON do przeniesienia",
-      "jsonHint": "Zachowuje też nazwę listy, walutę i datę wydarzenia."
+      "jsonHint": "Zachowuje też nazwę listy, walutę, datę wydarzenia i puste działy."
     },
     "import": {
       "title": "Importuj listę",
@@ -118,7 +118,8 @@
       "fileLabel": "Plik:",
       "submit": "Importuj pozycje ({n})",
       "tooBig": "Plik większy niż {max} MB.",
-      "importing": "Importuję…"
+      "importing": "Importuję…",
+      "sections": "działów: {n}"
     },
     "issues": {
       "titleRequired": "brak nazwy, wiersz pominięty.",
@@ -142,7 +143,8 @@
       "variants": "nie udało się odczytać cech «{value}», pole zostało puste.",
       "variantsMany": "więcej niż pięć cech, nadmiar pominięto.",
       "variantsLong": "cecha skrócona: nazwa do 40 znaków, wartość do 80.",
-      "itemCurrency": "Nieznana waluta „{value}” — cena w walucie listy"
+      "itemCurrency": "Nieznana waluta „{value}” — cena w walucie listy",
+      "sectionLong": "Nazwa działu dłuższa niż {max} znaków — skrócono."
     }
   },
   "outbox": {
@@ -472,6 +474,10 @@
       "title": "Nie ma takiej strony",
       "body": "Może adres skopiowano niecały albo strony już nie ma.",
       "home": "Do moich list"
+    },
+    "screenFailed": {
+      "title": "Ekran się nie wczytał",
+      "body": "Spróbuj ponownie — jeśli nie pomoże, sprawdź połączenie."
     }
   },
   "v2list": {
@@ -1172,6 +1178,7 @@
       "book": "Zarezerwuj i przejdź",
       "look": "Tylko popatrzę"
     },
-    "ownerBack": "Wróć"
+    "ownerBack": "Wróć",
+    "itemsHeading": "Pozycje listy"
   }
 }

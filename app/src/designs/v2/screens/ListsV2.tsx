@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AlertCircle, Check, ChevronRight, FileUp, Link2, ListPlus, Plus, Repeat } from 'lucide-react';
-import { createList, createListWithItems, deleteList, fetchDefaultCurrency, fetchListsOverview } from '../../../lib/db';
+import { createList, deleteList, fetchDefaultCurrency, fetchListsOverview, importList } from '../../../lib/db';
 import { fetchAppearances } from '../../../lib/appearances';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
@@ -289,10 +289,11 @@ export default function ListsV2() {
   /**
    * Імпорт із файлу (ADR-050): список створюється з позиціями одним кроком і
    * одразу відкривається з рядком «Імпортовано N». Збій — список не лишається
-   * напівпорожнім: `createListWithItems` прибирає його сам.
+   * напівпорожнім: `importList` прибирає його сам. Розділи з файлу створюються
+   * разом зі списком (ADR-036).
    */
   async function importFile(list: TransferList, items: TransferItem[]) {
-    const created = await createListWithItems(list, items, userId);
+    const created = await importList({ list, items }, userId);
     setImportOpen(false);
     navigate(`/lists/${created.id}`, { state: { flash: t('v2import.done', { n: items.length }) } });
   }

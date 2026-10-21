@@ -100,7 +100,7 @@
       "csv": "CSV for a spreadsheet",
       "csvHint": "Opens in Excel, Numbers and Google Sheets.",
       "json": "JSON for moving the list",
-      "jsonHint": "Also keeps the list name, currency and event date."
+      "jsonHint": "Also keeps the list name, currency, event date and empty sections."
     },
     "import": {
       "title": "Import list",
@@ -118,7 +118,8 @@
       "fileLabel": "File:",
       "submit": "Import items ({n})",
       "tooBig": "The file is larger than {max} MB.",
-      "importing": "Importing…"
+      "importing": "Importing…",
+      "sections": "sections: {n}"
     },
     "issues": {
       "titleRequired": "no title, row skipped.",
@@ -142,7 +143,8 @@
       "variants": "could not read details “{value}”, the field was left empty.",
       "variantsMany": "more than five details, the extra ones were dropped.",
       "variantsLong": "detail trimmed: label to 40 characters, value to 80.",
-      "itemCurrency": "Unknown currency “{value}” — the price is taken in the list currency"
+      "itemCurrency": "Unknown currency “{value}” — the price is taken in the list currency",
+      "sectionLong": "Section name is longer than {max} characters — shortened."
     }
   },
   "outbox": {
@@ -472,6 +474,10 @@
       "title": "There's no such page",
       "body": "The address may be incomplete, or the page has been removed.",
       "home": "To my lists"
+    },
+    "screenFailed": {
+      "title": "The screen didn't load",
+      "body": "Try again — if that doesn’t help, check your connection."
     }
   },
   "v2list": {
@@ -1172,6 +1178,7 @@
       "book": "Take it and go",
       "look": "Just looking"
     },
-    "ownerBack": "Go back"
+    "ownerBack": "Go back",
+    "itemsHeading": "Items on the list"
   }
 }

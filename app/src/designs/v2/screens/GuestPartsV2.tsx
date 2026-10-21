@@ -876,28 +876,30 @@ export function ShopSheetV2({
         {t('v2guest.shopSheet.title', { title: it?.title ?? '' })}
       </h2>
       <p className="v2-lede">{t('v2guest.shopSheet.body')}</p>
-      <div className="v2-sheet__actions">
-        <a
-          className="v2-btn v2-btn--primary v2-btn--block"
-          href={it?.url ?? undefined}
-          target="_blank"
-          rel="noreferrer noopener"
-          onClick={() => {
-            if (it) onBook(it);
-          }}
-        >
-          {t('v2guest.shopSheet.book')}
-        </a>
-        <a
-          className="v2-btn v2-btn--ghost"
-          href={it?.url ?? undefined}
-          target="_blank"
-          rel="noreferrer noopener"
-          onClick={onLook}
-        >
-          {t('v2guest.shopSheet.look')}
-        </a>
-      </div>
+      {/* Посилання без адреси — не посилання (Lighthouse, «crawlable-anchors»):
+          поки аркуш порожній, дій у ньому немає зовсім. */}
+      {it?.url && (
+        <div className="v2-sheet__actions">
+          <a
+            className="v2-btn v2-btn--primary v2-btn--block"
+            href={it.url}
+            target="_blank"
+            rel="noreferrer noopener"
+            onClick={() => onBook(it)}
+          >
+            {t('v2guest.shopSheet.book')}
+          </a>
+          <a
+            className="v2-btn v2-btn--ghost"
+            href={it.url}
+            target="_blank"
+            rel="noreferrer noopener"
+            onClick={onLook}
+          >
+            {t('v2guest.shopSheet.look')}
+          </a>
+        </div>
+      )}
     </SheetV2>
   );
 }

@@ -870,6 +870,10 @@ npx supabase db push
 
 **Листи про збір (ADR-064)** — нові види в `wishlist-guestmail`. Порядок: **спершу** передеплой `wishlist-guestmail`, **потім** `npx supabase db push` (міграції `20261020140000_gift_pools.sql` і `20261020150000_pool_mail.sql`).
 
+**Прибирання v1 (ADR-065)** — два кроки з різним порядком. 9а — лише фронтенд (і за бажанням передеплой `wishlist-jobs`, щоб листи й push ішли без `?design=v2`; без нього застосунок прибирає параметр сам). 9б — міграція `20261020160000_v1_rpc_internal.sql`, і `npx supabase db push` — **лише після** того, як Vercel виклав 9а: старий фронтенд кличе `get_shared_list` і `claim_item` напряму, а міграція їх закриває.
+
+**Індекс ціни** — міграція `20261021090000_drop_items_list_price_idx.sql` лише прибирає індекс; порядок із фронтендом не важливий.
+
 **«Поскаржитись» (ADR-061)** — скарги обробляє той самий `wishlist-guestmail`. Порядок: передеплой `wishlist-guestmail` (`gcloud run deploy wishlist-guestmail --source . --region europe-central2` з `services\parser`), потім `npx supabase db push` (міграція `20261020120000_share_reports.sql`). Лист про скаргу приходить на `MAIL_FROM`. Якщо сервіс ще старий, скарги просто чекають у `share_reports` до передеплою.
 
 **Картка посилання в месенджері (ADR-060)** — це `app/api/card.ts` у тому самому деплої Vercel, окремих кроків немає. Функція читає ті самі змінні `VITE_SUPABASE_URL` і `VITE_SUPABASE_PUBLISHABLE_KEY`, що вже стоять у Vercel для збірки; нових змінних не треба. Порядок: спершу `npx supabase db push` (міграція `20261020110000_share_card.sql`), потім деплой фронтенду. Перевірка:

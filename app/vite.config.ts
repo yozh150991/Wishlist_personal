@@ -1,10 +1,28 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
+import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+/**
+ * `<link rel="preconnect">` до Supabase у `<head>`: гостьова й «Мої списки»
+ * першим ділом ідуть у базу, і зʼєднання (DNS, TLS) встигає відкритись, поки
+ * завантажується JS (Lighthouse, «uses-rel-preconnect»). Без адреси в
+ * оточенні (збірка в CI) рядка просто немає.
+ */
+function preconnectSupabase(url: string | undefined): Plugin {
+  return {
+    name: 'wishlist-preconnect-supabase',
+    transformIndexHtml() {
+      if (!url || !/^https?:\/\//.test(url)) return [];
+      return [{ tag: 'link', attrs: { rel: 'preconnect', href: new URL(url).origin, crossorigin: '' }, injectTo: 'head' }];
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
+    preconnectSupabase(loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL),
     // Встановлення на телефон і оболонка застосунку офлайн (ROADMAP, етап 6.1).
     // Дані списків тут НЕ кешуються — це окремий крок з IndexedDB.
     VitePWA({
@@ -93,4 +111,4 @@ export default defineConfig({
     // системним шрифтом. Перевіряє `npm run check:pwa`.
     assetsInlineLimit: (file: string) => (/\.(woff2?|ttf|otf|eot)$/i.test(file) ? false : undefined),
   },
-});
+}));

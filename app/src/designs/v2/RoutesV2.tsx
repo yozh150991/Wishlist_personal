@@ -6,19 +6,23 @@ import LoginV2 from './screens/LoginV2';
 import RegisterV2 from './screens/RegisterV2';
 import ResetV2 from './screens/ResetV2';
 import NewPasswordV2 from './screens/NewPasswordV2';
-import ListsV2 from './screens/ListsV2';
-import NewListV2 from './screens/NewListV2';
-import ListV2 from './screens/ListV2';
-import SharesV2 from './screens/SharesV2';
-import GiftsV2 from './screens/GiftsV2';
-import SettingsV2 from './screens/SettingsV2';
-import AddV2 from './screens/AddV2';
 import { RequireAuthV2, ShellV2 } from './ShellV2';
-// Стилі v2 — у головному пакеті: інших екранів у застосунку немає (ADR-065).
+import { ChunkBoundary } from './ChunkBoundary';
+// Стилі — у головному пакеті: їх ділять усі екрани (ADR-065).
 import './v2.css';
 
 /** Гостьова — лінива: свій чанк, який власнику, що відкрив застосунок, не потрібен. */
 const GuestV2 = lazy(() => import('./screens/GuestV2'));
+
+/** Екрани власника — один лінивий чанк на всіх (див. `OwnerScreens.ts`). */
+const owner = () => import('./OwnerScreens');
+const ListsV2 = lazy(() => owner().then((m) => ({ default: m.ListsV2 })));
+const NewListV2 = lazy(() => owner().then((m) => ({ default: m.NewListV2 })));
+const ListV2 = lazy(() => owner().then((m) => ({ default: m.ListV2 })));
+const SharesV2 = lazy(() => owner().then((m) => ({ default: m.SharesV2 })));
+const GiftsV2 = lazy(() => owner().then((m) => ({ default: m.GiftsV2 })));
+const SettingsV2 = lazy(() => owner().then((m) => ({ default: m.SettingsV2 })));
+const AddV2 = lazy(() => owner().then((m) => ({ default: m.AddV2 })));
 
 /**
  * Таблиця маршрутів застосунку.
@@ -65,9 +69,11 @@ function Loading() {
 
 function Guest() {
   return (
-    <Suspense fallback={<Loading />}>
-      <GuestV2 />
-    </Suspense>
+    <ChunkBoundary>
+      <Suspense fallback={<Loading />}>
+        <GuestV2 />
+      </Suspense>
+    </ChunkBoundary>
   );
 }
 
@@ -90,7 +96,11 @@ export default function AppRoutes() {
         path="/add"
         element={
           <RequireAuthV2>
-            <AddV2 />
+            <ChunkBoundary>
+              <Suspense fallback={<Loading />}>
+                <AddV2 />
+              </Suspense>
+            </ChunkBoundary>
           </RequireAuthV2>
         }
       />

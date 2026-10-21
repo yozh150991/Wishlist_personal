@@ -38,6 +38,10 @@ export async function signIn(page: Page) {
   await page.locator('input[name="password"]').fill(PASSWORD!);
   await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL(/\/lists$/);
+  // Екрани власника — лінивий чанк (ADR-067): чекаємо, поки він приїхав і
+  // намалював головну, — інакше тест, що одразу вимикає мережу, ловив би
+  // не той стан.
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 }
 
 /** Новий список через «Новий список» — одразу всередині нього. */

@@ -387,8 +387,8 @@ Stop-Process -Id <PID> -Force
 
 | Гість | Особисте посилання | Код | Що взяв |
 |---|---|---|---|
-| перший | `http://localhost:5173/s/seed-active-share-token/g/seed-guest-key-0000001` | `SEED2` | навушники |
-| другий | `http://localhost:5173/s/seed-active-share-token/g/seed-guest-key-0000002` | `SEED3` | 2 келихи з 6 |
+| перший | `http://localhost:5173/l/seed-active-share-token/g/seed-guest-key-0000001` | `SEED2` | навушники |
+| другий | `http://localhost:5173/l/seed-active-share-token/g/seed-guest-key-0000002` | `SEED3` | 2 келихи з 6 |
 
 Код одноразовий: після використання він змінюється, а на список діє ліміт 5 спроб на годину. Щоб повернути `SEED2`, потрібен `npx supabase db reset`.
 
