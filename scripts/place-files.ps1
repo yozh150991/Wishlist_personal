@@ -40,7 +40,7 @@ $map = @{
   # documentation
   'API.md' = 'docs'; 'ARCHITECTURE.md' = 'docs'; 'DATA_MODEL.md' = 'docs'
   'DECISIONS.md' = 'docs'; 'ROADMAP.md' = 'docs'; 'SETUP.md' = 'docs'
-  'TESTING.md' = 'docs'; 'DEPLOY.md' = 'docs'
+  'TESTING.md' = 'docs'; 'DEPLOY.md' = 'docs'; 'QA_REPORT.md' = 'docs'
 
   # database migrations
   '20260910120000_init.sql'   = 'supabase\migrations'
@@ -79,6 +79,11 @@ $map = @{
   '11_link_checks.test.sql' = 'supabase\tests\database'
   '12_notifications.test.sql' = 'supabase\tests\database'
   '13_item_currency.test.sql' = 'supabase\tests\database'
+  # QA regression by test-design technique (ADR-069)
+  '25_qa_equivalence_boundaries.test.sql' = 'supabase\tests\database'
+  '26_qa_state_transitions.test.sql' = 'supabase\tests\database'
+  '27_qa_pairwise.test.sql' = 'supabase\tests\database'
+  '28_qa_error_guessing.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -151,6 +156,7 @@ $map = @{
   'ListV2.tsx' = 'app\src\designs\v2\screens'; 'ItemSheetV2.tsx' = 'app\src\designs\v2\screens'
   'ListPartsV2.tsx' = 'app\src\designs\v2\screens'; 'list-v2.spec.ts' = 'app\tests\e2e'; 'ImportSheetV2.tsx' = 'app\src\designs\v2\screens'
   'items-view.spec.ts' = 'app\tests\e2e'
+  'qa-techniques.spec.ts' = 'app\tests\e2e'; 'qa-flows.spec.ts' = 'app\tests\e2e'
   # Design v2 list actions (step 3b-2): share, preview, appearance, settings, order.
   'ShareSheetV2.tsx' = 'app\src\designs\v2\screens'; 'PreviewV2.tsx' = 'app\src\designs\v2\screens'
   'AppearanceSheetV2.tsx' = 'app\src\designs\v2\screens'; 'ListSettingsV2.tsx' = 'app\src\designs\v2\screens'
@@ -199,6 +205,7 @@ $map = @{
   'test_extract.py' = 'services\parser\tests'; 'test_ssrf.py' = 'services\parser\tests'
   'test_auth.py' = 'services\parser\tests'; 'test_fetch_pinning.py' = 'services\parser\tests'
   'test_jobs.py' = 'services\parser\tests'; 'test_notify.py' = 'services\parser\tests'; 'test_rates.py' = 'services\parser\tests'
+  'test_qa_techniques.py' = 'services\parser\tests'
   'jsonld.html' = 'services\parser\tests\fixtures'; 'og.html' = 'services\parser\tests\fixtures'
   'microdata.html' = 'services\parser\tests\fixtures'; 'bare.html' = 'services\parser\tests\fixtures'
   'price_in_text.html' = 'services\parser\tests\fixtures'
