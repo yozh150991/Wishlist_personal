@@ -57,7 +57,6 @@ def test_ep_non_product_jsonld_falls_back(parser, node):
     {"@type": "Product", "name": ["Lamp"]},
     {"@type": "Product", "name": 123},
 ])
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason="BUG-QA-27: JSON-LD field types crash extraction")
 def test_eg_malformed_jsonld_fields_do_not_return_500(parser, node):
     client, document, _ = parser
     document["html"] = markup(node)
@@ -67,7 +66,6 @@ def test_eg_malformed_jsonld_fields_do_not_return_500(parser, node):
 
 
 @pytest.mark.parametrize("digits", [309, 400])
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason="BUG-QA-28: math.isfinite overflows on a JSON integer")
 def test_bva_oversized_json_integer_is_ignored_without_500(parser, digits):
     client, document, _ = parser
     document["html"] = markup({"@type": "Product", "name": "Lamp", "offers": {"price": int("9" * digits)}})
@@ -78,7 +76,6 @@ def test_bva_oversized_json_integer_is_ignored_without_500(parser, digits):
 
 
 @pytest.mark.parametrize("price", ["-5", "-0.01", "-49,90 zł"])
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason="BUG-QA-29: textual negative price loses its sign")
 def test_ep_negative_text_is_not_a_positive_price(price):
     assert parse_price(price) is None
 
@@ -134,3 +131,28 @@ def test_eg_product_variant_query_parameters_never_share_cached_price(parser):
         assert result.status_code == 200
         assert result.json()['price'] == price
     assert len(calls) == 2
+
+
+# Межі виправлень BUG-QA-27…29 (ADR-071): що лишилось, як було.
+@pytest.mark.parametrize(("raw", "want"), [
+    ("−49,90 zł", None),        # типографський мінус — теж мінус
+    ("od 49,90 - 59,90 zł", 49.9),   # діапазон: перше число без знака
+    ("Model X-200 za 49,99 zł", 200.0),  # дефіс у коді товару — не мінус
+    (9_999_999_999, 9_999_999_999.0),    # найбільша ціна, що лягає в numeric(12,2)
+    (10_000_000_000, None),
+    ("10 000 000 000 zł", None),
+    ({"value": 10}, None),           # обʼєкт на місці ціни не стає цифрами з str()
+    (["10"], None),
+])
+def test_bva_price_fix_boundaries(raw, want):
+    assert parse_price(raw) == want
+
+
+def test_eg_currency_object_is_not_guessed_from_its_repr():
+    from app.extract import normalise_currency
+    assert normalise_currency({"sign": "$"}) is None
+
+
+def test_eg_availability_ignores_broken_type():
+    from app.extract import availability
+    assert availability(markup({"@type": 7, "offers": {"availability": "OutOfStock"}})) is None

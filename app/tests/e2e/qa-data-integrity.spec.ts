@@ -34,7 +34,6 @@ test.describe('EP: JSON numeric prices are numbers, not localized text', () => {
   for (const [price, expected] of [[1.234, 1.23], [12.345, 12.35], [0.125, 0.13]]) {
     test(`BUG-QA-23: JSON numeric ${price} keeps its decimal magnitude`, () => {
       const parsed = json({ price });
-      test.fail(!process.env.QA_STRICT, 'BUG-QA-23: numeric JSON is passed through localized grouping parser');
       expect(parsed.items[0]?.price).toBe(expected);
     });
   }
@@ -58,7 +57,6 @@ test.describe('BVA: calendar and Unicode boundaries', () => {
       const [year, month, date] = day.split('-');
       expect(dateTextToIso(`${date}.${month}.${year}`), 'form already rejects this date').toBeNull();
       const parsed = json({}, { event_date: day });
-      test.fail(!process.env.QA_STRICT, 'BUG-QA-24: import validates only the ISO shape');
       expect(parsed.list.event_date).toBeNull();
       expect(parsed.issues.map(i => i.key)).toContain('transfer.issues.eventDate');
     });
@@ -68,10 +66,40 @@ test.describe('BVA: calendar and Unicode boundaries', () => {
       const parsed = json({ [field]: 'a'.repeat(max - 1) + '🎁tail' });
       expect(parsed.items).toHaveLength(1);
       expect(parsed.issues.length).toBeGreaterThan(0);
-      test.fail(!process.env.QA_STRICT, 'BUG-QA-25: UTF-16 slice breaks emoji, PostgreSQL JSON cannot accept it');
       expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(parsed.items[0]![field]!)).toBe(false);
     });
   }
+});
+
+test.describe('Fix boundaries for BUG-QA-23…26 (ADR-071)', () => {
+  test('text prices keep the form rules: "1.234" is still grouping in CSV and JSON strings', () => {
+    expect(json({ price: '1.234' }).items[0]?.price).toBe(1234);
+    expect(parseCsvFile('title,price\r\nLamp,1.234\r\n', 'QA').items[0]?.price).toBe(1234);
+  });
+  test('JSON numbers round half-up by their decimal text', () => {
+    expect(json({ price: 1.005 }).items[0]?.price).toBe(1.01);
+    expect(json({ price: 0.004 }).items[0]?.price).toBe(0);
+    expect(json({ price: 1e-7 }).items[0]?.price).toBe(0);
+  });
+  test('list title, description and variants are clipped by characters, not UTF-16 units', () => {
+    const lone = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+    const parsed = json(
+      { variants: [{ label: 'a'.repeat(39) + '🎁x', value: 'b'.repeat(79) + '🎁x' }] },
+      { title: 'a'.repeat(119) + '🎁tail', description: 'a'.repeat(1999) + '🎁tail' },
+    );
+    expect(Array.from(parsed.list.title)).toHaveLength(120);
+    expect(lone.test(parsed.list.title)).toBe(false);
+    expect(lone.test(parsed.list.description ?? '')).toBe(false);
+    for (const v of parsed.items[0]!.variants) expect(lone.test(v.label + v.value)).toBe(false);
+  });
+  test('an emoji title within 200 characters is accepted, as the database counts characters', () => {
+    expect(json({ title: '🎁'.repeat(150) }).items).toHaveLength(1);
+  });
+  test('objects in non-title fields are treated as empty, not as "[object Object]"', () => {
+    const parsed = json({ note: { text: 'x' }, price: { value: 1 } });
+    expect(parsed.items[0]?.note).toBeNull();
+    expect(parsed.items[0]?.price).toBeNull();
+  });
 });
 
 test.describe('ST: export after a sequence of offline edits', () => {
@@ -152,6 +180,5 @@ test.describe('PW: transfer format × currency × status × priority × note × 
 test('EG BUG-QA-26: syntactically valid hostile JSON produces a validation result, never throws', () => {
   const payload = '{"items":[{"title":{"toString":null}}]}';
   expect(() => JSON.parse(payload)).not.toThrow();
-  test.fail(!process.env.QA_STRICT, 'BUG-QA-26: String(object) can throw for imported JSON');
   expect(() => parseJsonFile(payload, 'QA')).not.toThrow();
 });

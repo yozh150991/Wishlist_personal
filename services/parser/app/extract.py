@@ -14,6 +14,31 @@ CURRENCY_SIGNS = {
     "$": "USD", "usd": "USD",
 }
 
+# numeric(12,2) у базі й PRICE_MAX у застосунку: більшої ціни все одно не
+# зберегти, тож парсер її й не пропонує (BUG-QA-28).
+PRICE_MAX = 9_999_999_999.99
+
+# Мінус перед числом, а не дефіс усередині слова чи коду товару («X-200»).
+# U+2212 — типографський мінус, яким магазини теж пишуть знижки й борги.
+_NUMBER = re.compile(r"(?P<neg>(?<!\w)[-\u2212]\s*)?\d[\d\s\u00a0.,]*")
+
+
+def _price_or_none(number: float) -> float | None:
+    return number if math.isfinite(number) and 0 <= number <= PRICE_MAX else None
+
+
+def _text(value: object) -> str | None:
+    """Рядок із JSON-LD або None. Обʼєкт, масив чи число на місці тексту — не назва (BUG-QA-27)."""
+    return value if isinstance(value, str) else None
+
+
+def _types(node: dict) -> list:
+    """`@type` вузла як список: рядок, масив або щось зіпсоване (число, true) — порожньо."""
+    value = node.get("@type")
+    if isinstance(value, str):
+        return [value]
+    return value if isinstance(value, list) else []
+
 
 def parse_price(raw: object) -> float | None:
     """
@@ -26,23 +51,34 @@ def parse_price(raw: object) -> float | None:
 
     Нескінченність і NaN — не ціна: `json.loads` пропускає `Infinity`, а
     відповідь з `inf` FastAPI не серіалізує й віддає 500 (BUG-QA-19).
+
+    Ціле з JSON порівнюємо з межею ще як ціле: `float()` від числа з 309
+    цифр кидає OverflowError, і /parse відповідав 500 (BUG-QA-28).
+    Від'ємна ціна — не ціна і в тексті: «-49,90 zł» раніше втрачало мінус і
+    ставало 49.9 (BUG-QA-29). Приймаються лише рядок і число: обʼєкт чи
+    масив через `str()` перетворювався б на випадкові цифри.
     """
     if raw is None or isinstance(raw, bool):
         return None
-    if isinstance(raw, (int, float)):
-        return float(raw) if math.isfinite(raw) and raw >= 0 else None
+    if isinstance(raw, int):
+        return float(raw) if 0 <= raw <= PRICE_MAX else None
+    if isinstance(raw, float):
+        return _price_or_none(raw)
+    if not isinstance(raw, str):
+        return None
 
-    text = str(raw).strip()
+    text = raw.strip()
     if not text:
         return None
 
     # Спершу вирізаємо саме число, а не просто викидаємо все зайве:
     # інакше крапка з "9,99/szt." прилипала до числа й читалась як
     # десятковий роздільник без цифр після себе.
-    match = re.search(r"\d[\d\s\u00a0.,]*", text)
-    if not match:
+    match = _NUMBER.search(text)
+    if not match or match.group("neg"):
         return None
-    text = match.group(0).replace("\u00a0", "").replace(" ", "").strip(".,")
+    text = match.group(0)[len(match.group("neg") or ""):]
+    text = text.replace("\u00a0", "").replace(" ", "").strip(".,")
     if not text:
         return None
 
@@ -57,11 +93,11 @@ def parse_price(raw: object) -> float | None:
         number = float(value)
     except ValueError:
         return None
-    return number if math.isfinite(number) and number >= 0 else None
+    return _price_or_none(number)
 
 
 def normalise_currency(raw: object) -> str | None:
-    if not raw:
+    if not raw or not isinstance(raw, str):
         return None
     text = str(raw).strip().lower()
     # Спершу знаки й слова: «грн» — теж три літери, але не код ISO (BUG-QA-21).
@@ -164,12 +200,13 @@ def extract(html: str, url: str) -> ParseResponse:
         src[field] = source
 
     # 1. JSON-LD schema.org/Product
+    # Типи полів перевіряються до використання (BUG-QA-27): `"@type": 7` чи
+    # `"name": {"text": …}` від магазину — привід узяти поле з іншого
+    # джерела, а не відповісти 500.
     for node in _iter_jsonld(soup):
-        types = node.get("@type")
-        types = [types] if isinstance(types, str) else (types or [])
-        if "Product" not in types:
+        if "Product" not in _types(node):
             continue
-        put("title", node.get("name"), "jsonld")
+        put("title", _text(node.get("name")), "jsonld")
         put("image_url", _first_image(node.get("image")), "jsonld")
 
         offers = node.get("offers")
@@ -260,9 +297,7 @@ def availability(html: str) -> bool | None:
 
     seen: list[bool] = []
     for node in _iter_jsonld(soup):
-        types = node.get("@type")
-        types = [types] if isinstance(types, str) else (types or [])
-        if "Product" not in types:
+        if "Product" not in _types(node):
             continue
         offers = node.get("offers")
         offers = offers if isinstance(offers, list) else [offers]

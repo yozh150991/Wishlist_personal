@@ -8,6 +8,7 @@ import {
 } from './types';
 import { groupItems } from './order';
 import { parsePrice as parsePriceField } from './itemsView';
+import { dateTextToIso, isoToDateText } from './dateText';
 import type { Currency, Item, ItemPriority, ItemStatus, ItemVariant, List, Section } from './types';
 
 /**
@@ -335,8 +336,48 @@ export function parseCsv(text: string, sep: ',' | ';'): string[][] {
 
 /* ── Перевірка значень ──────────────────── */
 
+/**
+ * Значення поля як текст. Приводимо лише примітиви (BUG-QA-26): обʼєкт із
+ * файлу може мати будь-який `toString` — зокрема `null`, і тоді `String()`
+ * кидає `TypeError` замість зрозумілого зауваження до рядка. Обʼєкт у полі,
+ * де чекали текст чи число, — це порожнє поле: назва дасть
+ * `titleRequired`, решта — усталене значення.
+ */
 function trimmed(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : value === null || value === undefined ? '' : String(value).trim();
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim();
+  return '';
+}
+
+/**
+ * Довжина й обрізання — у символах (code points), а не в одиницях UTF-16
+ * (BUG-QA-25). Так рахує і база: `length(text)` у PostgreSQL — це символи.
+ * `slice` за UTF-16 міг розрізати емодзі навпіл і лишити самотній
+ * сурогат — рядок, який не є валідним UTF-8 і якого база не прийме.
+ */
+function charLength(s: string): number {
+  return Array.from(s).length;
+}
+
+function clip(s: string, max: number): string {
+  return charLength(s) > max ? Array.from(s).slice(0, max).join('') : s;
+}
+
+/**
+ * Гроші до копійок за десятковим записом числа, половина — вгору.
+ * `Math.round(n * 100) / 100` тут помиляється: 12.345 * 100 у двійковій
+ * арифметиці — 1234.4999…, і виходило б 12.34 (CLAUDE.md §4: гроші не
+ * рахуємо у float). `String(n)` дає найкоротший запис, що читається назад у
+ * те саме число, — тобто саме те, що написано у файлі.
+ */
+function roundToCents(n: number): number {
+  const m = /^(\d+)(?:\.(\d+))?$/.exec(String(n));
+  // Експоненційний запис для невідʼємних цін у межах PRICE_MAX буває лише
+  // для крихітних значень (1e-7) — вони округлюються до нуля.
+  if (!m) return n < 0.005 ? 0 : Math.round(n * 100) / 100;
+  const frac = (m[2] ?? '').padEnd(3, '0');
+  const cents = Number(m[1]) * 100 + Number(frac.slice(0, 2)) + (frac.charCodeAt(2) >= 53 /* '5' */ ? 1 : 0);
+  return cents / 100;
 }
 
 /**
@@ -412,8 +453,8 @@ function parseVariants(raw: string, row: number, issues: Issue[]): ItemVariant[]
   }
 
   const trimmedPairs = out.map((p) => ({
-    label: p.label.slice(0, VARIANT_LABEL_MAX),
-    value: p.value.slice(0, VARIANT_VALUE_MAX),
+    label: clip(p.label, VARIANT_LABEL_MAX),
+    value: clip(p.value, VARIANT_VALUE_MAX),
   }));
   if (trimmedPairs.some((p, i) => p.label !== out[i]?.label || p.value !== out[i]?.value)) {
     issues.push({ level: 'warning', row, key: 'transfer.issues.variantsLong' });
@@ -432,24 +473,30 @@ function parseVariants(raw: string, row: number, issues: Issue[]): ItemVariant[]
 function parseSection(raw: string, row: number, issues: Issue[]): string | null {
   const title = raw.replace(/\s+/g, ' ').trim();
   if (!title) return null;
-  if (title.length > SECTION_TITLE_MAX) {
+  if (charLength(title) > SECTION_TITLE_MAX) {
     issues.push({ level: 'warning', row, key: 'transfer.issues.sectionLong', vars: { max: SECTION_TITLE_MAX } });
-    return title.slice(0, SECTION_TITLE_MAX).trim();
+    return clip(title, SECTION_TITLE_MAX).trim();
   }
   return title;
 }
 
+/**
+ * `numeric` — ціна, що у файлі вже є числом (JSON). Вона не проходить
+ * правила тексту: «1.234» у клітинці — це розряди, тобто 1234, а JSON-число
+ * 1.234 — однозначно одна ціла й 234 тисячних (BUG-QA-23).
+ */
 function rowToItem(
   get: (column: (typeof CSV_COLUMNS)[number]) => string,
   row: number,
   issues: Issue[],
+  numeric?: { price?: number },
 ): TransferItem | null {
   const title = get('title');
   if (!title) {
     issues.push({ level: 'error', row, key: 'transfer.issues.titleRequired' });
     return null;
   }
-  if (title.length > TITLE_MAX) {
+  if (charLength(title) > TITLE_MAX) {
     issues.push({ level: 'error', row, key: 'transfer.issues.titleLong', vars: { max: TITLE_MAX } });
     return null;
   }
@@ -457,11 +504,11 @@ function rowToItem(
   let price: number | null = null;
   const rawPrice = get('price');
   if (rawPrice) {
-    const n = parsePrice(rawPrice);
-    if (n === null || Number.isNaN(n) || n < 0 || n > PRICE_MAX) {
+    const n = numeric?.price ?? parsePrice(rawPrice);
+    if (n === null || !Number.isFinite(n) || n < 0 || n > PRICE_MAX) {
       issues.push({ level: 'warning', row, key: 'transfer.issues.price', vars: { value: rawPrice } });
     } else {
-      price = Math.round(n * 100) / 100;
+      price = roundToCents(n);
     }
   }
 
@@ -490,8 +537,8 @@ function rowToItem(
   }
 
   let note: string | null = get('note') || null;
-  if (note && note.length > NOTE_MAX) {
-    note = note.slice(0, NOTE_MAX);
+  if (note && charLength(note) > NOTE_MAX) {
+    note = clip(note, NOTE_MAX);
     issues.push({ level: 'warning', row, key: 'transfer.issues.noteLong', vars: { max: NOTE_MAX } });
   }
 
@@ -546,14 +593,14 @@ function checkList(
   sections: string[] = [],
 ): TransferList {
   let title = trimmed(raw.title) || fallbackTitle;
-  if (title.length > LIST_TITLE_MAX) {
-    title = title.slice(0, LIST_TITLE_MAX);
+  if (charLength(title) > LIST_TITLE_MAX) {
+    title = clip(title, LIST_TITLE_MAX).trim();
     issues.push({ level: 'warning', row: 0, key: 'transfer.issues.listTitleLong', vars: { max: LIST_TITLE_MAX } });
   }
 
   let description = trimmed(raw.description) || null;
-  if (description && description.length > DESCRIPTION_MAX) {
-    description = description.slice(0, DESCRIPTION_MAX);
+  if (description && charLength(description) > DESCRIPTION_MAX) {
+    description = clip(description, DESCRIPTION_MAX);
     issues.push({ level: 'warning', row: 0, key: 'transfer.issues.descriptionLong', vars: { max: DESCRIPTION_MAX } });
   }
 
@@ -563,8 +610,13 @@ function checkList(
     issues.push({ level: 'warning', row: 0, key: 'transfer.issues.currency', vars: { value: rawCurrency } });
   }
 
+  // Справжня календарна дата за тими самими правилами, що й поле форми
+  // (BUG-QA-24): «2026-02-29» чи «2026-04-31» мають вигляд дати, але в
+  // колонку `date` не лягають.
   const rawDate = trimmed(raw.event_date);
-  const eventDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : null;
+  const eventDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && dateTextToIso(isoToDateText(rawDate)) === rawDate
+    ? rawDate
+    : null;
   if (rawDate && !eventDate) {
     issues.push({ level: 'warning', row: 0, key: 'transfer.issues.eventDate', vars: { value: rawDate } });
   }
@@ -656,7 +708,8 @@ export function parseJsonFile(text: string, fallbackTitle: string): ParseResult 
       const raw = record[column];
       return Array.isArray(raw) ? JSON.stringify(raw) : trimmed(raw);
     };
-    const item = rowToItem(get, i + 1, issues);
+    const rawPrice = record.price;
+    const item = rowToItem(get, i + 1, issues, typeof rawPrice === 'number' ? { price: rawPrice } : undefined);
     if (item) items.push(item);
   });
 
