@@ -33,6 +33,11 @@ if (-not $To) {
 }
 
 $map = @{
+  'playwright.logic.config.ts' = 'app'
+  'qa-data-integrity.spec.ts' = 'app\tests\e2e'
+  'qa-storage-resilience.spec.ts' = 'app\tests\e2e'
+  'test_qa_resilience.py' = 'services\parser\tests'
+  'QA_FOLLOWUP.md' = 'docs'
   # repository root
   'README.md' = '.'; 'CLAUDE.md' = '.'; 'CHANGELOG.md' = '.'
   '.env.example' = '.'; '.gitignore' = '.'
