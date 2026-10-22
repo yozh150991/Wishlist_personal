@@ -1,3 +1,4 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import {
   EMPTY_RANGE,
@@ -19,9 +20,8 @@ import type { Item, ItemStatus } from '../../src/lib/types';
 
 // QA-регресія за техніками тест-дизайну (ADR-069), чисті функції без браузера.
 //
-// Кожен describe — одна техніка. Відомі баги позначено `test.fail()` з номером
-// із docs/QA_REPORT.md: такий тест зелений, поки баг є, і червоніє, щойно баг
-// виправлено, — тоді позначку треба зняти й тест стає звичайною регресією.
+// Кожен describe — одна техніка. Тести знайдених і виправлених багів (ADR-070)
+// мають номер із docs/QA_REPORT.md у назві.
 
 let seq = 0;
 function item(over: Partial<Item> = {}): Item {
@@ -126,14 +126,14 @@ test.describe('EP: класи еквівалентності', () => {
 
 test.describe('BVA: граничні значення', () => {
   test('ціна: десять цифр до коми — максимум, одинадцять — забагато', () => {
-    expect(parsePrice('9999999999')).toEqual({ value: PRICE_MAX, error: null });
+    expect(PRICE_MAX).toBe(9_999_999_999.99);
+    expect(parsePrice('9999999999')).toEqual({ value: 9_999_999_999, error: null });
     expect(parsePrice('10000000000').error).toBe('tooBig');
     expect(parsePrice('0,01')).toEqual({ value: 0.01, error: null });
     expect(parsePrice('0,1')).toEqual({ value: 0.1, error: null });
   });
 
   test('BUG-QA-12: ціна 9 999 999 999,99 — максимум numeric(12,2) — приймається', () => {
-    test.fail(true, 'BUG-QA-12: поле відкидає найбільшу ціну, яку приймає база');
     expect(parsePrice('9 999 999 999,99')).toEqual({ value: 9999999999.99, error: null });
   });
 
@@ -206,7 +206,6 @@ test.describe('BVA: граничні значення', () => {
   });
 
   test('BUG-QA-17: імʼя файлу не розрізає емодзі на межі 60 символів', () => {
-    test.fail(true, 'BUG-QA-17: slice(0, 60) рахує UTF-16 і лишає половину сурогатної пари');
     const name = fileName(`${'a'.repeat(59)}🎁`, 'csv');
     // Самотня половина сурогатної пари — зіпсований рядок для імені файлу.
     expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(name)).toBe(false);
@@ -394,14 +393,16 @@ test.describe('Error guessing', () => {
   });
 
   test('BUG-QA-13: ціна з кривими розрядами — помилка, а не інше число', () => {
-    test.fail(true, 'BUG-QA-13: «1.2.3», «192.168.1.1», «0,500», «1234,567» читаються як числа');
+    // Правильні групування при цьому читаються як раніше.
+    for (const [input, want] of [['12 345 678,90', 12345678.9], ['1.234.567', 1234567], ["12'345", 12345], ['12,5', 12.5]] as const) {
+      expect(parsePrice(input), input).toEqual({ value: want, error: null });
+    }
     for (const input of ['1.2.3', '192.168.1.1', '0,500', '1234,567', '1,2,3']) {
       expect(parsePrice(input).error, input).toBe('format');
     }
   });
 
   test('BUG-QA-14: імпорт ціни — шістнадцяткові й експоненційні записи не стають ціною', () => {
-    test.fail(true, 'BUG-QA-14: Number() приймає «1e3» і «0x10»');
     for (const raw of ['1e3', '0x10', '0b101']) {
       const r = csv('title,price', `Річ,${raw}`);
       expect(r.items[0]?.price, raw).toBeNull();
@@ -410,20 +411,17 @@ test.describe('Error guessing', () => {
   });
 
   test('BUG-QA-14: імпорт ціни розуміє ті самі формати, що й поле форми', () => {
-    test.fail(true, 'BUG-QA-14: «1,240.50» і «1.240,50» з форми в імпорті — попередження й без ціни');
     expect(csv('title,price', 'Річ,"1,240.50"').items[0]?.price).toBe(1240.5);
     expect(csv('title;price', 'Річ;1.240,50').items[0]?.price).toBe(1240.5);
   });
 
   test('BUG-QA-15: імпорт кількості — лише десяткове ціле', () => {
-    test.fail(true, 'BUG-QA-15: «1e2» стає 100, «0x0A» — 10');
     for (const raw of ['1e2', '0x0A']) {
       expect(csv('title,quantity', `Річ,${raw}`).items[0]?.quantity, raw).toBe(1);
     }
   });
 
   test('BUG-QA-16: та сама сторінка з параметрами в іншому порядку — дублікат', () => {
-    test.fail(true, 'BUG-QA-16: urlKey зберігає порядок параметрів запиту');
     expect(urlKey('https://shop.pl/p?color=red&size=m')).toBe(urlKey('https://shop.pl/p?size=m&color=red'));
   });
 
@@ -470,5 +468,29 @@ test.describe('Error guessing', () => {
     const proto = parseJsonFile('[{"title":"__proto__","note":"x"}]', 'L');
     expect(proto.items[0]?.title).toBe('__proto__');
     expect(({} as Record<string, unknown>).note).toBeUndefined();
+  });
+
+  test('BUG-QA-22: кожен файл проєкту є в таблиці scripts/place-files.ps1', () => {
+    // CLAUDE.md §5: файл, якого немає в таблиці, скрипт мовчки не розкладе.
+    const root = new URL('../../../', import.meta.url);
+    const table = readFileSync(new URL('scripts/place-files.ps1', root), 'utf8');
+    const known = new Set([...table.matchAll(/'([^']+)'\s*=/g)].map((m) => m[1]));
+    const dirs = [
+      'app/src', 'app/api', 'app/tests', 'app/scripts', 'app/public',
+      'services/parser/app', 'services/parser/tests', 'supabase/tests', 'supabase/templates', 'supabase/migrations',
+      'docs',
+    ];
+    const skip = /(^|\/)(node_modules|test-results|__pycache__)(\/|$)|\.(png|ico|svg|woff2?)$|^app\/src\/types\/database\.ts$/;
+    const missing: string[] = [];
+    const walk = (rel: string) => {
+      for (const name of readdirSync(new URL(rel, root))) {
+        const path = `${rel}/${name}`;
+        if (skip.test(path)) continue;
+        if (statSync(new URL(path, root)).isDirectory()) walk(path);
+        else if (!known.has(name)) missing.push(path);
+      }
+    };
+    for (const d of dirs) walk(d);
+    expect(missing).toEqual([]);
   });
 });

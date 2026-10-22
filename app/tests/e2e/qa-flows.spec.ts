@@ -131,7 +131,6 @@ test.describe('QA: наскрізні сценарії', () => {
   });
 
   test('BUG-QA-13: ціна «1.2.3» у формі — помилка під полем, а не позиція за 12,30', async ({ page }) => {
-    test.fail(true, 'BUG-QA-13: parsePrice читає криві розряди як число, і позиція зберігається');
     await signIn(page);
     await createList(page, unique('QA ціна'));
     await page.getByRole('button', { name: /^(додати позицію|dodaj pozycję|add item)$/i }).first().click();

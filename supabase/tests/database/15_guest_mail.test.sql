@@ -171,11 +171,11 @@ select is((select count(*)::int from guest_mail where kind = 'code'), 1,
 select is((select locale from guest_mail where kind = 'code'), 'en', 'мова листа з кодом — мова запиту');
 
 select tests.as_anon();
-select send_guest_code('guestMailToken000000001', 'x@pochta.ua', 'uk') from generate_series(1, 3);
+select send_guest_code('guestMailToken000000001', 'x@pochta.ua', 'uk') from generate_series(1, 8);
 select is(
   send_guest_code('guestMailToken000000001', 'ira@pochta.ua', 'uk')->>'error',
   'too_many_attempts',
-  'ліміт спільний зі спробами коду: шоста спроба за годину — too_many_attempts'
+  'свій ліміт на запити коду (ADR-070): одинадцятий за годину — too_many_attempts'
 );
 select throws_ok(
   $$ select send_guest_code('guestMailRevoked0000001', 'ira@pochta.ua', 'uk') $$,

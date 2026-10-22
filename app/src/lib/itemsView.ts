@@ -316,12 +316,16 @@ export function normalizeUrl(input: string): string | null {
  */
 const TRACKING = /^(utm_[a-z]+|fbclid|gclid|dclid|gbraid|wbraid|yclid|msclkid|mc_cid|mc_eid|_ga|igshid|ref|ref_src|spm)$/i;
 
-/** Ключ для порівняння: без протоколу, `www.`, якоря, рекламних міток і кінцевої `/`. */
+/** Ключ для порівняння: без протоколу, `www.`, якоря, рекламних міток, кінцевої `/` і порядку параметрів. */
 export function urlKey(href: string): string | null {
   const normal = normalizeUrl(href);
   if (!normal) return null;
   const url = new URL(normal);
-  const params = [...url.searchParams.entries()].filter(([k]) => !TRACKING.test(k));
+  // Порядок параметрів сторінки не міняє (BUG-QA-16); однакові ключі лишаються
+  // у своєму порядку — сортування стабільне.
+  const params = [...url.searchParams.entries()]
+    .filter(([k]) => !TRACKING.test(k))
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   const query = params.length ? `?${new URLSearchParams(params).toString()}` : '';
   const path = url.pathname.replace(/\/+$/, '');
   return `${url.hostname.replace(/^www\./, '').toLowerCase()}${path}${query}`;
@@ -391,31 +395,45 @@ export function findSameTitle(items: Item[], title: string, exceptId?: string): 
 
 /* ── Ціна з поля ─────────────────────────────────────────── */
 
-/** Межа `numeric(12,2)`: десять цифр до коми (README, «Обмеження полів»). */
-export const PRICE_MAX = 9_999_999_999;
+/** Межа `numeric(12,2)`: десять цифр до коми й дві після (BUG-QA-12). */
+export const PRICE_MAX = 9_999_999_999.99;
 
 export type PriceParse = { value: number | null; error: 'format' | 'tooBig' | null };
 
+/** Ціле число з необовʼязковим дробом в одну-дві цифри: «1240», «1240,5», «1240.50». */
+const PLAIN = /^(\d+)(?:[.,](\d{1,2}))?$/;
+/**
+ * Ціле з розрядами: перша група 1–3 цифри без нуля попереду, далі групи рівно
+ * по три через ОДИН і той самий роздільник (пробіл, апостроф, крапка чи кома),
+ * і необовʼязковий дріб через інший знак: «1 240,50», «1.240,50», «1,240.50»,
+ * «12'345». Кривих груп («1.2.3», «1234,567», «0,500») тут немає (BUG-QA-13).
+ */
+const GROUPED = /^([1-9]\d{0,2})((?:([ '.,])\d{3})(?:\3\d{3})*)(?:([.,])(\d{1,2}))?$/;
+
 /**
  * Ціна, як її пишуть люди: «1 240», «1240,50», «1.240,50», «1,240.50».
- * Роздільник дробу — останній із крапки чи коми, якщо після нього одна чи дві
- * цифри; решта — розряди. Порожнє поле — «без ціни», не помилка.
+ * Дріб — одна чи дві цифри після останнього роздільника; три цифри після
+ * нього — це розряди («1,240»), але лише за правильного групування. Порожнє
+ * поле — «без ціни», не помилка. Усе, що не читається однозначно, — `format`:
+ * людина має побачити помилку, а не зберегти інше число.
  */
 export function parsePrice(input: string): PriceParse {
-  let s = input.replace(/[\s  ']/g, '');
+  const s = input.trim().replace(/[\u00a0\u202f\s]/g, ' ');
   if (!s) return { value: null, error: null };
-  const lastDot = s.lastIndexOf('.');
-  const lastComma = s.lastIndexOf(',');
-  const sep = Math.max(lastDot, lastComma);
-  if (sep >= 0) {
-    const whole = s.slice(0, sep).replace(/[.,]/g, '');
-    const tail = s.slice(sep + 1);
-    // Три цифри після роздільника — це розряди («1,240», «1.240»), а не дріб:
-    // копійок буває щонайбільше дві.
-    s = tail.length === 3 ? `${whole}${tail}` : `${whole}.${tail}`;
+  let whole: string;
+  let frac: string;
+  const plain = PLAIN.exec(s);
+  const grouped = plain ? null : GROUPED.exec(s);
+  if (plain) {
+    whole = plain[1]!;
+    frac = plain[2] ?? '';
+  } else if (grouped && grouped[4] !== grouped[3]) {
+    whole = grouped[1]! + grouped[2]!.replace(/[ '.,]/g, '');
+    frac = grouped[5] ?? '';
+  } else {
+    return { value: null, error: 'format' };
   }
-  if (!/^\d+(\.\d{1,2})?$/.test(s)) return { value: null, error: 'format' };
-  const value = Number(s);
+  const value = Number(frac ? `${whole}.${frac}` : whole);
   if (value > PRICE_MAX) return { value: null, error: 'tooBig' };
   return { value, error: null };
 }

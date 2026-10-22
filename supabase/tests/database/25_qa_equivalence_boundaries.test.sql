@@ -2,9 +2,9 @@
 -- і граничні значення (BVA) для всього, що має межу в схемі чи RPC.
 --
 -- Кожна межа перевіряється трьома точками: остання допустима, перша
--- недопустима і, де має сенс, мінімальна. Відомі баги — `todo` з номером із
--- docs/QA_REPORT.md: набір лишається зеленим, а виправлення стає видно як
--- «TODO passed», після чого `todo` прибирається.
+-- недопустима і, де має сенс, мінімальна. Баги, знайдені цими
+-- тестами, виправлено (ADR-070); номер із docs/QA_REPORT.md стоїть в описі
+-- перевірки, щоб регресію було видно одразу.
 
 begin;
 create extension if not exists pgtap with schema extensions;
@@ -119,12 +119,11 @@ select throws_ok($$ update public.lists set thanks_message = repeat('д', 1001) 
                  '23514', null, 'BVA lists.thanks_message: 1001 — перша недопустима');
 update public.lists set thanks_message = null where id = 'c0250000-0000-4000-8000-0000000000a1';
 
--- BUG-QA-05: межа рахується після btrim, тож пробіли довкола — безмежні.
-select todo('BUG-QA-05: межа довжини назви не обмежує пробіли довкола', 2);
+-- BUG-QA-05 (виправлено): межа — на сирому рядку, пробіли довкола теж рахуються.
 select throws_ok($$ insert into public.lists (owner_id, title) values (auth.uid(), repeat(' ', 5000) || 'x') $$,
-                 '23514', null, 'BVA lists.title: 5001 символ (пробіли + «x») не мав би пройти');
+                 '23514', null, 'BVA lists.title: 5001 символ (пробіли + «x») — не проходить (BUG-QA-05)');
 select throws_ok($$ insert into public.items (list_id, title) values ('c0250000-0000-4000-8000-0000000000a1', 'x' || repeat(' ', 5000)) $$,
-                 '23514', null, 'BVA items.title: 5001 символ (пробіли + «x») не мав би пройти');
+                 '23514', null, 'BVA items.title: 5001 символ (пробіли + «x») — не проходить (BUG-QA-05)');
 
 -- ═════════════════════════════════════════════
 -- 2. Числа: кількість і ціна (BVA), валюта (EP)
@@ -172,9 +171,8 @@ select throws_ok($$ select * from public.list_items_page('c0250000-0000-4000-800
 select throws_ok($$ select * from public.list_items_page('c0250000-0000-4000-8000-0000000000a1', 'created_at', true, 0) $$,
                  '22023', 'bad_limit', 'EP p_limit = 0');
 
-select todo('BUG-QA-10: p_limit = NULL проходить повз білий список', 1);
 select throws_ok($$ select * from public.list_items_page('c0250000-0000-4000-8000-0000000000a1', 'created_at', true, null) $$,
-                 '22023', 'bad_limit', 'EP p_limit = NULL мав би бути bad_limit, а не сторінкою без меж');
+                 '22023', 'bad_limit', 'EP p_limit = NULL — bad_limit, а не сторінка без меж (BUG-QA-10)');
 
 select lives_ok($$ select * from public.list_items_page('c0250000-0000-4000-8000-0000000000a1', 'title', false, 25) $$,    'EP p_sort = title');
 select lives_ok($$ select * from public.list_items_page('c0250000-0000-4000-8000-0000000000a1', 'price', false, 25) $$,    'EP p_sort = price');
@@ -215,10 +213,9 @@ select throws_ok($$ select public.claim_item_v2('qa25Token0000000000000001', 'c0
                                                'qa25KeyGuestB00000000000', null) $$,
                  '22023', 'bad_quantity', 'EP кількість броні: NULL');
 
-select todo('BUG-QA-09: кількість біля межі integer дає 22003 замість not_enough_left', 1);
 select throws_ok($$ select public.claim_item_v2('qa25Token0000000000000001', 'c0250000-0000-4000-8000-0000000000b1',
                                                'qa25KeyGuestC00000000000', 2147483647) $$,
-                 '22023', 'not_enough_left', 'BVA кількість броні: 2 147 483 647 — та сама відповідь, що й на 4');
+                 '22023', 'not_enough_left', 'BVA кількість броні: 2 147 483 647 — та сама відповідь, що й на 4 (BUG-QA-09)');
 
 -- Ключ гостя: ^[A-Za-z0-9_-]{22,64}$
 select throws_ok($$ select public.claim_item_v2('qa25Token0000000000000001', 'c0250000-0000-4000-8000-0000000000b7', repeat('k', 21), 1) $$,
@@ -285,10 +282,9 @@ select throws_ok($$ select public.start_pool('qa25Token0000000000000001', 'c0250
                                             'qa25KeyPool300000000000', 'Оля', repeat('і', 501), 10) $$,
                  '22023', 'bad_instructions', 'BVA «як скинутися»: 501');
 
-select todo('BUG-QA-02: ціль, що округлюється до 0,00, падає на check-обмеженні', 1);
 select throws_ok($$ select public.start_pool('qa25Token0000000000000001', 'c0250000-0000-4000-8000-0000000000b5',
                                             'qa25KeyPool400000000000', 'Оля', 'BLIK', 0.004) $$,
-                 '22023', 'bad_goal', 'BVA ціль збору: 0,004 → bad_goal, а не 23514');
+                 '22023', 'bad_goal', 'BVA ціль збору: 0,004 → bad_goal, а не 23514 (BUG-QA-02)');
 
 create temp table qa25_pool as
 select (public.start_pool('qa25Token0000000000000001', 'c0250000-0000-4000-8000-0000000000b6',
@@ -311,10 +307,9 @@ select throws_ok($$ select public.pledge_pool('qa25Token0000000000000001', (sele
                                              'qa25KeyPledge3000000000', 'Ігор', 'NaN'::numeric) $$,
                  '22023', 'bad_amount', 'EP внесок: NaN');
 
-select todo('BUG-QA-01: внесок, що округлюється до 0,00, падає на check-обмеженні', 1);
 select throws_ok($$ select public.pledge_pool('qa25Token0000000000000001', (select id from qa25_pool),
                                              'qa25KeyPledge4000000000', 'Ігор', 0.004) $$,
-                 '22023', 'bad_amount', 'BVA внесок: 0,004 → bad_amount, а не 23514');
+                 '22023', 'bad_amount', 'BVA внесок: 0,004 → bad_amount, а не 23514 (BUG-QA-01)');
 
 -- ═════════════════════════════════════════════
 -- 7. Скарга: причина (EP) і коментар (BVA)

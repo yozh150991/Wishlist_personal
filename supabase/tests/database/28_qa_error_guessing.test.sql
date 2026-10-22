@@ -2,14 +2,15 @@
 --
 -- Типові місця, де ламаються такі системи: спецсимволи в пошуку, ін'єкції в
 -- параметрах, спільні лічильники, «порожні» сутності, невидимі символи в
--- іменах, переміщення між власниками даних, ліміти ємності. Що з цього вже
--- зламано — `todo` з номером із docs/QA_REPORT.md; решта — захист від регресії.
+-- іменах, переміщення між власниками даних, ліміти ємності. Що з цього було
+-- зламано, виправлено (ADR-070) й позначено номером із docs/QA_REPORT.md;
+-- решта — захист від регресії.
 
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(30);
+select plan(35);
 
 create schema tests;
 grant usage on schema tests to anon, authenticated;
@@ -63,6 +64,12 @@ insert into public.items (id, list_id, owner_id, title, price, quantity) values
   ('c0280000-0000-4000-8000-0000000000b6', 'c0280000-0000-4000-8000-0000000000a1', 'c0280000-0000-4000-8000-0000000000f1', 'Листи', 1, 20),
   ('c0280000-0000-4000-8000-0000000000c1', 'c0280000-0000-4000-8000-0000000000a3', 'c0280000-0000-4000-8000-0000000000f2', 'Чуже', 1, 1);
 
+insert into public.items (id, list_id, owner_id, title, price) values
+  ('c0280000-0000-4000-8000-0000000000b8', 'c0280000-0000-4000-8000-0000000000a2', 'c0280000-0000-4000-8000-0000000000f1', 'Ваза з приватного', 70);
+
+insert into public.sections (id, list_id, title) values
+  ('c0280000-0000-4000-8000-0000000000e1', 'c0280000-0000-4000-8000-0000000000a1', 'Кухня');
+
 insert into public.items (id, list_id, owner_id, title, url, needs_title) values
   ('c0280000-0000-4000-8000-0000000000b7', 'c0280000-0000-4000-8000-0000000000a1', 'c0280000-0000-4000-8000-0000000000f1',
    'shop.pl/x', 'https://shop.pl/x', true);
@@ -89,8 +96,7 @@ select throws_ok($$ select * from public.list_items_page('c0280000-0000-4000-800
                                                          'title; drop table public.items', false, 25) $$,
                  '22023', 'bad_sort', 'ін''єкція в сортування — bad_sort, не SQL');
 
-select todo('BUG-QA-04: пошук трактує %, _ і \ як синтаксис LIKE, а клієнтський фільтр — ні', 4);
-select is(tests.page_titles('50%'), array['Знижка 50%'], 'пошук «50%» — лише назва з «50%» буквально');
+select is(tests.page_titles('50%'), array['Знижка 50%'], 'пошук «50%» — лише назва з «50%» буквально (BUG-QA-04)');
 select is(tests.page_titles('_'), array['snake_case кружка'], 'пошук «_» — лише назва з підкресленням');
 select is(tests.page_titles('%'), array['Знижка 50%'], 'пошук «%» — не всі позиції списку');
 select is(tests.page_titles('C:\temp'), array['Шлях C:\temp'], 'пошук «C:\temp» знаходить назву зі зворотною скісною рискою');
@@ -106,10 +112,9 @@ select throws_ok($$ select public.create_share('c0280000-0000-4000-8000-00000000
                                                array['c0280000-0000-4000-8000-0000000000c1']::uuid[], 'Чуже') $$,
                  '42501', null, 'посилання на чужий список — RLS');
 
-select todo('BUG-QA-06: create_share створює живе порожнє посилання, коли жодна позиція не підходить', 3);
 select throws_ok($$ select public.create_share('c0280000-0000-4000-8000-0000000000a1',
                                                array['c0280000-0000-4000-8000-0000000000c1']::uuid[], 'Лише чужі') $$,
-                 '22023', null, 'лише чужі id — помилка, а не порожнє посилання');
+                 '22023', null, 'лише чужі id — no_items, а не порожнє посилання (BUG-QA-06)');
 select throws_ok($$ select public.create_share('c0280000-0000-4000-8000-0000000000a1',
                                                array[gen_random_uuid()], 'Вигадані') $$,
                  '22023', null, 'лише вигадані id — помилка, а не порожнє посилання');
@@ -117,13 +122,23 @@ select throws_ok($$ select public.create_share('c0280000-0000-4000-8000-00000000
                                                array['c0280000-0000-4000-8000-0000000000b7']::uuid[], 'Лише чернетка') $$,
                  '22023', null, 'лише чернетка — помилка, а не порожнє посилання');
 
--- Переміщення позиції в інший (приватний) список через API.
-update public.items set list_id = 'c0280000-0000-4000-8000-0000000000a2'
- where id = 'c0280000-0000-4000-8000-0000000000b3';
+-- BUG-QA-07: позиція не переходить між списками, а посилання — лише свого списку.
+select throws_ok($$ update public.items set list_id = 'c0280000-0000-4000-8000-0000000000a2'
+                     where id = 'c0280000-0000-4000-8000-0000000000b3' $$,
+                 '42501', 'immutable_column', 'позицію не перенести в інший список, навіть свій (BUG-QA-07)');
+select throws_ok($$ update public.sections set list_id = 'c0280000-0000-4000-8000-0000000000a2'
+                     where id = 'c0280000-0000-4000-8000-0000000000e1' $$,
+                 '42501', 'immutable_column', 'розділ теж не переходить між списками (BUG-QA-07)');
+select throws_ok($$ insert into public.share_items (share_id, item_id)
+                     values ('c0280000-0000-4000-8000-0000000000d1', 'c0280000-0000-4000-8000-0000000000b8') $$,
+                 '42501', null, 'у посилання списку A не додати позицію зі списку B — RLS (BUG-QA-07)');
+-- Рядок, що міг лишитися з часів до виправлення, гостю однаково не видно.
+select tests.as_postgres();
+insert into public.share_items (share_id, item_id)
+values ('c0280000-0000-4000-8000-0000000000d1', 'c0280000-0000-4000-8000-0000000000b8');
 select tests.as_anon();
-select todo('BUG-QA-07: позиція, перенесена в інший список, лишається в посиланні старого', 1);
-select ok(not ('Лампа' = any(tests.titles('qa28Token0000000000000001'))),
-          'перенесена в приватний список «Лампа» більше не видна гостям старого посилання');
+select ok(not ('Ваза з приватного' = any(tests.titles('qa28Token0000000000000001'))),
+          'позиція чужого для посилання списку гостю не видна, навіть якщо рядок є (BUG-QA-07)');
 
 -- ═════════════════════════════════════════════
 -- 3. Спільний лічильник спроб коду
@@ -140,9 +155,8 @@ select tests.as_anon();
 
 -- Хтось інший п'ять разів просить «надіслати код» на будь-яку адресу.
 select public.send_guest_code('qa28Token0000000000000001', 'stranger' || g || '@mail.com') from generate_series(1, 5) g;
-select todo('BUG-QA-03: чужі запити «надіслати код» блокують відновлення для всіх гостей списку', 1);
 select is(public.redeem_guest_code('qa28Token0000000000000001', (select short_code from honest_code))->>'error', null,
-          'чесний гість із правильним кодом не мав би отримати too_many_attempts');
+          'чужі запити «надіслати код» не блокують чесного гостя з правильним кодом (BUG-QA-03)');
 
 -- ═════════════════════════════════════════════
 -- 4. Невидимі й керівні символи в іменах
@@ -154,13 +168,12 @@ select throws_ok($$ select public.claim_item_v2('qa28Token0000000000000001', 'c0
 select is(public.claim_item_v2('qa28Token0000000000000001', 'c0280000-0000-4000-8000-0000000000b6',
                                'qa28KeyEmoji000000000000', 1, '👨‍👩‍👧‍👦 Родина')->>'name', '👨‍👩‍👧‍👦 Родина',
           'емодзі з ZWJ в імені — дозволено');
-select todo('BUG-QA-11: невидимі символи й керування напрямом тексту проходять у імена', 2);
 select throws_ok($$ select public.claim_item_v2('qa28Token0000000000000001', 'c0280000-0000-4000-8000-0000000000b6',
                                                'qa28KeyZw00000000000000', 1, E'\u200B') $$,
-                 '22023', 'bad_name', 'імʼя з одного пробілу нульової ширини — bad_name');
+                 '22023', 'bad_name', 'імʼя з одного пробілу нульової ширини — bad_name (BUG-QA-11)');
 select throws_ok($$ select public.claim_item_v2('qa28Token0000000000000001', 'c0280000-0000-4000-8000-0000000000b6',
                                                'qa28KeyBidi000000000000', 1, E'Оля\u202Eлоцк') $$,
-                 '22023', 'bad_name', 'імʼя з U+202E (RIGHT-TO-LEFT OVERRIDE) — bad_name');
+                 '22023', 'bad_name', 'імʼя з U+202E (RIGHT-TO-LEFT OVERRIDE) — bad_name (BUG-QA-11)');
 
 -- ═════════════════════════════════════════════
 -- 5. Мертві й зіпсовані токени
@@ -207,6 +220,12 @@ select throws_ok($$ select public.pledge_pool('qa28Token0000000000000001', (sele
 select lives_ok($$ select public.pledge_pool('qa28Token0000000000000001', (select id from full_pool),
                                             'qa28KeyMember00000000050', 'Гість 50', 2) $$,
                 'BVA учасники збору: 50-й на повному зборі змінює суму');
+select throws_ok($$ select public.pledge_pool('qa28Token0000000000000001', (select id from full_pool),
+                                             'qa28KeyMember00000000050', E'\u200BГість', 3) $$,
+                 '22023', 'bad_name', 'імʼя учасника збору з невидимим символом — bad_name (BUG-QA-11)');
+select throws_ok($$ select public.start_pool('qa28Token0000000000000001', 'c0280000-0000-4000-8000-0000000000b6',
+                                            'qa28KeyOrgBidi0000000000', E'Оля\u202Eлоцк', 'BLIK', 10) $$,
+                 '22023', 'bad_name', 'імʼя організатора з U+202E — bad_name (BUG-QA-11)');
 select is((public.get_guest_list('qa28Token0000000000000001', null)->'items'
            -> (select (ord - 1)::int from jsonb_array_elements(public.get_guest_list('qa28Token0000000000000001', null)->'items')
                  with ordinality t(e, ord) where e->>'title' = 'Подарунок на 50 гостей')->'pool'->>'count')::int,

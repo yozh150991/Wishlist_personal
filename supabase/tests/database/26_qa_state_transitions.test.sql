@@ -8,7 +8,7 @@
 --   C. Позиція власника: актуальна ↔ куплена/подарована; список ↔ архів.
 --   D. Спільний збір: немає → відкритий ↔ закритий → скасований.
 --   E. Код гостя: старий код спрацьовує раз і змінюється; чернетка → назва.
--- Відомі баги — `todo` з номером із docs/QA_REPORT.md.
+-- Виправлені баги (ADR-070) — з номером із docs/QA_REPORT.md в описі перевірки.
 
 begin;
 create extension if not exists pgtap with schema extensions;
@@ -266,10 +266,9 @@ select throws_ok($$ select public.pledge_pool('qa26Live000000000000001', (select
 select throws_ok($$ select public.pledge_pool('qa26Live000000000000001', (select id from pool), 'qa26KeyMember00000000000', 'Ігор', 150) $$,
                  '22023', 'pool_closed', 'D: CLOSED --змінити свій внесок--> pool_closed');
 
-select todo('BUG-QA-08: close_pool(p_closed => NULL) мовчки відкриває збір', 1);
 select public.close_pool('qa26Live000000000000001', (select id from pool), 'qa26KeyOrganizer00000000', null);
 select is(tests.item('qa26Live000000000000001', 'qa26KeyMember00000000000', 'c0260000-0000-4000-8000-0000000000b2')->'pool'->>'closed', 'true',
-          'D: CLOSED --NULL--> лишається CLOSED');
+          'D: CLOSED --NULL--> лишається CLOSED (BUG-QA-08)');
 
 select public.close_pool('qa26Live000000000000001', (select id from pool), 'qa26KeyOrganizer00000000', false);
 select is(tests.item('qa26Live000000000000001', 'qa26KeyMember00000000000', 'c0260000-0000-4000-8000-0000000000b2')->'pool'->>'closed', 'false',

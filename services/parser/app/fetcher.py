@@ -27,8 +27,29 @@ class UpstreamError(HTTPException):
         self.upstream_status = upstream_status
 
 
+# IPv6, що несуть усередині IPv4: зʼєднання з ними може дійти до вбудованої
+# адреси (NAT64-шлюз, 6to4, застарілі IPv4-сумісні). Тож вбудована IPv4 теж
+# мусить бути публічною (BUG-QA-20).
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+_IPV4_COMPAT = ipaddress.ip_network("::/96")
+
+
+def _embedded_ipv4(addr: ipaddress.IPv6Address) -> ipaddress.IPv4Address | None:
+    if addr.ipv4_mapped is not None:
+        return addr.ipv4_mapped
+    if addr.sixtofour is not None:
+        return addr.sixtofour
+    if addr in _NAT64 or addr in _IPV4_COMPAT:
+        return ipaddress.IPv4Address(int(addr) & 0xFFFFFFFF)
+    return None
+
+
 def _is_public(ip: str) -> bool:
     addr = ipaddress.ip_address(ip)
+    if isinstance(addr, ipaddress.IPv6Address):
+        inner = _embedded_ipv4(addr)
+        if inner is not None and not _is_public(str(inner)):
+            return False
     # is_global — білий список за реєстром спеціальних адрес IANA, а не набір
     # окремих is_* прапорів, який легко забути доповнити новим діапазоном.
     # Зокрема покриває 169.254.0.0/16 (метадані хмари) і 100.64.0.0/10 (CGNAT,

@@ -8,8 +8,8 @@ QA-регресія за техніками тест-дизайну (ADR-069) д
   EG   — вгадування помилок: ціна з одним знаком дробу, Infinity у JSON-LD, «грн»,
          адреси, що ведуть у приватну мережу обхідними шляхами.
 
-Відомі баги — `xfail(strict=True)` з номером із docs/QA_REPORT.md: тест
-зелений, поки баг є, і червоніє, щойно його виправлено, — тоді позначка знімається.
+Тести знайдених і виправлених багів (ADR-070) позначено номером із
+docs/QA_REPORT.md у коментарі над ними.
 Мережі тести не потребують.
 """
 
@@ -61,7 +61,7 @@ def test_ep_currency_classes(raw, want):
     assert normalise_currency(raw) == want
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-QA-21: «грн» — три літери, тож стає кодом «ГРН», а не UAH")
+# BUG-QA-21 — виправлено (ADR-070)
 @pytest.mark.parametrize("raw", ["грн", "ГРН", "Грн"])
 def test_ep_currency_bare_hryvnia_word(raw):
     assert normalise_currency(raw) == "UAH"
@@ -244,13 +244,13 @@ def test_pw_array_is_pairwise_complete():
 # EG — вгадування помилок
 # ═══════════════════════════════════════════════
 
-@pytest.mark.xfail(strict=True, reason="BUG-QA-18: один знак дробу читається як розряди — ціна ×10")
+# BUG-QA-18 — виправлено (ADR-070)
 @pytest.mark.parametrize(("raw", "want"), [("49.9", 49.9), ("12,5 zł", 12.5), ("0.5", 0.5)])
 def test_eg_price_with_one_decimal(raw, want):
     assert parse_price(raw) == want
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-QA-18: JSON-LD offers.price \"49.9\" дає 499")
+# BUG-QA-18 — виправлено (ADR-070)
 def test_eg_jsonld_price_string_with_one_decimal():
     html = ('<script type="application/ld+json">{"@type":"Product","name":"Лампа",'
             '"offers":{"price":"49.9","priceCurrency":"PLN"}}</script>')
@@ -294,7 +294,7 @@ def test_eg_jsonld_negative_or_nan_price(monkeypatch, literal):
     _non_finite(monkeypatch, literal)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-QA-19: +Infinity у JSON-LD — 500 замість відповіді без ціни")
+# BUG-QA-19 — виправлено (ADR-070)
 @pytest.mark.parametrize("literal", ["Infinity", "1e400"])
 def test_eg_jsonld_infinite_price(monkeypatch, literal):
     _non_finite(monkeypatch, literal)
@@ -309,7 +309,7 @@ def test_eg_ssrf_obscure_private_forms_blocked(ip):
     assert fetcher._is_public(ip) is False, ip
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-QA-20: NAT64 і IPv4-сумісні IPv6 з приватною IPv4 вважаються публічними")
+# BUG-QA-20 — виправлено (ADR-070)
 @pytest.mark.parametrize("ip", ["64:ff9b::7f00:1", "64:ff9b::a9fe:a9fe", "::127.0.0.1", "::169.254.169.254"])
 def test_eg_ssrf_embedded_ipv4_blocked(ip):
     embedded = ipaddress.IPv4Address(int(ipaddress.IPv6Address(ip)) & 0xFFFFFFFF)
