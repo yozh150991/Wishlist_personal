@@ -46,7 +46,6 @@ test.describe('ST + EG: offline durability under storage failure', () => {
       }
     });
     expect(outcome.count).toBe(0);
-    test.fail(!process.env.QA_STRICT, 'BUG-QA-30: caller receives queued although no operation was persisted');
     expect(outcome.result).toBe('rejected');
   });
 });

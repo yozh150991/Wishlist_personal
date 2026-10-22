@@ -50,28 +50,39 @@ function notify(): void {
   for (const fn of listeners) fn();
 }
 
-export async function enqueue(userId: string, op: Op): Promise<void> {
-  if (!userId) return;
+/**
+ * Кладе зміну в чергу. `true` — лише коли транзакцію IndexedDB справді
+ * зафіксовано (BUG-QA-30): заборонене сховище, вичерпана квота чи
+ * перервана транзакція дають `false`, і викликач не має права сказати
+ * людині «збережеться пізніше».
+ */
+export async function enqueue(userId: string, op: Op): Promise<boolean> {
+  if (!userId) return false;
   const db = await openDb();
-  if (!db) return;
+  if (!db) return false;
+  let saved = false;
   try {
     const tx = db.transaction(OUTBOX, 'readwrite');
     tx.objectStore(OUTBOX).add({ userId, queuedAt: new Date().toISOString(), op });
-    await txDone(tx);
-    // Знімок підправляємо, щоб зміна пережила перезавантаження сторінки.
-    // Обидва знімки: першу партію (плаский вигляд) і весь список (розділи).
-    for (const key of [itemsKey(op.listId), allItemsKey(op.listId)]) {
-      await patchSnapshot<ItemsSnapshot>(key, userId, (snap) => ({
-        ...snap,
-        items: applyToItems(snap.items, op),
-      }));
+    saved = await txDone(tx);
+    if (saved) {
+      // Знімок підправляємо, щоб зміна пережила перезавантаження сторінки.
+      // Обидва знімки: першу партію (плаский вигляд) і весь список (розділи).
+      // Невдача тут зміну не губить — вона вже в черзі.
+      for (const key of [itemsKey(op.listId), allItemsKey(op.listId)]) {
+        await patchSnapshot<ItemsSnapshot>(key, userId, (snap) => ({
+          ...snap,
+          items: applyToItems(snap.items, op),
+        }));
+      }
     }
   } catch {
-    // Сховище недоступне: зміна втрачена, і викликач уже показав помилку.
+    // Сховище відмовило ще до фіксації: `saved` лишається false.
   } finally {
     db.close();
     notify();
   }
+  return saved;
 }
 
 export async function pending(userId: string): Promise<Entry[]> {
@@ -182,7 +193,10 @@ function messageOf(e: unknown): string {
  * Виконує зміну: мережею, а якщо мережі немає — у чергу.
  *
  * Повертає `'queued'`, коли зміна чекає на мережу, — щоб сторінка застосувала
- * її до себе сама й не намагалась перечитати дані з сервера.
+ * її до себе сама й не намагалась перечитати дані з сервера. Якщо ж і черга
+ * не прийняла зміну (сховище недоступне, BUG-QA-30), кидає ту саму мережеву
+ * помилку: зміни немає ні на сервері, ні на пристрої, і людина має це
+ * побачити (`errors.offline`), а не обіцянку, що «збережеться пізніше».
  */
 export async function run(userId: string, op: Op): Promise<'sent' | 'queued'> {
   try {
@@ -190,7 +204,7 @@ export async function run(userId: string, op: Op): Promise<'sent' | 'queued'> {
     return 'sent';
   } catch (e) {
     if (!isNetworkError(e) || !userId) throw e;
-    await enqueue(userId, op);
+    if (!(await enqueue(userId, op))) throw e;
     return 'queued';
   }
 }
