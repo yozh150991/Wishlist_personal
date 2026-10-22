@@ -42,6 +42,14 @@ def test_unresolvable_host_blocked():
         assert_public_url("http://nonexistent.invalid/")
 
 
-def test_public_host_allowed():
-    # Єдиний тест, якому потрібна мережа.
+def test_public_host_allowed(monkeypatch):
+    # Test the actual URL/DNS validation without depending on public DNS or a
+    # runner's proxy. Rebinding/transport behavior has separate pinning tests.
+    import socket
+
+    def resolve(host, *_args, **_kwargs):
+        assert host == "example.com"
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", resolve)
     assert_public_url("https://example.com/")
