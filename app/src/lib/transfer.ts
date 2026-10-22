@@ -7,6 +7,7 @@ import {
   VARIANT_VALUE_MAX,
 } from './types';
 import { groupItems } from './order';
+import { parsePrice as parsePriceField } from './itemsView';
 import type { Currency, Item, ItemPriority, ItemStatus, ItemVariant, List, Section } from './types';
 
 /**
@@ -268,12 +269,12 @@ export function toCsv(items: Item[], sections: Section[] = []): string {
 
 /** Ім'я файлу з назви списку: без службових символів, не порожнє. */
 export function fileName(listTitle: string, ext: 'csv' | 'json'): string {
-  const base =
-    listTitle
-      .trim()
-      .replace(/[\\/:*?"<>|]/g, '')
-      .replace(/\s+/g, '-')
-      .slice(0, 60) || 'wishlist';
+  const clean = listTitle
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, '-');
+  // Межа — у символах, а не в одиницях UTF-16: емодзі на межі не розрізаємо (BUG-QA-17).
+  const base = Array.from(clean).slice(0, 60).join('') || 'wishlist';
   const day = new Date().toISOString().slice(0, 10);
   return `${base}-${day}.${ext}`;
 }
@@ -338,12 +339,22 @@ function trimmed(value: unknown): string {
   return typeof value === 'string' ? value.trim() : value === null || value === undefined ? '' : String(value).trim();
 }
 
-/** Приймає і «123.45», і «1 234,56» — так ціну зберігає Excel у наших локалях. */
+/**
+ * Ціна з клітинки — за тими самими правилами, що й поле форми (BUG-QA-14):
+ * «123.45», «1 234,56», «1.240,50», «1,240.50». `Number()` тут не годиться —
+ * він читає «1e3» як 1000, а «0x10» як 16.
+ *
+ * Єдиний додатковий випадок — дріб із чотирьох і більше цифр через крапку:
+ * таблиця й JavaScript так пишуть неокруглені числа («19.990000000000002»).
+ * Три цифри — це вже розряди («1.240» = 1240), як і в полі форми.
+ */
 function parsePrice(raw: string): number | null {
-  const cleaned = raw.replace(/[\s  ]/g, '').replace(',', '.');
-  if (cleaned === '') return null;
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : NaN;
+  const s = raw.trim();
+  if (s === '') return null;
+  const field = parsePriceField(s);
+  if (field.value !== null) return field.value;
+  if (/^\d+\.\d{4,}$/.test(s)) return Number(s);
+  return NaN;
 }
 
 function checkUrl(raw: string, row: number, field: string, issues: Issue[]): string | null {
@@ -457,7 +468,8 @@ function rowToItem(
   let quantity = 1;
   const rawQuantity = get('quantity');
   if (rawQuantity) {
-    const n = Number(rawQuantity);
+    // Лише десяткові цифри (BUG-QA-15): Number() прийняв би «1e2» і «0x0A».
+    const n = /^\d+$/.test(rawQuantity) ? Number(rawQuantity) : NaN;
     if (!Number.isInteger(n) || n < 1 || n > QUANTITY_MAX) {
       issues.push({ level: 'warning', row, key: 'transfer.issues.quantity', vars: { value: rawQuantity } });
     } else quantity = n;

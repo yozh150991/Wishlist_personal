@@ -1,4 +1,5 @@
 import json
+import math
 import re
 from urllib.parse import urljoin, urlparse
 
@@ -18,13 +19,18 @@ def parse_price(raw: object) -> float | None:
     """
     Витягує число з рядків на кшталт '1 299,00 zł', '1,299.00', '399'.
 
-    Роздільник визначаємо за останнім розділовим знаком: якщо після нього
-    рівно дві цифри — це десяткова кома, усе решта відкидаємо як розряди.
+    Роздільник визначаємо за останнім розділовим знаком: одна чи дві цифри
+    після нього — дріб («49.9», «12,5 zł», «1 299,00»), три — розряди
+    («1,299», «1.299»). Раніше дробом вважалися лише рівно дві цифри, і
+    «49.9» з JSON-LD ставало 499 (BUG-QA-18).
+
+    Нескінченність і NaN — не ціна: `json.loads` пропускає `Infinity`, а
+    відповідь з `inf` FastAPI не серіалізує й віддає 500 (BUG-QA-19).
     """
-    if raw is None:
+    if raw is None or isinstance(raw, bool):
         return None
     if isinstance(raw, (int, float)):
-        return float(raw) if raw >= 0 else None
+        return float(raw) if math.isfinite(raw) and raw >= 0 else None
 
     text = str(raw).strip()
     if not text:
@@ -41,7 +47,7 @@ def parse_price(raw: object) -> float | None:
         return None
 
     last_sep = max(text.rfind(","), text.rfind("."))
-    if last_sep != -1 and len(text) - last_sep - 1 == 2:
+    if last_sep != -1 and len(text) - last_sep - 1 in (1, 2):
         integer = re.sub(r"[.,]", "", text[:last_sep])
         value = f"{integer}.{text[last_sep + 1:]}"
     else:
@@ -51,18 +57,19 @@ def parse_price(raw: object) -> float | None:
         number = float(value)
     except ValueError:
         return None
-    return number if number >= 0 else None
+    return number if math.isfinite(number) and number >= 0 else None
 
 
 def normalise_currency(raw: object) -> str | None:
     if not raw:
         return None
     text = str(raw).strip().lower()
-    if len(text) == 3 and text.isalpha():
-        return text.upper()
+    # Спершу знаки й слова: «грн» — теж три літери, але не код ISO (BUG-QA-21).
     for sign, code in CURRENCY_SIGNS.items():
         if sign in text:
             return code
+    if re.fullmatch(r"[a-z]{3}", text):
+        return text.upper()
     return None
 
 

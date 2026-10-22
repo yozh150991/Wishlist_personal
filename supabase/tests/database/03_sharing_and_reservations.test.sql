@@ -3,7 +3,7 @@
 --        і нічого, з чого їх можна вирахувати: ні лічильника, ні зміни відповіді.
 -- §3.3 — гість бачить лише те, що вибрано, і лише актуальне (ADR-007).
 -- ADR-035 — ключ гостя обмежений одним списком; код переносить позначки
---        одноразово, 5 спроб на годину; скидання власником — сліпе; мертве
+--        одноразово, 10 невдалих спроб на годину (ADR-070); скидання власником — сліпе; мертве
 --        посилання — одна відповідь на всі причини.
 
 begin;
@@ -228,13 +228,14 @@ select is(tests.item_field((select token from tests.created), 'guest-one-key-000
 select is(redeem_guest_code((select token from tests.created), (select value from tests.guest where name = 'code1'))->>'error',
           'code_not_found', 'код одноразовий: вдруге той самий не спрацьовує');
 select is(redeem_guest_code((select token from tests.created), 'YYYYY')->>'error', 'code_not_found',
-          'четверта спроба за годину ще приймається');
+          'вдалий код спроби не забирає: третя невдала за годину ще приймається');
+select redeem_guest_code((select token from tests.created), 'WWWWW') from generate_series(1, 6);
 select is(redeem_guest_code((select token from tests.created), 'XXXXX')->>'error', 'code_not_found',
-          'п''ята спроба за годину ще приймається');
+          'десята невдала спроба за годину ще приймається');
 select is(
   redeem_guest_code((select token from tests.created),
                     get_guest_list((select token from tests.created), 'guest-one-key-000000000001')->'guest'->>'code')->>'error',
-  'too_many_attempts', 'після п''яти спроб не приймається навіть правильний код — і про це сказано прямо'
+  'too_many_attempts', 'після десяти невдалих спроб не приймається навіть правильний код — і про це сказано прямо'
 );
 
 -- ── Власник не бачить позначок (§3.2) ────────

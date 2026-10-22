@@ -5,6 +5,7 @@ import { useI18n } from '../../../lib/i18n';
 import { THEMES, useTheme } from '../../../lib/theme';
 import type { Theme } from '../../../lib/theme';
 import { hostOf, moneyShort, num } from '../../../lib/format';
+import { parsePrice } from '../../../lib/itemsView';
 import {
   GoneError,
   POOL_NAME_MAX,
@@ -1166,9 +1167,11 @@ export function PoolSheetV2({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?.id, mode]);
 
+  // Ті самі правила, що в полі ціни (BUG-QA-14): «1 000,50» і «1.000,50» — так,
+  // «1e3» чи «0x10» — ні. Межі — як у pledge_pool / start_pool.
   const parse = (v: string) => {
-    const n = Number(v.replace(',', '.').replace(/\s/g, ''));
-    return Number.isFinite(n) && n > 0 && n <= 1_000_000 ? Math.round(n * 100) / 100 : null;
+    const n = parsePrice(v).value;
+    return n !== null && n > 0 && n <= 1_000_000 ? n : null;
   };
   const currency = pool?.currency ?? item?.currency ?? 'PLN';
   const fmt = (v: number | string | null) => moneyShort(num(v), currency, locale) ?? String(v ?? '');
