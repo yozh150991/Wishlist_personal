@@ -938,6 +938,26 @@ curl.exe -I "https://wishlist-personal.vercel.app/l/<токен>"               
 
 Нових змінних оточення й секретів немає: сервіс видаляє файли тим самим secret-ключем (`SUPABASE_SECRET_KEY`), яким уже ходить у базу.
 
+## 12. Вхід із нового пристрою (ADR-074)
+
+Нових секретів і змінних немає: лист іде тим самим Brevo, push — тим самим VAPID, що й сповіщення (розділ 9.9 і 9.11).
+
+1. **Міграція** — `npx supabase db push` (`20261025140000_signin_alerts.sql`).
+2. **Передеплой `wishlist-jobs`** — перевірка входу живе в щогодинному `POST /jobs/notify`:
+   ```powershell
+   cd services\parser
+   gcloud run deploy wishlist-jobs --source . --region $REGION
+   cd ..\..
+   ```
+3. **Перший запуск мовчить**: таблиця `known_devices` порожня, і сервіс запам'ятовує пристрої всіх живих сесій без листів. Позачерговий запуск і журнал:
+   ```powershell
+   gcloud scheduler jobs run wishlist-notify --location $REGION
+   Start-Sleep 30
+   gcloud run services logs read wishlist-jobs --region $REGION --limit 20
+   ```
+   Очікуємо рядок `signin {'signin_first': N}`. Далі лист приходить, щойно в акаунт увійдуть із браузера чи системи, яких у нього ще не було, — до години після входу.
+4. **Перевірка руками**: увійти в свій акаунт з іншого браузера (скажімо, Firefox, якщо зазвичай Chrome) і дочекатися наступної години — лист «Вхід у Wishlist із нового пристрою».
+
 ## Скільки це коштує
 
 | Що | Тариф | Реально |

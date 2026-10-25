@@ -1228,7 +1228,7 @@
     "s": {
       "owner": {
         "title": "What we store about account owners",
-        "body": "• Email and password. The password is stored only as a protected hash in the sign-in service — nobody can read it.\n• If you sign in with Google — your email, plus the profile name and photo Google passes on at sign-in. The app uses only the email.\n• Your lists, items, sections, guest links, list style, language, theme and notification settings.\n• Photos you upload yourself. They are downsized in your browser, and data about where they were taken and the phone is removed. A photo sits at a random address: anyone shown the item sees it — you and the guests of a link.\n• For push notifications — this device's subscription address; signing out removes it."
+        "body": "• Email and password. The password is stored only as a protected hash in the sign-in service — nobody can read it.\n• If you sign in with Google — your email, plus the profile name and photo Google passes on at sign-in. The app uses only the email.\n• Your lists, items, sections, guest links, list style, language, theme and notification settings.\n• Photos you upload yourself. They are downsized in your browser, and data about where they were taken and the phone is removed. A photo sits at a random address: anyone shown the item sees it — you and the guests of a link.\n• For push notifications — this device's subscription address; signing out removes it.\n• For the new-device sign-in email — the names of browsers and systems you've signed in from (“Chrome · Android”). The time and IP address of a sign-in go into that email to you and aren't stored anywhere else."
       },
       "guests": {
         "title": "What we store about guests",
