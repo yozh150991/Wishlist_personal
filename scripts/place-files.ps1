@@ -91,6 +91,7 @@ $map = @{
   '28_qa_error_guessing.test.sql' = 'supabase\tests\database'
   '29_delete_account.test.sql' = 'supabase\tests\database'
   '30_item_photos.test.sql' = 'supabase\tests\database'
+  '31_signin_alerts.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -260,6 +261,7 @@ $map = @{
   '20261022090000_qa_fixes.sql' = 'supabase\migrations'
   '20261025100000_delete_account.sql' = 'supabase\migrations'
   '20261025120000_item_photos.sql' = 'supabase\migrations'
+  '20261025140000_signin_alerts.sql' = 'supabase\migrations'
   '14_guest_contact.test.sql' = 'supabase\tests\database'
   '15_guest_mail.test.sql' = 'supabase\tests\database'
   '16_guest_changes.test.sql' = 'supabase\tests\database'
