@@ -690,7 +690,19 @@
       "placeholder": "Link do obrazka, https://…",
       "bad": "To nie wygląda na adres obrazka — potrzebny link zaczynający się od https://.",
       "tooLong": "Link do zdjęcia jest za długi — do 2048 znaków.",
-      "broken": "Obrazek pod tym linkiem się nie otwiera. Można zapisać, ale goście też go nie zobaczą."
+      "broken": "Obrazek pod tym linkiem się nie otwiera. Można zapisać, ale goście też go nie zobaczą.",
+      "upload": {
+        "cta": "Prześlij własne zdjęcie",
+        "replace": "Zmień zdjęcie",
+        "busy": "Przesyłam…",
+        "own": "Twoje zdjęcie",
+        "hint": "Zdjęcie zostanie pomniejszone, a dane o miejscu zrobienia i telefonie usunięte. Goście zobaczą je na liście.",
+        "notImage": "To nie wygląda na zdjęcie. Wybierz JPEG, PNG lub WebP.",
+        "unreadable": "Nie udało się otworzyć tego zdjęcia. Spróbuj JPEG lub PNG.",
+        "tooBig": "Zdjęcie jest za duże — do 25 MB.",
+        "quota": "Masz już {max} własnych zdjęć — więcej się nie zmieści. Usuń zdjęcia z pozycji, których już nie potrzebujesz.",
+        "rate": "Za dużo zdjęć w ciągu godziny. Spróbuj za chwilę."
+      }
     },
     "same": {
       "title": "Ta rzecz już jest na liście",

@@ -1793,6 +1793,11 @@ div.v2-chips { gap: var(--sp-3); }
 
 /* Фото позиції посиланням (як у v1): мініатюра під полем, «×» прибирає. */
 .v2-photo { display: flex; padding-top: var(--sp-3); }
+.v2-photo--own { align-items: center; gap: var(--sp-4); padding-top: var(--sp-2); }
+.v2-photo__caption { font-size: var(--t-small); color: var(--color-neutral-700); }
+/* «Завантажити своє фото» під полем фото (ADR-073). */
+.v2-photoup { display: grid; gap: var(--sp-2); margin-top: var(--sp-3); }
+.v2-photoup .v2-hint { margin: 0; }
 
 /* Дата: текст із маскою + календар праворуч (DateFieldV2). Рідне поле дати —
    прозоре поверх значка, а його кнопка вибору розтягнута на весь значок:

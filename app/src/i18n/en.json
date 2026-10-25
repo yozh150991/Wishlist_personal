@@ -690,7 +690,19 @@
       "placeholder": "Link to an image, https://…",
       "bad": "This doesn't look like an image address — it needs a link starting with https://.",
       "tooLong": "The photo link is too long — up to 2048 characters.",
-      "broken": "The image at this link doesn't open. You can save it, but guests won't see it either."
+      "broken": "The image at this link doesn't open. You can save it, but guests won't see it either.",
+      "upload": {
+        "cta": "Upload your own photo",
+        "replace": "Replace photo",
+        "busy": "Uploading…",
+        "own": "Your photo",
+        "hint": "The photo is downsized, and data about where it was taken and the phone is removed. Guests will see it on the list.",
+        "notImage": "That doesn't look like a photo. Choose a JPEG, PNG or WebP.",
+        "unreadable": "Couldn't open this photo. Try a JPEG or PNG.",
+        "tooBig": "The photo is too large — up to 25 MB.",
+        "quota": "You already have {max} photos of your own — there's no room for more. Remove photos from items you no longer need.",
+        "rate": "Too many photos in an hour. Try again a little later."
+      }
     },
     "same": {
       "title": "This is already on the list",

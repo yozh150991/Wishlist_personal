@@ -23,6 +23,8 @@ if (!url || !key) {
  * на поганому мобільному звʼязку, тож помилкових спрацювань не буде.
  */
 const AUTH_TIMEOUT_MS = 15_000;
+/** Фото до 2 МБ на повільному мобільному звʼязку — із запасом. */
+const STORAGE_TIMEOUT_MS = 60_000;
 
 /** Сигнал, що спрацює через `ms` або коли скасує сам викликач. */
 function withTimeout(caller: AbortSignal | null | undefined, ms: number) {
@@ -55,8 +57,15 @@ function withTimeout(caller: AbortSignal | null | undefined, ms: number) {
 const offlineAwareFetch: typeof fetch = (input, init) => {
   const target = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 
-  if (navigator.onLine === false && target.includes('/rest/v1/')) {
+  if (navigator.onLine === false && (target.includes('/rest/v1/') || target.includes('/storage/v1/'))) {
     return Promise.reject(new DOMException('Offline', 'AbortError'));
+  }
+
+  // Своє фото позиції (ADR-073): завантаження з поганою мережею може не
+  // закінчитись ніколи, а кнопка «Завантажити» мусить ожити (CLAUDE.md §4).
+  if (target.includes('/storage/v1/')) {
+    const { signal, done } = withTimeout(init?.signal, STORAGE_TIMEOUT_MS);
+    return fetch(input, { ...init, signal }).finally(done);
   }
 
   if (target.includes('/auth/v1/')) {
