@@ -24,6 +24,7 @@
 | `20260930090000_notifications.sql` | `notification_settings`, `push_subscriptions`, `notification_log` — сповіщення власника; `save_push_subscription`, `forget_push_subscription` (ADR-049) |
 | `20261022090000_qa_fixes.sql` | виправлення за QA-звітом (ADR-070): `guest_code_attempts.kind` і окремі ліміти коду; межі назв — на сирому рядку; незмінні `items.list_id` і `sections.list_id`, `share_items` лише зі списку посилання; імена гостей без невидимих символів; правки RPC `pledge_pool`, `start_pool`, `claim_item(_v2)`, `redeem_guest_code`, `send_guest_code`, `list_items_page`, `create_share`, `close_pool`, `get_shared_list` |
 | `20261025100000_delete_account.sql` | `account_delete_attempts` і `delete_my_account` — видалення акаунта власником після звірки пароля (ADR-072) |
+| `20261025120000_item_photos.sql` | бакет `item-photos`, `item_photos`, політика завантаження в `storage.objects`, `reserve_item_photo`, `item_photo_orphans`, `forget_item_photos` — своє фото позиції (ADR-073) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 
@@ -213,6 +214,17 @@ RLS: власник бачить свої й вбудовані, змінює й
 ### `account_delete_attempts` (ADR-072)
 Невдалі спроби підтвердити видалення акаунта паролем: `owner_id` (→ `auth.users`, `on delete cascade`) і `attempted_at`. Лише для ліміту в `delete_my_account` — п'ять на годину; старші за годину стираються при кожній спробі. Ні IP, ні пароля. RLS без політик, `anon` і `authenticated` прав не мають: таблицю читає й пише лише функція.
 
+### `item_photos` і бакет `item-photos` (ADR-073)
+Своє фото позиції. Файл лежить у **публічному** бакеті Supabase Storage `item-photos` (до 2 МБ, лише `image/webp` і `image/jpeg`) під ім'ям із 32 випадкових шістнадцяткових символів; посилання на нього — звичайний `items.image_url`, як у фото з магазину. Переліку файлів бакет не віддає нікому, тож адреса — як токен: її знають лише ті, кому показано позицію.
+
+| Колонка | Що |
+|---|---|
+| `path` | ім'я файлу, `check`: `^[0-9a-f]{32}\.(webp\|jpg)$` |
+| `owner_id` | кому видано адресу; `on delete set null` — рядок переживає акаунт, щоб файл прибрався |
+| `created_at` | коли видано; для ліміту за годину й «добу запасу» перед прибиранням |
+
+Вставляє лише `reserve_item_photo` (ліміти: 1000 на власника, 60 за годину). Власник бачить свої рядки (`item_photos_select_own`) — саме так їх перевіряє політика сховища **`item_photos_upload_reserved`** на `storage.objects`: вставка в `item-photos` лише в адресу, видану цьому власникові. Політик на оновлення й видалення файлів немає: заміна фото — нова адреса, видалення — `wishlist-jobs` раз на добу (`item_photo_orphans` → сховище → `forget_item_photos`) для адрес, на які понад добу не посилається жодна позиція.
+
 ### Що стирає видалення акаунта (ADR-072)
 `delete_my_account` видаляє лише рядок `auth.users`, решту робить каскад:
 
@@ -222,6 +234,7 @@ RLS: власник бачить свої й вбудовані, змінює й
 | `share_items`, позначки (`claims`) і ідентичності гостей на його списках, `guest_mail`, збори (`gift_pools`, `gift_pool_pledges`) | каскад від списків, позицій і посилань — так само, як за видалення списку; листів гостям немає |
 | позначки, які він лишив гостем у чужих списках | **лишаються**: `guest_identities.user_id` → `null` (ADR-062) |
 | `share_reports` на його посилання | **лишаються**: без зовнішнього ключа (ADR-061) |
+| свої фото (`item_photos`, файли в `item-photos`) | рядки лишаються без власника (`on delete set null`); файли й рядки стирає щоденне прибирання `wishlist-jobs`, щойно на фото не посилається жодна позиція (ADR-073) |
 
 ## Пагінація
 

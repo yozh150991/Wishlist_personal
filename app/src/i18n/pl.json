@@ -1207,13 +1207,13 @@
   },
   "privacy": {
     "title": "Polityka prywatności",
-    "updated": "Obowiązuje od 21 października 2026 r.",
+    "updated": "Obowiązuje od 25 października 2026 r.",
     "intro": "Wishlist to osobista aplikacja do list życzeń: prowadzisz listy, a bliskim dajesz sekretny link, pod którym widać tylko to, co udostępniłeś. Tutaj opisujemy, co aplikacja przechowuje, po co, kto jeszcze to przetwarza i jak wszystko usunąć.",
     "contact": "Z pytaniami i wnioskami dotyczącymi danych pisz na {email}.",
     "s": {
       "owner": {
         "title": "Co przechowujemy o właścicielu konta",
-        "body": "• E-mail i hasło. Hasło jest przechowywane wyłącznie jako zabezpieczony skrót w usłudze logowania — nikt nie może go odczytać.\n• Jeśli logujesz się przez Google — e-mail oraz imię i zdjęcie profilu, które Google przekazuje przy logowaniu. Aplikacja korzysta tylko z e-maila.\n• Twoje listy, pozycje, działy, linki dla gości, wygląd, język, motyw i ustawienia powiadomień.\n• Dla powiadomień push — adres subskrypcji tego urządzenia; wylogowanie go usuwa."
+        "body": "• E-mail i hasło. Hasło jest przechowywane wyłącznie jako zabezpieczony skrót w usłudze logowania — nikt nie może go odczytać.\n• Jeśli logujesz się przez Google — e-mail oraz imię i zdjęcie profilu, które Google przekazuje przy logowaniu. Aplikacja korzysta tylko z e-maila.\n• Twoje listy, pozycje, działy, linki dla gości, wygląd, język, motyw i ustawienia powiadomień.\n• Zdjęcia, które sam przesłałeś. Jeszcze w przeglądarce są pomniejszane, a dane o miejscu zrobienia i telefonie — usuwane. Zdjęcie leży pod losowym adresem: widzi je każdy, komu pokazano pozycję — Ty i goście linku.\n• Dla powiadomień push — adres subskrypcji tego urządzenia; wylogowanie go usuwa."
       },
       "guests": {
         "title": "Co przechowujemy o gościach",
@@ -1229,7 +1229,7 @@
       },
       "processors": {
         "title": "Kto jeszcze przetwarza dane",
-        "body": "• Supabase — baza danych i logowanie (UE, Frankfurt).\n• Vercel — hosting stron aplikacji.\n• Google Cloud (Warszawa) — usługi, które odczytują stronę sklepu pod wklejonym przez ciebie linkiem, sprawdzają linki i wysyłają wiadomości. Sklep widzi zapytanie od naszego serwera, a nie od ciebie.\n• Brevo — wysyłka wiadomości. Śledzenie otwarć i kliknięć w wiadomościach działa w trybie anonimowym.\n• Usługi push przeglądarek (Google, Mozilla, Apple, Microsoft) — otrzymują wyłącznie zaszyfrowane powiadomienie."
+        "body": "• Supabase — baza danych, logowanie i przechowywanie zdjęć (UE, Frankfurt).\n• Vercel — hosting stron aplikacji.\n• Google Cloud (Warszawa) — usługi, które odczytują stronę sklepu pod wklejonym przez ciebie linkiem, sprawdzają linki i wysyłają wiadomości. Sklep widzi zapytanie od naszego serwera, a nie od ciebie.\n• Brevo — wysyłka wiadomości. Śledzenie otwarć i kliknięć w wiadomościach działa w trybie anonimowym.\n• Usługi push przeglądarek (Google, Mozilla, Apple, Microsoft) — otrzymują wyłącznie zaszyfrowane powiadomienie."
       },
       "device": {
         "title": "Co jest przechowywane na twoim urządzeniu",
@@ -1237,7 +1237,7 @@
       },
       "keep": {
         "title": "Jak długo przechowujemy",
-        "body": "Dopóki istnieją konto i listy. Usunięcie konta od razu kasuje to wszystko razem z nim; rezerwacje, które zostawiłeś jako gość na cudzych listach, zostają bez powiązania z kontem. Usunięcie listy usuwa jej pozycje, linki dla gości oraz rezerwacje, imiona i e-maile gości tej listy. Zgłoszenia są przechowywane do czasu ich rozpatrzenia. Techniczne logi hostingu (np. adres IP i czas zapytania) dostawcy przechowują przez ograniczony czas."
+        "body": "Dopóki istnieją konto i listy. Usunięcie konta od razu kasuje to wszystko razem z nim; rezerwacje, które zostawiłeś jako gość na cudzych listach, zostają bez powiązania z kontem. Usunięcie listy usuwa jej pozycje, linki dla gości oraz rezerwacje, imiona i e-maile gości tej listy. Zdjęcie usunięte ze wszystkich pozycji (także razem z listą lub kontem) znika z magazynu w ciągu doby. Zgłoszenia są przechowywane do czasu ich rozpatrzenia. Techniczne logi hostingu (np. adres IP i czas zapytania) dostawcy przechowują przez ograniczony czas."
       },
       "rights": {
         "title": "Twoje prawa",

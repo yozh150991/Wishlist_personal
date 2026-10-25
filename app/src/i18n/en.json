@@ -1207,13 +1207,13 @@
   },
   "privacy": {
     "title": "Privacy policy",
-    "updated": "Effective from 21 October 2026.",
+    "updated": "Effective from 25 October 2026.",
     "intro": "Wishlist is a personal wish-list app: you keep lists and give your family a secret link that shows only what you shared. This page explains what the app stores, why, who else processes it and how to delete it all.",
     "contact": "For questions and data requests, write to {email}.",
     "s": {
       "owner": {
         "title": "What we store about account owners",
-        "body": "• Email and password. The password is stored only as a protected hash in the sign-in service — nobody can read it.\n• If you sign in with Google — your email, plus the profile name and photo Google passes on at sign-in. The app uses only the email.\n• Your lists, items, sections, guest links, list style, language, theme and notification settings.\n• For push notifications — this device's subscription address; signing out removes it."
+        "body": "• Email and password. The password is stored only as a protected hash in the sign-in service — nobody can read it.\n• If you sign in with Google — your email, plus the profile name and photo Google passes on at sign-in. The app uses only the email.\n• Your lists, items, sections, guest links, list style, language, theme and notification settings.\n• Photos you upload yourself. They are downsized in your browser, and data about where they were taken and the phone is removed. A photo sits at a random address: anyone shown the item sees it — you and the guests of a link.\n• For push notifications — this device's subscription address; signing out removes it."
       },
       "guests": {
         "title": "What we store about guests",
@@ -1229,7 +1229,7 @@
       },
       "processors": {
         "title": "Who else processes data",
-        "body": "• Supabase — database and sign-in (EU, Frankfurt).\n• Vercel — hosting of the app's pages.\n• Google Cloud (Warsaw) — services that read a shop page from a link you paste, check links and send emails. The shop sees a request from our server, not from you.\n• Brevo — sending emails. Open and click tracking in emails runs in anonymous mode.\n• Browser push services (Google, Mozilla, Apple, Microsoft) — receive only the encrypted notification."
+        "body": "• Supabase — database, sign-in and photo storage (EU, Frankfurt).\n• Vercel — hosting of the app's pages.\n• Google Cloud (Warsaw) — services that read a shop page from a link you paste, check links and send emails. The shop sees a request from our server, not from you.\n• Brevo — sending emails. Open and click tracking in emails runs in anonymous mode.\n• Browser push services (Google, Mozilla, Apple, Microsoft) — receive only the encrypted notification."
       },
       "device": {
         "title": "What stays on your device",
@@ -1237,7 +1237,7 @@
       },
       "keep": {
         "title": "How long we keep it",
-        "body": "For as long as the account and lists exist. Deleting the account erases all of it at once; picks you left as a guest on other people’s lists stay, no longer tied to the account. Deleting a list deletes its items, guest links, and the picks, names and emails of that list's guests. Reports are kept until they're reviewed. Hosting providers keep technical logs (such as IP address and request time) for a limited period."
+        "body": "For as long as the account and lists exist. Deleting the account erases all of it at once; picks you left as a guest on other people’s lists stay, no longer tied to the account. Deleting a list deletes its items, guest links, and the picks, names and emails of that list's guests. A photo removed from every item (including along with a list or the account) is erased from storage within a day. Reports are kept until they're reviewed. Hosting providers keep technical logs (such as IP address and request time) for a limited period."
       },
       "rights": {
         "title": "Your rights",

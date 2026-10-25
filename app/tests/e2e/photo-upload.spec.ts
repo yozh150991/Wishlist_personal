@@ -5,7 +5,7 @@ import { createList, hasAccount, itemCard, signIn, unique } from './helpers';
 /**
  * Своє фото позиції (ADR-073): фото з телефона (3000×2000, з EXIF) після
  * завантаження — зменшене до 1600 по довшій стороні, без EXIF, за випадковою
- * адресою з бакета `item-photos`, на картці позиції й у її зміні як «Ваше
+ * адресою з бакета `item-photos`, на картці позиції й у її зміні як «Твоє
  * фото». Сховище файлів є лише в локальному стеку (CI піднімає storage-api),
  * тож тест — лише проти локальної бази.
  */
@@ -50,7 +50,7 @@ function withExif(jpeg: Buffer): Buffer {
   return Buffer.concat([jpeg.subarray(0, 2), app1, jpeg.subarray(2)]);
 }
 
-test('своє фото: зменшене, без EXIF, за випадковою адресою — і «Ваше фото» у зміні', async ({ page }) => {
+test('своє фото: зменшене, без EXIF, за випадковою адресою — і «Твоє фото» у зміні', async ({ page }) => {
   test.skip(!localDb || !hasAccount, 'Сховище файлів — лише на локальній базі');
 
   await signIn(page);
@@ -67,7 +67,7 @@ test('своє фото: зменшене, без EXIF, за випадково�
   await sheet.getByTestId('photo-file').setInputFiles({ name: 'IMG_0451.jpg', mimeType: 'image/jpeg', buffer: file });
   const own = sheet.getByTestId('own-photo');
   await expect(own).toBeVisible({ timeout: 20_000 });
-  await expect(own).toContainText(/ваше фото|twoje zdjęcie|your photo/i);
+  await expect(own).toContainText(/твоє фото|twoje zdjęcie|your photo/i);
   // Поки фото своє, поля з адресою немає.
   await expect(sheet.locator('input[name="image_url"]')).toHaveCount(0);
 
@@ -90,7 +90,7 @@ test('своє фото: зменшене, без EXIF, за випадково�
   expect(body.includes(Buffer.from(MARKER))).toBe(false);
   expect(body.includes(Buffer.from('Exif\0\0', 'binary'))).toBe(false);
 
-  // Зміна позиції: «Ваше фото», «Замінити фото», а хрестик повертає поле адреси.
+  // Зміна позиції: «Твоє фото», «Замінити фото», а хрестик повертає поле адреси.
   await itemCard(page, title).first().getByRole('button', { name: new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).first().click();
   const edit = page.getByRole('dialog', { name: /^(позиція|pozycja|item)$/i });
   await expect(edit.getByTestId('own-photo')).toBeVisible();
