@@ -6,7 +6,9 @@ Secret-ключ дає роль service_role, яка обходить RLS, то�
 - перевірка посилань — лише поля `items.link_*` за `id`;
 - курс НБП (ADR-051) — лише таблиця `fx_rates`, по рядку на валюту;
 - сповіщення (ADR-049) — журнал надісланого, час останнього надсилання й
-  прибирання мертвих підписок push.
+  прибирання мертвих підписок push;
+- свої фото позицій (ADR-073) — лише сироти з `item_photo_orphans`: файл зі
+  сховища `item-photos` і його рядок через `forget_item_photos`.
 Позначок гостей (`claims`, `guest_*`) цей модуль не торкається й не повинен.
 Токенів посилань теж не читає: з `shares` — лише назва й термін.
 """
@@ -45,6 +47,7 @@ class Verdict:
 class Store:
     def __init__(self, supabase_url: str, secret_key: str, client: httpx.AsyncClient):
         self._base = f"{supabase_url.rstrip('/')}/rest/v1"
+        self._storage = f"{supabase_url.rstrip('/')}/storage/v1"
         # Нові ключі Supabase (`sb_secret_…`) — не JWT: вони йдуть лише в
         # заголовку `apikey`, без `Authorization: Bearer` (ADR-013).
         self._headers = {"apikey": secret_key}
@@ -104,6 +107,31 @@ class Store:
                 }
                 for r in rates
             ],
+        )
+        res.raise_for_status()
+
+    async def photo_orphans(self, limit: int) -> list[str]:
+        """Свої фото без жодної позиції, що на них посилається (ADR-073)."""
+        res = await self._client.post(
+            f"{self._base}/rpc/item_photo_orphans", headers=self._headers, json={"p_limit": limit}
+        )
+        res.raise_for_status()
+        rows = res.json()
+        return [r for r in rows if isinstance(r, str)] if isinstance(rows, list) else []
+
+    async def remove_photos(self, paths: list[str]) -> None:
+        """Файли зі сховища. Відсутній файл — не помилка: сховище його просто пропускає."""
+        res = await self._client.request(
+            "DELETE",
+            f"{self._storage}/object/item-photos",
+            headers=self._headers,
+            json={"prefixes": paths},
+        )
+        res.raise_for_status()
+
+    async def forget_photos(self, paths: list[str]) -> None:
+        res = await self._client.post(
+            f"{self._base}/rpc/forget_item_photos", headers=self._headers, json={"p_paths": paths}
         )
         res.raise_for_status()
 

@@ -14,6 +14,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 
 from . import jobs_links as links
 from . import jobs_notify as notify
+from . import jobs_photos as photos
 from . import jobs_rates as rates
 from .jobs_config import job_settings
 from .jobs_mail import Mailer
@@ -89,6 +90,13 @@ async def check_links(request: Request) -> dict[str, int]:
         # Курс НБП — тим самим щоденним викликом (ADR-051): без третьої задачі
         # Cloud Scheduler. Збій курсу перевірку посилань не зупиняє.
         fx = await rates.refresh(store, client)
+        # Свої фото без посилань (ADR-073) — тим самим викликом. Збій сховища
+        # перевірку посилань не зупиняє: рядки лишаються, спроба — завтра.
+        try:
+            removed = await photos.sweep(store)
+        except Exception as e:  # noqa: BLE001 — будь-який збій лише в журнал
+            log.warning("фото не прибрано: %s", type(e).__name__)
+            removed = 0
         summary = await links.run(
             store,
             batch=cfg.jobs_batch_size,
@@ -97,7 +105,7 @@ async def check_links(request: Request) -> dict[str, int]:
             host_delay=cfg.jobs_host_delay_seconds,
             concurrency=cfg.jobs_concurrency,
         )
-        return {**summary, "fx_rates": fx}
+        return {**summary, "fx_rates": fx, "photos_removed": removed}
 
 
 @app.post("/jobs/notify")

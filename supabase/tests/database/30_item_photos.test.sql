@@ -33,6 +33,9 @@ end $$;
 -- Видана адреса між викликами — у тимчасовій таблиці: \gset у pgTAP-файлі немає.
 create table tests.paths (who text primary key, path text);
 grant all on tests.paths to authenticated;
+-- Пошук сиріт перевіряється від імені сервісу (service_role) — йому теж треба бачити видані адреси.
+grant usage on schema tests to service_role;
+grant select on tests.paths to service_role;
 
 grant execute on all functions in schema tests to anon, authenticated;
 
