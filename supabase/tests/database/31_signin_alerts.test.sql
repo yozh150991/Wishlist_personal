@@ -30,7 +30,9 @@ begin
   perform set_config('role', 'postgres', true);
 end $$;
 
-grant execute on all functions in schema tests to anon, authenticated;
+-- Сесії читаються від імені сервісу — тож і він повертається через tests.as_postgres().
+grant usage on schema tests to service_role;
+grant execute on all functions in schema tests to anon, authenticated, service_role;
 
 insert into auth.users (id, email) values
   ('a3111111-0000-4000-8000-00000000000a', 'signin-a@test.local'),

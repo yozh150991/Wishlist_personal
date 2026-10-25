@@ -11,11 +11,22 @@
  */
 import { supabase } from './supabase';
 import { deviceTimeZone } from './zones';
-import { IMPORTANT_KINDS, NOTIFY_KINDS, allOff, anyOn, anyPushOn, enabledDefaults, flag, vapidKeyBytes } from './notifyRules';
-import type { NotifyChannel, NotifyFlag, NotifyFlags, NotifyKind, NotifySettings } from './notifyRules';
+import {
+  IMPORTANT_KINDS,
+  NOTIFY_KINDS,
+  SIGNIN_DEFAULTS,
+  allOff,
+  anyOn,
+  anyPushOn,
+  enabledDefaults,
+  flag,
+  signInFlags,
+  vapidKeyBytes,
+} from './notifyRules';
+import type { NotifyChannel, NotifyFlag, NotifyFlags, NotifyKind, NotifySettings, SignInFlags } from './notifyRules';
 
-export { IMPORTANT_KINDS, NOTIFY_KINDS, allOff, anyOn, anyPushOn, enabledDefaults, flag, vapidKeyBytes };
-export type { NotifyChannel, NotifyFlag, NotifyFlags, NotifyKind, NotifySettings };
+export { IMPORTANT_KINDS, NOTIFY_KINDS, SIGNIN_DEFAULTS, allOff, anyOn, anyPushOn, enabledDefaults, flag, signInFlags, vapidKeyBytes };
+export type { NotifyChannel, NotifyFlag, NotifyFlags, NotifyKind, NotifySettings, SignInFlags };
 
 // ── Дані ────────────────────────────────────
 
@@ -29,7 +40,10 @@ export async function fetchNotifySettings(): Promise<NotifySettings | null> {
  * Зберегти вибір. Пояс — завжди поточний пристрою: тиша 22:00–9:00 рахується
  * там, де людина зараз, а не там, де вмикала сповіщення.
  */
-export async function saveNotifySettings(ownerId: string, patch: Partial<NotifyFlags>): Promise<NotifySettings> {
+export async function saveNotifySettings(
+  ownerId: string,
+  patch: Partial<NotifyFlags & SignInFlags>,
+): Promise<NotifySettings> {
   // Пояс невідомий — не пишемо нічого: збережений лишається, новий рядок бере UTC.
   const tz = deviceTimeZone();
   const { data, error } = await supabase
@@ -186,6 +200,16 @@ export async function disablePushHere(): Promise<void> {
  * браузера однаково знімаємо, і служба push відповість сервісу «підписки
  * немає», а той прибере рядок сам. Вихід цим не затримується надовго.
  */
+/**
+ * «Вийти на всіх пристроях» (ADR-074): прибрати всі push-підписки власника на
+ * сервері. Інакше загублений телефон і далі отримував би push із назвами
+ * списків. Помилку кидає: вихід скрізь без цього кроку був би неповним.
+ */
+export async function forgetAllPushSubscriptions(): Promise<void> {
+  const { error } = await supabase.rpc('forget_all_push_subscriptions');
+  if (error) throw error;
+}
+
 export async function forgetPushOnThisDevice(withServer: boolean): Promise<void> {
   try {
     const sub = await currentSubscription();

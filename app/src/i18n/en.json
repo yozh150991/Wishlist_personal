@@ -958,13 +958,28 @@
       "ios": "On iPhone and iPad, push only works in the installed app: Share → Add to Home Screen.",
       "failed": "Couldn't turn on push in this browser. You can turn on emails below."
     },
-    "security": "Account security",
     "securityHint": "Password change",
     "securityAlways": "Email · always",
     "quiet": "We stay quiet from 22:00 to 9:00 your time, and several events within 3 hours arrive as one notification.",
     "email": "Emails go to {email}.",
     "guests": "There are no notifications about what guests took: it's a surprise for you too.",
     "off": "Turn off all notifications"
+  },
+  "v2security": {
+    "title": "Security",
+    "signin": "Sign-in from a new device",
+    "signinHint": "An email as soon as someone signs in from a browser or device not seen before. It arrives within an hour of the sign-in.",
+    "passwordHint": "An email from Supabase every time the password changes.",
+    "pushHint": "Push goes to devices where it's on in Notifications. There are none right now.",
+    "offHint": "You won't hear about sign-ins from new devices. Keep at least the email.",
+    "email": "Emails go to {email}.",
+    "changePassword": "Change password",
+    "everywhere": "Sign out on all devices",
+    "everywhereHint": "Don't recognise a sign-in? Change your password first, then sign out everywhere — so the old password no longer works.",
+    "everywhereTitle": "Sign out on all devices?",
+    "everywhereBody": "Every device is signed out, this one included, and push stops going anywhere. Pages already open on other devices may keep working for up to an hour.",
+    "everywhereConfirm": "Sign out everywhere",
+    "everywhereBusy": "Signing out…"
   },
   "v2date": {
     "placeholder": "DD.MM.YYYY",

@@ -958,13 +958,28 @@
       "ios": "Na iPhonie i iPadzie push działa tylko w zainstalowanej aplikacji: „Udostępnij” → „Do ekranu początkowego”.",
       "failed": "Nie udało się włączyć push w tej przeglądarce. E-maile możesz włączyć poniżej."
     },
-    "security": "Bezpieczeństwo konta",
     "securityHint": "Zmiana hasła",
     "securityAlways": "E-mail · zawsze",
     "quiet": "Od 22:00 do 9:00 Twojego czasu nie przeszkadzamy, a kilka zdarzeń w ciągu 3 godzin przychodzi jednym powiadomieniem.",
     "email": "E-maile na adres {email}.",
     "guests": "Nie ma powiadomień o tym, co wzięli goście: to niespodzianka także dla Ciebie.",
     "off": "Wyłącz wszystkie powiadomienia"
+  },
+  "v2security": {
+    "title": "Bezpieczeństwo",
+    "signin": "Logowanie z nowego urządzenia",
+    "signinHint": "E-mail, gdy tylko ktoś zaloguje się z przeglądarki lub urządzenia, którego jeszcze nie było. Przychodzi do godziny po logowaniu.",
+    "passwordHint": "E-mail od Supabase przy każdej zmianie hasła.",
+    "pushHint": "Push przyjdzie na urządzenia, na których włączono go w „Powiadomieniach”. Teraz takich nie ma.",
+    "offHint": "O logowaniu z nowego urządzenia się nie dowiesz. Zostaw przynajmniej e-mail.",
+    "email": "E-maile — na {email}.",
+    "changePassword": "Zmień hasło",
+    "everywhere": "Wyloguj na wszystkich urządzeniach",
+    "everywhereHint": "Nie poznajesz logowania? Najpierw zmień hasło, potem wyloguj się wszędzie — wtedy stare hasło już nie pomoże.",
+    "everywhereTitle": "Wylogować na wszystkich urządzeniach?",
+    "everywhereBody": "Sesja skończy się na każdym urządzeniu, także tutaj, a push nie będzie już nigdzie przychodzić. Na innych urządzeniach otwarte strony mogą działać jeszcze do godziny.",
+    "everywhereConfirm": "Wyloguj wszędzie",
+    "everywhereBusy": "Wylogowuję…"
   },
   "v2date": {
     "placeholder": "DD.MM.RRRR",

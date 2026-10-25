@@ -16,6 +16,7 @@ from . import jobs_links as links
 from . import jobs_notify as notify
 from . import jobs_photos as photos
 from . import jobs_rates as rates
+from . import jobs_signin as signin
 from .jobs_config import job_settings
 from .jobs_mail import Mailer
 from .jobs_push import Pusher
@@ -117,9 +118,16 @@ async def send_notifications(request: Request) -> dict[str, int]:
         log.error("Сповіщенням бракує налаштувань: %s", ", ".join(cfg.problems + cfg.notify_problems))
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "notify_not_configured")
     async with httpx.AsyncClient(timeout=15.0) as client:
-        return await notify.run(
-            NotifyStore(cfg.supabase_url, cfg.supabase_secret_key, client),
-            Pusher(cfg.vapid_private_key, cfg.mail_from, client),
-            Mailer(cfg.brevo_api_key, cfg.mail_from, client),
-            origin=cfg.app_origin.rstrip("/"),
-        )
+        store = NotifyStore(cfg.supabase_url, cfg.supabase_secret_key, client)
+        pusher = Pusher(cfg.vapid_private_key, cfg.mail_from, client)
+        mailer = Mailer(cfg.brevo_api_key, cfg.mail_from, client)
+        origin = cfg.app_origin.rstrip("/")
+        # Вхід із нового пристрою (ADR-074) — першим і окремо: без тиші й
+        # об'єднання. Збій тут не зупиняє звичайних сповіщень.
+        try:
+            alerts = await signin.run(store, pusher, mailer, origin=origin)
+        except Exception as e:  # noqa: BLE001
+            log.warning("вхід із нового пристрою не перевірено: %s", type(e).__name__)
+            alerts = {"signin_errors": 1}
+        result = await notify.run(store, pusher, mailer, origin=origin)
+        return {**result, **alerts}

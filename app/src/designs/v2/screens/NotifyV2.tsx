@@ -79,8 +79,9 @@ function OutcomeNoteV2({ outcome }: { outcome: EnableOutcome }) {
 
 /**
  * «Сповіщення» в Налаштуваннях v2 (потік P2): подія × канал, push на цьому
- * пристрої й чесний стан, коли push заборонено (P, гілка). Листи про безпеку
- * не вимикаються — і це сказано прямо. Про позначки гостей — плашка з
+ * пристрої й чесний стан, коли push заборонено (P, гілка). Безпека (вхід із
+ * нового пристрою, зміна пароля) — окрема картка `SecurityCardV2`, бо діє й
+ * без увімкнених сповіщень (ADR-074). Про позначки гостей — плашка з
  * поясненням, чому таких сповіщень немає (ADR-040).
  */
 export function NotifyCardV2() {
@@ -311,13 +312,6 @@ export function NotifyCardV2() {
                 </div>
               );
             })}
-            <div className="v2-notify__row">
-              <div className="v2-notify__text">
-                <span className="v2-notify__name">{t('v2notify.security')}</span>
-                <span className="v2-notify__hint">{t('v2notify.securityHint')}</span>
-              </div>
-              <span className="v2-notify__static">{t('v2notify.securityAlways')}</span>
-            </div>
           </div>
 
           <p className="v2-hint v2-hint--start">{t('v2notify.quiet')}</p>

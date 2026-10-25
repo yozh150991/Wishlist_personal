@@ -180,6 +180,8 @@ $map = @{
   'shareTarget.ts' = 'app\src\lib'; 'share-target.spec.ts' = 'app\tests\e2e'
   # notifications v2, step 4g-2 (ADR-049)
   'NotifyV2.tsx' = 'app\src\designs\v2\screens'
+  # sign-in alerts, sign out everywhere (ADR-074)
+  'SecurityV2.tsx' = 'app\src\designs\v2\screens'; 'security-v2.spec.ts' = 'app\tests\e2e'
   'notifications.ts' = 'app\src\lib'; 'notifyRules.ts' = 'app\src\lib'
   'notify-rules.spec.ts' = 'app\tests\e2e'; 'notify-v2.spec.ts' = 'app\tests\e2e'
   # account deletion (ADR-072)
@@ -213,6 +215,7 @@ $map = @{
   'jobs_main.py' = 'services\parser\app';  'jobs_config.py' = 'services\parser\app'
   'jobs_store.py' = 'services\parser\app'; 'jobs_links.py' = 'services\parser\app'; 'jobs_rates.py' = 'services\parser\app'
   'jobs_photos.py' = 'services\parser\app'
+  'jobs_signin.py' = 'services\parser\app'
   # owner notifications (ADR-049)
   'jobs_notify.py' = 'services\parser\app'; 'jobs_push.py' = 'services\parser\app'
   'jobs_mail.py' = 'services\parser\app';   'jobs_texts.py' = 'services\parser\app'
@@ -220,6 +223,7 @@ $map = @{
   'test_auth.py' = 'services\parser\tests'; 'test_fetch_pinning.py' = 'services\parser\tests'
   'test_jobs.py' = 'services\parser\tests'; 'test_notify.py' = 'services\parser\tests'; 'test_rates.py' = 'services\parser\tests'
   'test_photos.py' = 'services\parser\tests'
+  'test_signin.py' = 'services\parser\tests'
   'test_qa_techniques.py' = 'services\parser\tests'
   'jsonld.html' = 'services\parser\tests\fixtures'; 'og.html' = 'services\parser\tests\fixtures'
   'microdata.html' = 'services\parser\tests\fixtures'; 'bare.html' = 'services\parser\tests\fixtures'

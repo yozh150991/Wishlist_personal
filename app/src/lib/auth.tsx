@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { clearCache, setCacheOwner } from './cache';
-import { forgetPushOnThisDevice } from './notifications';
+import { forgetAllPushSubscriptions, forgetPushOnThisDevice } from './notifications';
 
 type AuthState = {
   session: Session | null;
@@ -12,6 +12,12 @@ type AuthState = {
   /** Виставляється, коли користувач прийшов за посиланням скидання пароля. */
   recovery: boolean;
   signOut: () => Promise<void>;
+  /**
+   * Вихід скрізь (ADR-074): Supabase відкликає всі сесії акаунта, а push
+   * більше не йде на жоден пристрій. Тут теж виходимо — подія `SIGNED_OUT`
+   * стирає офлайн-копії й чергу, як за звичайного виходу.
+   */
+  signOutEverywhere: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthState | null>(null);
@@ -63,6 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Поки сесія жива — прибрати й рядок пристрою на сервері.
         await forgetPushOnThisDevice(true);
         await supabase.auth.signOut();
+      },
+      signOutEverywhere: async () => {
+        // Спершу сервер: без мережі не виходимо зовсім, а не наполовину.
+        await forgetAllPushSubscriptions();
+        await forgetPushOnThisDevice(false);
+        const { error } = await supabase.auth.signOut({ scope: 'global' });
+        if (error) throw error;
       },
     }),
     [session, loading, recovery],

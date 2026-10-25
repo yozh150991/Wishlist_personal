@@ -158,6 +158,15 @@ class Owner:
 
 
 @dataclass(frozen=True)
+class SignInPrefs:
+    """Канали листа про вхід із нового пристрою (ADR-074). Немає рядка — лист так."""
+
+    push: bool = False
+    email: bool = True
+    time_zone: str = "UTC"
+
+
+@dataclass(frozen=True)
 class Recipient:
     """Кому писати: підтверджена пошта (або None) і мова інтерфейсу."""
 
@@ -301,6 +310,67 @@ class NotifyStore:
             f"{self._base}/push_subscriptions", headers=self._headers, params={"id": f"eq.{sub_id}"}
         )
         res.raise_for_status()
+
+    # ── Вхід із нового пристрою (ADR-074) ──
+
+    async def any_known_devices(self) -> bool:
+        rows = await self._get("known_devices", [("select", "owner_id"), ("limit", "1")])
+        return bool(rows)
+
+    async def recent_sign_ins(self, since: datetime, limit: int) -> list["SignIn"]:
+        from .jobs_signin import SignIn
+
+        res = await self._client.post(
+            f"{self._base}/rpc/recent_sign_ins",
+            headers=self._headers,
+            json={"p_since": since.isoformat(), "p_limit": limit},
+        )
+        res.raise_for_status()
+        out = []
+        for r in res.json():
+            at = _when(r.get("created_at"))
+            if at is None or not r.get("user_id"):
+                continue
+            out.append(SignIn(str(r.get("session_id")), str(r["user_id"]), at, r.get("user_agent"), r.get("ip")))
+        return out
+
+    async def known_devices(self, user_ids: list[str]) -> dict[str, set[str]]:
+        out: dict[str, set[str]] = {}
+        for start in range(0, len(user_ids), 100):
+            chunk = user_ids[start : start + 100]
+            rows = await self._get(
+                "known_devices", [("select", "owner_id,device"), ("owner_id", f"in.({','.join(chunk)})")]
+            )
+            for r in rows:
+                out.setdefault(r["owner_id"], set()).add(r["device"])
+        return out
+
+    async def remember_devices(self, user_id: str, devices: list[str]) -> None:
+        if not devices:
+            return
+        res = await self._client.post(
+            f"{self._base}/known_devices",
+            headers={**self._headers, "Prefer": "resolution=ignore-duplicates,return=minimal"},
+            params={"on_conflict": "owner_id,device"},
+            json=[{"owner_id": user_id, "device": d[:80]} for d in devices],
+        )
+        res.raise_for_status()
+
+    async def signin_prefs(self, user_ids: list[str]) -> dict[str, SignInPrefs]:
+        out: dict[str, SignInPrefs] = {}
+        for start in range(0, len(user_ids), 100):
+            chunk = user_ids[start : start + 100]
+            rows = await self._get(
+                "notification_settings",
+                [("select", "owner_id,time_zone,signin_push,signin_email"), ("owner_id", f"in.({','.join(chunk)})")],
+            )
+            for r in rows:
+                out[r["owner_id"]] = SignInPrefs(
+                    push=bool(r.get("signin_push")),
+                    email=r.get("signin_email") is not False,
+                    time_zone=r.get("time_zone") or "UTC",
+                )
+        return out
 
     async def touch_subscription(self, sub_id: str, at: datetime) -> None:
         res = await self._client.patch(
