@@ -97,12 +97,14 @@ jobs:
         with:
           version: 2.117.0
 
-      # Лише те, що потрібно тестам: база, Auth, PostgREST, шлюз і поштова скринька.
-      # Решту сервісів не запускаємо — це хвилини завантаження образів.
+      # Лише те, що потрібно тестам: база, Auth, PostgREST, сховище файлів, шлюз і
+      # поштова скринька. Сховище — для своїх фото позицій (ADR-073): політика
+      # завантаження в pgTAP і саме завантаження в Playwright. Решту сервісів не
+      # запускаємо — це хвилини завантаження образів.
       - name: Start local Supabase
         run: >-
           supabase start
-          -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
+          -x realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
 
       - name: pgTAP · інваріанти приватності
         run: supabase test db
