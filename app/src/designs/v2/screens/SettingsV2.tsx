@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../lib/auth';
 import { useI18n, LOCALES } from '../../../lib/i18n';
@@ -14,9 +14,10 @@ import { toAccountJson } from '../../../lib/transfer';
 import { fetchSections } from '../../../lib/sections';
 import type { Section } from '../../../lib/sections';
 import { downloadText } from '../../../lib/download';
+import { deleteAccount } from '../../../lib/account';
 import { DESKTOP } from '../ShellV2';
-import { NoteV2 } from './AuthPartsV2';
-import { SignOutV2, SwitchV2 } from './CommonV2';
+import { NoteV2, PasswordFieldV2 } from './AuthPartsV2';
+import { SheetV2, SignOutV2, SwitchV2 } from './CommonV2';
 import { NotifyCardV2 } from './NotifyV2';
 
 const LANGUAGE: Record<Locale, string> = { uk: 'Українська', pl: 'Polski', en: 'English' };
@@ -58,7 +59,7 @@ function Choice<T extends string>({
  * Кожен вибір застосовується одразу — кнопки «Зберегти» немає. Порядок:
  * акаунт → доступність (висока контрастність над кольорами, бо важливіша за
  * смак) → кольори → тема → мова → сповіщення (P, ADR-049) → застосунок на
- * телефоні → мої дані → вигляд застосунку → вихід. Тема, схема й контраст їдуть у профіль (`AppearanceSync`)
+ * телефоні → мої дані → вигляд застосунку → вихід і видалення акаунта (ADR-072). Тема, схема й контраст їдуть у профіль (`AppearanceSync`)
  * — для обох версій однаково; вигляд події — властивість окремого списку,
  * тут його немає (ADR-034).
  *
@@ -195,7 +196,7 @@ export default function SettingsV2() {
           </h2>
           {/* Пошта вже у верхній картці профілю — тут лише дії з акаунтом. */}
           <SignOutV2 className="v2-btn v2-btn--outline v2-btn--start" />
-          <p className="v2-hint v2-hint--start">{t('v2settings.deleteLater')}</p>
+          <DeleteAccountV2 email={email} />
           <p className="v2-hint v2-hint--start">
             <Link to="/privacy" className="v2-link">
               {t('privacy.link')}
@@ -344,5 +345,110 @@ function MyDataV2() {
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * Видалення акаунта (ADR-072). Пароль звіряє сервер; невдалі спроби він же й
+ * рахує (п'ять на годину). Видаляється одразу: списки, позиції й посилання
+ * зникають, роздані посилання стають «Такого списку немає», листів гостям
+ * немає. Броні, які людина сама лишила в чужих списках, лишаються.
+ *
+ * Перед видаленням — порада зберегти «Мої дані»: це єдина копія, яка
+ * переживе акаунт.
+ */
+function DeleteAccountV2({ email }: { email: string }) {
+  const { t } = useI18n();
+  const titleId = useId();
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [tried, setTried] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [server, setServer] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setPassword('');
+    setTried(false);
+    setBusy(false);
+    setServer(null);
+  }, [open]);
+
+  async function confirm() {
+    if (busy) return;
+    setTried(true);
+    if (!password) return inputRef.current?.focus();
+    setBusy(true);
+    setServer(null);
+    try {
+      const result = await deleteAccount(password);
+      // Видалено — сесії вже немає, і екран сам піде на вхід.
+      if (result === 'deleted') return;
+      setServer(
+        result === 'wrong_password'
+          ? t('v2settings.delete.wrongPassword')
+          : result === 'too_many'
+            ? t('v2settings.delete.tooMany')
+            : t('v2settings.delete.noPassword'),
+      );
+      if (result === 'wrong_password') {
+        setPassword('');
+        inputRef.current?.focus();
+      }
+    } catch (e) {
+      setServer(errorText(e, t));
+    }
+    setBusy(false);
+  }
+
+  return (
+    <>
+      <button type="button" className="v2-btn v2-btn--danger v2-btn--start" onClick={() => setOpen(true)}>
+        {t('v2settings.delete.cta')}
+      </button>
+      <SheetV2 open={open} onClose={() => !busy && setOpen(false)} labelledBy={titleId} closeOnBackdrop={false}>
+        <form
+          className="v2-stack"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            void confirm();
+          }}
+        >
+          <h2 className="v2-sheet__title" id={titleId}>
+            {t('v2settings.delete.title')}
+          </h2>
+          <p className="v2-lede">{t('v2settings.delete.body')}</p>
+          <p className="v2-hint v2-hint--start">{t('v2settings.delete.keepData')}</p>
+          {server && <NoteV2 tone="error">{server}</NoteV2>}
+          {/* Пошта — для менеджера паролів: він підставляє пароль до пари. */}
+          <input type="email" name="username" autoComplete="username" value={email} readOnly hidden />
+          <PasswordFieldV2
+            ref={inputRef}
+            label={t('v2settings.delete.passwordLabel')}
+            name="password"
+            autoComplete="current-password"
+            value={password}
+            error={tried && !password ? t('v2auth.passwordEmpty') : null}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <div className="v2-sheet__actions">
+            <button
+              type="submit"
+              className="v2-btn v2-btn--danger-fill v2-btn--block"
+              aria-disabled={busy || undefined}
+              data-busy={busy || undefined}
+            >
+              {busy && <span className="v2-spinner" aria-hidden="true" />}
+              {busy ? t('v2settings.delete.deleting') : t('v2settings.delete.confirm')}
+            </button>
+            <button type="button" className="v2-btn v2-btn--ghost" onClick={() => setOpen(false)} disabled={busy}>
+              {t('common.keep')}
+            </button>
+          </div>
+        </form>
+      </SheetV2>
+    </>
   );
 }

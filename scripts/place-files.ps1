@@ -89,6 +89,7 @@ $map = @{
   '26_qa_state_transitions.test.sql' = 'supabase\tests\database'
   '27_qa_pairwise.test.sql' = 'supabase\tests\database'
   '28_qa_error_guessing.test.sql' = 'supabase\tests\database'
+  '29_delete_account.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -179,6 +180,8 @@ $map = @{
   'NotifyV2.tsx' = 'app\src\designs\v2\screens'
   'notifications.ts' = 'app\src\lib'; 'notifyRules.ts' = 'app\src\lib'
   'notify-rules.spec.ts' = 'app\tests\e2e'; 'notify-v2.spec.ts' = 'app\tests\e2e'
+  # account deletion (ADR-072)
+  'account.ts' = 'app\src\lib'
   'push-sw.js' = 'app\public'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
@@ -227,6 +230,7 @@ $map = @{
   'shareCard.ts' = 'app\src\lib'
   'a11y.spec.ts' = 'app\tests\e2e'
   'gifts-v2.spec.ts' = 'app\tests\e2e'
+  'account-delete.spec.ts' = 'app\tests\e2e'
   'guest-v2.spec.ts' = 'app\tests\e2e'
   'share-card.spec.ts' = 'app\tests\e2e'
   'guest_mail.py' = 'services\parser\app'
@@ -248,6 +252,7 @@ $map = @{
   '20261020160000_v1_rpc_internal.sql' = 'supabase\migrations'
   '20261021090000_drop_items_list_price_idx.sql' = 'supabase\migrations'
   '20261022090000_qa_fixes.sql' = 'supabase\migrations'
+  '20261025100000_delete_account.sql' = 'supabase\migrations'
   '14_guest_contact.test.sql' = 'supabase\tests\database'
   '15_guest_mail.test.sql' = 'supabase\tests\database'
   '16_guest_changes.test.sql' = 'supabase\tests\database'

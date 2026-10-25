@@ -235,6 +235,13 @@ await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoi
 ```
 «Вимкнути push тут» і вихід з акаунта. Прибирає лише свій рядок; чужий із тією самою адресою не чіпає й не видає. Напряму ні вставити, ні змінити, ні видалити рядок `push_subscriptions` клієнт не може: адреса підписки — секрет рівня токена, і в тілі запиту вона не осідає в журналах шлюзу API, як осів би фільтр `?endpoint=eq.…`.
 
+### `delete_my_account` — authenticated
+```ts
+const { data } = await supabase.rpc('delete_my_account', { p_password: password });
+// 'deleted' | 'wrong_password' | 'too_many' | 'no_password'
+```
+Видалення власного акаунта (ADR-072). `SECURITY DEFINER` від `postgres`: звіряє пароль із `auth.users` і видаляє рядок — решту стирає каскад, гостям нічого не надсилається, роздані посилання стають `not_found`. Невдачі — у тілі, не винятком: `wrong_password` (зокрема порожній пароль), `too_many` — п'ять невдалих спроб за годину, після них відмова навіть із правильним паролем; `no_password` — акаунт без пароля (лише Google). Користувача вже немає (відповідь на успішне видалення загубилась) — `P0002 not_found`; клієнт (`lib/account.ts`) вважає це видаленням і виходить лише локально.
+
 ### Права на виклик
 
 | Функція | Ролі |
@@ -243,7 +250,7 @@ await supabase.rpc('forget_push_subscription', { p_endpoint: subscription.endpoi
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
 | `ack_claim_change`, `get_share_card`, `report_share`, `start_pool`, `pledge_pool`, `leave_pool`, `close_pool`, `cancel_pool` | `anon`, `authenticated` |
 | `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
-| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key` | `authenticated` |
+| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account` | `authenticated` |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
 Права задано міграціями `20260910120300_grants.sql` і `20260916220000_revoke_default_function_grants.sql`. Перша відкликала лише `PUBLIC`, і функції власника лишались доступними `anon` через явні гранти Supabase за замовчуванням; друга це закрила. Кожна нова RPC-функція отримує гранти явно й відкликає їх у конкретних ролей (CLAUDE.md §3.4). Таблицю вище перевіряє `supabase/tests/database/01_schema_guards.test.sql`.
