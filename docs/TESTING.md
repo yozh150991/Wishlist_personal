@@ -510,6 +510,18 @@ npx lighthouse http://localhost:4173/login --view
 
 **Що ловлять.** Проти схеми внесено мутацію — курсор `list_items_page` без `id` для розбиття нічиїх: падають шість рядків P2 у `27_qa_pairwise`.
 
+## Живий прогін по магазинах (ROADMAP 8.3)
+
+Не в CI і не в звичайному `pytest`: `addopts = -m "not live"` у `pytest.ini`, а Playwright-конфіг окремий. Набір посилань — `services/parser/tests/shop-links.txt`, порожній — тести пропускаються.
+
+```bash
+cd services/parser && pytest -m live          # парсер → live-shops.md
+cd app && HEADED=1 npm run check:shops        # кнопка «У вішліст» → test-results/shops.md
+# PowerShell: $env:HEADED=1; npm run check:shops
+```
+
+Кожне посилання — окремий тест: зелений, коли є назва. Червоний — не обовʼязково баг: магазин міг не пустити бота чи безголовий браузер. Що робити з кожним рядком — вирішуємо за таблицею (API.md, «Магазини родини»). Без мережі до магазинів інструмент перевірено на локальній сторінці (`SHOP_LINKS` — інший файл того самого формату).
+
 ## Запуск
 
 ```powershell

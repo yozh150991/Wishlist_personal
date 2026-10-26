@@ -34,6 +34,7 @@ if (-not $To) {
 
 $map = @{
   'playwright.logic.config.ts' = 'app'
+  'playwright.shops.config.ts' = 'app'
   'qa-data-integrity.spec.ts' = 'app\tests\e2e'
   'qa-storage-resilience.spec.ts' = 'app\tests\e2e'
   'test_qa_resilience.py' = 'services\parser\tests'
@@ -248,6 +249,9 @@ $map = @{
   'book-before-shop.spec.ts' = 'app\tests\e2e'
   'bookmarklet.ts' = 'app\src\lib'
   'bookmarklet.spec.ts' = 'app\tests\e2e'
+  'shops.live.ts' = 'app\tests\live'
+  'shop-links.txt' = 'services\parser\tests'
+  'test_live_shops.py' = 'services\parser\tests'
   'guest_mail.py' = 'services\parser\app'
   'mail_main.py' = 'services\parser\app'
   'share_reports.py' = 'services\parser\app'
