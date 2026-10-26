@@ -1165,7 +1165,8 @@
       "title": "“{title}” is yours",
       "body": "To come back from another phone, save this code:",
       "copy": "Copy code",
-      "note": "On this device your pick stays put — the code is only for another one.",
+      "note": "This browser remembers your pick on its own. If you clear its data, or open the list in another browser, a private window or on another phone, tap “I already have picks” and enter the code.",
+      "mailed": "The code is also on its way to {email}.",
       "link": "Send myself the link",
       "done": "Done",
       "label": "Your code: {code}"
@@ -1176,7 +1177,7 @@
       "signed": "Name: {name}",
       "release": "Release pick",
       "keepTitle": "To come back from another device",
-      "keepBody": "The code or your personal link brings your picks back on any phone.",
+      "keepBody": "This browser remembers your picks on its own. On another phone, in another browser or after clearing browser data, the code or your personal link brings them back.",
       "email": "Email: {email}"
     },
     "redeem": {

@@ -396,3 +396,41 @@ test('спільний збір на /l/ — відкрити, долучити�
   await expect(page.locator('.v2-gpool')).toHaveCount(0);
   await expect(page.getByText(/оля|ігор|blik/i)).toHaveCount(0);
 });
+
+test('код після першої броні: як повернути броні й лист на пошту гостя (ROADMAP 8.6)', async ({ page }) => {
+  // Відповіді бази підставляємо: що лист несе той самий код, стереже pytest (guest_mail).
+  let guest: { code: string; name: string | null; email: string | null } | null = null;
+  const body = () => ({
+    title: 'Новосілля', message: null, currency: 'PLN', event_date: null,
+    expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+    hide_prices: false, allow_reservations: true, archived: false, viewer_is_owner: false,
+    guest, sections: [], thanks: null,
+    items: ['Ваза', 'Рушники'].map((title, i) => ({
+      id: `e2e-rec-${i}`, title, url: null, price: 100, currency: 'PLN', quantity: 1,
+      priority: 'medium', note: null, variants: [], image_url: null, status: 'active',
+      created_at: '2026-10-01T10:00:00Z', section_id: null,
+      taken_qty: guest && i === 0 ? 1 : 0, mine_qty: guest && i === 0 ? 1 : 0,
+    })),
+  });
+  await page.route('**/rpc/get_guest_list', (r) => r.fulfill({ json: body() }));
+  await page.route('**/rpc/register_share_view', (r) => r.fulfill({ status: 204, body: '' }));
+  await page.route('**/rpc/claim_item_v2', async (r) => {
+    const args = r.request().postDataJSON() as { p_email: string | null };
+    guest = { code: 'K7M2Q', name: null, email: args.p_email || null };
+    await r.fulfill({ json: { taken_qty: 1, mine_qty: 1, code: 'K7M2Q', name: null, email: guest.email } });
+  });
+
+  await page.goto('/l/e2e-recovery-token');
+  await card(page, 'Ваза').getByRole('button', { name: takeBtn }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.locator('input[name="guest_email"]').fill(MAIL);
+  await sheet.getByRole('button', { name: /^(забронювати|zarezerwuj|take it)$/i }).click();
+
+  await expect(sheet.getByRole('heading', { name: /за вами|twoje|is yours/i })).toBeVisible();
+  await expect(sheet.locator('.v2-gcode')).toHaveText('K7M2Q');
+  // Чесно: бронь тримає браузер — і як її повернути, коли його дані зникнуть.
+  await expect(sheet.getByText(/інкогніто|incognito|private window/i)).toBeVisible();
+  await expect(sheet.getByText(/уже маю броні|mam już rezerwacje|i already have picks/i)).toBeVisible();
+  await expect(sheet.getByText(MAIL)).toBeVisible();
+  await expect(sheet.getByRole('button', { name: /надіслати собі посилання|wyślij sobie link|send myself the link/i })).toBeVisible();
+});
