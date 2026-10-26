@@ -90,6 +90,7 @@ $map = @{
   '27_qa_pairwise.test.sql' = 'supabase\tests\database'
   '28_qa_error_guessing.test.sql' = 'supabase\tests\database'
   '29_delete_account.test.sql' = 'supabase\tests\database'
+  '30_item_photos.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -182,6 +183,9 @@ $map = @{
   'notify-rules.spec.ts' = 'app\tests\e2e'; 'notify-v2.spec.ts' = 'app\tests\e2e'
   # account deletion (ADR-072)
   'account.ts' = 'app\src\lib'
+  # own item photo (ADR-073)
+  'photos.ts' = 'app\src\lib'; 'photoRules.ts' = 'app\src\lib'
+  'photo-rules.spec.ts' = 'app\tests\e2e'; 'photo-upload.spec.ts' = 'app\tests\e2e'
   'push-sw.js' = 'app\public'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).
@@ -207,12 +211,14 @@ $map = @{
   # closed background jobs service wishlist-jobs (ADR-048), same image
   'jobs_main.py' = 'services\parser\app';  'jobs_config.py' = 'services\parser\app'
   'jobs_store.py' = 'services\parser\app'; 'jobs_links.py' = 'services\parser\app'; 'jobs_rates.py' = 'services\parser\app'
+  'jobs_photos.py' = 'services\parser\app'
   # owner notifications (ADR-049)
   'jobs_notify.py' = 'services\parser\app'; 'jobs_push.py' = 'services\parser\app'
   'jobs_mail.py' = 'services\parser\app';   'jobs_texts.py' = 'services\parser\app'
   'test_extract.py' = 'services\parser\tests'; 'test_ssrf.py' = 'services\parser\tests'
   'test_auth.py' = 'services\parser\tests'; 'test_fetch_pinning.py' = 'services\parser\tests'
   'test_jobs.py' = 'services\parser\tests'; 'test_notify.py' = 'services\parser\tests'; 'test_rates.py' = 'services\parser\tests'
+  'test_photos.py' = 'services\parser\tests'
   'test_qa_techniques.py' = 'services\parser\tests'
   'jsonld.html' = 'services\parser\tests\fixtures'; 'og.html' = 'services\parser\tests\fixtures'
   'microdata.html' = 'services\parser\tests\fixtures'; 'bare.html' = 'services\parser\tests\fixtures'
@@ -253,6 +259,7 @@ $map = @{
   '20261021090000_drop_items_list_price_idx.sql' = 'supabase\migrations'
   '20261022090000_qa_fixes.sql' = 'supabase\migrations'
   '20261025100000_delete_account.sql' = 'supabase\migrations'
+  '20261025120000_item_photos.sql' = 'supabase\migrations'
   '14_guest_contact.test.sql' = 'supabase\tests\database'
   '15_guest_mail.test.sql' = 'supabase\tests\database'
   '16_guest_changes.test.sql' = 'supabase\tests\database'

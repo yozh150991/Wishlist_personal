@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ClipboardEvent } from 'react';
-import { ClipboardPaste, Plus, X } from 'lucide-react';
+import { ClipboardPaste, ImageUp, Plus, X } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { errorText } from '../../../lib/errors';
 import { formatDay, hostOf, moneyShort, num } from '../../../lib/format';
@@ -29,6 +29,8 @@ import { FieldV2, NoteV2, OrDividerV2 } from './AuthPartsV2';
 import { SheetV2 } from './CommonV2';
 import { ConfirmSheetV2, usePriorityLabel } from './ListPartsV2';
 import { useFxRates } from '../../../lib/fx';
+import { PHOTO_QUOTA, PhotoError, isOwnPhoto, uploadPhoto } from '../../../lib/photos';
+import type { PhotoErrorKey } from '../../../lib/photos';
 
 const STROKE = 2.75;
 
@@ -117,7 +119,10 @@ function imageCheck(raw: string): 'empty' | 'ok' | 'bad' | 'tooLong' {
  * замовчуванням їх немає (V1). Фото — посиланням на картинку, як у v1:
  * магазин підставляє своє, його можна прибрати, замінити або вписати вручну;
  * «Заповнити з посилання» дотягує порожні поля й у вже збереженої позиції.
- * Своє фото файлом — пізніше, разом із місцем для файлів (ROADMAP, V2).
+ * Своє фото файлом (V2, ADR-073) — «Завантажити своє фото» під полем: фото
+ * зменшується й втрачає EXIF у браузері, а його адреса стає тим самим
+ * `image_url`. Поки фото своє, поля з адресою немає — лише прев'ю, «Замінити
+ * фото» й хрестик.
  *
  * Що побачила щоденна перевірка посилання (R, ADR-048), — згори зміни
  * позиції: сторінки немає — «Замінити посилання», «Шукати деінде», «Прибрати
@@ -572,6 +577,7 @@ export function ItemSheetV2({
   const searchHref = `https://www.google.com/search?q=${encodeURIComponent(form.title.trim() || item?.title || '')}`;
 
   const imageSrc = image === 'ok' ? form.image_url.trim() : null;
+  const ownPhoto = isOwnPhoto(form.image_url);
   const imageBroken = imageSrc !== null && brokenImage === imageSrc;
   const canFill = stage === 'form' && Boolean(urlNormal) && !urlError && parserConfigured() && !reading;
 
@@ -962,49 +968,85 @@ export function ItemSheetV2({
                   }
                 />
 
-                <FieldV2
-                  ref={imageRef}
-                  label={t('v2item.photo.label')}
-                  name="image_url"
-                  type="url"
-                  inputMode="url"
-                  autoComplete="off"
-                  placeholder={t('v2item.photo.placeholder')}
-                  value={form.image_url}
-                  error={imageError}
-                  warning={imageBroken ? t('v2item.photo.broken') : null}
-                  onChange={(e) => set('image_url', e.target.value)}
-                  after={
-                    // Угорі вже є прев'ю з тим самим фото — другий раз не малюємо.
-                    imageSrc && !showPreview ? (
-                      <div className="v2-photo">
+                {ownPhoto ? (
+                  <div className="v2-field" data-testid="own-photo">
+                    <span className="v2-field__label">{t('v2item.photo.label')}</span>
+                    <div className="v2-photo v2-photo--own">
+                      {/* Угорі вже є прев'ю з тим самим фото — другий раз не малюємо. */}
+                      {!showPreview && (
                         <span className="v2-preview__imgbox">
                           {imageBroken ? (
                             <span className="v2-preview__img v2-preview__img--empty" aria-hidden="true" />
                           ) : (
                             <img
                               className="v2-preview__img"
-                              src={imageSrc}
+                              src={form.image_url.trim()}
                               alt=""
-                              onError={() => setBrokenImage(imageSrc)}
+                              onError={() => setBrokenImage(form.image_url.trim())}
                             />
                           )}
                           <button
                             type="button"
                             className="v2-preview__remove"
                             aria-label={t('v2item.photo.remove')}
-                            onClick={() => {
-                              set('image_url', '');
-                              imageRef.current?.focus();
-                            }}
+                            onClick={() => set('image_url', '')}
                           >
                             <X size={16} strokeWidth={STROKE} aria-hidden="true" />
                           </button>
                         </span>
-                      </div>
-                    ) : null
-                  }
-                />
+                      )}
+                      <span className="v2-photo__caption">{t('v2item.photo.upload.own')}</span>
+                    </div>
+                    <PhotoUploadV2 replace onUploaded={(url) => set('image_url', url)} />
+                  </div>
+                ) : (
+                  <>
+                    <FieldV2
+                      ref={imageRef}
+                      label={t('v2item.photo.label')}
+                      name="image_url"
+                      type="url"
+                      inputMode="url"
+                      autoComplete="off"
+                      placeholder={t('v2item.photo.placeholder')}
+                      value={form.image_url}
+                      error={imageError}
+                      warning={imageBroken ? t('v2item.photo.broken') : null}
+                      onChange={(e) => set('image_url', e.target.value)}
+                      after={
+                        // Угорі вже є прев'ю з тим самим фото — другий раз не малюємо.
+                        imageSrc && !showPreview ? (
+                          <div className="v2-photo">
+                            <span className="v2-preview__imgbox">
+                              {imageBroken ? (
+                                <span className="v2-preview__img v2-preview__img--empty" aria-hidden="true" />
+                              ) : (
+                                <img
+                                  className="v2-preview__img"
+                                  src={imageSrc}
+                                  alt=""
+                                  onError={() => setBrokenImage(imageSrc)}
+                                />
+                              )}
+                              <button
+                                type="button"
+                                className="v2-preview__remove"
+                                aria-label={t('v2item.photo.remove')}
+                                onClick={() => {
+                                  set('image_url', '');
+                                  imageRef.current?.focus();
+                                }}
+                              >
+                                <X size={16} strokeWidth={STROKE} aria-hidden="true" />
+                              </button>
+                            </span>
+                          </div>
+                        ) : null
+                      }
+                    />
+                    <PhotoUploadV2 replace={false} onUploaded={(url) => set('image_url', url)} />
+                  </>
+                )}
 
                 {significant && liveShares > 0 && (
                   <p className="v2-hint v2-hint--start" role="status" data-testid="item-guests-warn">
@@ -1175,5 +1217,82 @@ function VariantsV2({
         </button>
       )}
     </fieldset>
+  );
+}
+
+/**
+ * «Завантажити своє фото» (V2, ADR-073). Вибір файлу — свій, як в імпорті:
+ * рідний `<input type="file">` підписує себе мовою браузера (CLAUDE.md §4).
+ * Справжній `<input>` лишається фокусованим, видиме — `<label>`-кнопка.
+ *
+ * Поки фото стискається й вантажиться, кнопка показує «Завантажую…»;
+ * мережа, що не відповідає, обірветься тайм-аутом сховища в `lib/supabase.ts`.
+ */
+function PhotoUploadV2({ replace, onUploaded }: { replace: boolean; onUploaded: (url: string) => void }) {
+  const { t } = useI18n();
+  const id = useId();
+  const hintId = useId();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const run = useRef(0);
+
+  // Кожна гілка — буквальний виклик: так `check:i18n` бачить усі ключі.
+  const problemText = (key: PhotoErrorKey): string => {
+    switch (key) {
+      case 'v2item.photo.upload.notImage':
+        return t('v2item.photo.upload.notImage');
+      case 'v2item.photo.upload.unreadable':
+        return t('v2item.photo.upload.unreadable');
+      case 'v2item.photo.upload.tooBig':
+        return t('v2item.photo.upload.tooBig');
+      case 'v2item.photo.upload.quota':
+        return t('v2item.photo.upload.quota', { max: PHOTO_QUOTA });
+      default:
+        return t('v2item.photo.upload.rate');
+    }
+  };
+
+  async function pick(file: File | undefined) {
+    if (!file || busy) return;
+    const mine = ++run.current;
+    setBusy(true);
+    setError(null);
+    try {
+      const url = await uploadPhoto(file);
+      if (run.current === mine) onUploaded(url);
+    } catch (e) {
+      if (run.current === mine) setError(e instanceof PhotoError ? problemText(e.key) : errorText(e, t));
+    } finally {
+      if (run.current === mine) setBusy(false);
+    }
+  }
+
+  return (
+    <div className="v2-photoup">
+      <div className="v2-file">
+        <input
+          id={id}
+          className="v2-file__input"
+          type="file"
+          accept="image/*"
+          disabled={busy}
+          aria-describedby={hintId}
+          data-testid="photo-file"
+          onChange={(e) => {
+            void pick(e.target.files?.[0]);
+            // Той самий файл удруге теж має спрацювати.
+            e.target.value = '';
+          }}
+        />
+        <label htmlFor={id} className="v2-btn v2-btn--outline v2-btn--small" aria-busy={busy || undefined}>
+          {busy ? <span className="v2-spinner" aria-hidden="true" /> : <ImageUp size={18} strokeWidth={STROKE} aria-hidden="true" />}
+          {busy ? t('v2item.photo.upload.busy') : replace ? t('v2item.photo.upload.replace') : t('v2item.photo.upload.cta')}
+        </label>
+      </div>
+      <p className="v2-hint v2-hint--start" id={hintId}>
+        {t('v2item.photo.upload.hint')}
+      </p>
+      {error && <NoteV2 tone="error">{error}</NoteV2>}
+    </div>
   );
 }

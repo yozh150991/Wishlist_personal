@@ -170,7 +170,7 @@ Cloud Scheduler, щодня 04:15 за Варшавою
 ```
 Сервіс нічого не знає про позначки гостей і нічого не міняє в тому, що бачить гість: гостьові RPC полів `link_*` не віддають. Ціну в списку він теж не чіпає — лише запам'ятовує, що побачив у магазині; рішення за власником (v2, діалог позиції). Нове посилання скидає висновок тригером `items_link_reset`, тож будь-яка заміна посилання — з форми, імпорту чи черги — дає чесне «ще не перевірено».
 
-Код задач — `services/parser/app/jobs_*.py`: налаштування (`jobs_config.py`), доступ до бази (`jobs_store.py`), сама перевірка (`jobs_links.py`), сповіщення (`jobs_notify.py`, `jobs_push.py`, `jobs_mail.py`, `jobs_texts.py`), застосунок (`jobs_main.py`). Образ той самий, що й у парсера; який застосунок запускати, каже змінна `APP_MODULE`. Відкритий парсер (`app.main`) модулів задач не імпортує.
+Код задач — `services/parser/app/jobs_*.py`: налаштування (`jobs_config.py`), доступ до бази (`jobs_store.py`), сама перевірка (`jobs_links.py`), сповіщення (`jobs_notify.py`, `jobs_push.py`, `jobs_mail.py`, `jobs_texts.py`), курс НБП (`jobs_rates.py`), прибирання своїх фото (`jobs_photos.py`, ADR-073), застосунок (`jobs_main.py`). Образ той самий, що й у парсера; який застосунок запускати, каже змінна `APP_MODULE`. Відкритий парсер (`app.main`) модулів задач не імпортує.
 
 ### Сповіщення власника (ADR-049)
 ```
@@ -192,6 +192,8 @@ Cloud Scheduler, щогодини :05 → POST /jobs/notify у wishlist-jobs
 Service Worker показує push через `push-sw.js` (підключений `workbox.importScripts`): заголовок, текст і відносна адреса всередині застосунку. Натиск фокусує відкриту вкладку й веде туди, або відкриває нову. Чужих доменів із push не відкриває.
 
 Вихід з акаунта знімає підписку цього пристрою (`forgetPushOnThisDevice` у `lib/auth.tsx`): поки сесія жива — ще й рядок на сервері (`forget_push_subscription`). Наступна людина за пристроєм не отримає сповіщень із назвами чужих списків. Адреса підписки йде лише в тілі запитів, ніколи — фільтром у рядку адреси.
+
+**Своє фото позиції (ADR-073).** У формі позиції під полем «Фото» — «Завантажити своє фото» (`PhotoUploadV2` у `ItemSheetV2.tsx`, вибір файлу — свій, як в імпорті). `lib/photos.ts` розкодовує файл (`createImageBitmap`, поворот з EXIF), малює його на полотні до 1600 px по довшій стороні й перекодовує в WebP чи JPEG до 2 МБ — так EXIF не доїжджає до сховища. Потім `reserve_item_photo` видає випадкову адресу, файл вантажиться в публічний бакет `item-photos`, і його публічна адреса стає `image_url` — далі фото нічим не відрізняється від фото з магазину. Поки фото своє (`isOwnPhoto`), замість поля адреси — прев'ю, «Твоє фото» й «Замінити фото». Запити до сховища обмежені тайм-аутом 60 с у `lib/supabase.ts` і без мережі відхиляються одразу. Файли, на які вже ніщо не посилається, прибирає `wishlist-jobs` (`jobs_photos.py`) у щоденному виклику `check-links`.
 
 **Видалення акаунта (ADR-072).** «Налаштування» → «Видалити акаунт» відкриває діалог із паролем (`DeleteAccountV2` у `SettingsV2.tsx`). Пароль звіряє сервер (`delete_my_account`), ліміт спроб — теж його. Після `deleted` `lib/account.ts` знімає підписку push браузера й виходить лише локально (`signOut({ scope: 'local' })`): користувача вже немає, серверний вихід відповів би помилкою. Подія `SIGNED_OUT` стирає офлайн-копії й чергу, як за звичайного виходу, а екран входу каже «Акаунт видалено» (`justDeletedAccount`, 10 секунд після видалення в цій вкладці).
 
@@ -256,6 +258,7 @@ app/
 │   │   ├── zones.ts                                  # зона власника, «діє до … за Києвом»
 │   │   ├── transfer.ts  download.ts                  # експорт та імпорт; розділи назвами, файл у порядку гостя (ADR-066)
 │   │   ├── account.ts                                # видалення акаунта: delete_my_account і локальний вихід (ADR-072)
+│   │   ├── photos.ts  photoRules.ts                  # своє фото: стиснення без EXIF, адреса й завантаження / чисті правила (ADR-073)
 │   │   ├── idb.ts  cache.ts  outbox.ts  outboxOps.ts  # офлайн: кеш і черга
 │   │   └── useOutbox.ts                              # відправка черги й відхилені зміни
 │   ├── i18n/{uk,pl,en}.json
@@ -277,8 +280,9 @@ services/parser/
 │   ├── extract.py    # JSON-LD → microdata → OG → Twitter → title → евристика; наявність товару
 │   ├── cache.py  ratelimit.py  config.py  models.py
 │   ├── jobs_main.py  jobs_config.py  jobs_store.py  jobs_links.py
-│   └── jobs_notify.py  jobs_push.py  jobs_mail.py  jobs_texts.py
-│                     # закритий сервіс задач wishlist-jobs (ADR-048, ADR-049), APP_MODULE=app.jobs_main:app
+│   ├── jobs_notify.py  jobs_push.py  jobs_mail.py  jobs_texts.py
+│   └── jobs_rates.py  jobs_photos.py
+│                     # закритий сервіс задач wishlist-jobs (ADR-048, ADR-049, ADR-051, ADR-073), APP_MODULE=app.jobs_main:app
 └── tests/            # pytest + HTML-фікстури; test_jobs.py, test_notify.py — задачі з підмінною базою
 ```
 

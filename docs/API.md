@@ -242,6 +242,18 @@ const { data } = await supabase.rpc('delete_my_account', { p_password: password 
 ```
 Видалення власного акаунта (ADR-072). `SECURITY DEFINER` від `postgres`: звіряє пароль із `auth.users` і видаляє рядок — решту стирає каскад, гостям нічого не надсилається, роздані посилання стають `not_found`. Невдачі — у тілі, не винятком: `wrong_password` (зокрема порожній пароль), `too_many` — п'ять невдалих спроб за годину, після них відмова навіть із правильним паролем; `no_password` — акаунт без пароля (лише Google). Користувача вже немає (відповідь на успішне видалення загубилась) — `P0002 not_found`; клієнт (`lib/account.ts`) вважає це видаленням і виходить лише локально.
 
+### `reserve_item_photo` — authenticated
+```ts
+const { data: path } = await supabase.rpc('reserve_item_photo', { p_ext: 'webp' });
+// '0123456789abcdef0123456789abcdef.webp'
+await supabase.storage.from('item-photos').upload(path, blob, { contentType: 'image/webp', upsert: false });
+const url = supabase.storage.from('item-photos').getPublicUrl(path).data.publicUrl;   // → items.image_url
+```
+Адреса для свого фото позиції (ADR-073). `SECURITY DEFINER`: видає 32 випадкові шістнадцяткові символи й розширення (`webp` чи `jpg`, інакше `22023 bad_request`) і записує рядок `item_photos` — лише в таку адресу політика `storage.objects` пускає завантаження, і лише цьому власникові. Ліміти — `P0001 photo_quota` (1000 фото на акаунт) і `P0001 photo_rate` (60 адрес за годину). Стиснення й стирання EXIF — до виклику, у браузері (`lib/photos.ts`).
+
+### `item_photo_orphans` / `forget_item_photos` — лише `service_role`
+Прибирання своїх фото (ADR-073), викликає `wishlist-jobs` раз на добу. `item_photo_orphans(p_limit)` — адреси, видані понад добу тому, на які не посилається жоден `items.image_url` (будь-якого власника); `forget_item_photos(p_paths)` — забути рядки після того, як файли видалено зі сховища (`DELETE /storage/v1/object/item-photos`, тіло `{"prefixes": [...]}`).
+
 ### Права на виклик
 
 | Функція | Ролі |
@@ -250,7 +262,8 @@ const { data } = await supabase.rpc('delete_my_account', { p_password: password 
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
 | `ack_claim_change`, `get_share_card`, `report_share`, `start_pool`, `pledge_pool`, `leave_pool`, `close_pool`, `cancel_pool` | `anon`, `authenticated` |
 | `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
-| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account` | `authenticated` |
+| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account`, `reserve_item_photo` | `authenticated` |
+| `item_photo_orphans`, `forget_item_photos` | лише `service_role` (`wishlist-jobs`) |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
 Права задано міграціями `20260910120300_grants.sql` і `20260916220000_revoke_default_function_grants.sql`. Перша відкликала лише `PUBLIC`, і функції власника лишались доступними `anon` через явні гранти Supabase за замовчуванням; друга це закрила. Кожна нова RPC-функція отримує гранти явно й відкликає їх у конкретних ролей (CLAUDE.md §3.4). Таблицю вище перевіряє `supabase/tests/database/01_schema_guards.test.sql`.
@@ -423,6 +436,8 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 | `401 missing_token` | немає `Authorization: Bearer` (запит дійшов би сюди, лише якщо сервіс розгорнули відкритим) |
 | `503 jobs_not_configured` | не задано `SUPABASE_URL` або `SUPABASE_SECRET_KEY`, чи ключ не починається з `sb_secret_` |
 | `500` | Supabase відхилив ключ (401/403) чи недоступний; у лозі — «PostgREST відхилив ключ … перевір SUPABASE_SECRET_KEY» |
+
+Тим самим викликом (ADR-073) — прибирання своїх фото без посилань: у відповіді `photos_removed` — скільки файлів стерто. Збій сховища перевірку посилань не зупиняє: `photos_removed: 0`, рядки лишаються до завтра.
 
 ### `POST /jobs/notify`
 Тіла немає. Сповіщення власникам (ADR-049; ARCHITECTURE, «Сповіщення власника»). Cloud Scheduler кличе щогодини. Відповідь — лічильники:
