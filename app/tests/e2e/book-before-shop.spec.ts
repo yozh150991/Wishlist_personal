@@ -153,6 +153,8 @@ test('повільна мережа: вкладка чекає броні й л�
   const code = page.getByRole('dialog');
   await expect(code.getByRole('heading', { name: codeTitle })).toBeVisible();
   await expect(code.getByRole('link', { name: /перейти в магазин|przejdź do sklepu|go to the shop/i })).toHaveCount(0);
+  // Пошти в цій броні немає — і рядка «код прийде листом» теж.
+  await expect(code.getByText(/листом на|mailem na|on its way to/i)).toHaveCount(0);
   await code.getByRole('button', { name: /^(готово|gotowe|done)$/i }).click();
   await expect(card(page, 'Чайник')).toContainText(yours);
 });

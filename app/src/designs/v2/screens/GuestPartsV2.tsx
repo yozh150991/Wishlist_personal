@@ -438,6 +438,8 @@ export function BookSheetV2({
             {step.code}
           </p>
           <p className="v2-hint v2-hint--start">{t('v2guest.code.note')}</p>
+          {/* Пошта з цієї ж броні: лист «claim» несе той самий код (ADR-054). */}
+          {email && <p className="v2-hint v2-hint--start">{t('v2guest.code.mailed', { email })}</p>}
           <div className="v2-sheet__actions">
             <button
               type="button"

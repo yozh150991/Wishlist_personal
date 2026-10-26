@@ -1165,7 +1165,8 @@
       "title": "„{title}” — twoje",
       "body": "Żeby wrócić z innego telefonu, zachowaj kod:",
       "copy": "Skopiuj kod",
-      "note": "Na tym urządzeniu rezerwacja trzyma się sama — kod potrzebny jest tylko na innym.",
+      "note": "Ta przeglądarka sama pamięta rezerwację. Jeśli wyczyścisz jej dane albo otworzysz listę w innej przeglądarce, w trybie incognito lub na innym telefonie — kliknij „Mam już rezerwacje” i wpisz kod.",
+      "mailed": "Kod przyjdzie też mailem na {email}.",
       "link": "Wyślij sobie link",
       "done": "Gotowe",
       "label": "Twój kod: {code}"
@@ -1176,7 +1177,7 @@
       "signed": "Podpis: {name}",
       "release": "Zdejmij rezerwację",
       "keepTitle": "Żeby wrócić z innego urządzenia",
-      "keepBody": "Kod albo osobisty link przywracają twoje rezerwacje na dowolnym telefonie.",
+      "keepBody": "Ta przeglądarka sama pamięta rezerwacje. Na innym telefonie, w innej przeglądarce albo po wyczyszczeniu danych przeglądarki przywróci je kod lub osobisty link.",
       "email": "E-mail: {email}"
     },
     "redeem": {
