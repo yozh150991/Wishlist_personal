@@ -6,6 +6,7 @@ import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
 import { authErrorKey } from '../../../lib/authErrors';
 import { safeNext } from '../../../lib/safeNext';
+import { justDeletedAccount } from '../../../lib/account';
 import {
   authReturn,
   emailProblem,
@@ -72,6 +73,8 @@ export default function LoginV2() {
   const [arrival] = useState(() => ({
     error: readRedirectError(location.search, location.hash),
     confirmed: params.get('from') === 'confirm',
+    // Акаунт щойно видалено з Налаштувань (ADR-072) — сказати один раз.
+    deleted: justDeletedAccount(),
   }));
 
   const presetEmail = (location.state as { email?: string } | null)?.email;
@@ -260,6 +263,7 @@ export default function LoginV2() {
         </div>
 
         {arrival.confirmed && !server && <NoteV2 tone="info">{t('v2auth.login.confirmed')}</NoteV2>}
+        {arrival.deleted && !server && <NoteV2 tone="info">{t('v2settings.delete.done')}</NoteV2>}
         {server && <NoteV2 tone="error">{server}</NoteV2>}
         {pause > 0 && (
           <NoteV2 tone="error">

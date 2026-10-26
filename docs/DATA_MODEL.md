@@ -23,6 +23,7 @@
 | `20260929090000_link_checks.sql` | `items.link_status`, `link_checked_at`, `link_price`, `link_currency` — перевірка посилань; індекс черги й тригер `items_link_reset` (ADR-048) |
 | `20260930090000_notifications.sql` | `notification_settings`, `push_subscriptions`, `notification_log` — сповіщення власника; `save_push_subscription`, `forget_push_subscription` (ADR-049) |
 | `20261022090000_qa_fixes.sql` | виправлення за QA-звітом (ADR-070): `guest_code_attempts.kind` і окремі ліміти коду; межі назв — на сирому рядку; незмінні `items.list_id` і `sections.list_id`, `share_items` лише зі списку посилання; імена гостей без невидимих символів; правки RPC `pledge_pool`, `start_pool`, `claim_item(_v2)`, `redeem_guest_code`, `send_guest_code`, `list_items_page`, `create_share`, `close_pool`, `get_shared_list` |
+| `20261025100000_delete_account.sql` | `account_delete_attempts` і `delete_my_account` — видалення акаунта власником після звірки пароля (ADR-072) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 
@@ -208,6 +209,19 @@ RLS: власник бачить свої й вбудовані, змінює й
 **Пристрій — одного власника.** `save_push_subscription` (SECURITY DEFINER) прибирає рядок із тією самою адресою, якщо він належить іншому власникові, і тримає щонайбільше 10 пристроїв на власника (найстаріші — за `created_at`, який функція ставить `clock_timestamp()`). Адреса підписки — секрет рівня токена: хто її знає, може слати push на пристрій; тому її бачить лише власник, а сервіс не логує.
 
 Усі три таблиці видаляються каскадом разом з акаунтом.
+
+### `account_delete_attempts` (ADR-072)
+Невдалі спроби підтвердити видалення акаунта паролем: `owner_id` (→ `auth.users`, `on delete cascade`) і `attempted_at`. Лише для ліміту в `delete_my_account` — п'ять на годину; старші за годину стираються при кожній спробі. Ні IP, ні пароля. RLS без політик, `anon` і `authenticated` прав не мають: таблицю читає й пише лише функція.
+
+### Що стирає видалення акаунта (ADR-072)
+`delete_my_account` видаляє лише рядок `auth.users`, решту робить каскад:
+
+| Що | Як зникає |
+|---|---|
+| `profiles`, `lists`, `items`, `sections`, `shares`, `appearances` власника, `notification_settings`, `push_subscriptions`, `notification_log`, `account_delete_attempts` | `owner_id … on delete cascade` на `auth.users` |
+| `share_items`, позначки (`claims`) і ідентичності гостей на його списках, `guest_mail`, збори (`gift_pools`, `gift_pool_pledges`) | каскад від списків, позицій і посилань — так само, як за видалення списку; листів гостям немає |
+| позначки, які він лишив гостем у чужих списках | **лишаються**: `guest_identities.user_id` → `null` (ADR-062) |
+| `share_reports` на його посилання | **лишаються**: без зовнішнього ключа (ADR-061) |
 
 ## Пагінація
 

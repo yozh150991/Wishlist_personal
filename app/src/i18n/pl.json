@@ -804,7 +804,19 @@
       "cancel": "Anuluj",
       "saved": "Plik zapisany."
     },
-    "deleteLater": "Usuwanie konta pojawi się tu później."
+    "delete": {
+      "cta": "Usuń konto",
+      "title": "Usunąć konto na zawsze?",
+      "body": "Znikną wszystkie Twoje listy, pozycje, sekcje i linki. Linki, które rozesłałeś, przestaną się otwierać — goście zobaczą „Nie ma takiej listy”. Rezerwacje, które sam zostawiłeś na cudzych listach, zostaną. Nie da się tego cofnąć.",
+      "keepData": "Chcesz zachować listy — najpierw pobierz „Moje dane” powyżej.",
+      "passwordLabel": "Twoje hasło",
+      "confirm": "Usuń na zawsze",
+      "deleting": "Usuwam…",
+      "wrongPassword": "Hasło się nie zgadza.",
+      "tooMany": "Za dużo prób. Spróbuj ponownie za godzinę.",
+      "noPassword": "Konto nie ma hasła. Ustaw je przez „Nie pamiętasz hasła?” na ekranie logowania — i wróć tutaj.",
+      "done": "Konto usunięte. Listy i linki zostały skasowane."
+    }
   },
   "v2after": {
     "card": {
@@ -1213,11 +1225,11 @@
       },
       "keep": {
         "title": "Jak długo przechowujemy",
-        "body": "Dopóki istnieją konto i listy. Usunięcie listy usuwa jej pozycje, linki dla gości oraz rezerwacje, imiona i e-maile gości tej listy. Zgłoszenia są przechowywane do czasu ich rozpatrzenia. Techniczne logi hostingu (np. adres IP i czas zapytania) dostawcy przechowują przez ograniczony czas."
+        "body": "Dopóki istnieją konto i listy. Usunięcie konta od razu kasuje to wszystko razem z nim; rezerwacje, które zostawiłeś jako gość na cudzych listach, zostają bez powiązania z kontem. Usunięcie listy usuwa jej pozycje, linki dla gości oraz rezerwacje, imiona i e-maile gości tej listy. Zgłoszenia są przechowywane do czasu ich rozpatrzenia. Techniczne logi hostingu (np. adres IP i czas zapytania) dostawcy przechowują przez ograniczony czas."
       },
       "rights": {
         "title": "Twoje prawa",
-        "body": "• Otrzymać swoje dane: „Ustawienia” → „Moje dane” — plik ze wszystkimi listami i pozycjami.\n• Poprawić lub usunąć: listy i pozycje — bezpośrednio w aplikacji; całe konto — prośbą na adres kontaktowy.\n• Wypisać się: wiadomości dla gości — linkiem w każdej wiadomości; powiadomienia właściciela — w „Ustawieniach”.\n• Złożyć skargę do organu ochrony danych — w Polsce to Prezes Urzędu Ochrony Danych Osobowych (UODO)."
+        "body": "• Otrzymać swoje dane: „Ustawienia” → „Moje dane” — plik ze wszystkimi listami i pozycjami.\n• Poprawić lub usunąć: listy i pozycje — bezpośrednio w aplikacji; całe konto — „Ustawienia” → „Usuń konto”.\n• Wypisać się: wiadomości dla gości — linkiem w każdej wiadomości; powiadomienia właściciela — w „Ustawieniach”.\n• Złożyć skargę do organu ochrony danych — w Polsce to Prezes Urzędu Ochrony Danych Osobowych (UODO)."
       },
       "changes": {
         "title": "Zmiany",

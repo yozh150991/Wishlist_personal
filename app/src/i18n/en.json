@@ -804,7 +804,19 @@
       "cancel": "Cancel",
       "saved": "File saved."
     },
-    "deleteLater": "Deleting your account will be available here later."
+    "delete": {
+      "cta": "Delete account",
+      "title": "Delete your account for good?",
+      "body": "All your lists, items, sections and links will be gone. Links you shared will stop opening — guests will see “There’s no such list”. Picks you left on other people’s lists will stay. This can’t be undone.",
+      "keepData": "Want to keep your lists? Download “My data” above first.",
+      "passwordLabel": "Your password",
+      "confirm": "Delete for good",
+      "deleting": "Deleting…",
+      "wrongPassword": "That password doesn’t match.",
+      "tooMany": "Too many attempts. Try again in an hour.",
+      "noPassword": "Your account has no password. Set one with “Forgot your password?” on the sign-in screen, then come back here.",
+      "done": "Account deleted. Your lists and links have been erased."
+    }
   },
   "v2after": {
     "card": {
@@ -1213,11 +1225,11 @@
       },
       "keep": {
         "title": "How long we keep it",
-        "body": "For as long as the account and lists exist. Deleting a list deletes its items, guest links, and the picks, names and emails of that list's guests. Reports are kept until they're reviewed. Hosting providers keep technical logs (such as IP address and request time) for a limited period."
+        "body": "For as long as the account and lists exist. Deleting the account erases all of it at once; picks you left as a guest on other people’s lists stay, no longer tied to the account. Deleting a list deletes its items, guest links, and the picks, names and emails of that list's guests. Reports are kept until they're reviewed. Hosting providers keep technical logs (such as IP address and request time) for a limited period."
       },
       "rights": {
         "title": "Your rights",
-        "body": "• Get your data: Settings → My data — a file with all your lists and items.\n• Correct or delete: lists and items — right in the app; the whole account — by request to the contact address.\n• Unsubscribe: guest emails — with the link in every email; owner notifications — in Settings.\n• Complain to a data protection authority — in Poland that's the President of the Personal Data Protection Office (UODO)."
+        "body": "• Get your data: Settings → My data — a file with all your lists and items.\n• Correct or delete: lists and items — right in the app; the whole account — Settings → Delete account.\n• Unsubscribe: guest emails — with the link in every email; owner notifications — in Settings.\n• Complain to a data protection authority — in Poland that's the President of the Personal Data Protection Office (UODO)."
       },
       "changes": {
         "title": "Changes",
