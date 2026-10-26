@@ -22,6 +22,8 @@ test.describe('«Я дарую» v2', () => {
     await page.getByRole('navigation').getByRole('link', { name: /я дарую|daruję|i'm giving/i }).click();
     await expect(page).toHaveURL(/\/gifts$/);
     await expect(page.getByRole('heading', { level: 1, name: /я дарую|daruję|i'm giving/i })).toBeVisible();
+    // Три стани — три слова (ROADMAP 8.7): бронь, покупка, обіцяний внесок.
+    await expect(page.getByText(/гроші застосунок не переказує|aplikacja nie przelewa pieniędzy|the app doesn.t move money/i)).toBeVisible();
     await expect(page.locator('main[aria-busy]')).toHaveCount(0);
 
     const titles = await page.locator('.v2-sharecard__title').allInnerTexts();
