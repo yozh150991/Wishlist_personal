@@ -133,14 +133,17 @@ test.describe('з акаунтом власника', () => {
     await expect(g.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(g.getByText(/спершу натисніть|najpierw kliknij|tap .take. first/i)).toBeVisible();
 
-    // Перший похід у магазин без броні — аркуш; «Забронювати й перейти» бронює й відкриває магазин.
+    // Перший похід у магазин без броні — аркуш; «Забронювати й перейти» бронює,
+    // і лише тоді вкладка йде в магазин (ADR-075).
     const shop = /^(у магазин|do sklepu|to the shop)$/i;
     await card(g, 'Чайник').getByRole('link', { name: shop }).click();
     const ask = g.getByRole('dialog');
     await expect(ask.getByRole('heading', { name: /чайник/i })).toBeVisible();
     const popup = g.waitForEvent('popup');
-    await ask.getByRole('link', { name: /забронювати й перейти|zarezerwuj i przejdź|take it and go/i }).click();
-    await (await popup).close();
+    await ask.getByRole('button', { name: /забронювати й перейти|zarezerwuj i przejdź|take it and go/i }).click();
+    const tab = await popup;
+    await tab.waitForURL(shopUrl);
+    await tab.close();
     // Перша бронь — код, як і через «Беру».
     await expect(g.getByRole('dialog').getByRole('heading', { name: /за вами|twoje|is yours/i })).toBeVisible();
     await g.getByRole('dialog').getByRole('button', { name: /^(готово|gotowe|done)$/i }).click();
@@ -171,6 +174,59 @@ test.describe('з акаунтом власника', () => {
     await expect(card(g, 'Чайник').getByRole('button', { name: /^(зняти|zdejmij|release)$/i })).toBeVisible();
 
     await ctx.close();
+  });
+
+  test('два гості на одну штуку через «Забронювати й перейти»: магазин відкриває лише переможець (ADR-075)', async ({ page, browser }) => {
+    await signIn(page);
+    await createList(page, unique('Guest v2 race'));
+    await addItem(page, 'Кавоварка');
+    const link = await shareLink(page, ['Кавоварка'], unique('Гостям'));
+
+    const shopUrl = 'https://shop.example.com/e2e-race';
+    let shopHits = 0;
+    const open = async () => {
+      const ctx = await browser.newContext();
+      await ctx.route('https://shop.example.com/**', (r) => {
+        shopHits += 1;
+        return r.fulfill({ body: 'shop' });
+      });
+      await ctx.route('**/rpc/get_guest_list', async (route) => {
+        const res = await route.fetch();
+        const body = await res.json();
+        body.items = (body.items ?? []).map((i: { url: string | null }) => ({ ...i, url: shopUrl }));
+        await route.fulfill({ response: res, json: body });
+      });
+      const p = await ctx.newPage();
+      await p.goto(link);
+      await expect(p.getByRole('heading', { level: 1 })).toBeVisible();
+      return p;
+    };
+    const a = await open();
+    const b = await open();
+
+    // Обидва відкрили аркуш, поки позиція вільна.
+    const shop = /^(у магазин|do sklepu|to the shop)$/i;
+    const go = /забронювати й перейти|zarezerwuj i przejdź|take it and go/i;
+    for (const p of [a, b]) {
+      await card(p, 'Кавоварка').getByRole('link', { name: shop }).click();
+      await expect(p.getByRole('dialog').getByRole('button', { name: go })).toBeVisible();
+    }
+
+    // A першим: бронь, вкладка йде в магазин.
+    const tabA = a.waitForEvent('popup');
+    await a.getByRole('dialog').getByRole('button', { name: go }).click();
+    await (await tabA).waitForURL(shopUrl);
+    expect(shopHits).toBe(1);
+
+    // B програє: вкладка закривається, «встигли раніше», магазину для B немає.
+    const tabB = b.waitForEvent('popup');
+    await b.getByRole('dialog').getByRole('button', { name: go }).click();
+    const lostTab = await tabB;
+    await expect.poll(() => lostTab.isClosed()).toBe(true);
+    await expect(b.getByRole('dialog').getByRole('heading', { name: /щойно взяв хтось інший|ktoś właśnie wziął|someone just took/i })).toBeVisible();
+    expect(shopHits).toBe(1);
+
+    for (const p of [a, b]) await p.context().close();
   });
 });
 

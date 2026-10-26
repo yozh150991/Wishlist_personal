@@ -1215,7 +1215,13 @@
       "title": "Zarezerwować „{title}”?",
       "body": "Idziesz do sklepu. Oznacz to jako swoje — inni goście zobaczą, że jest już wzięte.",
       "book": "Zarezerwuj i przejdź",
-      "look": "Tylko popatrzę"
+      "look": "Tylko popatrzę",
+      "booking": "Rezerwujemy…",
+      "wait": "Rezerwujemy „{title}”… Sklep otworzy się tu za chwilę."
+    },
+    "shopGo": {
+      "body": "Sklep nie otworzył się sam — przejdź przez link.",
+      "open": "Przejdź do sklepu"
     },
     "ownerBack": "Wróć",
     "itemsHeading": "Pozycje listy"
