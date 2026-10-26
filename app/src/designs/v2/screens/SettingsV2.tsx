@@ -15,6 +15,8 @@ import { fetchSections } from '../../../lib/sections';
 import type { Section } from '../../../lib/sections';
 import { downloadText } from '../../../lib/download';
 import { deleteAccount } from '../../../lib/account';
+import { bookmarkletHref } from '../../../lib/bookmarklet';
+import { publicOrigin } from '../../../lib/supabase';
 import { DESKTOP } from '../ShellV2';
 import { NoteV2, PasswordFieldV2 } from './AuthPartsV2';
 import { SheetV2, SignOutV2, SwitchV2 } from './CommonV2';
@@ -60,7 +62,7 @@ function Choice<T extends string>({
  * Кожен вибір застосовується одразу — кнопки «Зберегти» немає. Порядок:
  * акаунт → доступність (висока контрастність над кольорами, бо важливіша за
  * смак) → кольори → тема → мова → сповіщення (P, ADR-049) → застосунок на
- * телефоні → мої дані → вигляд застосунку → вихід і видалення акаунта (ADR-072).
+ * телефоні → кнопка «У вішліст» (лише на компʼютері, ADR-076) → мої дані → вигляд застосунку → вихід і видалення акаунта (ADR-072).
  * Безпека (вхід із нового пристрою, вихід скрізь, ADR-074) — одразу після сповіщень. Тема, схема й контраст їдуть у профіль (`AppearanceSync`)
  * — для обох версій однаково; вигляд події — властивість окремого списку,
  * тут його немає (ADR-034).
@@ -192,6 +194,9 @@ export default function SettingsV2() {
           {install !== 'installed' && desktop && <QrV2 />}
         </section>
 
+        {/* Закладки з кодом — лише браузер на компʼютері; на телефоні є «Поділитися». */}
+        {desktop && <BookmarkletCardV2 />}
+
         <MyDataV2 />
 
         <section className="v2-settings__card v2-settings__card--wide" aria-labelledby="v2-set-out">
@@ -217,6 +222,44 @@ export default function SettingsV2() {
  * телефон, а він в іншій руці. Бібліотека тягнеться ліниво й не входить у
  * кеш офлайн-оболонки (`globIgnores` у `vite.config.ts`).
  */
+/**
+ * Кнопка «У вішліст» для панелі закладок (ROADMAP 8.4, ADR-076). Посилання
+ * `javascript:` React у `href` не пускає — адресу ставимо через ref, у DOM
+ * напряму. На цій сторінці закладка не виконується: натиск лише підказує,
+ * що її треба перетягнути (та й CSP сайту такий код не пустив би).
+ */
+function BookmarkletCardV2() {
+  const { t } = useI18n();
+  const link = useRef<HTMLAnchorElement>(null);
+  const [hint, setHint] = useState(false);
+
+  useEffect(() => {
+    link.current?.setAttribute('href', bookmarkletHref(publicOrigin));
+  }, []);
+
+  return (
+    <section className="v2-settings__card" aria-labelledby="v2-set-bookmarklet" data-testid="bookmarklet">
+      <h2 className="v2-settings__label" id="v2-set-bookmarklet">
+        {t('settings.bookmarklet.title')}
+      </h2>
+      <p className="v2-hint v2-hint--start">{t('settings.bookmarklet.body')}</p>
+      <p className="v2-hint v2-hint--start">{t('settings.bookmarklet.steps')}</p>
+      <a
+        ref={link}
+        className="v2-btn v2-btn--outline v2-btn--start"
+        draggable="true"
+        onClick={(e) => {
+          e.preventDefault();
+          setHint(true);
+        }}
+      >
+        {t('settings.bookmarklet.button')}
+      </a>
+      {hint && <NoteV2 tone="info">{t('settings.bookmarklet.drag')}</NoteV2>}
+    </section>
+  );
+}
+
 function QrV2() {
   const { t } = useI18n();
   const [svg, setSvg] = useState<string | null>(null);

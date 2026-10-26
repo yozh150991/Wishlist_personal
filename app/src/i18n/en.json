@@ -43,7 +43,14 @@
     "highContrastHint": "Turns on Charcoal (AAA) and stops list styles from changing it. Overrides everything below.",
     "highContrastSystem": "Turned on by your system: the device asks for more contrast. You can turn it off in the device settings.",
     "schemeLocked": "While high contrast is on, the scheme doesn't apply. Your choice is kept for when you turn it off.",
-    "nichHint": "Night is dark by default. You can pick the light theme under Theme."
+    "nichHint": "Night is dark by default. You can pick the light theme under Theme.",
+    "bookmarklet": {
+      "title": "“To wishlist” browser button",
+      "body": "Allegro, Amazon or OLX sometimes won’t give us the product details. This button takes the name, price and photo straight from the page you have open — on any site.",
+      "steps": "Drag the button to your bookmarks bar (Ctrl+Shift+B if you can’t see it). On a product page, click the bookmark — “Add to Wishlist” opens with the fields filled in.",
+      "button": "To wishlist",
+      "drag": "Drag the button to your bookmarks bar — clicking it here does nothing."
+    }
   },
   "errors": {
     "invalidCredentials": "That email and password don't match.",

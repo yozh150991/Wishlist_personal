@@ -104,6 +104,56 @@ test.describe('«Додати в Wishlist» з акаунтом', () => {
     await expect(card(page, itemTitle)).toContainText(/shop\.ua/);
   });
 
+  test('з кнопки «У вішліст» (ADR-076): поля зі сторінки, парсер не кличемо', async ({ page }) => {
+    let parsed = 0;
+    await page.unroute(/\/parse$/);
+    await page.route(/\/parse$/, (route) => {
+      parsed += 1;
+      return route.fulfill({ status: 502, body: '' });
+    });
+    await signInV2(page);
+    const listTitle = unique('V2 add page');
+    await newList(page, listTitle);
+
+    const itemTitle = unique('Чайник скляний');
+    const q = new URLSearchParams({
+      src: 'page',
+      url: `https://allegro.example/oferta/czajnik-${Date.now()}`,
+      title: itemTitle,
+      price: '129.99',
+      currency: 'PLN',
+      image: 'https://cdn.example.com/kettle.jpg',
+    });
+    await page.goto(`/add?${q}`);
+    await expect(page).toHaveURL(/\/add$/);
+    await expect(page.locator('input[name="title"]')).toHaveValue(itemTitle);
+    await expect(page.locator('.v2-preview__meta')).toContainText(/129[,.]99/);
+    await expect(page.locator('.v2-preview__img')).toHaveAttribute('src', 'https://cdn.example.com/kettle.jpg');
+    await expect(page.getByText(/не віддав опису|nie podał opisu|didn't share a description/i)).toHaveCount(0);
+    await page.getByRole('radio', { name: listTitle }).check();
+    await page.getByRole('button', { name: /^(додати|dodaj|add)$/i }).click();
+    await expect(page.getByRole('heading', { name: new RegExp(listTitle) })).toBeVisible();
+    expect(parsed).toBe(0);
+
+    await page.getByRole('link', { name: /відкрити список|otwórz listę|open the list/i }).click();
+    await expect(card(page, itemTitle)).toContainText(/129[,.]99/);
+  });
+
+  test('кнопка «У вішліст» у Налаштуваннях — лише на компʼютері, перетягують, а не натискають', async ({ page }, info) => {
+    await signInV2(page);
+    await page.goto('/settings');
+    const box = page.getByTestId('bookmarklet');
+    if (info.project.name === 'mobile') {
+      await expect(box).toHaveCount(0);
+      return;
+    }
+    const link = box.getByRole('link', { name: /^(у вішліст|do wishlisty|to wishlist)$/i });
+    await expect(link).toHaveAttribute('href', /^javascript:/);
+    await link.click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(box.getByRole('status')).toHaveText(/перетягнути|przeciągnąć|clicking it here does nothing/i);
+  });
+
   test('лише посилання, магазин мовчить — «Зберегти чернетку», у списку «Потрібна назва»', async ({ page }) => {
     await signInV2(page);
     const listTitle = unique('V2 add draft');
