@@ -958,13 +958,28 @@
       "ios": "Na iPhonie i iPadzie push działa tylko w zainstalowanej aplikacji: „Udostępnij” → „Do ekranu początkowego”.",
       "failed": "Nie udało się włączyć push w tej przeglądarce. E-maile możesz włączyć poniżej."
     },
-    "security": "Bezpieczeństwo konta",
     "securityHint": "Zmiana hasła",
     "securityAlways": "E-mail · zawsze",
     "quiet": "Od 22:00 do 9:00 Twojego czasu nie przeszkadzamy, a kilka zdarzeń w ciągu 3 godzin przychodzi jednym powiadomieniem.",
     "email": "E-maile na adres {email}.",
     "guests": "Nie ma powiadomień o tym, co wzięli goście: to niespodzianka także dla Ciebie.",
     "off": "Wyłącz wszystkie powiadomienia"
+  },
+  "v2security": {
+    "title": "Bezpieczeństwo",
+    "signin": "Logowanie z nowego urządzenia",
+    "signinHint": "E-mail, gdy tylko ktoś zaloguje się z przeglądarki lub urządzenia, którego jeszcze nie było. Przychodzi do godziny po logowaniu.",
+    "passwordHint": "E-mail od Supabase przy każdej zmianie hasła.",
+    "pushHint": "Push przyjdzie na urządzenia, na których włączono go w „Powiadomieniach”. Teraz takich nie ma.",
+    "offHint": "O logowaniu z nowego urządzenia się nie dowiesz. Zostaw przynajmniej e-mail.",
+    "email": "E-maile — na {email}.",
+    "changePassword": "Zmień hasło",
+    "everywhere": "Wyloguj na wszystkich urządzeniach",
+    "everywhereHint": "Nie poznajesz logowania? Najpierw zmień hasło, potem wyloguj się wszędzie — wtedy stare hasło już nie pomoże.",
+    "everywhereTitle": "Wylogować na wszystkich urządzeniach?",
+    "everywhereBody": "Sesja skończy się na każdym urządzeniu, także tutaj, a push nie będzie już nigdzie przychodzić. Na innych urządzeniach otwarte strony mogą działać jeszcze do godziny.",
+    "everywhereConfirm": "Wyloguj wszędzie",
+    "everywhereBusy": "Wylogowuję…"
   },
   "v2date": {
     "placeholder": "DD.MM.RRRR",
@@ -1213,7 +1228,7 @@
     "s": {
       "owner": {
         "title": "Co przechowujemy o właścicielu konta",
-        "body": "• E-mail i hasło. Hasło jest przechowywane wyłącznie jako zabezpieczony skrót w usłudze logowania — nikt nie może go odczytać.\n• Jeśli logujesz się przez Google — e-mail oraz imię i zdjęcie profilu, które Google przekazuje przy logowaniu. Aplikacja korzysta tylko z e-maila.\n• Twoje listy, pozycje, działy, linki dla gości, wygląd, język, motyw i ustawienia powiadomień.\n• Zdjęcia, które sam przesłałeś. Jeszcze w przeglądarce są pomniejszane, a dane o miejscu zrobienia i telefonie — usuwane. Zdjęcie leży pod losowym adresem: widzi je każdy, komu pokazano pozycję — Ty i goście linku.\n• Dla powiadomień push — adres subskrypcji tego urządzenia; wylogowanie go usuwa."
+        "body": "• E-mail i hasło. Hasło jest przechowywane wyłącznie jako zabezpieczony skrót w usłudze logowania — nikt nie może go odczytać.\n• Jeśli logujesz się przez Google — e-mail oraz imię i zdjęcie profilu, które Google przekazuje przy logowaniu. Aplikacja korzysta tylko z e-maila.\n• Twoje listy, pozycje, działy, linki dla gości, wygląd, język, motyw i ustawienia powiadomień.\n• Zdjęcia, które sam przesłałeś. Jeszcze w przeglądarce są pomniejszane, a dane o miejscu zrobienia i telefonie — usuwane. Zdjęcie leży pod losowym adresem: widzi je każdy, komu pokazano pozycję — Ty i goście linku.\n• Dla powiadomień push — adres subskrypcji tego urządzenia; wylogowanie go usuwa.\n• Dla e-maila o logowaniu z nowego urządzenia — nazwy przeglądarek i systemów, z których się logowałeś („Chrome · Android”). Czas i adres IP logowania trafiają do tego e-maila do Ciebie i nigdzie indziej nie są przechowywane."
       },
       "guests": {
         "title": "Co przechowujemy o gościach",

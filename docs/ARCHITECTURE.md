@@ -170,7 +170,7 @@ Cloud Scheduler, щодня 04:15 за Варшавою
 ```
 Сервіс нічого не знає про позначки гостей і нічого не міняє в тому, що бачить гість: гостьові RPC полів `link_*` не віддають. Ціну в списку він теж не чіпає — лише запам'ятовує, що побачив у магазині; рішення за власником (v2, діалог позиції). Нове посилання скидає висновок тригером `items_link_reset`, тож будь-яка заміна посилання — з форми, імпорту чи черги — дає чесне «ще не перевірено».
 
-Код задач — `services/parser/app/jobs_*.py`: налаштування (`jobs_config.py`), доступ до бази (`jobs_store.py`), сама перевірка (`jobs_links.py`), сповіщення (`jobs_notify.py`, `jobs_push.py`, `jobs_mail.py`, `jobs_texts.py`), курс НБП (`jobs_rates.py`), прибирання своїх фото (`jobs_photos.py`, ADR-073), застосунок (`jobs_main.py`). Образ той самий, що й у парсера; який застосунок запускати, каже змінна `APP_MODULE`. Відкритий парсер (`app.main`) модулів задач не імпортує.
+Код задач — `services/parser/app/jobs_*.py`: налаштування (`jobs_config.py`), доступ до бази (`jobs_store.py`), сама перевірка (`jobs_links.py`), сповіщення (`jobs_notify.py`, `jobs_push.py`, `jobs_mail.py`, `jobs_texts.py`), курс НБП (`jobs_rates.py`), прибирання своїх фото (`jobs_photos.py`, ADR-073), вхід із нового пристрою (`jobs_signin.py`, ADR-074), застосунок (`jobs_main.py`). Образ той самий, що й у парсера; який застосунок запускати, каже змінна `APP_MODULE`. Відкритий парсер (`app.main`) модулів задач не імпортує.
 
 ### Сповіщення власника (ADR-049)
 ```
@@ -192,6 +192,8 @@ Cloud Scheduler, щогодини :05 → POST /jobs/notify у wishlist-jobs
 Service Worker показує push через `push-sw.js` (підключений `workbox.importScripts`): заголовок, текст і відносна адреса всередині застосунку. Натиск фокусує відкриту вкладку й веде туди, або відкриває нову. Чужих доменів із push не відкриває.
 
 Вихід з акаунта знімає підписку цього пристрою (`forgetPushOnThisDevice` у `lib/auth.tsx`): поки сесія жива — ще й рядок на сервері (`forget_push_subscription`). Наступна людина за пристроєм не отримає сповіщень із назвами чужих списків. Адреса підписки йде лише в тілі запитів, ніколи — фільтром у рядку адреси.
+
+**Безпека (ADR-074).** Картка `SecurityCardV2` (`SecurityV2.tsx`) у Налаштуваннях одразу після сповіщень і видна завжди. Вибір «Вхід із нового пристрою» (пошта, push) пишеться в той самий рядок `notification_settings`, що й сповіщення, але поза `NOTIFY_KINDS` (`signInFlags`, `SIGNIN_DEFAULTS` у `lib/notifyRules.ts`): без рядка діє лист. Самі листи шле `wishlist-jobs` (`jobs_signin.py`): нові сесії з `recent_sign_ins`, User-Agent → «браузер · система», порівняння з `known_devices`. «Вийти на всіх пристроях» — `signOutEverywhere` у `lib/auth.tsx`: `forget_all_push_subscriptions`, зняти push браузера, `signOut({ scope: 'global' })`; далі `SIGNED_OUT` стирає офлайн-копії й чергу, як за звичайного виходу.
 
 **Своє фото позиції (ADR-073).** У формі позиції під полем «Фото» — «Завантажити своє фото» (`PhotoUploadV2` у `ItemSheetV2.tsx`, вибір файлу — свій, як в імпорті). `lib/photos.ts` розкодовує файл (`createImageBitmap`, поворот з EXIF), малює його на полотні до 1600 px по довшій стороні й перекодовує в WebP чи JPEG до 2 МБ — так EXIF не доїжджає до сховища. Потім `reserve_item_photo` видає випадкову адресу, файл вантажиться в публічний бакет `item-photos`, і його публічна адреса стає `image_url` — далі фото нічим не відрізняється від фото з магазину. Поки фото своє (`isOwnPhoto`), замість поля адреси — прев'ю, «Твоє фото» й «Замінити фото». Запити до сховища обмежені тайм-аутом 60 с у `lib/supabase.ts` і без мережі відхиляються одразу. Файли, на які вже ніщо не посилається, прибирає `wishlist-jobs` (`jobs_photos.py`) у щоденному виклику `check-links`.
 
@@ -281,8 +283,8 @@ services/parser/
 │   ├── cache.py  ratelimit.py  config.py  models.py
 │   ├── jobs_main.py  jobs_config.py  jobs_store.py  jobs_links.py
 │   ├── jobs_notify.py  jobs_push.py  jobs_mail.py  jobs_texts.py
-│   └── jobs_rates.py  jobs_photos.py
-│                     # закритий сервіс задач wishlist-jobs (ADR-048, ADR-049, ADR-051, ADR-073), APP_MODULE=app.jobs_main:app
+│   └── jobs_rates.py  jobs_photos.py  jobs_signin.py
+│                     # закритий сервіс задач wishlist-jobs (ADR-048, ADR-049, ADR-051, ADR-073, ADR-074), APP_MODULE=app.jobs_main:app
 └── tests/            # pytest + HTML-фікстури; test_jobs.py, test_notify.py — задачі з підмінною базою
 ```
 

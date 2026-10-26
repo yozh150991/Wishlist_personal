@@ -135,12 +135,13 @@ select set_eq(
   -- повертають, адреса підписки — у тілі запиту.
   -- delete_my_account — видалення власного акаунта після звірки пароля (ADR-072).
   -- reserve_item_photo — адреса для свого фото позиції (ADR-073).
+  -- forget_all_push_subscriptions — «Вийти на всіх пристроях», нічого не повертає (ADR-074).
   array['register_share_view', 'release_claim', 'redeem_guest_code',
         'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set', 'ack_claim_change',
         'set_claim_bought', 'get_share_card', 'report_share', 'get_my_gifts', 'attach_guest_key',
         'start_pool', 'pledge_pool', 'leave_pool', 'close_pool', 'cancel_pool', 'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
         'reorder_items', 'reorder_sections', 'save_push_subscription', 'forget_push_subscription',
-        'delete_my_account', 'reserve_item_photo'],
+        'delete_my_account', 'reserve_item_photo', 'forget_all_push_subscriptions'],
   'authenticated може викликати лише гостьові RPC і функції власника'
 );
 

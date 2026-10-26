@@ -19,6 +19,7 @@ import { DESKTOP } from '../ShellV2';
 import { NoteV2, PasswordFieldV2 } from './AuthPartsV2';
 import { SheetV2, SignOutV2, SwitchV2 } from './CommonV2';
 import { NotifyCardV2 } from './NotifyV2';
+import { SecurityCardV2 } from './SecurityV2';
 
 const LANGUAGE: Record<Locale, string> = { uk: 'Українська', pl: 'Polski', en: 'English' };
 
@@ -59,7 +60,8 @@ function Choice<T extends string>({
  * Кожен вибір застосовується одразу — кнопки «Зберегти» немає. Порядок:
  * акаунт → доступність (висока контрастність над кольорами, бо важливіша за
  * смак) → кольори → тема → мова → сповіщення (P, ADR-049) → застосунок на
- * телефоні → мої дані → вигляд застосунку → вихід і видалення акаунта (ADR-072). Тема, схема й контраст їдуть у профіль (`AppearanceSync`)
+ * телефоні → мої дані → вигляд застосунку → вихід і видалення акаунта (ADR-072).
+ * Безпека (вхід із нового пристрою, вихід скрізь, ADR-074) — одразу після сповіщень. Тема, схема й контраст їдуть у профіль (`AppearanceSync`)
  * — для обох версій однаково; вигляд події — властивість окремого списку,
  * тут його немає (ADR-034).
  *
@@ -168,6 +170,8 @@ export default function SettingsV2() {
         </section>
 
         <NotifyCardV2 />
+
+        <SecurityCardV2 />
 
         <section className="v2-settings__card" aria-labelledby="v2-set-install" data-testid="install">
           <h2 className="v2-settings__label" id="v2-set-install">

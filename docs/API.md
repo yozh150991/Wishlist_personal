@@ -254,6 +254,16 @@ const url = supabase.storage.from('item-photos').getPublicUrl(path).data.publicU
 ### `item_photo_orphans` / `forget_item_photos` — лише `service_role`
 Прибирання своїх фото (ADR-073), викликає `wishlist-jobs` раз на добу. `item_photo_orphans(p_limit)` — адреси, видані понад добу тому, на які не посилається жоден `items.image_url` (будь-якого власника); `forget_item_photos(p_paths)` — забути рядки після того, як файли видалено зі сховища (`DELETE /storage/v1/object/item-photos`, тіло `{"prefixes": [...]}`).
 
+### `forget_all_push_subscriptions` — authenticated
+```ts
+await supabase.rpc('forget_all_push_subscriptions');   // 204
+await supabase.auth.signOut({ scope: 'global' });
+```
+«Вийти на всіх пристроях» (ADR-074): прибирає всі push-підписки власника й нічого не повертає. Викликається перед глобальним виходом (`lib/auth.tsx`, `signOutEverywhere`).
+
+### `recent_sign_ins` — лише `service_role`
+`recent_sign_ins(p_since, p_limit)` → `session_id, user_id, created_at, user_agent, ip` — сесії Supabase Auth, створені після `p_since`, у порядку входу (ADR-074). Читає лише `wishlist-jobs` для листа «вхід із нового пристрою»; IP іде в лист власникові й ніде не зберігається.
+
 ### Права на виклик
 
 | Функція | Ролі |
@@ -262,8 +272,8 @@ const url = supabase.storage.from('item-photos').getPublicUrl(path).data.publicU
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
 | `ack_claim_change`, `get_share_card`, `report_share`, `start_pool`, `pledge_pool`, `leave_pool`, `close_pool`, `cancel_pool` | `anon`, `authenticated` |
 | `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
-| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account`, `reserve_item_photo` | `authenticated` |
-| `item_photo_orphans`, `forget_item_photos` | лише `service_role` (`wishlist-jobs`) |
+| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account`, `reserve_item_photo`, `forget_all_push_subscriptions` | `authenticated` |
+| `item_photo_orphans`, `forget_item_photos`, `recent_sign_ins` | лише `service_role` (`wishlist-jobs`) |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
 Права задано міграціями `20260910120300_grants.sql` і `20260916220000_revoke_default_function_grants.sql`. Перша відкликала лише `PUBLIC`, і функції власника лишались доступними `anon` через явні гранти Supabase за замовчуванням; друга це закрила. Кожна нова RPC-функція отримує гранти явно й відкликає їх у конкретних ролей (CLAUDE.md §3.4). Таблицю вище перевіряє `supabase/tests/database/01_schema_guards.test.sql`.
@@ -472,6 +482,8 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 
 **Лист** — `POST https://api.brevo.com/v3/smtp/email` з `api-key`, відправник `MAIL_FROM` з ім'ям «Wishlist», тег `wishlist-notify`. Раз на добу — `GET /v3/account`, щоб ключ не згас за 90 днів тиші.
 
+
+Першим кроком того самого виклику (ADR-074) — вхід із нового пристрою: нові сесії за 3 години, листи й push одразу, без тиші й об'єднання. У відповіді — лічильники `signin_alerts`, `signin_first`, `signin_off`, `signin_nowhere`, `signin_retry`, `signin_errors`; збій цього кроку звичайних сповіщень не зупиняє.
 ### `GET /health`
 ```json
 {

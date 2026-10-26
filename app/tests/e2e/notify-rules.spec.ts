@@ -7,6 +7,7 @@ import {
   anyPushOn,
   enabledDefaults,
   flag,
+  signInFlags,
   vapidKeyBytes,
 } from '../../src/lib/notifyRules';
 
@@ -52,4 +53,21 @@ test('ключ VAPID із base64url — 65 байтів нестиснутої �
   const bytes = vapidKeyBytes(key);
   expect(bytes.length).toBe(65);
   expect(bytes[0]).toBe(4);
+});
+
+test.describe('вхід із нового пристрою (ADR-074)', () => {
+  test('без рядка налаштувань — лист так, push ні', () => {
+    expect(signInFlags(null)).toEqual({ signin_push: false, signin_email: true });
+    expect(signInFlags(undefined)).toEqual({ signin_push: false, signin_email: true });
+    expect(signInFlags({})).toEqual({ signin_push: false, signin_email: true });
+  });
+
+  test('збережений вибір — як є, зокрема вимкнений лист', () => {
+    expect(signInFlags({ signin_push: true, signin_email: false })).toEqual({ signin_push: true, signin_email: false });
+  });
+
+  test('«Увімкнути сповіщення» й «Вимкнути все» входу не чіпають', () => {
+    expect(Object.keys(enabledDefaults(true)).some((k) => k.startsWith('signin'))).toBe(false);
+    expect(Object.keys(allOff()).some((k) => k.startsWith('signin'))).toBe(false);
+  });
 });

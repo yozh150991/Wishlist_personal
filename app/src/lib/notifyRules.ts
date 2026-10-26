@@ -10,11 +10,29 @@ export type NotifyChannel = 'push' | 'email';
 export type NotifyFlag = `${NotifyKind}_${NotifyChannel}`;
 export type NotifyFlags = Record<NotifyFlag, boolean>;
 
-export type NotifySettings = NotifyFlags & {
-  owner_id: string;
-  time_zone: string;
-  last_sent_at: string | null;
-};
+/**
+ * Вхід із нового пристрою (ADR-074) — поза `NOTIFY_KINDS`: це безпека, а не
+ * новини. Не вмикається кнопкою «Увімкнути сповіщення», не вимикається
+ * «Вимкнути все», а лист типово ввімкнений навіть без рядка налаштувань.
+ */
+export type SignInFlags = { signin_push: boolean; signin_email: boolean };
+
+/** Що діє, поки рядка налаштувань немає: лист так, push ні. */
+export const SIGNIN_DEFAULTS: SignInFlags = { signin_push: false, signin_email: true };
+
+export function signInFlags(s: Partial<SignInFlags> | null | undefined): SignInFlags {
+  return {
+    signin_push: s?.signin_push ?? SIGNIN_DEFAULTS.signin_push,
+    signin_email: s?.signin_email ?? SIGNIN_DEFAULTS.signin_email,
+  };
+}
+
+export type NotifySettings = NotifyFlags &
+  SignInFlags & {
+    owner_id: string;
+    time_zone: string;
+    last_sent_at: string | null;
+  };
 
 /**
  * Події, заради яких пошта вмикається сама, коли push на пристрої неможливий
