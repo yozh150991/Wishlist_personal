@@ -792,6 +792,7 @@
   "v2gifts": {
     "title": "Daruję",
     "subtitle": "Co bierzesz z cudzych list — ze wszystkich urządzeń, na których rezerwowałeś po zalogowaniu lub z adresem e-mail tego konta.",
+    "legend": "„Biorę” — rezerwacja, „Kupione” — twój znak po zakupie, „Dokładam się” — obiecana wpłata na zbiórkę. Aplikacja nie przelewa pieniędzy: płacisz w sklepie albo organizatorowi zbiórki sam.",
     "upcoming": "Przed nami",
     "past": "Po święcie",
     "archived": "W archiwum",
@@ -1072,7 +1073,7 @@
       "closed": "Zrzutka zamknięta",
       "raised": "Obiecano {raised} z {goal}",
       "count": "uczestników: {n}",
-      "mine": "Dokładasz: {amount}",
+      "mine": "Obiecałeś: {amount}",
       "how": "Jak się dołożyć:",
       "manageTitle": "Twoja zrzutka na „{title}”",
       "who": "Kto ile obiecał",
@@ -1149,6 +1150,7 @@
     "book": {
       "title": "Bierzesz „{title}”?",
       "body": "Kto wziął, właściciel się nie dowie — ani teraz, ani po święcie.",
+      "notPaid": "Rezerwacja to nie płatność: pokazuje tylko innym gościom, że ktoś już to wziął. Kupujesz sam, gdzie ci wygodnie.",
       "name": "Jak cię podpisać · opcjonalnie",
       "nameHint": "Żeby rozpoznać swoje rezerwacje. Ani właściciel, ani inni goście podpisu nie widzą.",
       "qty": "Ile bierzesz",
@@ -1181,6 +1183,7 @@
     "mineSheet": {
       "title": "Moje rezerwacje",
       "count": "Rezerwacji na tej liście: {n}",
+      "states": "„Biorę” — znak dla innych gości. „Już kupione” — przypomnienie dla ciebie. Właściciel nie widzi ani jednego, ani drugiego, a aplikacja niczego nie opłaca.",
       "signed": "Podpis: {name}",
       "release": "Zdejmij rezerwację",
       "keepTitle": "Żeby wrócić z innego urządzenia",

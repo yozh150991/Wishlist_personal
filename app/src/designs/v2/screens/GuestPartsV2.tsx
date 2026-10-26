@@ -485,6 +485,8 @@ export function BookSheetV2({
             {t('v2guest.book.title', { title: it?.title ?? '' })}
           </h2>
           <p className="v2-lede">{t('v2guest.book.body')}</p>
+          {/* Бронь, покупка й внесок — різні речі (ROADMAP 8.7): бронь грошей не стосується. */}
+          <p className="v2-hint v2-hint--start">{t('v2guest.book.notPaid')}</p>
           {error && <NoteV2 tone="error">{error}</NoteV2>}
           {multi && (
             <div className="v2-field">
@@ -603,6 +605,7 @@ export function MyPicksSheetV2({
         {name ? ` · ${t('v2guest.mineSheet.signed', { name })}` : ''}
         {email ? ` · ${t('v2guest.mineSheet.email', { email })}` : ''}
       </p>
+      <p className="v2-hint v2-hint--start">{t('v2guest.mineSheet.states')}</p>
       <ul className="v2-gpicks">
         {items.map(({ item, mine }) => {
           const price = moneyShort(item.price, item.currency ?? currency, locale);

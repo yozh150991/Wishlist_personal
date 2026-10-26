@@ -373,7 +373,7 @@ test('спільний збір на /l/ — відкрити, долучити�
   await sheet.locator('input[name="pool_amount"]').fill('150');
   await sheet.getByRole('button', { name: /^(долучитися|dołączam|count me in)$/i }).click();
   await expect(sheet).toHaveCount(0);
-  await expect(card('Велосипед')).toContainText(/ви скидаєтесь|dokładasz|you're chipping in/i);
+  await expect(card('Велосипед')).toContainText(/ви обіцяли|obiecałeś|you pledged/i);
   expect(calls.at(-1)).toMatchObject({ fn: 'pledge', p_pool_id: 'pool-1', p_name: 'Тарас', p_amount: 150 });
 
   // Свій збір: ціль за замовчуванням — ціна позиції.
@@ -397,7 +397,7 @@ test('спільний збір на /l/ — відкрити, долучити�
   await expect(page.getByText(/оля|ігор|blik/i)).toHaveCount(0);
 });
 
-test('код після першої броні: як повернути броні й лист на пошту гостя (ROADMAP 8.6)', async ({ page }) => {
+test('код після першої броні: як повернути броні й лист на пошту гостя (ROADMAP 8.6, 8.7)', async ({ page }) => {
   // Відповіді бази підставляємо: що лист несе той самий код, стереже pytest (guest_mail).
   let guest: { code: string; name: string | null; email: string | null } | null = null;
   const body = () => ({
@@ -423,6 +423,8 @@ test('код після першої броні: як повернути бро�
   await page.goto('/l/e2e-recovery-token');
   await card(page, 'Ваза').getByRole('button', { name: takeBtn }).click();
   const sheet = page.getByRole('dialog');
+  // Бронь — не оплата (ROADMAP 8.7).
+  await expect(sheet.getByText(/бронь — це не оплата|rezerwacja to nie płatność|taking isn.t paying/i)).toBeVisible();
   await sheet.locator('input[name="guest_email"]').fill(MAIL);
   await sheet.getByRole('button', { name: /^(забронювати|zarezerwuj|take it)$/i }).click();
 
@@ -433,4 +435,9 @@ test('код після першої броні: як повернути бро�
   await expect(sheet.getByText(/уже маю броні|mam już rezerwacje|i already have picks/i)).toBeVisible();
   await expect(sheet.getByText(MAIL)).toBeVisible();
   await expect(sheet.getByRole('button', { name: /надіслати собі посилання|wyślij sobie link|send myself the link/i })).toBeVisible();
+
+  // «Мої броні» розводять «Беру» й «Уже куплено»: обидва — не оплата й не для власника.
+  await sheet.getByRole('button', { name: /^(готово|gotowe|done)$/i }).click();
+  await page.getByRole('button', { name: /мої броні · 1|moje rezerwacje · 1|my picks · 1/i }).click();
+  await expect(page.getByRole('dialog').getByText(/нічого не оплачує|niczego nie opłaca|doesn.t pay for anything/i)).toBeVisible();
 });

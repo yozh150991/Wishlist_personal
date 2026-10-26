@@ -133,6 +133,8 @@ export default function GiftsV2() {
       <div className="v2-head">
         <h1 className="v2-page__title">{t('v2gifts.title')}</h1>
         <p className="v2-lede">{t('v2gifts.subtitle')}</p>
+        {/* Три слова — три стани (ROADMAP 8.7): бронь, покупка, обіцяний внесок. */}
+        <p className="v2-hint v2-hint--start">{t('v2gifts.legend')}</p>
       </div>
 
       {loading ? (

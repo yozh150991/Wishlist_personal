@@ -792,6 +792,7 @@
   "v2gifts": {
     "title": "I'm giving",
     "subtitle": "What you're taking from other people's lists — from every device where you reserved while signed in or left this account's email.",
+    "legend": "“Taking” is a pick, “Bought” is your own note after buying, “Chipping in” is a pledge to a group gift. The app doesn’t move money: you pay the shop or the organiser yourself.",
     "upcoming": "Coming up",
     "past": "Already celebrated",
     "archived": "Archived",
@@ -1072,7 +1073,7 @@
       "closed": "Collection closed",
       "raised": "{raised} of {goal} promised",
       "count": "participants: {n}",
-      "mine": "You're chipping in: {amount}",
+      "mine": "You pledged: {amount}",
       "how": "How to chip in:",
       "manageTitle": "Your collection for “{title}”",
       "who": "Who promised what",
@@ -1149,6 +1150,7 @@
     "book": {
       "title": "Taking “{title}”?",
       "body": "The owner won't find out who took it — not now, not after the celebration.",
+      "notPaid": "Taking isn’t paying: it only shows other guests that someone already has it. You buy it yourself, wherever suits you.",
       "name": "Your name · optional",
       "nameHint": "So you can recognise your picks. Neither the owner nor other guests can see it.",
       "qty": "How many",
@@ -1181,6 +1183,7 @@
     "mineSheet": {
       "title": "My picks",
       "count": "Picks on this list: {n}",
+      "states": "“Take” is a sign for other guests. “Already bought” is a reminder for you. The owner sees neither, and the app doesn’t pay for anything.",
       "signed": "Name: {name}",
       "release": "Release pick",
       "keepTitle": "To come back from another device",
