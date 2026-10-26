@@ -43,7 +43,14 @@
     "highContrastHint": "Włącza Węgiel (AAA) i nie pozwala wyglądowi list go zmieniać. Wygrywa ze wszystkim poniżej.",
     "highContrastSystem": "Włączone przez system: urządzenie prosi o wzmocniony kontrast. Wyłączysz to w ustawieniach urządzenia.",
     "schemeLocked": "Dopóki włączony jest wysoki kontrast, schemat nie działa. Wybór zostanie zapamiętany na później.",
-    "nichHint": "Noc jest domyślnie ciemna. Jasny motyw wybierzesz w sekcji „Motyw”."
+    "nichHint": "Noc jest domyślnie ciemna. Jasny motyw wybierzesz w sekcji „Motyw”.",
+    "bookmarklet": {
+      "title": "Przycisk „Do wishlisty” dla przeglądarki",
+      "body": "Allegro, Amazon czy OLX czasem nie oddają nam opisu produktu. Ten przycisk bierze nazwę, cenę i zdjęcie prosto z otwartej strony — na dowolnej stronie.",
+      "steps": "Przeciągnij przycisk na pasek zakładek (Ctrl+Shift+B, jeśli go nie widać). Na stronie produktu kliknij zakładkę — otworzy się „Dodaj do Wishlist” z wypełnionymi polami.",
+      "button": "Do wishlisty",
+      "drag": "Przycisk trzeba przeciągnąć na pasek zakładek, a nie kliknąć tutaj."
+    }
   },
   "errors": {
     "invalidCredentials": "E-mail albo hasło się nie zgadzają.",

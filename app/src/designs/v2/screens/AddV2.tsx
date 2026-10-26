@@ -11,6 +11,7 @@ import { ParseError, parseUrl, parserConfigured } from '../../../lib/parser';
 import { newId, run } from '../../../lib/outbox';
 import { ITEM_TITLE_MAX, ITEM_URL_MAX, PRIORITY_ORDER, draftTitle } from '../../../lib/itemsView';
 import { fromShare, readLastList, writeLastList } from '../../../lib/shareTarget';
+import { fromPage } from '../../../lib/bookmarklet';
 import { CURRENCIES } from '../../../lib/types';
 import type { Currency, ItemInput, ItemPriority, List } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
@@ -42,6 +43,11 @@ function byRelevance(today: string) {
  *
  * Лише Android і десктопний Chrome: Safari на iPhone не пускає вебзастосунки
  * в системне «Поділитися». Ручна форма в списку — повноцінний шлях для всіх.
+ *
+ * Сюди ж веде кнопка «У вішліст» з панелі закладок (`?src=page`, ADR-076):
+ * назву, ціну, валюту й фото вже прочитав браузер людини на сторінці
+ * магазину, тож парсер не кличемо — він часто й не пройшов би захист від
+ * ботів. Лише якщо назви там не знайшлося, працює звичайний шлях з парсером.
  */
 export default function AddV2() {
   const { t, locale } = useI18n();
@@ -56,6 +62,10 @@ export default function AddV2() {
     const q = new URLSearchParams(location.search);
     return fromShare({ title: q.get('title'), text: q.get('text'), url: q.get('url') });
   });
+  // Букмарклет: поля, прочитані на сторінці магазину (ADR-076). Чужі дані — з межами форми.
+  const [page] = useState(() => fromPage(new URLSearchParams(location.search)));
+  /** Назву вже дала сама сторінка — парсер не потрібен. */
+  const fromPageDone = !!(page && page.title && shared.url);
 
   // Адресу з тим, що поширили, прибираємо з рядка: F5 не має додати вдруге.
   useEffect(() => {
@@ -68,10 +78,10 @@ export default function AddV2() {
   const [target, setTarget] = useState<string>('');
   const [newName, setNewName] = useState('');
   const [title, setTitle] = useState(shared.title ?? '');
-  const [price, setPrice] = useState<number | null>(null);
+  const [price, setPrice] = useState<number | null>(page?.price ?? null);
   /** Валюта ціни з магазину (ADR-051); null — магазин не сказав, тоді це валюта списку. */
-  const [priceCurrency, setPriceCurrency] = useState<Currency | null>(null);
-  const [image, setImage] = useState<string | null>(null);
+  const [priceCurrency, setPriceCurrency] = useState<Currency | null>(page?.currency ?? null);
+  const [image, setImage] = useState<string | null>(page?.image ?? null);
   const [priority, setPriority] = useState<ItemPriority>('medium');
   const [reading, setReading] = useState(false);
   const [unread, setUnread] = useState(false);
@@ -116,6 +126,7 @@ export default function AddV2() {
 
   // Сторінку магазину читаємо, поки людина вибирає список, — поля вже живі (C2).
   useEffect(() => {
+    if (fromPageDone) return;
     if (!shared.url || !parserConfigured()) {
       if (shared.url && !shared.title) setUnread(true);
       return;
@@ -132,7 +143,7 @@ export default function AddV2() {
         const usable = got.price !== null && (!got.currency || known !== null);
         setPrice(usable ? got.price : null);
         setPriceCurrency(usable ? known : null);
-        setImage(got.image_url && got.image_url.length <= ITEM_URL_MAX ? got.image_url : null);
+        setImage(got.image_url && got.image_url.length <= ITEM_URL_MAX ? got.image_url : (page?.image ?? null));
         if (!got.title && !shared.title) setUnread(true);
       })
       .catch((e: unknown) => {
@@ -144,7 +155,8 @@ export default function AddV2() {
         if (!ctl.signal.aborted) setReading(false);
       });
     return () => ctl.abort();
-  }, [shared.url, shared.title]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shared.url, shared.title, fromPageDone]);
 
   const chosen = lists?.find((l) => l.id === target) ?? null;
   const currency = chosen?.currency ?? FALLBACK_CURRENCY;
