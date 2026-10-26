@@ -18,6 +18,7 @@ import {
   startPool,
 } from '../../../lib/shares';
 import type { SharedItem, SharedList } from '../../../lib/shares';
+import { canPreopenTab, closeTab, openPendingTab, sendTab } from '../../../lib/shopTab';
 import {
   ensureKey,
   isGuestKey,
@@ -152,6 +153,9 @@ export default function GuestV2() {
   const [shopItem, setShopItem] = useState<SharedItem | null>(null);
   /** Спитали вже в цій вкладці — далі посилання просто відкривається. */
   const shopAskedRef = useRef(false);
+  /** «Забронювати й перейти» в дорозі: стан — для кнопки, ref — від подвійного натиску. */
+  const [shopBusy, setShopBusy] = useState(false);
+  const shopBusyRef = useRef(false);
 
   /** Броні, зняття яких ще відлічує тост: на екрані їх уже немає. */
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -578,34 +582,63 @@ export default function GuestV2() {
     setShopItem(null);
   }
 
-  /** «Забронювати й перейти»: одна штука, без аркуша; першій броні — код. */
-  async function quickBook(item: SharedItem) {
-    if (!data) return;
-    const first = !data.guest;
-    const k = ensureKey(token);
-    setKey(k);
-    setError(null);
-    try {
-      const res = await claimItemV2(token, item.id, k, countsOf(item).mine + 1, null, null, locale);
-      setData(await fetchGuestList(token, k));
-      if (first) {
-        setBookError(null);
-        setBook({ item, step: { kind: 'code', code: res.code } });
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : '';
-      if (e instanceof GoneError) {
-        setGone(true);
-        return;
-      }
-      if (msg.includes('not_enough_left')) setBook({ item, step: { kind: 'race' } });
-      else if (!msg.includes('list_archived')) setError(t('v2guest.error'));
+  /**
+   * «Забронювати й перейти»: одна штука, без аркуша броні; першій броні — код.
+   * Магазин відкривається лише після броні (ROADMAP 8.1, ADR-075): вкладка
+   * відкривається порожньою тут же, синхронно в натиску, і йде в магазин,
+   * коли сервер підтвердив бронь. Програш гонки, мертве посилання, архів чи
+   * збій мережі закривають її — магазину без броні не буває. Не вдалося
+   * відкрити вкладку — посилання на магазин з'являється в аркуші після броні.
+   */
+  function bookAndGo(item: SharedItem) {
+    const url = item.url;
+    if (!data || !url || shopBusyRef.current) return;
+    shopBusyRef.current = true;
+    setShopBusy(true);
+    // До першого await: інакше браузер вважає вікно спливним і блокує його.
+    const tab = canPreopenTab()
+      ? openPendingTab(t('v2guest.shopSheet.wait', { title: item.title }), locale)
+      : null;
+    void (async () => {
+      const first = !data.guest;
+      const k = ensureKey(token);
+      setKey(k);
+      setError(null);
       try {
-        setData(await fetchGuestList(token, k));
-      } catch {
-        /* лишаємо те, що є на екрані */
+        const res = await claimItemV2(token, item.id, k, countsOf(item).mine + 1, null, null, locale);
+        const went = sendTab(tab, url);
+        closeShop();
+        if (first) {
+          setBookError(null);
+          setBook({ item, step: { kind: 'code', code: res.code, ...(went ? {} : { shopUrl: url }) } });
+        } else if (!went) {
+          setBook({ item, step: { kind: 'go', shopUrl: url } });
+        }
+        try {
+          setData(await fetchGuestList(token, k));
+        } catch {
+          /* бронь уже є; список перечитається при наступній дії */
+        }
+      } catch (e) {
+        closeTab(tab);
+        closeShop();
+        const msg = e instanceof Error ? e.message : '';
+        if (e instanceof GoneError) {
+          setGone(true);
+          return;
+        }
+        if (msg.includes('not_enough_left')) setBook({ item, step: { kind: 'race' } });
+        else if (!msg.includes('list_archived')) setError(t('v2guest.error'));
+        try {
+          setData(await fetchGuestList(token, k));
+        } catch {
+          /* лишаємо те, що є на екрані */
+        }
+      } finally {
+        shopBusyRef.current = false;
+        setShopBusy(false);
       }
-    }
+    })();
   }
 
   /* ── Забрати доступ із собою ── */
@@ -1045,12 +1078,12 @@ export default function GuestV2() {
 
       <ShopSheetV2
         item={shopItem}
-        onBook={(i) => {
-          closeShop();
-          void quickBook(i);
-        }}
+        busy={shopBusy}
+        onBook={bookAndGo}
         onLook={closeShop}
-        onClose={closeShop}
+        onClose={() => {
+          if (!shopBusyRef.current) closeShop();
+        }}
       />
 
       <PoolSheetV2

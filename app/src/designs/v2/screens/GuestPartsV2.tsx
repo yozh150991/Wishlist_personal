@@ -319,10 +319,15 @@ export function GuestCardV2({
 
 /* ── Бронь ─────────────────────────────────────────────────── */
 
+/**
+ * `shopUrl` — бронь зроблено через «Забронювати й перейти», а вкладку
+ * магазину відкрити не вдалося (ADR-075): аркуш дає посилання на магазин.
+ */
 export type BookStep =
   | { kind: 'form' }
   | { kind: 'race' }
-  | { kind: 'code'; code: string };
+  | { kind: 'code'; code: string; shopUrl?: string }
+  | { kind: 'go'; shopUrl: string };
 
 /**
  * Аркуш броні (E2): «Берете …?», скільки (для позицій на кілька штук),
@@ -331,7 +336,8 @@ export type BookStep =
  * (ADR-054); власник її не бачить.
  *
  * Той самий аркуш показує й наслідок: програну гонку (гілка «встигли
- * раніше») і код після першої броні (E3).
+ * раніше»), код після першої броні (E3) і — коли «Забронювати й перейти»
+ * не змогло відкрити вкладку — посилання на магазин уже після броні.
  */
 export function BookSheetV2({
   item,
@@ -443,6 +449,22 @@ export function BookSheetV2({
             <button type="button" className="v2-btn v2-btn--outline v2-btn--block" onClick={onSendLink}>
               {t('v2guest.code.link')}
             </button>
+            {step.shopUrl && <ShopLinkV2 url={step.shopUrl} />}
+            <button type="button" className="v2-btn v2-btn--ghost" onClick={onClose}>
+              {t('v2guest.code.done')}
+            </button>
+          </div>
+        </>
+      ) : step.kind === 'go' ? (
+        <>
+          <h2 className="v2-sheet__title" id={titleId}>
+            {t('v2guest.code.title', { title: it?.title ?? '' })}
+          </h2>
+          <p className="v2-lede" role="status">
+            {t('v2guest.shopGo.body')}
+          </p>
+          <div className="v2-sheet__actions">
+            <ShopLinkV2 url={step.shopUrl} primary />
             <button type="button" className="v2-btn v2-btn--ghost" onClick={onClose}>
               {t('v2guest.code.done')}
             </button>
@@ -843,22 +865,48 @@ export function RedeemSheetV2({
   );
 }
 
+/**
+ * Посилання на магазин після броні — запасний шлях «Забронювати й перейти»,
+ * коли вкладку не вдалося відкрити наперед (ADR-075). Звичайне посилання:
+ * натиск на нього браузер не блокує.
+ */
+function ShopLinkV2({ url, primary }: { url: string; primary?: boolean }) {
+  const { t } = useI18n();
+  return (
+    <a
+      className={`v2-btn ${primary ? 'v2-btn--primary' : 'v2-btn--outline'} v2-btn--block`}
+      href={url}
+      target="_blank"
+      rel="noreferrer noopener"
+    >
+      <ExternalLink size={18} strokeWidth={STROKE} aria-hidden="true" />
+      {t('v2guest.shopGo.open')}
+    </a>
+  );
+}
+
 /* ── «У магазин» без броні (S1) ───────────────────────────── */
 
 /**
  * Гість іде в магазин, не забронювавши позицію: раз на сесію питаємо, чи не
- * позначити її спершу — інакше двоє можуть купити те саме. Обидві відповіді —
- * справжні посилання з `target="_blank"`: магазин відкривається одразу, а
- * бронь іде паралельно в цій вкладці (браузер не блокує вікно, бо його
- * відкриває сам натиск).
+ * позначити її спершу — інакше двоє можуть купити те саме.
+ *
+ * «Забронювати й перейти» — кнопка, не посилання: магазин відкривається лише
+ * після броні (ROADMAP 8.1, ADR-075). Натиск синхронно відкриває порожню
+ * вкладку («Бронюємо…»), а екран веде її в магазин, коли сервер підтвердив
+ * бронь; програш чи збій закривають її. Поки бронь іде, кнопка зайнята:
+ * подвійний натиск не дає ні другого запиту, ні другої вкладки.
+ * «Просто подивитись» лишається справжнім посиланням — броні в ньому немає.
  */
 export function ShopSheetV2({
   item,
+  busy,
   onBook,
   onLook,
   onClose,
 }: {
   item: SharedItem | null;
+  busy: boolean;
   onBook: (item: SharedItem) => void;
   onLook: () => void;
   onClose: () => void;
@@ -872,7 +920,7 @@ export function ShopSheetV2({
   const it = item ?? shown;
 
   return (
-    <SheetV2 open={item !== null} onClose={onClose} labelledBy={titleId}>
+    <SheetV2 open={item !== null} onClose={onClose} labelledBy={titleId} closeOnBackdrop={!busy}>
       <h2 className="v2-sheet__title" id={titleId}>
         {t('v2guest.shopSheet.title', { title: it?.title ?? '' })}
       </h2>
@@ -881,15 +929,17 @@ export function ShopSheetV2({
           поки аркуш порожній, дій у ньому немає зовсім. */}
       {it?.url && (
         <div className="v2-sheet__actions">
-          <a
+          <button
+            type="button"
             className="v2-btn v2-btn--primary v2-btn--block"
-            href={it.url}
-            target="_blank"
-            rel="noreferrer noopener"
-            onClick={() => onBook(it)}
+            disabled={busy}
+            aria-busy={busy || undefined}
+            onClick={() => {
+              if (!busy) onBook(it);
+            }}
           >
-            {t('v2guest.shopSheet.book')}
-          </a>
+            {busy ? t('v2guest.shopSheet.booking') : t('v2guest.shopSheet.book')}
+          </button>
           <a
             className="v2-btn v2-btn--ghost"
             href={it.url}

@@ -1215,7 +1215,13 @@
       "title": "Take “{title}”?",
       "body": "You're heading to the shop. Mark it as yours so other guests see it's taken.",
       "book": "Take it and go",
-      "look": "Just looking"
+      "look": "Just looking",
+      "booking": "Taking it…",
+      "wait": "Taking “{title}” for you… The shop will open here in a moment."
+    },
+    "shopGo": {
+      "body": "The shop didn’t open on its own — use the link.",
+      "open": "Go to the shop"
     },
     "ownerBack": "Go back",
     "itemsHeading": "Items on the list"
