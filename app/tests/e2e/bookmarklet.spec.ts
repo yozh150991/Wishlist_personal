@@ -122,6 +122,85 @@ test.describe('закладка на сторінці магазину', () => {
   });
 });
 
+test.describe('закладка: сторінка без розмітки (ADR-078)', () => {
+  /** Повна сторінка (не лише `<head>`), щоб браузер розклав її й порахував розміри. */
+  async function grabPage(page: Page, html: string): Promise<URLSearchParams> {
+    await page.route('https://shop.example.com/**', (r) =>
+      r.fulfill({ contentType: 'text/html; charset=utf-8', body: `<!doctype html><html>${html}</html>` }),
+    );
+    await page.goto('https://shop.example.com/dp/B0X');
+    await page.evaluate(() => {
+      window.open = (u?: string | URL) => {
+        (window as unknown as Opened).__opened = String(u);
+        return window;
+      };
+    });
+    await page.evaluate(decodeURIComponent(bookmarkletHref(APP).slice('javascript:'.length)));
+    return new URL(await page.evaluate(() => (window as unknown as Opened).__opened ?? '')).searchParams;
+  }
+
+  test('як Amazon: назва з h1, головна ціна — найбільша видима, стара закреслена — ні, фото — найбільше', async ({ page }) => {
+    const q = await grabPage(
+      page,
+      `<head><title>Filtr osmozy : Amazon.pl: Przemysł i nauka</title></head><body style="margin:0">
+        <h1 id="title"><span id="productTitle">  Ecosoft PURE Balance filtr   osmozy </span></h1>
+        <img src="https://cdn.example.com/logo.png" width="90" height="30" alt="">
+        <img src="https://cdn.example.com/main.jpg" width="400" height="400" alt="">
+        <img src="https://cdn.example.com/thumb.jpg" width="130" height="130" alt="">
+        <div class="basisPrice"><span class="a-price" style="text-decoration:line-through;font-size:40px">1 599,00 zł</span></div>
+        <div id="corePrice"><span class="a-price" style="font-size:28px"><span class="a-price-whole">1 299</span>,<span>00</span> zł</span></div>
+        <div class="price-per-unit" style="font-size:12px">(64,95 zł / l)</div>
+        <div style="height:8000px"></div>
+        <div class="a-price" style="font-size:60px">9 999,00 zł</div>
+      </body>`,
+    );
+    expect(q.get('title')).toBe('Ecosoft PURE Balance filtr osmozy');
+    expect(q.get('price')).toBe('1 299,00');
+    expect(q.get('currency')).toBe('PLN');
+    expect(q.get('image')).toBe('https://cdn.example.com/main.jpg');
+    // Застосунок бере цю ціну крізь ті самі межі, що й форма.
+    expect(fromPage(q)).toMatchObject({ price: 1299, currency: 'PLN', image: 'https://cdn.example.com/main.jpg' });
+  });
+
+  test('як Decathlon: ціна в елементі з «price» у класі, без знака валюти — з копійками', async ({ page }) => {
+    const q = await grabPage(
+      page,
+      `<head><title>Kurtka | Decathlon</title><meta property="og:title" content="Kurtka puchowa MT500"></head><body>
+        <h1>Kurtka puchowa MT500</h1>
+        <span class="vtmn-price" style="font-size:32px">699,99</span>
+        <span class="series-price" style="font-size:14px">IKEA 365+</span>
+      </body>`,
+    );
+    expect(q.get('title')).toBe('Kurtka puchowa MT500');
+    expect(q.get('price')).toBe('699,99');
+    expect(q.has('currency')).toBe(false);
+  });
+
+  test('число без знака й без копійок ціною не вважаємо; приховані й далекі — теж', async ({ page }) => {
+    const q = await grabPage(
+      page,
+      `<head><title>Kubek</title></head><body>
+        <span class="price-name" style="font-size:40px">IKEA 365+</span>
+        <span class="price" style="display:none">49,99 zł</span>
+        <div style="height:8000px"></div><span class="price">19,99 zł</span>
+      </body>`,
+    );
+    expect(q.has('price')).toBe(false);
+    expect(q.has('image')).toBe(false);
+  });
+
+  test('розмітка важить більше за те, що на екрані', async ({ page }) => {
+    const q = await grabPage(
+      page,
+      `<head>${ld({ '@type': 'Product', name: 'Лампа', offers: { price: '49.90', priceCurrency: 'EUR' }, image: 'https://cdn.example.com/ld.jpg' })}</head><body>
+        <h1>Інша назва</h1><span class="price" style="font-size:50px">999,00 zł</span>
+        <img src="https://cdn.example.com/big.jpg" width="500" height="500" alt="">
+      </body>`,
+    );
+    expect([q.get('title'), q.get('price'), q.get('currency'), q.get('image')]).toEqual(['Лампа', '49.90', 'EUR', 'https://cdn.example.com/ld.jpg']);
+  });
+});
+
 test.describe('що застосунок бере з адреси', () => {
   const q = (o: Record<string, string>) => new URLSearchParams(o);
 
