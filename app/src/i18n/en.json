@@ -50,6 +50,21 @@
       "steps": "Drag the button to your bookmarks bar (Ctrl+Shift+B if you can’t see it). On a product page, click the bookmark — “Add to Wishlist” opens with the fields filled in.",
       "button": "To wishlist",
       "drag": "Drag the button to your bookmarks bar — clicking it here does nothing."
+    },
+    "iosShortcut": {
+      "title": "Add from Safari on iPhone",
+      "body": "Safari on iPhone doesn’t let web apps into the Share menu. A Shortcut gets around that — one action, a minute to set up.",
+      "ready": "Add the ready-made Shortcut",
+      "readyHint": "The Shortcuts app opens — tap “Add Shortcut”.",
+      "own": "Or build it yourself:",
+      "step1": "Open the Shortcuts app → “+”. Name it “To wishlist”.",
+      "step2": "Add the “Open URLs” action.",
+      "step3": "In the address field, paste the start copied with the button below, followed directly by the “Shortcut Input” variable.",
+      "step4": "In the shortcut’s settings (ⓘ), turn on “Show in Share Sheet”.",
+      "step5": "In Safari on a product page: Share → “To wishlist”.",
+      "copy": "Copy the address start",
+      "copied": "Copied",
+      "note": "The Shortcut opens Safari, not the Home Screen app, so you need to be signed in in Safari too. The first time it asks you to sign in — then brings you back to the form with the product."
     }
   },
   "errors": {

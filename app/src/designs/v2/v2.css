@@ -2105,3 +2105,6 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-gpicks__row { flex-wrap: wrap; }
 .v2-gpicks__text { flex: 1 1 12rem; }
 .v2-gpicks__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); margin-inline-start: auto; }
+
+/* Нумеровані кроки в картці Налаштувань (Команда для iPhone, ADR-077). */
+.v2-steps { margin: 0; padding-inline-start: 1.25rem; display: grid; gap: var(--sp-2); }

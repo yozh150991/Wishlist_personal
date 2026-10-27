@@ -10,7 +10,7 @@ import { LISTS_KEY, readSnapshot } from '../../../lib/cache';
 import { ParseError, parseUrl, parserConfigured } from '../../../lib/parser';
 import { newId, run } from '../../../lib/outbox';
 import { ITEM_TITLE_MAX, ITEM_URL_MAX, PRIORITY_ORDER, draftTitle } from '../../../lib/itemsView';
-import { fromShare, readLastList, writeLastList } from '../../../lib/shareTarget';
+import { fromShare, rawSharedUrl, readLastList, writeLastList } from '../../../lib/shareTarget';
 import { fromPage } from '../../../lib/bookmarklet';
 import { CURRENCIES } from '../../../lib/types';
 import type { Currency, ItemInput, ItemPriority, List } from '../../../lib/types';
@@ -48,6 +48,9 @@ function byRelevance(today: string) {
  * назву, ціну, валюту й фото вже прочитав браузер людини на сторінці
  * магазину, тож парсер не кличемо — він часто й не пройшов би захист від
  * ботів. Лише якщо назви там не знайшлося, працює звичайний шлях з парсером.
+ *
+ * І з Команди для iPhone (`?src=ios&url=…`, ADR-077): адресу сторінки Команда
+ * дописує сирою, тож її беремо цілим хвостом після `url=` (`rawSharedUrl`).
  */
 export default function AddV2() {
   const { t, locale } = useI18n();
@@ -60,7 +63,8 @@ export default function AddV2() {
   // Читаємо один раз: одразу після цього адресу з параметрами прибираємо.
   const [shared] = useState(() => {
     const q = new URLSearchParams(location.search);
-    return fromShare({ title: q.get('title'), text: q.get('text'), url: q.get('url') });
+    const raw = rawSharedUrl(location.search, location.hash);
+    return fromShare({ title: q.get('title'), text: q.get('text'), url: raw ?? q.get('url') });
   });
   // Букмарклет: поля, прочитані на сторінці магазину (ADR-076). Чужі дані — з межами форми.
   const [page] = useState(() => fromPage(new URLSearchParams(location.search)));
@@ -69,7 +73,7 @@ export default function AddV2() {
 
   // Адресу з тим, що поширили, прибираємо з рядка: F5 не має додати вдруге.
   useEffect(() => {
-    if (location.search) navigate(location.pathname, { replace: true, state: location.state });
+    if (location.search || location.hash) navigate(location.pathname, { replace: true, state: location.state });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
