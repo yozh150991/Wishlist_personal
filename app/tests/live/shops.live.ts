@@ -36,7 +36,15 @@ const links = readLinks();
 test.describe.serial('кнопка «У вішліст» на сторінках магазинів', () => {
   if (links.length === 0) {
     test('набір посилань', () => {
-      test.skip(true, 'services/parser/tests/shop-links.txt порожній — допиши посилання');
+      const hidden = readFileSync(LINKS, 'utf8')
+        .split(/\r?\n/)
+        .filter((l) => l.trimStart().startsWith('#') && l.includes('|') && l.includes('://') && !l.includes('...')).length;
+      test.skip(
+        true,
+        hidden
+          ? `у shop-links.txt усі ${hidden} посилань закоментовані — прибери «# » на початку рядків`
+          : 'services/parser/tests/shop-links.txt порожній — допиши посилання',
+      );
     });
   }
 

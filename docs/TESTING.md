@@ -517,10 +517,12 @@ npx lighthouse http://localhost:4173/login --view
 Не в CI і не в звичайному `pytest`: `addopts = -m "not live"` у `pytest.ini`, а Playwright-конфіг окремий. Набір посилань — `services/parser/tests/shop-links.txt`, порожній — тести пропускаються.
 
 ```bash
-cd services/parser && pytest -m live          # парсер → live-shops.md
+cd services/parser && pytest -m live tests/test_live_shops.py   # парсер → live-shops.md
 cd app && HEADED=1 npm run check:shops        # кнопка «У вішліст» → test-results/shops.md
 # PowerShell: $env:HEADED=1; npm run check:shops
 ```
+
+Шлях до файлу в `pytest` — щоб не збирати решту модулів: їм потрібні всі залежності сервісу (`ModuleNotFoundError: http_ece` означає, що `requirements-dev.txt` ставився до ADR-049 — постав ще раз). Рядок, що починається з «#», — коментар: такий товар пропускається, а якщо закоментовано все — тест так і пише.
 
 Кожне посилання — окремий тест: зелений, коли є назва. Червоний — не обовʼязково баг: магазин міг не пустити бота чи безголовий браузер. Що робити з кожним рядком — вирішуємо за таблицею (API.md, «Магазини родини»). Без мережі до магазинів інструмент перевірено на локальній сторінці (`SHOP_LINKS` — інший файл того самого формату).
 
