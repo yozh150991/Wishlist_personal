@@ -414,6 +414,8 @@ npx lighthouse http://localhost:4173/login --view
 
 ## Тести парсера (pytest)
 
+**Ціна й назва з JSON-LD у живих формах** — `test_extract_offers.py` (ROADMAP 8.3): HTML-сутності в назві (Amazon), `AggregateOffer.lowPrice`, `priceSpecification` обʼєктом і списком, перша пропозиція без ціни, `ProductGroup` з ціною першого варіанта; ціна з JSON-LD перемагає евристику.
+
 **Пін на перевірену IP** — `test_fetch_pinning.py`, мережу підміняє `MockTransport`
 - Зʼєднання йде на IP, `Host` і SNI лишаються доменом; порт і IPv6 у дужках зберігаються.
 - Друга відповідь DNS (уже приватна) нічого не змінює — рівно той сценарій, від якого захищає пін.

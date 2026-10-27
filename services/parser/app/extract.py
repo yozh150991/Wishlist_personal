@@ -1,3 +1,4 @@
+import html as html_lib
 import json
 import math
 import re
@@ -125,6 +126,27 @@ def _iter_jsonld(soup: BeautifulSoup):
                 stack.extend(v for v in node.values() if isinstance(v, (dict, list)))
 
 
+def _offer_price(offers: object) -> tuple[float | None, str | None]:
+    """
+    Перша ціна з `offers`: обʼєкт або список; `price`, далі `lowPrice`
+    (AggregateOffer), далі `priceSpecification` (обʼєкт чи список). Той самий
+    порядок, що й у кнопки «У вішліст» (ADR-076), — щоб сервер і браузер
+    бачили одне й те саме.
+    """
+    for offer in offers if isinstance(offers, list) else [offers]:
+        if not isinstance(offer, dict):
+            continue
+        spec = offer.get("priceSpecification")
+        spec = spec[0] if isinstance(spec, list) and spec else spec
+        spec = spec if isinstance(spec, dict) else {}
+        for raw in (offer.get("price"), offer.get("lowPrice"), spec.get("price")):
+            price = parse_price(raw)
+            if price is not None:
+                currency = normalise_currency(offer.get("priceCurrency")) or normalise_currency(spec.get("priceCurrency"))
+                return price, currency
+    return None, None
+
+
 def _first_image(value: object) -> str | None:
     if isinstance(value, str):
         return value
@@ -203,17 +225,28 @@ def extract(html: str, url: str) -> ParseResponse:
     # Типи полів перевіряються до використання (BUG-QA-27): `"@type": 7` чи
     # `"name": {"text": …}` від магазину — привід узяти поле з іншого
     # джерела, а не відповісти 500.
+    # Назва з JSON-LD — це текст скрипта, браузер у ньому сутностей не
+    # розкодовує: Amazon пише туди «M&eogon;ska». Розкодовуємо лише її —
+    # мета-теги й текст сторінки BeautifulSoup уже розкодував.
     for node in _iter_jsonld(soup):
-        if "Product" not in _types(node):
+        types = _types(node)
+        if "Product" not in types and "ProductGroup" not in types:
             continue
-        put("title", _text(node.get("name")), "jsonld")
+        name = _text(node.get("name"))
+        put("title", html_lib.unescape(name) if name else None, "jsonld")
         put("image_url", _first_image(node.get("image")), "jsonld")
 
-        offers = node.get("offers")
-        offers = offers[0] if isinstance(offers, list) and offers else offers
-        if isinstance(offers, dict):
-            put("price", parse_price(offers.get("price")), "jsonld")
-            put("currency", normalise_currency(offers.get("priceCurrency")), "jsonld")
+        price, currency = _offer_price(node.get("offers"))
+        # Група варіантів: ціна — у першого варіанта з пропозицією.
+        variants = node.get("hasVariant")
+        for variant in variants if isinstance(variants, list) else []:
+            if price is not None:
+                break
+            if isinstance(variant, dict):
+                price, currency = _offer_price(variant.get("offers"))
+        if price is not None:
+            put("price", price, "jsonld")
+            put("currency", currency, "jsonld")
 
     # 2. Microdata
     for tag in soup.select("[itemprop]"):
