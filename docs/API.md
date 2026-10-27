@@ -390,7 +390,7 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 
 Живий прогін по справжніх посиланнях — лише вручну, не в CI: сторінки змінюються, а пропуск ботів залежить від IP. Набір — `services/parser/tests/shop-links.txt` («Магазин | адреса»). Два звіти на тому самому наборі:
 
-- `pytest -m live` (з `services/parser`) — серверний парсер; таблиця в `services/parser/live-shops.md`;
+- `pytest -m live tests/test_live_shops.py` (з `services/parser`) — серверний парсер; таблиця в `services/parser/live-shops.md`;
 - `npm run check:shops` (з `app`, краще з вікном: `HEADED=1`) — кнопка «У вішліст» у справжньому Chromium; таблиця в `app/test-results/shops.md`.
 
 Обидві таблиці переносимо сюди після прогону. Поки прогону не було, тут порожньо.

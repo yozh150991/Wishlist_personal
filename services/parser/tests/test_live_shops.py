@@ -4,8 +4,11 @@
 Не в CI: живі сторінки змінюються, а магазини по-різному пускають ботів
 залежно від IP. Запускати вручну з кореня сервісу:
 
-    pytest -m live            # усі посилання з tests/shop-links.txt
-    pytest -m live -k allegro # лише один магазин
+    pytest -m live tests/test_live_shops.py             # усі посилання
+    pytest -m live tests/test_live_shops.py -k Allegro  # лише один магазин
+
+Шлях до файлу — щоб pytest не збирав решту модулів: їм потрібні всі
+залежності сервісу (`pip install -r requirements-dev.txt`), цьому — ні.
 
 Кожне посилання — окремий тест: зелений, коли парсер дав назву. Після прогону
 в `live-shops.md` (поруч із pytest.ini, у .gitignore) лежить таблиця
@@ -64,10 +67,24 @@ def report():
     REPORT.write_text(head + body, encoding="utf-8")
 
 
+def commented_links(path: Path = LINKS) -> int:
+    """Скільки посилань сховано за «#» — найчастіша причина «порожнього» набору."""
+    return sum(
+        1
+        for raw in path.read_text(encoding="utf-8").splitlines()
+        if raw.lstrip().startswith("#") and "|" in raw and "://" in raw and "..." not in raw
+    )
+
+
 LINK_LIST = read_links()
+_EMPTY = (
+    f"у tests/shop-links.txt усі {commented_links()} посилань закоментовані — прибери «# » на початку рядків"
+    if commented_links()
+    else "tests/shop-links.txt порожній — допиши посилання"
+)
 
 
-@pytest.mark.skipif(not LINK_LIST, reason="tests/shop-links.txt порожній — допиши посилання")
+@pytest.mark.skipif(not LINK_LIST, reason=_EMPTY)
 @pytest.mark.parametrize(("shop", "url"), LINK_LIST or [("—", "https://example.com")], ids=lambda v: str(v)[:40])
 async def test_shop_page_gives_title(shop: str, url: str) -> None:
     row = {"shop": shop, "title": "", "price": "", "currency": "", "image": "", "sources": "", "error": ""}
@@ -94,3 +111,7 @@ def test_read_links_skips_comments_and_garbage(tmp_path: Path) -> None:
     f = tmp_path / "l.txt"
     f.write_text("# коментар\n\nAllegro | https://allegro.pl/x\nбез риски\nOLX | ftp://x\n", encoding="utf-8")
     assert read_links(f) == [("Allegro", "https://allegro.pl/x")]
+    g = tmp_path / "c.txt"
+    g.write_text("# Allegro | https://allegro.pl/...\n# OLX | https://www.olx.pl/d/oferta/x.html\n", encoding="utf-8")
+    assert read_links(g) == []
+    assert commented_links(g) == 1
