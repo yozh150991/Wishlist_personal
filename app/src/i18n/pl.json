@@ -50,6 +50,21 @@
       "steps": "Przeciągnij przycisk na pasek zakładek (Ctrl+Shift+B, jeśli go nie widać). Na stronie produktu kliknij zakładkę — otworzy się „Dodaj do Wishlist” z wypełnionymi polami.",
       "button": "Do wishlisty",
       "drag": "Przycisk trzeba przeciągnąć na pasek zakładek, a nie kliknąć tutaj."
+    },
+    "iosShortcut": {
+      "title": "Dodawanie z Safari na iPhonie",
+      "body": "Safari na iPhonie nie wpuszcza aplikacji webowych do menu „Udostępnij”. Obchodzi to Skrót — jedna czynność, ustawienie zajmuje minutę.",
+      "ready": "Dodaj gotowy Skrót",
+      "readyHint": "Otworzy się aplikacja „Skróty” — stuknij „Dodaj skrót”.",
+      "own": "Albo utwórz go sam:",
+      "step1": "Otwórz aplikację „Skróty” → „+”. Nazwij skrót „Do wishlisty”.",
+      "step2": "Dodaj czynność „Otwórz adresy URL” (ang. Open URLs).",
+      "step3": "W pole adresu wklej początek skopiowany przyciskiem poniżej, a zaraz za nim — zmienną „Dane wejściowe skrótu” (Shortcut Input).",
+      "step4": "W ustawieniach skrótu (ⓘ) włącz „Pokazuj w arkuszu udostępniania”.",
+      "step5": "W Safari na stronie produktu: „Udostępnij” → „Do wishlisty”.",
+      "copy": "Skopiuj początek adresu",
+      "copied": "Skopiowano",
+      "note": "Skrót otwiera Safari, a nie aplikację z ekranu początkowego, więc w Safari też trzeba być zalogowanym. Za pierwszym razem poprosi o logowanie — i wróci do formularza z produktem."
     }
   },
   "errors": {

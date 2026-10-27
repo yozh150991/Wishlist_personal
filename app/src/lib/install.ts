@@ -45,7 +45,8 @@ function standalone(): boolean {
   );
 }
 
-function ios(): boolean {
+/** iPhone чи iPad (зокрема iPadOS, що видає себе за Mac). */
+export function ios(): boolean {
   const ua = navigator.userAgent;
   // iPadOS видає себе за Mac, але має сенсорний екран.
   return /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1);

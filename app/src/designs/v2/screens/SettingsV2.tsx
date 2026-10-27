@@ -5,7 +5,8 @@ import { useI18n, LOCALES } from '../../../lib/i18n';
 import type { Locale } from '../../../lib/i18n';
 import { SCHEMES, THEMES, useTheme } from '../../../lib/theme';
 import type { Scheme, Theme } from '../../../lib/theme';
-import { promptInstall, useInstallState } from '../../../lib/install';
+import { ios, promptInstall, useInstallState } from '../../../lib/install';
+import { iosShortcutPrefix } from '../../../lib/shareTarget';
 import { useMediaQuery } from '../../../lib/media';
 import { errorText } from '../../../lib/errors';
 import { fetchAllItems, fetchLists } from '../../../lib/db';
@@ -62,7 +63,7 @@ function Choice<T extends string>({
  * Кожен вибір застосовується одразу — кнопки «Зберегти» немає. Порядок:
  * акаунт → доступність (висока контрастність над кольорами, бо важливіша за
  * смак) → кольори → тема → мова → сповіщення (P, ADR-049) → застосунок на
- * телефоні → кнопка «У вішліст» (лише на компʼютері, ADR-076) → мої дані → вигляд застосунку → вихід і видалення акаунта (ADR-072).
+ * телефоні → кнопка «У вішліст» (лише на компʼютері, ADR-076) → Команда для iPhone (лише iOS, ADR-077) → мої дані → вигляд застосунку → вихід і видалення акаунта (ADR-072).
  * Безпека (вхід із нового пристрою, вихід скрізь, ADR-074) — одразу після сповіщень. Тема, схема й контраст їдуть у профіль (`AppearanceSync`)
  * — для обох версій однаково; вигляд події — властивість окремого списку,
  * тут його немає (ADR-034).
@@ -76,6 +77,7 @@ export default function SettingsV2() {
     useTheme();
   const install = useInstallState();
   const desktop = useMediaQuery(DESKTOP);
+  const [iphone] = useState(ios);
   const email = session?.user.email ?? '';
   const contrastOn = highContrast || systemContrast;
 
@@ -196,6 +198,8 @@ export default function SettingsV2() {
 
         {/* Закладки з кодом — лише браузер на компʼютері; на телефоні є «Поділитися». */}
         {desktop && <BookmarkletCardV2 />}
+        {/* Safari на iPhone не має Web Share Target — замість нього Команда (ROADMAP 8.5, ADR-077). */}
+        {iphone && <IosShortcutCardV2 />}
 
         <MyDataV2 />
 
@@ -256,6 +260,59 @@ function BookmarkletCardV2() {
         {t('settings.bookmarklet.button')}
       </a>
       {hint && <NoteV2 tone="info">{t('settings.bookmarklet.drag')}</NoteV2>}
+    </section>
+  );
+}
+
+/**
+ * Команда для iPhone (ROADMAP 8.5, ADR-077). Готову Команду можна дати
+ * посиланням iCloud у `VITE_IOS_SHORTCUT_URL`; без нього — інструкція, як
+ * зібрати її самому з однієї дії, і кнопка, що копіює початок адреси.
+ */
+function IosShortcutCardV2() {
+  const { t } = useI18n();
+  const prefix = iosShortcutPrefix(publicOrigin);
+  const ready = import.meta.env.VITE_IOS_SHORTCUT_URL?.trim() || null;
+  const readySafe = ready && /^https:\/\/(www\.)?icloud\.com\/shortcuts\//.test(ready) ? ready : null;
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(prefix);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* без дозволу на буфер — адреса є текстом нижче, її можна виділити */
+    }
+  }
+
+  return (
+    <section className="v2-settings__card" aria-labelledby="v2-set-ios-shortcut" data-testid="ios-shortcut">
+      <h2 className="v2-settings__label" id="v2-set-ios-shortcut">
+        {t('settings.iosShortcut.title')}
+      </h2>
+      <p className="v2-hint v2-hint--start">{t('settings.iosShortcut.body')}</p>
+      {readySafe && (
+        <>
+          <a className="v2-btn v2-btn--primary v2-btn--start" href={readySafe} rel="noreferrer noopener">
+            {t('settings.iosShortcut.ready')}
+          </a>
+          <p className="v2-hint v2-hint--start">{t('settings.iosShortcut.readyHint')}</p>
+          <p className="v2-hint v2-hint--start">{t('settings.iosShortcut.own')}</p>
+        </>
+      )}
+      <ol className="v2-hint v2-hint--start v2-steps">
+        <li>{t('settings.iosShortcut.step1')}</li>
+        <li>{t('settings.iosShortcut.step2')}</li>
+        <li>{t('settings.iosShortcut.step3')}</li>
+        <li>{t('settings.iosShortcut.step4')}</li>
+        <li>{t('settings.iosShortcut.step5')}</li>
+      </ol>
+      <code className="v2-qr__url">{prefix}</code>
+      <button type="button" className="v2-btn v2-btn--outline v2-btn--start" onClick={() => void copy()}>
+        {copied ? t('settings.iosShortcut.copied') : t('settings.iosShortcut.copy')}
+      </button>
+      <p className="v2-hint v2-hint--start">{t('settings.iosShortcut.note')}</p>
     </section>
   );
 }

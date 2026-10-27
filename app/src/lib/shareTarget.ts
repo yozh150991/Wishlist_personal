@@ -43,6 +43,40 @@ export function fromShare(params: { title?: string | null; text?: string | null;
   };
 }
 
+/** Позначка Команди для iPhone (ROADMAP 8.5, ADR-077): адреса в `url` — сирим хвостом. */
+export const IOS_SOURCE = 'ios';
+
+/**
+ * Початок адреси, який людина вставляє в Команду для iPhone. Одразу за ним
+ * Команда дописує адресу сторінки як є, без кодування: так у Команді одна
+ * дія замість трьох, а `rawSharedUrl` збирає адресу назад.
+ */
+export function iosShortcutPrefix(origin: string): string {
+  return `${origin.replace(/\/+$/, '')}/add?src=${IOS_SOURCE}&url=`;
+}
+
+/**
+ * Адреса з Команди: усе після першого `url=` у сирому `search`, разом із
+ * власними `?`, `&` і `#` сторінки магазину, які інакше розсипались би на
+ * окремі параметри. Закодовану адресу (`https%3A%2F%2F…`) розкодовуємо.
+ * `null` — адреса не від Команди: тоді діє звичайне `fromShare`.
+ */
+export function rawSharedUrl(search: string, hash = ''): string | null {
+  const q = new URLSearchParams(search);
+  if (q.get('src') !== IOS_SOURCE) return null;
+  const at = search.indexOf('url=');
+  if (at < 0) return null;
+  let raw = search.slice(at + 4) + hash;
+  if (/^https?%3A/i.test(raw)) {
+    try {
+      raw = decodeURIComponent(raw);
+    } catch {
+      return null;
+    }
+  }
+  return raw.trim() || null;
+}
+
 /** Список, куди додавали востаннє, — пропонуємо його першим (L3). Id списку — не таємниця. */
 const LAST_LIST_KEY = 'wl.v2.lastList';
 

@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly VITE_CONTACT_EMAIL?: string;
   /** Публічний ключ VAPID для push (ADR-049). Без нього push вимкнений, лишається пошта. */
   readonly VITE_VAPID_PUBLIC_KEY?: string;
+  /** Посилання iCloud на готову Команду для iPhone (ADR-077); без нього — лише інструкція. */
+  readonly VITE_IOS_SHORTCUT_URL?: string;
 }
 
 interface ImportMeta {
