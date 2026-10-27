@@ -194,7 +194,8 @@
       "unknown": "Nie udało się odczytać strony. Uzupełnij pola ręcznie.",
       "authUnavailable": "Parser nie mógł zweryfikować logowania. Sprawdź jego konfigurację albo uzupełnij pola ręcznie.",
       "misconfigured": "Parser jest źle skonfigurowany: nie ma adresu Supabase.",
-      "blockedByShop": "Sklep blokuje automatyczne zapytania. Skopiuj nazwę i cenę ręcznie — link zostanie zapisany."
+      "blockedByShop": "Sklep blokuje automatyczne zapytania. Skopiuj nazwę i cenę ręcznie — link zostanie zapisany.",
+      "blockedByShopDesktop": "Sklep blokuje automatyczne zapytania. Dodaj produkt przyciskiem „Do wishlisty” z jego strony (Ustawienia) albo wpisz nazwę i cenę ręcznie — link zostanie zapisany."
     }
   },
   "share": {

@@ -194,7 +194,8 @@
       "unknown": "Couldn't read that page. Fill the fields in yourself.",
       "authUnavailable": "The parser couldn't verify your sign-in. Check its configuration or fill the fields in yourself.",
       "misconfigured": "The parser is misconfigured: its Supabase URL is missing.",
-      "blockedByShop": "This shop blocks automated requests. Copy the name and price in yourself — the link will still be saved."
+      "blockedByShop": "This shop blocks automated requests. Copy the name and price in yourself — the link will still be saved.",
+      "blockedByShopDesktop": "This shop blocks automated requests. Add it with the “To wishlist” button from the product page (Settings), or type the name and price yourself — the link will still be saved."
     }
   },
   "share": {

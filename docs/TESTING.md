@@ -416,6 +416,8 @@ npx lighthouse http://localhost:4173/login --view
 
 **Ціна й назва з JSON-LD у живих формах** — `test_extract_offers.py` (ROADMAP 8.3): HTML-сутності в назві (Amazon), `AggregateOffer.lowPrice`, `priceSpecification` обʼєктом і списком, перша пропозиція без ціни, `ProductGroup` з ціною першого варіанта; ціна з JSON-LD перемагає евристику.
 
+**Тиха відмова магазину** — `test_fetch_pinning.py`, `TestShopBlocksQuietly`: `202`, відповідь без `Content-Type` і порожня не-HTML — `upstream_forbidden`; справжній PDF — `unsupported_content`. У застосунку — `list-v2.spec.ts`, «магазин блокує парсер»: на десктопі підказка про «У вішліст», на телефоні без неї; назву можна вписати.
+
 **Пін на перевірену IP** — `test_fetch_pinning.py`, мережу підміняє `MockTransport`
 - Зʼєднання йде на IP, `Host` і SNI лишаються доменом; порт і IPv6 у дужках зберігаються.
 - Друга відповідь DNS (уже приватна) нічого не змінює — рівно той сценарій, від якого захищає пін.
@@ -519,12 +521,12 @@ npx lighthouse http://localhost:4173/login --view
 Не в CI і не в звичайному `pytest`: `addopts = -m "not live"` у `pytest.ini`, а Playwright-конфіг окремий. Набір посилань — `services/parser/tests/shop-links.txt`, порожній — тести пропускаються.
 
 ```bash
-cd services/parser && pytest -m live tests/test_live_shops.py   # парсер → live-shops.md
+cd services/parser && pytest -m live                            # парсер → live-shops.md
 cd app && HEADED=1 npm run check:shops        # кнопка «У вішліст» → test-results/shops.md
 # PowerShell: $env:HEADED=1; npm run check:shops
 ```
 
-Шлях до файлу в `pytest` — щоб не збирати решту модулів: їм потрібні всі залежності сервісу (`ModuleNotFoundError: http_ece` означає, що `requirements-dev.txt` ставився до ADR-049 — постав ще раз). Рядок, що починається з «#», — коментар: такий товар пропускається, а якщо закоментовано все — тест так і пише.
+З `-m live` pytest збирає лише `test_live_shops.py` (`tests/conftest.py`), тож живому прогону не потрібні залежності `wishlist-jobs`. Звичайному `pytest` — потрібні: `ModuleNotFoundError: http_ece` означає, що `requirements-dev.txt` ставився до ADR-049 — постав ще раз. Рядок, що починається з «#», — коментар: такий товар пропускається, а якщо закоментовано все — тест так і пише.
 
 Кожне посилання — окремий тест: зелений, коли є назва. Червоний — не обовʼязково баг: магазин міг не пустити бота чи безголовий браузер. Що робити з кожним рядком — вирішуємо за таблицею (API.md, «Магазини родини»). Без мережі до магазинів інструмент перевірено на локальній сторінці (`SHOP_LINKS` — інший файл того самого формату).
 

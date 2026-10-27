@@ -389,6 +389,33 @@ test.describe('сторінка списку v2: чернетки', () => {
   });
 });
 
+test.describe('сторінка списку v2: магазин блокує парсер (ROADMAP 8.3)', () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('чесне «магазин блокує», а на компʼютері — підказка про «У вішліст»; введене не губиться', async ({ page }, info) => {
+    await signInV2(page);
+    await newList(page, unique('V2 blocked'));
+    // Так парсер відповідає і на 403, і на «успіх» без сторінки (Amazon із Cloud Run).
+    await page.route(/\/parse$/, (route) =>
+      route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ detail: 'upstream_forbidden' }) }),
+    );
+    await addButton(page).click();
+    const sheet = itemSheet(page);
+    await sheet.locator('input[name="link"]').fill(`https://www.amazon.example/dp/B0${Date.now()}`);
+    await sheet.getByRole('button', { name: /^(далі|dalej|next)$/i }).click();
+
+    const note = sheet.getByText(/блокує автоматичні запити|blokuje automatyczne zapytania|blocks automated requests/i);
+    await expect(note).toBeVisible();
+    const bookmarklet = sheet.getByText(/«у вішліст»|„do wishlisty”|“to wishlist”/i);
+    if (info.project.name === 'mobile') await expect(bookmarklet).toHaveCount(0);
+    else await expect(bookmarklet).toBeVisible();
+    await expect(sheet.getByText(/не дав опису|nie podał opisu|didn't give a description/i)).toHaveCount(0);
+
+    await sheet.locator('input[name="title"]').fill('Термобілизна');
+    await expect(sheet.locator('input[name="title"]')).toHaveValue('Термобілизна');
+  });
+});
+
 test.describe('сторінка списку v2: те, що прийшло з v1 (ADR-050)', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 

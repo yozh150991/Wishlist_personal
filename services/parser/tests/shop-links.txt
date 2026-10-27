@@ -5,7 +5,7 @@
 # техніка, книга, товар з варіантами розміру чи кольору).
 #
 # Хто читає цей файл:
-#   pytest -m live tests/test_live_shops.py — серверний парсер (services/parser), звіт live-shops.md
+#   pytest -m live              — серверний парсер (services/parser), звіт live-shops.md
 #   npm run check:shops (app/)  — кнопка «У вішліст» у справжньому браузері, звіт
 #                                 app/test-results/shops.md
 #
