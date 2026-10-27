@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import type { Page } from '@playwright/test';
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { bookmarkletHref } from '../../src/lib/bookmarklet';
 
 /**
@@ -7,12 +8,20 @@ import { bookmarkletHref } from '../../src/lib/bookmarklet';
  * Запуск і умови — у `playwright.shops.config.ts`. Той самий набір посилань
  * читає `pytest -m live` для серверного парсера, тож дві таблиці можна
  * порівняти рядок у рядок.
+ *
+ * Браузер під керуванням Playwright частина магазинів упізнає й показує
+ * сторінку перевірки «чи ти не робот» (у вкладці лише домен) чи порожню.
+ * Такий рядок — «перевір вручну у своєму Chrome», а не вада кнопки: у
+ * людини ця сторінка відкривається звичайно.
  */
 
 // SHOP_LINKS — інший файл того самого формату (наприклад, лише нові посилання).
 const LINKS = process.env.SHOP_LINKS ?? new URL('../../../services/parser/tests/shop-links.txt', import.meta.url);
 const REPORT_DIR = new URL('../../test-results/', import.meta.url);
+/** Рядки звіту по одному на тест; чистить `shops.setup.ts` на початку прогону. */
+const JSONL = new URL('shops.jsonl', REPORT_DIR);
 const APP = 'https://wishlist.example';
+const MANUAL = 'перевірка «чи ти не робот» — перевір вручну у своєму Chrome';
 
 function readLinks(): { shop: string; url: string }[] {
   return readFileSync(LINKS, 'utf8')
@@ -27,13 +36,71 @@ function readLinks(): { shop: string; url: string }[] {
 }
 
 type Row = { shop: string; title: string; price: string; currency: string; image: string; page: string; error: string };
-const rows: Row[] = [];
-const cell = (v: string | null | undefined) => (v ?? '').replace(/\|/g, '/').replace(/\s+/g, ' ').slice(0, 80);
 type Opened = { __opened?: string };
+
+const cell = (v: string | null | undefined) => (v ?? '').replace(/\|/g, '/').replace(/\s+/g, ' ').slice(0, 80);
+
+/**
+ * Дописує рядок у `shops.jsonl` і перезбирає з нього `shops.md`. Тест, що
+ * впав, перезапускає воркер — і змінні модуля разом із ним, тож звіт у
+ * памʼяті губив би все, що було до падіння.
+ */
+function record(row: Row) {
+  mkdirSync(REPORT_DIR, { recursive: true });
+  appendFileSync(JSONL, `${JSON.stringify(row)}\n`, 'utf8');
+  const rows = readFileSync(JSONL, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => JSON.parse(l) as Row);
+  const head = '| Магазин | Назва | Ціна | Валюта | Фото | Заголовок вкладки | Помилка |\n|---|---|---|---|---|---|---|\n';
+  const body = rows
+    .map((r) => `| ${r.shop} | ${r.title} | ${r.price} | ${r.currency} | ${r.image} | ${r.page} | ${r.error} |`)
+    .join('\n');
+  writeFileSync(new URL('shops.md', REPORT_DIR), `${head}${body}\n`, 'utf8');
+}
+
+/** У вкладці лише домен («allegro.pl», «Amazon.pl») — це сторінка перевірки, а не товар. */
+function looksLikeGate(title: string, url: string): boolean {
+  const t = title.trim().toLowerCase();
+  if (!t) return true;
+  if (/\s/.test(t)) return false;
+  const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+  return t === host || t.replace(/^www\./, '') === host || host.startsWith(`${t.split('.')[0]}.`);
+}
+
+async function grab(page: Page, url: string, row: Row) {
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+    // Частина магазинів дописує JSON-LD скриптами вже після завантаження.
+    await page.waitForLoadState('load', { timeout: 15_000 }).catch(() => undefined);
+    await page.waitForTimeout(2_000);
+  } catch (e) {
+    row.error = cell(e instanceof Error ? e.message.split('\n')[0] : String(e));
+    return;
+  }
+  row.page = cell(await page.title());
+  await page.evaluate(() => {
+    window.open = (u?: string | URL) => {
+      (window as unknown as Opened).__opened = String(u);
+      return window;
+    };
+  });
+  await page.evaluate(decodeURIComponent(bookmarkletHref(APP).slice('javascript:'.length)));
+  const opened = await page.evaluate(() => (window as unknown as Opened).__opened ?? '');
+  const q = new URL(opened).searchParams;
+  row.title = cell(q.get('title'));
+  row.price = cell(q.get('price'));
+  row.currency = cell(q.get('currency'));
+  row.image = q.get('image') ? 'так' : '';
+  if (!row.page && !row.title) row.error = `порожня сторінка — ${MANUAL}`;
+  else if (looksLikeGate(row.title || row.page, url)) row.error = MANUAL;
+  else if (!row.title) row.error = 'назви немає';
+}
 
 const links = readLinks();
 
-test.describe.serial('кнопка «У вішліст» на сторінках магазинів', () => {
+// Не serial: магазин, що впав, не зупиняє решту.
+test.describe('кнопка «У вішліст» на сторінках магазинів', () => {
   if (links.length === 0) {
     test('набір посилань', () => {
       const hidden = readFileSync(LINKS, 'utf8')
@@ -48,44 +115,15 @@ test.describe.serial('кнопка «У вішліст» на сторінках
     });
   }
 
-  test.afterAll(() => {
-    if (rows.length === 0) return;
-    mkdirSync(REPORT_DIR, { recursive: true });
-    const head = '| Магазин | Назва | Ціна | Валюта | Фото | Заголовок вкладки | Помилка |\n|---|---|---|---|---|---|---|\n';
-    const body = rows
-      .map((r) => `| ${r.shop} | ${r.title} | ${r.price} | ${r.currency} | ${r.image} | ${r.page} | ${r.error} |`)
-      .join('\n');
-    writeFileSync(new URL('shops.md', REPORT_DIR), `${head}${body}\n`, 'utf8');
-  });
-
   for (const { shop, url } of links) {
     test(`${shop}: ${url.slice(0, 60)}`, async ({ page }) => {
       const row: Row = { shop, title: '', price: '', currency: '', image: '', page: '', error: '' };
-      rows.push(row);
       try {
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-        // Частина магазинів дописує JSON-LD скриптами вже після завантаження.
-        await page.waitForLoadState('load', { timeout: 15_000 }).catch(() => undefined);
-        await page.waitForTimeout(2_000);
-      } catch (e) {
-        row.error = cell(e instanceof Error ? e.message.split('\n')[0] : String(e));
-        throw e;
+        await grab(page, url, row);
+      } finally {
+        record(row);
       }
-      row.page = cell(await page.title());
-      await page.evaluate(() => {
-        window.open = (u?: string | URL) => {
-          (window as unknown as Opened).__opened = String(u);
-          return window;
-        };
-      });
-      await page.evaluate(decodeURIComponent(bookmarkletHref(APP).slice('javascript:'.length)));
-      const opened = await page.evaluate(() => (window as unknown as Opened).__opened ?? '');
-      const q = new URL(opened).searchParams;
-      row.title = cell(q.get('title'));
-      row.price = cell(q.get('price'));
-      row.currency = cell(q.get('currency'));
-      row.image = q.get('image') ? 'так' : '';
-      expect(q.get('title'), `${shop}: назви немає`).toBeTruthy();
+      expect(row.error, `${shop}: ${row.error}`).toBe('');
     });
   }
 });

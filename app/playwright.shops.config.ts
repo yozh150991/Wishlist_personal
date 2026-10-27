@@ -13,6 +13,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/live',
+  // Чистить рядки звіту минулого прогону (shops.jsonl).
+  globalSetup: './tests/live/shops.setup.ts',
   testMatch: /\.live\.ts$/,
   fullyParallel: false,
   workers: 1,

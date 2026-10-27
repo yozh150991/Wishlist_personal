@@ -250,6 +250,7 @@ $map = @{
   'bookmarklet.ts' = 'app\src\lib'
   'bookmarklet.spec.ts' = 'app\tests\e2e'
   'shops.live.ts' = 'app\tests\live'
+  'shops.setup.ts' = 'app\tests\live'
   'shop-links.txt' = 'services\parser\tests'
   'test_live_shops.py' = 'services\parser\tests'
   'conftest.py' = 'services\parser\tests'
