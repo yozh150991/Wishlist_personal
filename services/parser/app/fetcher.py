@@ -134,7 +134,27 @@ async def _read_page(res: httpx.Response, cfg, host: str | None) -> str:
         raise UpstreamError("upstream_error", res.status_code)
 
     ctype = res.headers.get("content-type", "")
+    # Amazon та інші відповідають ботам «успіхом» без сторінки: 202 Accepted
+    # або відповідь без Content-Type (живий прогін, 27 жовтня: з Cloud Run
+    # Amazon давав 422 unsupported_content, з домашньої IP — сторінку). Це
+    # той самий захист від ботів, що й 403: людині кажемо чесно.
+    if res.status_code == 202 or not ctype.strip():
+        log.info("магазин не віддав сторінку: host=%s status=%s ctype=%r", host, res.status_code, ctype)
+        raise UpstreamError("upstream_forbidden", res.status_code)
     if "html" not in ctype.lower():
+        # Порожня відповідь «text/plain» — теж відмова, а не інший формат.
+        empty = True
+        stream = res.aiter_bytes()
+        try:
+            async for chunk in stream:
+                if chunk.strip():
+                    empty = False
+                    break
+        finally:
+            await stream.aclose()
+        log.info("не HTML: host=%s status=%s ctype=%r empty=%s", host, res.status_code, ctype, empty)
+        if empty:
+            raise UpstreamError("upstream_forbidden", res.status_code)
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "unsupported_content")
 
     # Читаємо потоком і обриваємо на ліміті, але не відмовляємо: мета-теги

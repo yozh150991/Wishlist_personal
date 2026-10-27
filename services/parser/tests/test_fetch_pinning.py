@@ -188,3 +188,40 @@ class TestRebinding:
 
         await fetcher.fetch_html("https://shop.example/p", transport=httpx.MockTransport(handler))
         assert seen == ["93.184.216.34"]
+
+
+class TestShopBlocksQuietly:
+    """
+    Захист від ботів без 403 (живий прогін 27 жовтня, ROADMAP 8.3): Amazon із
+    Cloud Run відповідав «успіхом» без сторінки — це теж upstream_forbidden,
+    щоб людина бачила «магазин блокує автоматичні запити», а не «не HTML».
+    """
+
+    @pytest.mark.parametrize(
+        ("code", "headers", "body"),
+        [
+            (202, {}, ""),
+            (202, HTML, "<html></html>"),
+            (200, {}, ""),
+            (200, {"content-type": ""}, "x"),
+        ],
+    )
+    async def test_success_without_page_is_blocking(self, monkeypatch, code, headers, body):
+        fake_dns(monkeypatch, {"shop.example": ["93.184.216.34"]})
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(code, headers=headers, text=body)
+
+        with pytest.raises(HTTPException) as err:
+            await fetcher.fetch_html("https://shop.example/p", transport=httpx.MockTransport(handler))
+        assert err.value.detail == "upstream_forbidden"
+
+    async def test_real_non_html_is_still_unsupported(self, monkeypatch):
+        fake_dns(monkeypatch, {"shop.example": ["93.184.216.34"]})
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, headers={"content-type": "application/pdf"}, content=b"%PDF")
+
+        with pytest.raises(HTTPException) as err:
+            await fetcher.fetch_html("https://shop.example/p", transport=httpx.MockTransport(handler))
+        assert err.value.detail == "unsupported_content"

@@ -14,6 +14,25 @@ from .models import ParseRequest, ParseResponse
 
 log = logging.getLogger("parser")
 
+
+def _log_at_info() -> None:
+    """
+    Рядки «магазин відмовив: host=… status=…» — на рівні INFO, а uvicorn
+    типово показує лише WARNING і вище: без цього в логах Cloud Run видно
+    тільки «POST /parse 422», а не чому. Пишемо хост і статус, ніколи URL
+    (посилання на подарунок — приватна річ). Як у wishlist-jobs.
+    """
+    if log.handlers:
+        return
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(levelname)s: %(name)s %(message)s"))
+    log.addHandler(handler)
+    log.setLevel(logging.INFO)
+    log.propagate = False
+
+
+_log_at_info()
+
 app = FastAPI(title="Wishlist parser", version="0.1.0", docs_url=None, redoc_url=None)
 
 app.add_middleware(
