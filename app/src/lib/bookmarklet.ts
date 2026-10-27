@@ -97,6 +97,18 @@ export function pageGrab(origin: string): void {
       /* зіпсований блок — беремо наступний */
     }
   }
+  // Назва з JSON-LD — текст скрипта, сутностей браузер у ньому не розкодовує
+  // (Amazon: «M&eogon;ska»). textarea розкодовує їх без розбору тегів; на
+  // сторінках із Trusted Types присвоєння кидає — тоді лишаємо як є.
+  if (name && /&[#a-z0-9]+;/i.test(name)) {
+    try {
+      var ta = d.createElement('textarea');
+      ta.innerHTML = name;
+      name = ta.value;
+    } catch (e) {
+      /* лишаємо як є */
+    }
+  }
   name = name || meta('og:title') || meta('twitter:title') || d.title.trim();
   if (!price) {
     price = meta('product:price:amount') || meta('og:price:amount') || meta('price');

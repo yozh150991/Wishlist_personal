@@ -79,6 +79,14 @@ test.describe('закладка на сторінці магазину', () => {
     expect(q.get('image')).toBe('https://cdn.example.com/s.jpg');
   });
 
+  test('сутності в назві з JSON-LD розкодовано, теги не виконуються (як на Amazon)', async ({ page }) => {
+    const q = await grab(
+      page,
+      ld({ '@type': 'Product', name: 'Bielizna M&eogon;ska, D&lstrok;ugi &amp; <img src=x onerror=alert(1)>', offers: { price: '129.95', priceCurrency: 'PLN' } }),
+    );
+    expect(q.get('title')).toBe('Bielizna Męska, Długi & <img src=x onerror=alert(1)>');
+  });
+
   test('без JSON-LD — Open Graph', async ({ page }) => {
     const q = await grab(
       page,
