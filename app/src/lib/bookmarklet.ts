@@ -109,12 +109,78 @@ export function pageGrab(origin: string): void {
       /* лишаємо як є */
     }
   }
-  name = name || meta('og:title') || meta('twitter:title') || d.title.trim();
+  // Без розмітки (Amazon, Decathlon у браузері людини, 28 жовтня) — заголовок
+  // сторінки `h1`: у `<title>` магазини дописують хвіст («: Amazon.pl: …»).
+  var h1 = d.querySelector('h1');
+  var h1Text = h1 ? (h1.textContent || '').replace(/\s+/g, ' ').trim() : '';
+  name = name || meta('og:title') || meta('twitter:title') || (h1Text.length <= 300 ? h1Text : '') || d.title.trim();
   if (!price) {
     price = meta('product:price:amount') || meta('og:price:amount') || meta('price');
     cur = meta('product:price:currency') || meta('og:price:currency') || meta('priceCurrency');
   }
   img = img || meta('og:image:secure_url') || meta('og:image') || meta('twitter:image');
+
+  // Остання надія — те, що бачить людина (ADR-078). Без правил під магазини:
+  // ціна — найбільша видима ціна у верхній частині сторінки (головна ціна
+  // товару найпомітніша, ціни рекомендацій дрібніші й нижче; закреслені —
+  // стара ціна — не беремо); фото — найбільше видиме зображення там само.
+  // Людина бачить обидва у формі й може виправити.
+  var view = (window.innerHeight || 800) * 2;
+  var scrollTop = window.scrollY || 0;
+  if (!price) {
+    var SIGNS = [['zł', 'PLN'], ['pln', 'PLN'], ['₴', 'UAH'], ['грн', 'UAH'], ['uah', 'UAH'], ['€', 'EUR'], ['eur', 'EUR'], ['$', 'USD'], ['usd', 'USD']];
+    var NUM = /\d{1,3}(?:[ \u00a0\u202f.]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/;
+    var best = 0;
+    var bestTop = 0;
+    var cands = d.querySelectorAll('[itemprop="price"],[class*="price" i],[id*="price" i],[data-testid*="price" i]');
+    for (var c = 0; c < cands.length && c < 400; c++) {
+      var el = cands[c] as HTMLElement;
+      if (el.closest('s,del,strike')) continue;
+      var cs = getComputedStyle(el);
+      if ((cs.textDecorationLine || '').indexOf('line-through') >= 0) continue;
+      var r = el.getBoundingClientRect();
+      var top = r.top + scrollTop;
+      if (r.width < 2 || r.height < 2 || top > view || r.right < 0) continue;
+      var tx = ((el.getAttribute('itemprop') === 'price' && el.getAttribute('content')) || el.innerText || '').replace(/\s+/g, ' ').trim();
+      if (!tx || tx.length > 60) continue;
+      var m = tx.match(NUM);
+      if (!m) continue;
+      var low = tx.toLowerCase();
+      var sign = '';
+      for (var s = 0; s < SIGNS.length && !sign; s++) if (low.indexOf(SIGNS[s]![0]!) >= 0) sign = SIGNS[s]![1]!;
+      // Число без знака валюти й без копійок — це, найімовірніше, не ціна («365+»).
+      if (!sign && !/\d[.,]\d{2}(?!\d)/.test(m[0]) && el.getAttribute('itemprop') !== 'price') continue;
+      var size = parseFloat(cs.fontSize) || 0;
+      var struck = false;
+      var kids = el.querySelectorAll('*');
+      for (var k2 = 0; k2 < kids.length && k2 < 20; k2++) {
+        var ks = getComputedStyle(kids[k2]!);
+        // Блок зі старою (закресленою) ціною всередині — не наш: нова ціна має свій елемент.
+        if ((ks.textDecorationLine || '').indexOf('line-through') >= 0 || kids[k2]!.matches('s,del,strike')) struck = true;
+        size = Math.max(size, parseFloat(ks.fontSize) || 0);
+      }
+      if (struck) continue;
+      if (size > best || (size === best && top < bestTop)) {
+        best = size;
+        bestTop = top;
+        price = m[0];
+        cur = sign;
+      }
+    }
+  }
+  if (!img) {
+    var area = 0;
+    for (var g = 0; g < d.images.length && g < 300; g++) {
+      var im = d.images[g]!;
+      var ir = im.getBoundingClientRect();
+      var src = im.currentSrc || im.src;
+      if (ir.width < 120 || ir.height < 120 || ir.top + scrollTop > view || !/^https:/.test(src)) continue;
+      if (ir.width * ir.height > area) {
+        area = ir.width * ir.height;
+        img = src;
+      }
+    }
+  }
   try {
     img = img ? new URL(img, location.href).href : '';
   } catch (e) {
