@@ -23,6 +23,7 @@
   },
   "settings": {
     "title": "Settings",
+    "version": "Version {v}",
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",

@@ -23,6 +23,7 @@
   },
   "settings": {
     "title": "Ustawienia",
+    "version": "Wersja {v}",
     "theme": "Motyw",
     "themeLight": "Jasny",
     "themeDark": "Ciemny",
