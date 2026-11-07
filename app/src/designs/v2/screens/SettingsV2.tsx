@@ -215,6 +215,9 @@ export default function SettingsV2() {
               {t('privacy.link')}
             </Link>
           </p>
+          <p className="v2-hint v2-hint--start" data-testid="app-version">
+            {t('settings.version', { v: __APP_VERSION__ })}
+          </p>
         </section>
       </div>
     </main>

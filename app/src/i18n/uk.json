@@ -23,6 +23,7 @@
   },
   "settings": {
     "title": "Налаштування",
+    "version": "Версія {v}",
     "theme": "Тема",
     "themeLight": "Світла",
     "themeDark": "Темна",

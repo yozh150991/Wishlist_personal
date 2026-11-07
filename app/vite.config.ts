@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig, loadEnv } from 'vite';
 import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -19,7 +20,15 @@ function preconnectSupabase(url: string | undefined): Plugin {
   };
 }
 
+/**
+ * Версія з package.json — у збірку як `__APP_VERSION__`, видно внизу Налаштувань.
+ * Піднята версія міняє код застосунку, отже й Service Worker: відкриті вкладки
+ * отримують банер «Оновити», а після оновлення в Налаштуваннях видно новий номер.
+ */
+const APP_VERSION = (JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }).version;
+
 export default defineConfig(({ mode }) => ({
+  define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   plugins: [
     react(),
     preconnectSupabase(loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL),
