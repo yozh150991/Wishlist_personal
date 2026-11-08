@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { X } from 'lucide-react';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
 import { pendingCount } from '../../../lib/outbox';
@@ -245,5 +246,96 @@ export function YearlySwitchV2({
       disabled={!next}
       onChange={onChange}
     />
+  );
+}
+
+/**
+ * Фото позиції на весь екран (гостьова сторінка, свій список, форма позиції).
+ * Закривається тапом будь-де, «×», Escape і кнопкою «Назад» на телефоні.
+ *
+ * Рідний `<dialog>`: відкритий поверх форми позиції (теж `<dialog>`), він лягає
+ * над нею у верхньому шарі браузера, а фокус після закриття повертається на
+ * мініатюру.
+ *
+ * «Назад»: при відкритті додаємо в історію запис із тією самою адресою. Будь-яке
+ * закриття йде через нього — тап, «×» і Escape викликають `history.back()`, а
+ * закриває перегляд уже `popstate`; так «Назад» на телефоні закриває перегляд,
+ * а не сторінку чи форму під ним. Роутер на такий запис не зважає: адреса та
+ * сама, а `idx` у стані скопійовано з поточного. Запис не дублюється, якщо
+ * ефект виконано двічі (StrictMode у розробці).
+ */
+export function PhotoViewerV2({ src, onClose }: { src: string; onClose: () => void }) {
+  const { t } = useI18n();
+  const ref = useRef<HTMLDialogElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  // Вікно не закривається, а зникає з DOM, тож фокус на мініатюру браузер не
+  // поверне — повертаємо самі. Беремо його під час першого рендера (ще до
+  // `showModal()`), щоб повторний ефект StrictMode не підмінив його на «×».
+  const openerRef = useRef(document.activeElement);
+
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open) d.showModal();
+    if (!isViewerEntry(window.history.state)) {
+      const base: unknown = window.history.state;
+      window.history.pushState({ ...(typeof base === 'object' && base ? base : {}), photoViewer: true }, '');
+    }
+    const onPop = () => closeRef.current();
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      const opener = openerRef.current;
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, []);
+
+  const close = () => {
+    if (isViewerEntry(window.history.state)) window.history.back();
+    else onClose();
+  };
+
+  return (
+    <dialog
+      ref={ref}
+      className="v2-viewer"
+      aria-label={t('v2app.photo.viewer')}
+      data-testid="photo-viewer"
+      onCancel={(e) => {
+        e.preventDefault();
+        close();
+      }}
+      // Тап будь-де — і по фото, і по затемненню — закриває перегляд.
+      onClick={(e) => {
+        e.stopPropagation();
+        close();
+      }}
+    >
+      <img className="v2-viewer__img" src={src} alt="" />
+      <button type="button" className="v2-iconbtn v2-viewer__close" aria-label={t('v2app.photo.close')}>
+        <X size={24} strokeWidth={2.75} aria-hidden="true" />
+      </button>
+    </dialog>
+  );
+}
+
+function isViewerEntry(state: unknown): boolean {
+  return typeof state === 'object' && state !== null && 'photoViewer' in state;
+}
+
+/**
+ * Мініатюра фото, що відкриває його на весь екран. `children` — сама `<img>`
+ * зі своїм класом розміру; кнопка лише робить її натисканою.
+ */
+export function PhotoThumbV2({ src, children }: { src: string; children: ReactNode }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="v2-thumb" aria-label={t('v2app.photo.open')} onClick={() => setOpen(true)}>
+        {children}
+      </button>
+      {open && <PhotoViewerV2 src={src} onClose={() => setOpen(false)} />}
+    </>
   );
 }

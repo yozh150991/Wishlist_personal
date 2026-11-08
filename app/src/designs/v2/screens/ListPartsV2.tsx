@@ -14,7 +14,7 @@ import { fileName, toCsv, toJson } from '../../../lib/transfer';
 import type { Pending } from '../../../lib/undo';
 import { errorText } from '../../../lib/errors';
 import { FieldV2, NoteV2, SubmitV2, useCountdown } from './AuthPartsV2';
-import { SheetV2 } from './CommonV2';
+import { PhotoThumbV2, SheetV2 } from './CommonV2';
 
 /**
  * Частини сторінки списку v2 (потоки C, F, O, V): картка позиції, її меню,
@@ -209,9 +209,9 @@ export function ItemCardV2({
   const priceMoved = item.status === 'active' ? linkPriceChange(item, currency)?.notable : false;
   const linkTag = link === 'gone' || link === 'out' || priceMoved;
 
+  const img = item.image_url ? <img className="v2-item__img" src={item.image_url} alt="" loading="lazy" /> : null;
   const body = (
     <>
-      {item.image_url && <img className="v2-item__img" src={item.image_url} alt="" loading="lazy" />}
       <span className="v2-item__text">
         <span className="v2-item__title">{item.title}</span>
         <span className="v2-item__meta">
@@ -284,6 +284,8 @@ export function ItemCardV2({
         )}
         <div
           className="v2-item__front"
+          // Фото — окрема кнопка поперед рядка (перегляд на весь екран), але не в режимі вибору.
+          data-photo={(img && !select) || undefined}
           data-dragging={swipe.dragging || undefined}
           style={swipe.offset ? { transform: `translateX(${swipe.offset}px)` } : undefined}
           {...swipe.handlers}
@@ -296,12 +298,16 @@ export function ItemCardV2({
                 checked={select.on}
                 onChange={() => select.onToggle(item)}
               />
+              {img}
               {body}
             </label>
           ) : (
-            <button type="button" className="v2-item__main" onClick={() => onOpen(item)}>
-              {body}
-            </button>
+            <>
+              {img && item.image_url && <PhotoThumbV2 src={item.image_url}>{img}</PhotoThumbV2>}
+              <button type="button" className="v2-item__main" onClick={() => onOpen(item)}>
+                {body}
+              </button>
+            </>
           )}
           {!selecting && (
             <button

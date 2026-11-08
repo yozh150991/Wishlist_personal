@@ -415,6 +415,11 @@
     }
   },
   "v2app": {
+    "photo": {
+      "viewer": "Full-screen photo",
+      "open": "Enlarge photo",
+      "close": "Close photo"
+    },
     "nav": {
       "label": "Main navigation",
       "account": "Account"

@@ -26,7 +26,7 @@ import { CURRENCIES, VARIANTS_MAX, VARIANT_LABEL_MAX, VARIANT_VALUE_MAX } from '
 import type { Currency, Item, ItemInput, ItemPriority, ItemVariant } from '../../../lib/types';
 import type { Section } from '../../../lib/sections';
 import { FieldV2, NoteV2, OrDividerV2 } from './AuthPartsV2';
-import { SheetV2 } from './CommonV2';
+import { PhotoThumbV2, SheetV2 } from './CommonV2';
 import { ConfirmSheetV2, usePriorityLabel } from './ListPartsV2';
 import { useFxRates } from '../../../lib/fx';
 import { useMediaQuery } from '../../../lib/media';
@@ -729,12 +729,14 @@ export function ItemSheetV2({
                         {brokenImage === form.image_url.trim() ? (
                           <span className="v2-preview__img v2-preview__img--empty" aria-hidden="true" />
                         ) : (
-                          <img
-                            className="v2-preview__img"
-                            src={form.image_url}
-                            alt=""
-                            onError={() => setBrokenImage(form.image_url.trim())}
-                          />
+                          <PhotoThumbV2 src={form.image_url}>
+                            <img
+                              className="v2-preview__img"
+                              src={form.image_url}
+                              alt=""
+                              onError={() => setBrokenImage(form.image_url.trim())}
+                            />
+                          </PhotoThumbV2>
                         )}
                         <button
                           type="button"
@@ -983,12 +985,14 @@ export function ItemSheetV2({
                           {imageBroken ? (
                             <span className="v2-preview__img v2-preview__img--empty" aria-hidden="true" />
                           ) : (
-                            <img
-                              className="v2-preview__img"
-                              src={form.image_url.trim()}
-                              alt=""
-                              onError={() => setBrokenImage(form.image_url.trim())}
-                            />
+                            <PhotoThumbV2 src={form.image_url.trim()}>
+                              <img
+                                className="v2-preview__img"
+                                src={form.image_url.trim()}
+                                alt=""
+                                onError={() => setBrokenImage(form.image_url.trim())}
+                              />
+                            </PhotoThumbV2>
                           )}
                           <button
                             type="button"
@@ -1026,12 +1030,14 @@ export function ItemSheetV2({
                               {imageBroken ? (
                                 <span className="v2-preview__img v2-preview__img--empty" aria-hidden="true" />
                               ) : (
-                                <img
-                                  className="v2-preview__img"
-                                  src={imageSrc}
-                                  alt=""
-                                  onError={() => setBrokenImage(imageSrc)}
-                                />
+                                <PhotoThumbV2 src={imageSrc}>
+                                  <img
+                                    className="v2-preview__img"
+                                    src={imageSrc}
+                                    alt=""
+                                    onError={() => setBrokenImage(imageSrc)}
+                                  />
+                                </PhotoThumbV2>
                               )}
                               <button
                                 type="button"
