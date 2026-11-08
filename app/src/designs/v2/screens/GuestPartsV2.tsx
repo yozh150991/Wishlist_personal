@@ -1119,8 +1119,8 @@ export function ReportSheetV2({ open, token, onClose }: { open: boolean; token: 
               onChange={(e) => setComment(e.target.value)}
             />
           </div>
-          <SubmitV2 busy={busy} label={t('v2guest.report.send')} busyLabel={t('v2guest.report.sending')} />
           <div className="v2-sheet__actions">
+            <SubmitV2 busy={busy} label={t('v2guest.report.send')} busyLabel={t('v2guest.report.sending')} />
             <button type="button" className="v2-btn v2-btn--ghost" onClick={onClose}>
               {t('common.cancel')}
             </button>
@@ -1379,28 +1379,29 @@ export function PoolSheetV2({
           <p className="v2-hint v2-hint--start">
             {mode === 'start' ? t('v2guest.pool.emailOrganizer') : t('v2guest.pool.emailJoin')}
           </p>
-          <SubmitV2
-            busy={busy}
-            label={
-              mode === 'start'
-                ? t('v2guest.pool.startSubmit')
-                : pool?.mine !== null && pool?.mine !== undefined
-                  ? t('common.save')
-                  : t('v2guest.pool.joinSubmit')
-            }
-            busyLabel={t('common.saving')}
-          />
-          {mode === 'join' && pool && pool.mine !== null && (
-            <button
-              type="button"
-              className="v2-btn v2-btn--ghost v2-btn--block"
-              aria-disabled={busy || undefined}
-              onClick={() => !busy && onLeave()}
-            >
-              {t('v2guest.pool.leave')}
-            </button>
-          )}
+          {/* Головна дія — у панелі, що прилипає до низу аркуша. */}
           <div className="v2-sheet__actions">
+            <SubmitV2
+              busy={busy}
+              label={
+                mode === 'start'
+                  ? t('v2guest.pool.startSubmit')
+                  : pool?.mine !== null && pool?.mine !== undefined
+                    ? t('common.save')
+                    : t('v2guest.pool.joinSubmit')
+              }
+              busyLabel={t('common.saving')}
+            />
+            {mode === 'join' && pool && pool.mine !== null && (
+              <button
+                type="button"
+                className="v2-btn v2-btn--ghost v2-btn--block"
+                aria-disabled={busy || undefined}
+                onClick={() => !busy && onLeave()}
+              >
+                {t('v2guest.pool.leave')}
+              </button>
+            )}
             <button type="button" className="v2-btn v2-btn--ghost" onClick={onClose}>
               {t('common.cancel')}
             </button>
