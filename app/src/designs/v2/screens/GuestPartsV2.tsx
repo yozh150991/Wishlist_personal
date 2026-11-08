@@ -20,7 +20,7 @@ import type { GuestPool, ReportReason } from '../../../lib/shares';
 import type { SharedItem } from '../../../lib/shares';
 import type { Currency } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
-import { SheetV2, SwitchV2 } from './CommonV2';
+import { PhotoThumbV2, SheetV2, SwitchV2 } from './CommonV2';
 import { usePriorityLabel } from './ListPartsV2';
 
 /**
@@ -176,7 +176,9 @@ export function GuestCardV2({
       id={`v2-g-${item.id}`}
     >
       {item.image_url ? (
-        <img className="v2-gcard__img" src={item.image_url} alt="" loading="lazy" />
+        <PhotoThumbV2 src={item.image_url}>
+          <img className="v2-gcard__img" src={item.image_url} alt="" loading="lazy" />
+        </PhotoThumbV2>
       ) : null}
       <div className="v2-gcard__text">
         {flag && <span className="v2-tag v2-gcard__flag" data-tone="accent">{flag}</span>}

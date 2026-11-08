@@ -441,3 +441,56 @@ test('код після першої броні: як повернути бро�
   await page.getByRole('button', { name: /мої броні · 1|moje rezerwacje · 1|my picks · 1/i }).click();
   await expect(page.getByRole('dialog').getByText(/нічого не оплачує|niczego nie opłaca|doesn.t pay for anything/i)).toBeVisible();
 });
+
+test('фото позиції на /l/ — мініатюра відкриває перегляд на весь екран; тап, Escape і «Назад» закривають', async ({ page }) => {
+  // Маленька PNG 1×1 як «фото» — адреса з того самого сайту, щоб не впиратись у CSP img-src.
+  await page.route('**/e2e-photo.png', (route) =>
+    route.fulfill({
+      contentType: 'image/png',
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'),
+    }),
+  );
+  await page.route('**/rpc/get_guest_list', (route) =>
+    route.fulfill({
+      json: {
+        title: 'День народження', message: null, currency: 'PLN', event_date: null,
+        expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+        hide_prices: false, allow_reservations: true, archived: false, viewer_is_owner: false,
+        guest: null, sections: [], thanks: null,
+        items: [{
+          id: 'e2e-photo-1', title: 'Лампа', url: null, price: 120, currency: 'PLN', quantity: 1, priority: 'medium',
+          note: null, variants: [], image_url: '/e2e-photo.png', status: 'active', created_at: '2026-10-01T10:00:00Z',
+          section_id: null, taken_qty: 0, mine_qty: 0,
+        }],
+      },
+    }),
+  );
+  await page.route('**/rpc/register_share_view', (route) => route.fulfill({ status: 204, body: '' }));
+
+  await page.goto('/l/e2e-photo-token');
+  const thumb = page.getByRole('button', { name: /збільшити фото|powiększ zdjęcie|enlarge photo/i });
+  const viewer = page.getByTestId('photo-viewer');
+
+  // Тап по фото закриває, фокус повертається на мініатюру.
+  await thumb.click();
+  await expect(viewer).toBeVisible();
+  const box = await viewer.locator('img').boundingBox();
+  expect(box?.width ?? 0).toBeGreaterThan(200);
+  await viewer.locator('img').click();
+  await expect(viewer).toHaveCount(0);
+  await expect(thumb).toBeFocused();
+
+  // Escape.
+  await thumb.click();
+  await expect(viewer).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(viewer).toHaveCount(0);
+
+  // «Назад» закриває перегляд, а сторінка лишається тією самою.
+  await thumb.click();
+  await expect(viewer).toBeVisible();
+  await page.goBack();
+  await expect(viewer).toHaveCount(0);
+  await expect(page).toHaveURL(/\/l\/e2e-photo-token$/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+});
