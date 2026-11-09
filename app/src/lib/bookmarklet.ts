@@ -149,7 +149,9 @@ export function pageGrab(origin: string): void {
       var sign = '';
       for (var s = 0; s < SIGNS.length && !sign; s++) if (low.indexOf(SIGNS[s]![0]!) >= 0) sign = SIGNS[s]![1]!;
       // Число без знака валюти й без копійок — це, найімовірніше, не ціна («365+»).
-      if (!sign && !/\d[.,]\d{2}(?!\d)/.test(m[0]) && el.getAttribute('itemprop') !== 'price') continue;
+      // «1 599,-» — ціле число без копійок (IKEA й багато польських магазинів):
+      // «,-» на місці копійок — теж ознака ціни.
+      if (!sign && !/\d[.,](?:\d{2}(?!\d)|\s?[-\u2013\u2014](?![\d-]))/.test(tx) && el.getAttribute('itemprop') !== 'price') continue;
       var size = parseFloat(cs.fontSize) || 0;
       var struck = false;
       var kids = el.querySelectorAll('*');

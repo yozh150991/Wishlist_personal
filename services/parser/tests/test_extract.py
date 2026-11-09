@@ -171,3 +171,25 @@ class TestHeuristicRejectsNoise:
         assert _looks_like_price("9,99/szt.") is True
         assert _looks_like_price("365 zł") is True
         assert _looks_like_price("399 грн") is True
+
+    def test_whole_price_with_dash_accepted(self):
+        """«1 599,-» — ціле число злотих без копійок (IKEA, 9 листопада 2026)."""
+        from app.extract import _looks_like_price
+
+        for text in ("1 599,-", "1\u00a0599,-", "Cena 1599,-", "49,–", "99.—", "1 599, -"):
+            assert _looks_like_price(text) is True, text
+            assert parse_price(text) == float(text.replace("Cena", "").strip(" ,.-–—").replace(" ", "").replace("\u00a0", "").rstrip(",")), text
+        # Тире без числа перед комою, діапазон і від'ємне — не «,-».
+        for text in ("IKEA 365+", "365", "1,-5", "10,--", "-"):
+            assert _looks_like_price(text) is False, text
+
+    def test_ikea_whole_price_from_page(self):
+        html = (
+            '<html><head><meta property="og:title" content="HEMNES Witryna"></head><body>'
+            '<span class="pip-header-section__description-text">IKEA 365+</span>'
+            '<span class="pip-temp-price"><span class="pip-temp-price__sr-text">Cena 1599,-</span>'
+            '<span class="pip-temp-price__integer">1 599</span><span class="pip-temp-price__decimal">,-</span></span>'
+            "</body></html>"
+        )
+        out = extract(html, "https://www.ikea.com/pl/pl/p/hemnes-00596161/")
+        assert (out.price, out.confidence["price"]) == (1599.0, "heuristic")

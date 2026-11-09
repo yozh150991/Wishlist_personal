@@ -176,6 +176,21 @@ test.describe('закладка: сторінка без розмітки (ADR-0
     expect(q.has('currency')).toBe(false);
   });
 
+  test('як IKEA: «1 599,-» — ціле число без копійок і без знака валюти', async ({ page }) => {
+    const q = await grabPage(
+      page,
+      `<head><title>HEMNES Witryna - IKEA</title><meta property="og:title" content="HEMNES Witryna z 3 szufladami"></head><body>
+        <h1>HEMNES</h1>
+        <span class="pip-header-section__description-text" style="font-size:40px">IKEA 365+</span>
+        <span class="pip-temp-price"><span class="pip-temp-price__sr-text" style="position:absolute;clip:rect(0 0 0 0);width:1px;height:1px;overflow:hidden">Cena 1599,-</span>
+          <span class="pip-temp-price__integer" style="font-size:32px">1 599</span><span class="pip-temp-price__decimal" style="font-size:16px">,-</span></span>
+        <div class="price-banner" style="font-size:12px">15 rat 0% przy zakupach za min. 2500 zł w dn. 4.08 - 1.09.2026 dla Klubowiczów</div>
+      </body>`,
+    );
+    expect(q.get('title')).toBe('HEMNES Witryna z 3 szufladami');
+    expect(fromPage(q)).toMatchObject({ price: 1599, currency: null });
+  });
+
   test('число без знака й без копійок ціною не вважаємо; приховані й далекі — теж', async ({ page }) => {
     const q = await grabPage(
       page,
