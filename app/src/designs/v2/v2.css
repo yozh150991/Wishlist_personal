@@ -634,8 +634,13 @@
 .v2-sheet {
   width: 100%;
   max-width: none;
+  /* Високий аркуш доходить до самого верху, а не лишає браузерну смужку
+     сторінки над собою (типове max-height діалогу — 100% − 2em − 6px). */
+  max-height: 100dvh;
   margin: auto 0 0;
   padding: 0;
+  /* Догорнули аркуш до краю — сторінка під ним не їде слідом. */
+  overscroll-behavior: contain;
   color: var(--color-text);
   background: var(--color-surface);
   border: 0;
@@ -650,11 +655,42 @@
 /* Заголовок вікна буває й <legend> (вибір сортування) — шрифт кажемо явно. */
 .v2-sheet__title { font-family: var(--font-heading); font-weight: var(--weight-heading); font-size: var(--t-h2); }
 .v2-sheet__actions { display: grid; gap: var(--sp-3); }
+/* Кнопки прилипають до низу аркуша: у довгому аркуші (збір, ландшафт,
+   великий шрифт) головна дія завжди на виду, гортаються лише поля. Коли
+   гортати нічого, «прилипання» нічим не відрізняється від звичайного. */
+.v2-sheet .v2-sheet__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-inline: calc(-1 * var(--sp-6));
+  padding: var(--sp-4) var(--sp-6) calc(var(--sp-7) + env(safe-area-inset-bottom));
+  /* Нижній відступ аркуша переходить у саму панель, щоб не було двох. */
+  margin-bottom: calc(-1 * (var(--sp-7) + env(safe-area-inset-bottom)));
+  background: var(--color-surface);
+}
 @media (min-width: 40rem) {
   .v2-sheet {
     width: min(28rem, calc(100% - 2 * var(--sp-6)));
+    max-height: calc(100dvh - 2 * var(--sp-6));
     margin: auto;
     border-radius: 30px;
+  }
+}
+/* Телефон боком (і будь-яке низьке вікно): аркуш на всю висоту, щільніший,
+   заголовок дрібніший — інакше від вікна лишалась смужка, а кнопки — під
+   гортанням. */
+@media (min-width: 40rem) and (max-height: 32rem) {
+  .v2-sheet:not(.v2-sheet--full) {
+    max-height: 100dvh;
+    margin-block: 0;
+    border-radius: 0 0 30px 30px;
+  }
+  .v2-sheet:not(.v2-sheet--full) .v2-sheet__body { gap: var(--sp-4); padding-block: var(--sp-6); }
+  .v2-sheet:not(.v2-sheet--full) .v2-sheet__title { font-size: 1.25rem; }
+  .v2-sheet:not(.v2-sheet--full) .v2-sheet__actions {
+    margin-bottom: calc(-1 * var(--sp-6));
+    padding-block: var(--sp-3) var(--sp-6);
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   }
 }
 

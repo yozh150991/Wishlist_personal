@@ -178,3 +178,10 @@ h4 { overflow-wrap: anywhere; }
 }
 .update-banner > span { flex: 1 1 12rem; font-weight: 700; }
 .update-banner__actions { display: flex; gap: var(--sp-2); margin-inline-start: auto; }
+
+/* Поки відкрите модальне вікно (аркуш, форма, фото на весь екран), сторінка
+   під ним не гортається: рідний <dialog> сам цього не робить. */
+html:has(dialog:modal) { overflow: hidden; }
+/* Місце під смугу прокрутки — завжди: інакше на компʼютері сторінка
+   стрибала б убік, коли вікно ховає смугу. На телефоні смуга накладна. */
+html { scrollbar-gutter: stable; }

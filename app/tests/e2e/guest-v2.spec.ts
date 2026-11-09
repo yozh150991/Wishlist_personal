@@ -494,3 +494,37 @@ test('фото позиції на /l/ — мініатюра відкриває
   await expect(page).toHaveURL(/\/l\/e2e-photo-token$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
+
+test('аркуш на /l/ — сторінка під ним не гортається, головна дія на виду навіть у ландшафті', async ({ page }) => {
+  const item = (id: string, title: string) => ({
+    id, title, url: null, price: 1999, currency: 'PLN', quantity: 1, priority: 'medium', note: null,
+    variants: [], image_url: null, status: 'active', created_at: '2026-10-01T10:00:00Z', section_id: null,
+    taken_qty: 0, mine_qty: 0,
+  });
+  await page.route('**/rpc/get_guest_list', (route) =>
+    route.fulfill({
+      json: {
+        title: 'День народження', message: null, currency: 'PLN', event_date: null,
+        expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+        hide_prices: false, allow_reservations: true, archived: false, viewer_is_owner: false,
+        guest: null, sections: [], thanks: null,
+        items: Array.from({ length: 12 }, (_, i) => item(`e2e-sheet-${i}`, `Позиція ${i + 1}`)),
+      },
+    }),
+  );
+  await page.route('**/rpc/register_share_view', (route) => route.fulfill({ status: 204, body: '' }));
+  // Телефон боком: низьке вікно, де раніше від аркуша лишалась смужка.
+  await page.setViewportSize({ width: 915, height: 340 });
+  await page.goto('/l/e2e-sheet-token');
+
+  await page.getByRole('button', { name: /брати разом|zrzućmy się|chip in/i }).first().click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+  // Сторінка під вікном не гортається.
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow)).toBe('hidden');
+  // «Відкрити збір» видно одразу, без прокрутки аркуша.
+  await expect(sheet.getByRole('button', { name: /відкрити збір|otwórz zrzutkę|start the collection/i })).toBeInViewport();
+  await sheet.getByRole('button', { name: /^(скасувати|anuluj|cancel)$/i }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow)).not.toBe('hidden');
+});
