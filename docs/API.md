@@ -429,7 +429,7 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 
 **Кнопка вручну у своєму Chrome, 28 жовтня:** Allegro — назва, 49,99 PLN, фото; Zalando — назва, 399 PLN, фото; Amazon — лише назва з `<title>` (з хвостом «: Amazon.pl: …»); Decathlon — лише назва. Розмітки з ціною на Amazon і Decathlon у браузері людини немає — тому ADR-078: ціна й фото з того, що на екрані. Перевірити ще раз після оновлення закладки.
 
-**Разом:** назву бодай одним шляхом дають 7 з 9 (OLX, Rozetka, Prom, Empik, IKEA — кнопкою; Amazon, Zalando — сервером, Amazon лише з домашньої IP). Не перевірено ні тим, ні іншим — Allegro й Decathlon: їх, а також Amazon і Zalando, треба натиснути кнопкою вручну у своєму Chrome. Ціна IKEA — лише вручну.
+**Разом (станом на 9 листопада):** назву бодай одним шляхом дають усі 9: OLX, Rozetka, Prom, Empik, IKEA — кнопкою під керуванням; Allegro, Zalando, Amazon, Decathlon — кнопкою вручну (Zalando й Amazon — ще й сервером, Amazon лише з домашньої IP). Ціну дають 7 з 9: Allegro, Amazon (сервер, домашня IP), OLX, Rozetka, Prom, Empik, Zalando. Не перевірено після виправлень: Amazon і Decathlon кнопкою з ADR-078 (ціна й фото з екрана) та IKEA з «1 599,-» (0.2.7) — перетягнути кнопку з Налаштувань ще раз і натиснути вручну у своєму Chrome.
 
 ### Порядок витягу даних
 1. JSON-LD `schema.org/Product` → `name`, `offers.price`, `offers.priceCurrency`, `image`
