@@ -53,8 +53,8 @@
       "drag": "Przycisk trzeba przeciągnąć na pasek zakładek, a nie kliknąć tutaj."
     },
     "iosShortcut": {
-      "title": "Dodawanie z Safari na iPhonie",
-      "body": "Safari na iPhonie nie wpuszcza aplikacji webowych do menu „Udostępnij”. Obchodzi to Skrót — jedna czynność, ustawienie zajmuje minutę.",
+      "title": "Dodawanie z przeglądarki na iPhonie",
+      "body": "Safari i Chrome na iPhonie nie wpuszczają aplikacji webowych do menu „Udostępnij”. Obchodzi to Skrót — jedna czynność, ustawienie zajmuje minutę.",
       "ready": "Dodaj gotowy Skrót",
       "readyHint": "Otworzy się aplikacja „Skróty” — stuknij „Dodaj skrót”.",
       "own": "Albo utwórz go sam:",
@@ -62,10 +62,10 @@
       "step2": "Dodaj czynność „Otwórz adresy URL” (ang. Open URLs).",
       "step3": "W pole adresu wklej początek skopiowany przyciskiem poniżej, a zaraz za nim — zmienną „Dane wejściowe skrótu” (Shortcut Input).",
       "step4": "W ustawieniach skrótu (ⓘ) włącz „Pokazuj w arkuszu udostępniania”.",
-      "step5": "W Safari na stronie produktu: „Udostępnij” → „Do wishlisty”.",
+      "step5": "W Safari lub Chrome na stronie produktu: „Udostępnij” → „Do wishlisty”.",
       "copy": "Skopiuj początek adresu",
       "copied": "Skopiowano",
-      "note": "Skrót otwiera Safari, a nie aplikację z ekranu początkowego, więc w Safari też trzeba być zalogowanym. Za pierwszym razem poprosi o logowanie — i wróci do formularza z produktem."
+      "note": "Skrót otwiera domyślną przeglądarkę iPhone’a (zwykle Safari), a nie aplikację z ekranu początkowego, więc w niej też trzeba być zalogowanym. Za pierwszym razem poprosi o logowanie — i wróci do formularza z produktem."
     }
   },
   "errors": {
@@ -250,7 +250,7 @@
     "installed": "Wishlist jest już zainstalowany na tym urządzeniu.",
     "installHint": "Zainstaluj Wishlist na ekranie głównym — będzie się otwierać jak osobna aplikacja, bez paska przeglądarki.",
     "installButton": "Zainstaluj",
-    "installIos": "Na iPhonie lub iPadzie otwórz stronę w Safari, stuknij „Udostępnij”, a potem „Do ekranu początkowego”.",
+    "installIos": "Na iPhonie lub iPadzie stuknij „Udostępnij” w Safari lub Chrome, a potem „Do ekranu początkowego”.",
     "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”.",
     "qrShow": "Pokaż kod QR",
     "qrHint": "Wygodniej zainstalować na telefonie — zeskanuj adres."

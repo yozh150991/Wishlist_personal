@@ -53,8 +53,8 @@
       "drag": "Drag the button to your bookmarks bar — clicking it here does nothing."
     },
     "iosShortcut": {
-      "title": "Add from Safari on iPhone",
-      "body": "Safari on iPhone doesn’t let web apps into the Share menu. A Shortcut gets around that — one action, a minute to set up.",
+      "title": "Add from your browser on iPhone",
+      "body": "Safari and Chrome on iPhone don’t let web apps into the Share menu. A Shortcut gets around that — one action, a minute to set up.",
       "ready": "Add the ready-made Shortcut",
       "readyHint": "The Shortcuts app opens — tap “Add Shortcut”.",
       "own": "Or build it yourself:",
@@ -62,10 +62,10 @@
       "step2": "Add the “Open URLs” action.",
       "step3": "In the address field, paste the start copied with the button below, followed directly by the “Shortcut Input” variable.",
       "step4": "In the shortcut’s settings (ⓘ), turn on “Show in Share Sheet”.",
-      "step5": "In Safari on a product page: Share → “To wishlist”.",
+      "step5": "In Safari or Chrome on a product page: Share → “To wishlist”.",
       "copy": "Copy the address start",
       "copied": "Copied",
-      "note": "The Shortcut opens Safari, not the Home Screen app, so you need to be signed in in Safari too. The first time it asks you to sign in — then brings you back to the form with the product."
+      "note": "The Shortcut opens your iPhone’s default browser (usually Safari), not the Home Screen app, so you need to be signed in there too. The first time it asks you to sign in — then brings you back to the form with the product."
     }
   },
   "errors": {
@@ -250,7 +250,7 @@
     "installed": "Wishlist is already installed on this device.",
     "installHint": "Install Wishlist on your home screen — it will open as a separate app, without the browser bar.",
     "installButton": "Install",
-    "installIos": "On iPhone or iPad, open the site in Safari, tap “Share”, then “Add to Home Screen”.",
+    "installIos": "On iPhone or iPad, tap “Share” in Safari or Chrome, then “Add to Home Screen”.",
     "installManual": "Open the browser menu and choose “Install app” or “Add to Home screen”.",
     "qrShow": "Show QR code",
     "qrHint": "It is handier on a phone — scan the address."

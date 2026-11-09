@@ -244,6 +244,24 @@ test.describe('«Додати в Wishlist» з акаунтом', () => {
     await iphone.close();
   });
 
+  test('картка Команди є й у Chrome на iPhone (CriOS)', async ({ browser }, info) => {
+    test.skip(info.project.name !== 'mobile', 'одного прогону досить');
+    const iphone = await browser.newContext({
+      userAgent:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.90 Mobile/15E148 Safari/604.1',
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    const page = await iphone.newPage();
+    await signInV2(page);
+    await page.goto('/settings');
+    const box = page.getByTestId('ios-shortcut');
+    await expect(box).toBeVisible();
+    await expect(box.getByText(/chrome/i).first()).toBeVisible();
+    await iphone.close();
+  });
+
   test('на Android картки Команди немає', async ({ page }) => {
     await signInV2(page);
     await page.goto('/settings');
