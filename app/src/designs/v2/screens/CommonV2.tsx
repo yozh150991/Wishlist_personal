@@ -13,6 +13,43 @@ import { formatDay, localToday } from '../../../lib/format';
  */
 
 /**
+ * Сторінка під відкритим вікном не має з'їжджати (BUG-QA-31). Під вікном вона
+ * заблокована (`html:has(dialog:modal)`, 0.2.6), але iOS однаково її зсуває,
+ * щоб показати поле під клавіатурою чи поле, у яке фокус переніс код
+ * («Заповнити з посилання» → поле посилання). Після цього прогорнути назад
+ * нічим: у Chrome на iPhone вікно лишалось зсунутим угору, разом із панеллю
+ * «Скасувати». Тож поки вікно відкрите, сторінку, що з'їхала, повертаємо на
+ * місце — але не поки відкрита клавіатура: тоді зсув потрібен, щоб бачити поле.
+ */
+function useKeepPage(open: boolean) {
+  useEffect(() => {
+    if (!open) return;
+    const x = window.scrollX;
+    const y = window.scrollY;
+    const vv = window.visualViewport;
+    // Клавіатура з'їдає щонайменше п'яту частину висоти; масштаб пальцями — теж сюди.
+    const keyboard = () => !!vv && vv.height < document.documentElement.clientHeight * 0.8;
+    let timer = 0;
+    const check = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (keyboard()) return;
+        if (window.scrollX !== x || window.scrollY !== y) window.scrollTo(x, y);
+      }, 120);
+    };
+    window.addEventListener('scroll', check, { passive: true });
+    document.addEventListener('focusout', check);
+    vv?.addEventListener('resize', check);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('scroll', check);
+      document.removeEventListener('focusout', check);
+      vv?.removeEventListener('resize', check);
+    };
+  }, [open]);
+}
+
+/**
  * Модальне вікно на рідному `<dialog>`: фокус замикає сам браузер, Escape
  * закриває, фокус після закриття повертається туди, звідки відкрили. На
  * телефоні — нижній лист, на десктопі — по центру (лише CSS, розмітка одна).
@@ -38,6 +75,7 @@ export function SheetV2({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  useKeepPage(open);
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
