@@ -71,17 +71,23 @@
 ```
 Якщо парсер недоступний або нічого не знайшов — форма відкривається з підставленим URL і порожніми полями. Додавання ніколи не блокується.
 
-### Додавання з Android-помічника (ADR-080)
+### Застосунок для Android (ADR-080, ADR-081)
+Один APK (`android/`, пакет `pl.yozh.wishlist`) із двох частин:
 ```
-Магазин чи Chrome на Android → «Поділитися» → «У вішліст» (android-share/)
+Іконка Wishlist → LauncherActivity (androidbrowserhelper)
+  → Trusted Web Activity: сайт на весь екран у Chrome, спільний із Chrome вхід
+  → Chrome звіряє пару: asset_statements у застосунку ↔ /.well-known/assetlinks.json
+    (пакет + SHA-256 ключа); не зійшлось — рядок адреси вгорі
+  → push сайту показує DelegationService від імені застосунку
+
+Магазин чи Chrome → «Поділитися» → «У вішліст» (ShareActivity)
   → невидимий WebView на телефоні відкриває сторінку (UA як у Chrome)
   → раз на секунду: assets/grab.js (= pageGrab з lib/bookmarklet.ts),
     window.open підмінено → адреса /add?src=page&url&title&price&currency&image
   → назва + ціна + фото — одразу; інакше чекаємо, за 15 с показуємо сторінку
-  → ACTION_VIEW на цю адресу, у встановлений PWA (WebAPK), інакше — системі
-  → /add у застосунку: fromPage, парсер не викликається
+  → LauncherActivity з цією адресою → форма /add у тому ж застосунку (fromPage)
 ```
-Помічник не має акаунта й нічого не надсилає, крім запитів самої сторінки магазину. `grab.js` генерується (`npm run build:android-grab`) і перевіряється в CI `android-share.yml`.
+Застосунок не має свого акаунта: вхід — у сайті, у сховищі Chrome. «У вішліст» нічого не надсилає, крім запитів самої сторінки магазину. `grab.js` генерується (`npm run build:android-grab`) і перевіряється в CI `android.yml`; там же перевіряється, що відбиток ключа APK є в `assetlinks.json`.
 
 ### Створення спільного посилання
 ```

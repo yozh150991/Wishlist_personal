@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Фон іконки — як у PWA (app/public/icons). -->
+    <color name="icon_background">#4A2E6B</color>
+    <!-- Смуги статусу й навігації — як meta theme-color в app/index.html. -->
+    <color name="bar_light">#F5EAD8</color>
+    <color name="bar_dark">#221F1B</color>
+    <color name="splash_background">#F5F6F4</color>
+</resources>
