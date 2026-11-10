@@ -92,7 +92,9 @@ export default defineConfig(({ mode }) => ({
         // Крім гостьових сторінок: відповідь на /s/<токен> (гостьова v1) чи
         // /l/<токен> (гостьова v2, ADR-041) не має лягати в кеш пристрою разом
         // із токеном і ключем гостя (ARCHITECTURE.md, «Офлайн-режим»).
-        navigateFallbackDenylist: [/^\/s\//, /^\/l\//],
+        // І крім /.well-known/: там лежить assetlinks.json для Android-застосунку
+        // (ADR-081) — справжній файл, а не сторінка застосунку.
+        navigateFallbackDenylist: [/^\/s\//, /^\/l\//, /^\/\.well-known\//],
         cleanupOutdatedCaches: true,
         // Запити до Supabase і парсера — завжди в мережу.
         runtimeCaching: [],

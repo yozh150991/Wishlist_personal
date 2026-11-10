@@ -27,7 +27,7 @@
       "destination": "/api/card?p=s&t=:token"
     },
     {
-      "source": "/((?!assets/|api/).*)",
+      "source": "/((?!assets/|api/|\\.well-known/).*)",
       "destination": "/index.html"
     }
   ],

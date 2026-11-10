@@ -1043,7 +1043,7 @@ wishlistKeystorePassword=пароль із 14.1
 ### 14.5. Збірка й викладка
 
 1. Закоміть `assetlinks.json` із відбитком і запуш. Workflow `android` збере підписаний APK і перевірить, що відбиток ключа в APK є в `assetlinks.json` (якщо ні — впаде з підказкою).
-2. Злий у `main`: `assetlinks.json` має бути на робочому сайті. Перевірка — https://wishlist-personal.vercel.app/.well-known/assetlinks.json відкривається як JSON із твоїм відбитком.
+2. Злий у `main`: `assetlinks.json` має бути на робочому сайті. Перевірка — `curl.exe -i https://wishlist-personal.vercel.app/.well-known/assetlinks.json` у PowerShell: статус `200`, `content-type: application/json` і JSON із твоїм відбитком. `curl.exe` надійніший за браузер: браузер може показати стару версію застосунку з кешу Service Worker.
 3. Actions → запуск `android` → **Artifacts → wishlist-android** → `wishlist.apk`.
 
 ### 14.6. На телефоні
