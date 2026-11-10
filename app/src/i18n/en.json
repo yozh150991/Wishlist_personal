@@ -60,12 +60,24 @@
       "own": "Or build it yourself:",
       "step1": "Open the Shortcuts app → “+”. Name it “To wishlist”.",
       "step2": "Add the “Open URLs” action.",
-      "step3": "In the address field, paste the start copied with the button below, followed directly by the “Shortcut Input” variable.",
-      "step4": "In the shortcut’s settings (ⓘ), turn on “Show in Share Sheet”.",
+      "step3": "In the address field, paste the start copied with the button below, and right after it — the “Shortcut Input” variable.",
+      "step4": "In the shortcut settings (ⓘ), turn on “Show in Share Sheet”. Leave the input types as they are — Chrome and shop apps pass more than “URLs”.",
       "step5": "In Safari or Chrome on a product page: Share → “To wishlist”.",
       "copy": "Copy the address start",
       "copied": "Copied",
-      "note": "The Shortcut opens your iPhone’s default browser (usually Safari), not the Home Screen app, so you need to be signed in there too. The first time it asks you to sign in — then brings you back to the form with the product."
+      "note": "The Shortcut opens your iPhone’s default browser (usually Safari), not the Home Screen app, so you need to be signed in there too. The first time it asks you to sign in — then brings you back to the form with the product.",
+      "step6": "To keep the Shortcut at the top of the menu: Share → at the bottom “Edit Actions…” → “+” next to “To wishlist”.",
+      "quickTitle": "Quick — in any browser",
+      "quickBody": "Opens the form right away, but with the link only: Allegro, OLX and other shops that block our server give no name — you’ll add it yourself.",
+      "fullTitle": "Full — Safari only: name, price and photo",
+      "fullBody": "Reads the product page in Safari the same way as the “To wishlist” button on a computer — even on Allegro and OLX. But iOS runs such a script slowly: after you tap, the Shortcut thinks for 30–40 seconds. Longer than we’d like, and still faster than typing the name, price and photo by hand.",
+      "full1": "In Shortcuts → “+”. Name the shortcut “To wishlist Safari”.",
+      "full2": "In the shortcut settings (ⓘ), turn on “Show in Share Sheet”. In the first block, tap the input types and keep only “Safari web pages”.",
+      "full3": "Add the “Run JavaScript on Web Page” action. Delete the code inside it and paste the script copied with the button below.",
+      "full4": "Add the “Open URLs” action, and put the “JavaScript Result” variable in its address field.",
+      "full5": "iPhone Settings → Apps → Shortcuts → Advanced → turn on “Allow Running Scripts”.",
+      "full6": "In Safari on a product page: Share → “To wishlist Safari”. The first time, iOS asks for permission for the site — “Always Allow”. Then wait 30–40 seconds: the form opens with the name, price and photo.",
+      "copyScript": "Copy the script"
     }
   },
   "errors": {

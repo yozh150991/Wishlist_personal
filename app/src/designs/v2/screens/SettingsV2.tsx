@@ -16,7 +16,7 @@ import { fetchSections } from '../../../lib/sections';
 import type { Section } from '../../../lib/sections';
 import { downloadText } from '../../../lib/download';
 import { deleteAccount } from '../../../lib/account';
-import { bookmarkletHref } from '../../../lib/bookmarklet';
+import { bookmarkletHref, shortcutScript } from '../../../lib/bookmarklet';
 import { publicOrigin } from '../../../lib/supabase';
 import { DESKTOP } from '../ShellV2';
 import { NoteV2, PasswordFieldV2 } from './AuthPartsV2';
@@ -268,22 +268,27 @@ function BookmarkletCardV2() {
 }
 
 /**
- * Команда для iPhone (ROADMAP 8.5, ADR-077). Готову Команду можна дати
- * посиланням iCloud у `VITE_IOS_SHORTCUT_URL`; без нього — інструкція, як
- * зібрати її самому з однієї дії, і кнопка, що копіює початок адреси.
+ * Команди для iPhone (ROADMAP 8.5). Дві, бо кожна програє в чомусь своєму:
+ * - швидка (ADR-077) — одна дія, працює в будь-якому браузері й застосунку
+ *   магазину, форма одразу, але з магазинів, що не пускають наш сервер, —
+ *   лише посилання. Готову можна дати посиланням iCloud у `VITE_IOS_SHORTCUT_URL`;
+ * - повна (ADR-079) — лише Safari: код кнопки «У вішліст» читає сторінку,
+ *   тож приходять назва, ціна й фото, але iOS запускає скрипт 30–40 секунд.
+ *   Це чесно сказано в картці, щоб довге очікування не здавалось зависанням.
  */
 function IosShortcutCardV2() {
   const { t } = useI18n();
   const prefix = iosShortcutPrefix(publicOrigin);
+  const script = shortcutScript(publicOrigin);
   const ready = import.meta.env.VITE_IOS_SHORTCUT_URL?.trim() || null;
   const readySafe = ready && /^https:\/\/(www\.)?icloud\.com\/shortcuts\//.test(ready) ? ready : null;
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'prefix' | 'script' | null>(null);
 
-  async function copy() {
+  async function copy(what: 'prefix' | 'script') {
     try {
-      await navigator.clipboard.writeText(prefix);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(what === 'prefix' ? prefix : script);
+      setCopied(what);
+      window.setTimeout(() => setCopied(null), 2000);
     } catch {
       /* без дозволу на буфер — адреса є текстом нижче, її можна виділити */
     }
@@ -295,6 +300,9 @@ function IosShortcutCardV2() {
         {t('settings.iosShortcut.title')}
       </h2>
       <p className="v2-hint v2-hint--start">{t('settings.iosShortcut.body')}</p>
+
+      <h3 className="v2-settings__sublabel">{t('settings.iosShortcut.quickTitle')}</h3>
+      <p className="v2-hint v2-hint--start">{t('settings.iosShortcut.quickBody')}</p>
       {readySafe && (
         <>
           <a className="v2-btn v2-btn--primary v2-btn--start" href={readySafe} rel="noreferrer noopener">
@@ -304,18 +312,35 @@ function IosShortcutCardV2() {
           <p className="v2-hint v2-hint--start">{t('settings.iosShortcut.own')}</p>
         </>
       )}
-      <ol className="v2-hint v2-hint--start v2-steps">
+      <ol className="v2-hint v2-hint--start v2-steps" data-testid="ios-shortcut-quick">
         <li>{t('settings.iosShortcut.step1')}</li>
         <li>{t('settings.iosShortcut.step2')}</li>
         <li>{t('settings.iosShortcut.step3')}</li>
         <li>{t('settings.iosShortcut.step4')}</li>
         <li>{t('settings.iosShortcut.step5')}</li>
+        <li>{t('settings.iosShortcut.step6')}</li>
       </ol>
       <code className="v2-qr__url">{prefix}</code>
-      <button type="button" className="v2-btn v2-btn--outline v2-btn--start" onClick={() => void copy()}>
-        {copied ? t('settings.iosShortcut.copied') : t('settings.iosShortcut.copy')}
+      <button type="button" className="v2-btn v2-btn--outline v2-btn--start" onClick={() => void copy('prefix')}>
+        {copied === 'prefix' ? t('settings.iosShortcut.copied') : t('settings.iosShortcut.copy')}
       </button>
       <p className="v2-hint v2-hint--start">{t('settings.iosShortcut.note')}</p>
+
+      <h3 className="v2-settings__sublabel">{t('settings.iosShortcut.fullTitle')}</h3>
+      <p className="v2-hint v2-hint--start">{t('settings.iosShortcut.fullBody')}</p>
+      <ol className="v2-hint v2-hint--start v2-steps" data-testid="ios-shortcut-full">
+        <li>{t('settings.iosShortcut.full1')}</li>
+        <li>{t('settings.iosShortcut.full2')}</li>
+        <li>{t('settings.iosShortcut.full3')}</li>
+        <li>{t('settings.iosShortcut.full4')}</li>
+        <li>{t('settings.iosShortcut.full5')}</li>
+        <li>{t('settings.iosShortcut.full6')}</li>
+      </ol>
+      {/* Скрипт — кнопкою, а не текстом: виділяти 4 КБ на телефоні незручно,
+          а копія з прев'ю файлу губила «||» (10 листопада). */}
+      <button type="button" className="v2-btn v2-btn--outline v2-btn--start" onClick={() => void copy('script')}>
+        {copied === 'script' ? t('settings.iosShortcut.copied') : t('settings.iosShortcut.copyScript')}
+      </button>
     </section>
   );
 }
