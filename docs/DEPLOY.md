@@ -974,6 +974,88 @@ curl.exe -I "https://wishlist-personal.vercel.app/l/<токен>"               
 
 Команда прив'язана до адреси застосунку: змінив домен — збери й поділись нею заново.
 
+## 14. Застосунок для Android (ADR-080, ADR-081)
+
+Один APK: сам Wishlist (сайт на весь екран у Chrome) і «У вішліст» у меню «Поділитися». Збирає його workflow `android.yml`. Щоб застосунок відкривався без рядка адреси й оновлювався поверх, потрібен постійний ключ підпису — один раз.
+
+### 14.1. Ключ підпису (один раз, на своєму комп'ютері)
+
+Ключ створюєш сам і нікому не передаєш, зокрема в чат. `keytool` є в JDK Android Studio. Кожна команда нижче — в один рядок, шляхи через `/`; перед шляхом до програми в PowerShell потрібен `&`.
+
+```powershell
+$keytool = "C:/Program Files/Android/Android Studio/jbr/bin/keytool.exe"
+Test-Path $keytool
+```
+
+`False` — Studio стоїть деінде. Знайти `keytool.exe` і підставити його повний шлях у `$keytool`:
+
+```powershell
+Get-ChildItem "C:/Program Files/Android", "C:/Program Files/Java", "$env:LOCALAPPDATA/Programs", "$env:LOCALAPPDATA/JetBrains", "$env:USERPROFILE/.jdks" -Recurse -Filter keytool.exe -ErrorAction SilentlyContinue | Select-Object -First 5 FullName
+```
+
+Створити ключ:
+
+```powershell
+New-Item -ItemType Directory -Force D:/keys
+& $keytool -genkeypair -v -keystore D:/keys/wishlist-release.jks -storetype PKCS12 -alias wishlist -keyalg RSA -keysize 2048 -validity 10000
+```
+
+- Пароль — придумай і запиши; спитає двічі, символи не показуються.
+- Ім'я, організація, місто тощо — будь-що (можна просто Enter).
+- На «Is CN=… correct?» — `yes` (або слово, яке keytool пропонує в дужках).
+
+**Збережи `wishlist-release.jks` і пароль у надійному місці** (менеджер паролів, Google Drive). Загубиш ключ — нові версії не стануть поверх старої: новий ключ, новий відбиток у `assetlinks.json` і перевстановлення в усіх.
+
+### 14.2. Відбиток ключа в `assetlinks.json`
+
+```powershell
+& $keytool -list -v -keystore D:/keys/wishlist-release.jks -alias wishlist
+```
+
+Скопіюй значення рядка `SHA256:` — `AB:CD:…` (32 пари через двокрапку) — і встав його в `app/public/.well-known/assetlinks.json` замість `REPLACE_WITH_SHA256_FINGERPRINT`.
+
+### 14.3. Секрети GitHub
+
+Скопіювати ключ у буфер одним рядком:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("D:/keys/wishlist-release.jks")) | Set-Clipboard
+```
+
+GitHub → репозиторій → **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Name | Value |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | вставити з буфера |
+| `ANDROID_KEYSTORE_PASSWORD` | пароль із 14.1 |
+
+### 14.4. Ключ для збірок зі Studio (необов'язково)
+
+У `%USERPROFILE%\.gradle\gradle.properties` (не в репозиторії; шлях до ключа — через `/`):
+
+```
+wishlistKeystore=D:/keys/wishlist-release.jks
+wishlistKeystorePassword=пароль із 14.1
+```
+
+Тоді Run зі Studio підписує тим самим ключем: збірка ставиться поверх збірки з CI, і Chrome її впізнає.
+
+### 14.5. Збірка й викладка
+
+1. Закоміть `assetlinks.json` із відбитком і запуш. Workflow `android` збере підписаний APK і перевірить, що відбиток ключа в APK є в `assetlinks.json` (якщо ні — впаде з підказкою).
+2. Злий у `main`: `assetlinks.json` має бути на робочому сайті. Перевірка — https://wishlist-personal.vercel.app/.well-known/assetlinks.json відкривається як JSON із твоїм відбитком.
+3. Actions → запуск `android` → **Artifacts → wishlist-android** → `wishlist.apk`.
+
+### 14.6. На телефоні
+
+1. Видали PWA Wishlist з головного екрана і старий помічник «У вішліст», якщо стоять — інакше буде дві іконки й два пункти в «Поділитися».
+2. Відкрий `wishlist.apk` → дозволь встановлення з цього джерела → **Встановити**. Play Protect попередить про невідомого розробника — **Докладніше → Усе одно встановити**.
+3. Відкрий Wishlist: вгорі не має бути рядка адреси, вхід — той самий, що в Chrome.
+
+**Рядок адреси все одно є?** Чи відкривається `assetlinks.json` (крок 14.5.2) і чи збігається відбиток. Chrome запам'ятовує перевірку — після виправлення перевстанови застосунок.
+
+**Оновлення.** Нова версія APK з того самого ключа ставиться поверх, без видалення. Вміст Wishlist оновлюється з сайту сам — APK міняти треба лише після змін у `android/`.
+
 ## Скільки це коштує
 
 | Що | Тариф | Реально |

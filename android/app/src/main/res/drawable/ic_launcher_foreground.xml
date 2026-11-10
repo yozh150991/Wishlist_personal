@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Малюнок іконки PWA (app/public/icons/maskable.svg) у безпечній зоні адаптивної іконки:
+     вміст 116–401 × 148–392 у координатах SVG, масштаб 0,15, центр у (54, 54). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.15"
+        android:scaleY="0.15"
+        android:translateX="15.225"
+        android:translateY="13.5">
+        <path
+            android:pathData="M136,168h240"
+            android:strokeWidth="40"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M136,256h240"
+            android:strokeWidth="40"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M136,344h112"
+            android:strokeWidth="40"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#D9C6F0"
+            android:pathData="M340,392c-4,0 -8,-1.5 -11,-4.5l-38,-37c-15,-14.5 -15,-38 0,-52.5 13,-12.6 33.5,-13.4 47.5,-2.4l1.5,1.2 1.5,-1.2c14,-11 34.5,-10.2 47.5,2.4 15,14.5 15,38 0,52.5l-38,37c-3,3 -7,4.5 -11,4.5z" />
+    </group>
+</vector>

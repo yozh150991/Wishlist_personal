@@ -1,0 +1,13 @@
+.gradle/
+build/
+app/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.kotlin/
+# Ключ підпису ніколи не комітимо.
+*.jks
+*.keystore
+*.p12

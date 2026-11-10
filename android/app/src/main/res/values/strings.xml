@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wishlist</string>
+    <string name="share_label">Add to Wishlist</string>
+    <string name="heading">Add to Wishlist</string>
+    <string name="status_reading">Reading the shop page…</string>
+    <string name="status_found_title">Found the name, looking for price and photo…</string>
+    <string name="status_no_price">No price found. If the page asks you to prove you\'re not a robot, do it here. Or tap “Add as is”.</string>
+    <string name="status_page_shown">This is the shop page. The form opens as soon as the price shows up.</string>
+    <string name="show_page">Show page</string>
+    <string name="add_as_is">Add as is</string>
+    <string name="cancel">Cancel</string>
+    <string name="no_link">There is no link in what was shared</string>
+</resources>

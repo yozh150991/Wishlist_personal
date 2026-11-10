@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Заставка під час запуску: іконка PWA (app/public/icons/icon.svg). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="144dp"
+    android:height="144dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path
+        android:fillColor="#4A2E6B"
+        android:pathData="M112,0h288a112,112 0,0 1,112 112v288a112,112 0,0 1,-112 112h-288a112,112 0,0 1,-112 -112v-288a112,112 0,0 1,112 -112z" />
+    <group android:translateY="-22">
+        <path
+            android:pathData="M136,168h240"
+            android:strokeWidth="40"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M136,256h240"
+            android:strokeWidth="40"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M136,344h112"
+            android:strokeWidth="40"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#D9C6F0"
+            android:pathData="M340,392c-4,0 -8,-1.5 -11,-4.5l-38,-37c-15,-14.5 -15,-38 0,-52.5 13,-12.6 33.5,-13.4 47.5,-2.4l1.5,1.2 1.5,-1.2c14,-11 34.5,-10.2 47.5,2.4 15,14.5 15,38 0,52.5l-38,37c-3,3 -7,4.5 -11,4.5z" />
+    </group>
+</vector>

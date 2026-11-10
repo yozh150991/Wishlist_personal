@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wishlist</string>
+    <string name="share_label">Do wishlisty</string>
+    <string name="heading">Do wishlisty</string>
+    <string name="status_reading">Czytam stronę sklepu…</string>
+    <string name="status_found_title">Mam nazwę, szukam ceny i zdjęcia…</string>
+    <string name="status_no_price">Nie znalazłem ceny. Jeśli strona prosi o potwierdzenie, że nie jesteś robotem — zrób to tutaj. Albo stuknij „Dodaj tak, jak jest”.</string>
+    <string name="status_page_shown">To strona sklepu. Formularz otworzy się sam, gdy pojawi się cena.</string>
+    <string name="show_page">Pokaż stronę</string>
+    <string name="add_as_is">Dodaj tak, jak jest</string>
+    <string name="cancel">Anuluj</string>
+    <string name="no_link">W udostępnionej treści nie ma linku</string>
+</resources>
