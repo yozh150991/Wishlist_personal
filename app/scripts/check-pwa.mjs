@@ -134,6 +134,25 @@ check(
   'push-sw.js: немає обробників push і notificationclick',
 );
 
+// Android-застосунок (ADR-081): assetlinks.json має дійти до Chrome файлом.
+// Service Worker не підміняє його на index.html, а vercel.json не переписує.
+const assetlinks = await readFile(join(dist, '.well-known', 'assetlinks.json'), 'utf8').catch(() => '');
+let assetlinksOk = false;
+try {
+  const target = JSON.parse(assetlinks)[0]?.target;
+  assetlinksOk = target?.namespace === 'android_app' && Array.isArray(target.sha256_cert_fingerprints);
+} catch { /* лишається false */ }
+check(assetlinksOk, '.well-known/assetlinks.json: немає у збірці або не той вміст');
+check(
+  /denylist:\[[^\]]*well-known/.test(sw),
+  'sw.js: /.well-known/ немає в navigateFallbackDenylist — Service Worker віддасть index.html замість assetlinks.json',
+);
+const spaRewrite = (vercel.rewrites ?? []).find((r) => r.destination === '/index.html');
+check(
+  spaRewrite && !new RegExp(`^${spaRewrite.source}$`).test('/.well-known/assetlinks.json'),
+  'vercel.json: переписування на index.html зачіпає /.well-known/',
+);
+
 if (failures.length) {
   console.error('PWA: знайдено проблеми:\n- ' + failures.join('\n- '));
   process.exit(1);
