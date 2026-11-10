@@ -980,16 +980,27 @@ curl.exe -I "https://wishlist-personal.vercel.app/l/<токен>"               
 
 ### 14.1. Ключ підпису (один раз, на своєму комп'ютері)
 
-Ключ створюєш сам і нікому не передаєш, зокрема в чат. `keytool` є в JDK Android Studio.
+Ключ створюєш сам і нікому не передаєш, зокрема в чат. `keytool` є в JDK Android Studio. Кожна команда нижче — в один рядок, шляхи через `/`; перед шляхом до програми в PowerShell потрібен `&`.
 
 ```powershell
-mkdir D:\keys
-& "C:\Program Files\Android\Android Studio\jbrin\keytool.exe" -genkeypair -v `
-  -keystore D:\keys\wishlist-release.jks -storetype PKCS12 `
-  -alias wishlist -keyalg RSA -keysize 2048 -validity 10000
+$keytool = "C:/Program Files/Android/Android Studio/jbr/bin/keytool.exe"
+Test-Path $keytool
 ```
 
-- Пароль — придумай і запиши; спитає двічі.
+`False` — Studio стоїть деінде. Знайти `keytool.exe` і підставити його повний шлях у `$keytool`:
+
+```powershell
+Get-ChildItem "C:/Program Files/Android", "C:/Program Files/Java", "$env:LOCALAPPDATA/Programs", "$env:LOCALAPPDATA/JetBrains", "$env:USERPROFILE/.jdks" -Recurse -Filter keytool.exe -ErrorAction SilentlyContinue | Select-Object -First 5 FullName
+```
+
+Створити ключ:
+
+```powershell
+New-Item -ItemType Directory -Force D:/keys
+& $keytool -genkeypair -v -keystore D:/keys/wishlist-release.jks -storetype PKCS12 -alias wishlist -keyalg RSA -keysize 2048 -validity 10000
+```
+
+- Пароль — придумай і запиши; спитає двічі, символи не показуються.
 - Ім'я, організація, місто тощо — будь-що (можна просто Enter).
 - На «Is CN=… correct?» — `yes` (або слово, яке keytool пропонує в дужках).
 
@@ -998,8 +1009,7 @@ mkdir D:\keys
 ### 14.2. Відбиток ключа в `assetlinks.json`
 
 ```powershell
-& "C:\Program Files\Android\Android Studio\jbrin\keytool.exe" -list -v `
-  -keystore D:\keys\wishlist-release.jks -alias wishlist
+& $keytool -list -v -keystore D:/keys/wishlist-release.jks -alias wishlist
 ```
 
 Скопіюй значення рядка `SHA256:` — `AB:CD:…` (32 пари через двокрапку) — і встав його в `app/public/.well-known/assetlinks.json` замість `REPLACE_WITH_SHA256_FINGERPRINT`.
@@ -1009,7 +1019,7 @@ mkdir D:\keys
 Скопіювати ключ у буфер одним рядком:
 
 ```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("D:\keys\wishlist-release.jks")) | Set-Clipboard
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("D:/keys/wishlist-release.jks")) | Set-Clipboard
 ```
 
 GitHub → репозиторій → **Settings → Secrets and variables → Actions → New repository secret**:
@@ -1021,7 +1031,7 @@ GitHub → репозиторій → **Settings → Secrets and variables → A
 
 ### 14.4. Ключ для збірок зі Studio (необов'язково)
 
-У `%USERPROFILE%\.gradle\gradle.properties` (не в репозиторії):
+У `%USERPROFILE%\.gradle\gradle.properties` (не в репозиторії; шлях до ключа — через `/`):
 
 ```
 wishlistKeystore=D:/keys/wishlist-release.jks
