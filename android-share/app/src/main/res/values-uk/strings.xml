@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">У вішліст</string>
+    <string name="share_label">У вішліст</string>
+    <string name="heading">У вішліст</string>
+    <string name="status_reading">Читаю сторінку магазину…</string>
+    <string name="status_found_title">Назву знайдено, шукаю ціну й фото…</string>
+    <string name="status_no_price">Ціни не знайшов. Якщо на сторінці перевірка «чи ти не робот» — пройди її тут. Або натисни «Додати як є».</string>
+    <string name="status_page_shown">Це сторінка магазину. Щойно на ній з\'явиться ціна, форма відкриється сама.</string>
+    <string name="show_page">Показати сторінку</string>
+    <string name="add_as_is">Додати як є</string>
+    <string name="cancel">Скасувати</string>
+    <string name="no_link">У тому, чим поділились, немає посилання</string>
+    <string name="no_app">Не вдалося відкрити Wishlist</string>
+    <string name="info_title">У вішліст</string>
+    <string name="info_body">На сторінці товару — в додатку магазину чи в браузері — натисни «Поділитися» і вибери «У вішліст».\n\nСторінку прочитає сам телефон, тож назва, ціна й фото прийдуть навіть із магазинів, які блокують автоматичні запити. Потім відкриється форма Wishlist — перевір поля й натисни «Додати».\n\nЗазвичай це 3–10 секунд. Якщо магазин попросить довести, що ти не робот, — побачиш сторінку й зможеш це зробити.</string>
+    <string name="open_app">Відкрити Wishlist</string>
+</resources>

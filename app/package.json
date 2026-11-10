@@ -16,7 +16,8 @@
     "test:e2e": "playwright test",
     "gen:types": "supabase gen types typescript --linked > src/types/database.ts",
     "test:logic": "playwright test --config=playwright.logic.config.ts",
-    "check:shops": "playwright test --config=playwright.shops.config.ts"
+    "check:shops": "playwright test --config=playwright.shops.config.ts",
+    "build:android-grab": "node scripts/build-android-grab.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

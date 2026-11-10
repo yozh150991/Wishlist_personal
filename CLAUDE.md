@@ -14,6 +14,7 @@
 | Змінну оточення | `.env.example` + `docs/SETUP.md` або `docs/DEPLOY.md` |
 | Обрав технологію / підхід всупереч очевидному | новий ADR у `docs/DECISIONS.md` |
 | Будь-яку помітну для користувача зміну | `CHANGELOG.md` |
+| Код закладки `pageGrab` у `lib/bookmarklet.ts` | `npm run build:android-grab` → `android-share/app/src/main/assets/grab.js` (ADR-080) |
 | Завершив етап | `docs/ROADMAP.md` + `README.md` (статус) |
 
 Код без оновленої документації вважається незавершеним.

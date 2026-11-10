@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Add to Wishlist</string>
+    <string name="share_label">Add to Wishlist</string>
+    <string name="heading">Add to Wishlist</string>
+    <string name="status_reading">Reading the shop page…</string>
+    <string name="status_found_title">Found the name, looking for price and photo…</string>
+    <string name="status_no_price">No price found. If the page asks you to prove you\'re not a robot, do it here. Or tap “Add as is”.</string>
+    <string name="status_page_shown">This is the shop page. The form opens as soon as the price shows up.</string>
+    <string name="show_page">Show page</string>
+    <string name="add_as_is">Add as is</string>
+    <string name="cancel">Cancel</string>
+    <string name="no_link">There is no link in what was shared</string>
+    <string name="no_app">Couldn\'t open Wishlist</string>
+    <string name="info_title">Add to Wishlist</string>
+    <string name="info_body">On a product page in a shop app or in the browser, tap Share and choose “Add to Wishlist”.\n\nThe page is read right on this phone, so name, price and photo come through even from shops that block automatic requests. Then the Wishlist form opens — check the fields and tap Add.\n\nIt usually takes 3–10 seconds. If the shop asks you to prove you\'re not a robot, you\'ll see the page and can do it.</string>
+    <string name="open_app">Open Wishlist</string>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.WishlistShare" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:colorAccent">#A8C7AE</item>
+        <item name="android:colorPrimary">#6B8F71</item>
+    </style>
+</resources>

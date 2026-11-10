@@ -1,0 +1,57 @@
+# Помічник «У вішліст» для Android (android-share/, ADR-080).
+# Збирає debug-APK і кладе його в артефакти запуску: Actions → цей запуск →
+# Artifacts → wishlist-share-debug. Окремо від ci.yml: застосунок і сервіси
+# від помічника не залежать, а йому потрібні лише Node (для grab.js) і JDK.
+name: android-share
+
+on:
+  push:
+    paths:
+      - 'android-share/**'
+      - 'app/src/lib/bookmarklet.ts'
+      - 'app/scripts/build-android-grab.mjs'
+      - '.github/workflows/android-share.yml'
+  pull_request:
+    paths:
+      - 'android-share/**'
+      - 'app/src/lib/bookmarklet.ts'
+      - 'app/scripts/build-android-grab.mjs'
+      - '.github/workflows/android-share.yml'
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # grab.js — це код закладки з bookmarklet.ts. Змінили закладку й не
+      # оновили файл — помічник читав би сторінку старими правилами.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Залежності застосунку
+        working-directory: app
+        run: npm ci
+      - name: grab.js збігається з bookmarklet.ts
+        working-directory: app
+        run: npm run build:android-grab -- --check
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Збірка debug-APK
+        working-directory: android-share
+        # bash, а не ./gradlew: з Windows біт виконання файлу може загубитися.
+        run: bash ./gradlew assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wishlist-share-debug
+          path: android-share/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

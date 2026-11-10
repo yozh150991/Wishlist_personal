@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Do wishlisty</string>
+    <string name="share_label">Do wishlisty</string>
+    <string name="heading">Do wishlisty</string>
+    <string name="status_reading">Czytam stronę sklepu…</string>
+    <string name="status_found_title">Mam nazwę, szukam ceny i zdjęcia…</string>
+    <string name="status_no_price">Nie znalazłem ceny. Jeśli strona prosi o potwierdzenie, że nie jesteś robotem — zrób to tutaj. Albo stuknij „Dodaj tak, jak jest”.</string>
+    <string name="status_page_shown">To strona sklepu. Formularz otworzy się sam, gdy pojawi się cena.</string>
+    <string name="show_page">Pokaż stronę</string>
+    <string name="add_as_is">Dodaj tak, jak jest</string>
+    <string name="cancel">Anuluj</string>
+    <string name="no_link">W udostępnionej treści nie ma linku</string>
+    <string name="no_app">Nie udało się otworzyć Wishlist</string>
+    <string name="info_title">Do wishlisty</string>
+    <string name="info_body">Na stronie produktu — w aplikacji sklepu lub w przeglądarce — stuknij „Udostępnij” i wybierz „Do wishlisty”.\n\nStronę czyta sam telefon, więc nazwa, cena i zdjęcie dotrą nawet ze sklepów, które blokują automatyczne zapytania. Potem otworzy się formularz Wishlist — sprawdź pola i stuknij „Dodaj”.\n\nZwykle trwa to 3–10 sekund. Jeśli sklep poprosi o potwierdzenie, że nie jesteś robotem, zobaczysz stronę i możesz to zrobić.</string>
+    <string name="open_app">Otwórz Wishlist</string>
+</resources>
