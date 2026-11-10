@@ -4,7 +4,7 @@
     "target": {
       "namespace": "android_app",
       "package_name": "pl.yozh.wishlist",
-      "sha256_cert_fingerprints": ["REPLACE_WITH_SHA256_FINGERPRINT"]
+      "sha256_cert_fingerprints": ["B3:6A:EB:CA:F1:08:B9:0C:67:C9:F1:CB:3C:27:9C:9C:BD:14:9B:93:B0:99:78:DF:97:B9:90:5B:30:B3:D6:F8"]
     }
   }
 ]
