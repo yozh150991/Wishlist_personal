@@ -528,3 +528,36 @@ test('аркуш на /l/ — сторінка під ним не гортаєт
   await expect(sheet).toHaveCount(0);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow)).not.toBe('hidden');
 });
+
+test('аркуш на /l/ — сторінка, яку зсунули під вікном, повертається на місце (BUG-QA-31)', async ({ page }) => {
+  // iOS зсуває сторінку під вікном, щоб показати поле, а прогорнути її назад
+  // під заблокованим вікном нічим. Тут зсув роблять скриптом — як iOS.
+  const item = (id: string, title: string) => ({
+    id, title, url: null, price: 1999, currency: 'PLN', quantity: 1, priority: 'medium', note: null,
+    variants: [], image_url: null, status: 'active', created_at: '2026-10-01T10:00:00Z', section_id: null,
+    taken_qty: 0, mine_qty: 0,
+  });
+  await page.route('**/rpc/get_guest_list', (route) =>
+    route.fulfill({
+      json: {
+        title: 'День народження', message: null, currency: 'PLN', event_date: null,
+        expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+        hide_prices: false, allow_reservations: true, archived: false, viewer_is_owner: false,
+        guest: null, sections: [], thanks: null,
+        items: Array.from({ length: 12 }, (_, i) => item(`e2e-drift-${i}`, `Позиція ${i + 1}`)),
+      },
+    }),
+  );
+  await page.route('**/rpc/register_share_view', (route) => route.fulfill({ status: 204, body: '' }));
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.goto('/l/e2e-drift-token');
+
+  await page.getByRole('button', { name: /брати разом|zrzućmy się|chip in/i }).first().click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+  const before = await page.evaluate(() => window.scrollY);
+  await page.evaluate(() => window.scrollTo(0, 400));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
+  await expect(sheet.getByRole('button', { name: /^(скасувати|anuluj|cancel)$/i })).toBeInViewport();
+});
+
