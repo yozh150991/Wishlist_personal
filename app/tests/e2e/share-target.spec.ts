@@ -236,11 +236,19 @@ test.describe('«Додати в Wishlist» з акаунтом', () => {
     await page.goto('/settings');
     const box = page.getByTestId('ios-shortcut');
     await expect(box).toBeVisible();
-    await expect(box.getByRole('listitem')).toHaveCount(5);
+    await expect(page.getByTestId('ios-shortcut-quick').getByRole('listitem')).toHaveCount(6);
+    // Повна Команда для Safari (ADR-079): шість кроків і чесне попередження про 30–40 секунд.
+    await expect(page.getByTestId('ios-shortcut-full').getByRole('listitem')).toHaveCount(6);
+    await expect(box.getByText(/30–40/).first()).toBeVisible();
     await box.getByRole('button', { name: /скопіювати початок адреси|skopiuj początek adresu|copy the address start/i }).click();
     await expect(box.getByRole('button', { name: /^(скопійовано|skopiowano|copied)$/i })).toBeVisible();
     const copied = await page.evaluate(() => (window as unknown as { __copied?: string }).__copied ?? '');
     expect(copied).toMatch(/\/add\?src=ios&url=$/);
+    await box.getByRole('button', { name: /скопіювати скрипт|skopiuj skrypt|copy the script/i }).click();
+    const script = await page.evaluate(() => (window as unknown as { __copied?: string }).__copied ?? '');
+    expect(script).toContain('completion(');
+    expect(script).toContain('src=ios&url=');
+    expect(script).toContain('||');
     await iphone.close();
   });
 

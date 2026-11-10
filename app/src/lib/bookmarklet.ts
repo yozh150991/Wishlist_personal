@@ -1,6 +1,7 @@
 /**
  * Кнопка «У вішліст» на панелі закладок браузера (букмарклет; ROADMAP 8.4,
- * ADR-076).
+ * ADR-076) і той самий код у Команді для Safari на iPhone (ROADMAP 8.5,
+ * ADR-079).
  *
  * Allegro, Amazon й OLX часто не пускають наш парсер: сторінку бачить людина,
  * а сервер — захист від ботів. Букмарклет читає вже відкриту сторінку в
@@ -18,6 +19,12 @@
 import { CURRENCIES } from './types';
 import type { Currency } from './types';
 import { ITEM_TITLE_MAX, ITEM_URL_MAX, normalizeUrl, parsePrice } from './itemsView';
+
+/**
+ * Є лише в дії Команди iOS «Запустити JavaScript на вебсторінці»: віддає
+ * результат скрипта наступній дії. У закладці її немає — `typeof` дає `undefined`.
+ */
+declare const completion: ((result: string) => void) | undefined;
 
 /** Позначка в адресі `/add`: поля прийшли з відкритої сторінки, а не з «Поділитися». */
 export const PAGE_SOURCE = 'page';
@@ -197,6 +204,13 @@ export function pageGrab(origin: string): void {
   if (cur) q.set('currency', cur.slice(0, 8));
   if (img && img.length <= 2048) q.set('image', img);
   var target = origin.replace(/\/+$/, '') + '/add?' + q.toString();
+  // Команда на iPhone («Запустити JavaScript на вебсторінці»): адресу віддаємо
+  // їй, а відкриває її вже наступна дія Команди (ADR-079). У закладці
+  // `completion` немає — тоді відкриваємо вкладку, як завжди.
+  if (typeof completion !== 'undefined') {
+    completion(target);
+    return;
+  }
   var w = window.open(target, '_blank');
   if (!w) location.href = target;
 }
@@ -205,6 +219,18 @@ export function pageGrab(origin: string): void {
 export function bookmarkletHref(origin: string): string {
   const code = `(${pageGrab.toString()})(${JSON.stringify(origin)});void 0`;
   return `javascript:${encodeURIComponent(code)}`;
+}
+
+/**
+ * Скрипт для дії Команди iOS «Запустити JavaScript на вебсторінці» (ADR-079):
+ * той самий `pageGrab`, що й у закладці, лише адресу `/add?src=page&…` він
+ * віддає Команді через `completion`. Зламався — Команда однаково отримує
+ * адресу сторінки (`/add?src=ios&url=`), як без скрипта.
+ */
+export function shortcutScript(origin: string): string {
+  const app = JSON.stringify(origin);
+  const fallback = `${JSON.stringify(origin.replace(/\/+$/, '') + '/add?src=ios&url=')}+encodeURIComponent(location.href)`;
+  return `try{(${pageGrab.toString()})(${app})}catch(e){completion(${fallback})}`;
 }
 
 export type FromPage = {

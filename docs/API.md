@@ -433,6 +433,8 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 
 **Разом (станом на 9 листопада):** кнопкою «У вішліст» усі 9 магазинів дають назву, ціну й фото: OLX, Rozetka, Prom, Empik — під керуванням; Allegro, Zalando, Amazon, Decathlon, IKEA — вручну у своєму Chrome (під керуванням Allegro, Amazon і Zalando показують перевірку «чи ти не робот»). Серверний парсер, тобто додавання за посиланням і на телефоні, — назва 5 з 9 (Amazon лише з домашньої IP, з Cloud Run — `upstream_forbidden`); Allegro, OLX, Rozetka, Decathlon — 403, для них на телефоні лишається чернетка «Потрібна назва».
 
+**iPhone, 10 листопада.** Швидка Команда (ADR-077) передає лише адресу, тож результат — як у серверного парсера: Amazon — усе, Allegro й OLX — лише посилання. Повна Команда для Safari (ADR-079) — код кнопки «У вішліст» на сторінці в Safari: OLX і Allegro — назва, ціна й фото, але 33–39 секунд очікування, які забирає сама дія iOS «Запустити JavaScript на вебсторінці».
+
 ### Порядок витягу даних
 1. JSON-LD `schema.org/Product` → `name`, `offers.price`, `offers.priceCurrency`, `image`
 2. Microdata `itemprop`

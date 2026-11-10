@@ -1670,6 +1670,14 @@ div.v2-chips { gap: var(--sp-3); }
   text-transform: uppercase;
   color: var(--color-neutral-700);
 }
+/* Підзаголовок усередині картки (дві Команди для iPhone): текст, а не мітка. */
+.v2-settings__sublabel {
+  margin-top: var(--sp-3);
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  font-weight: 700;
+  color: var(--color-text);
+}
 .v2-settings__card .v2-seg > legend { margin-bottom: var(--sp-4); }
 .v2-settings__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 

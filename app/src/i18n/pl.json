@@ -60,12 +60,24 @@
       "own": "Albo utwórz go sam:",
       "step1": "Otwórz aplikację „Skróty” → „+”. Nazwij skrót „Do wishlisty”.",
       "step2": "Dodaj czynność „Otwórz adresy URL” (ang. Open URLs).",
-      "step3": "W pole adresu wklej początek skopiowany przyciskiem poniżej, a zaraz za nim — zmienną „Dane wejściowe skrótu” (Shortcut Input).",
-      "step4": "W ustawieniach skrótu (ⓘ) włącz „Pokazuj w arkuszu udostępniania”.",
+      "step3": "W polu adresu wklej początek skopiowany przyciskiem poniżej, a zaraz za nim — zmienną „Dane wejściowe skrótu” (Shortcut Input).",
+      "step4": "W ustawieniach skrótu (ⓘ) włącz „Pokazuj w arkuszu udostępniania”. Typów danych wejściowych nie zmieniaj — Chrome i aplikacje sklepów przekazują nie tylko „Adresy URL”.",
       "step5": "W Safari lub Chrome na stronie produktu: „Udostępnij” → „Do wishlisty”.",
       "copy": "Skopiuj początek adresu",
       "copied": "Skopiowano",
-      "note": "Skrót otwiera domyślną przeglądarkę iPhone’a (zwykle Safari), a nie aplikację z ekranu początkowego, więc w niej też trzeba być zalogowanym. Za pierwszym razem poprosi o logowanie — i wróci do formularza z produktem."
+      "note": "Skrót otwiera domyślną przeglądarkę iPhone’a (zwykle Safari), a nie aplikację z ekranu początkowego, więc w niej też trzeba być zalogowanym. Za pierwszym razem poprosi o logowanie — i wróci do formularza z produktem.",
+      "step6": "Żeby Skrót był na górze menu: „Udostępnij” → na dole „Edytuj czynności…” → „+” przy „Do wishlisty”.",
+      "quickTitle": "Szybki — w każdej przeglądarce",
+      "quickBody": "Otwiera formularz od razu, ale tylko z linkiem: Allegro, OLX i inne sklepy, które nie wpuszczają naszego serwera, nie podają nazwy — dopiszesz ją sam/sama.",
+      "fullTitle": "Pełny — tylko Safari: nazwa, cena i zdjęcie",
+      "fullBody": "Czyta stronę produktu w Safari tak samo jak przycisk „Do wishlisty” na komputerze — nawet z Allegro i OLX. Ale iOS uruchamia taki skrypt powoli: po stuknięciu Skrót myśli 30–40 sekund. To dłużej, niż byśmy chcieli, i wciąż szybciej niż przepisywanie nazwy, ceny i zdjęcia ręcznie.",
+      "full1": "W „Skrótach” → „+”. Nazwij skrót „Do wishlisty Safari”.",
+      "full2": "W ustawieniach skrótu (ⓘ) włącz „Pokazuj w arkuszu udostępniania”. W pierwszym bloku stuknij typy danych wejściowych i zostaw tylko „Strony Safari”.",
+      "full3": "Dodaj czynność „Uruchom JavaScript na stronie” (Run JavaScript on Web Page). Usuń kod, który w niej jest, i wklej skrypt skopiowany przyciskiem poniżej.",
+      "full4": "Dodaj czynność „Otwórz adresy URL”, a w polu adresu — zmienną „Wynik JavaScript”.",
+      "full5": "Ustawienia iPhone’a → Aplikacje → Skróty → Zaawansowane → włącz „Zezwalaj na uruchamianie skryptów”.",
+      "full6": "W Safari na stronie produktu: „Udostępnij” → „Do wishlisty Safari”. Za pierwszym razem iOS zapyta o zgodę dla strony — „Zawsze zezwalaj”. Potem poczekaj 30–40 sekund: formularz otworzy się z nazwą, ceną i zdjęciem.",
+      "copyScript": "Skopiuj skrypt"
     }
   },
   "errors": {

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { bookmarkletHref, fromPage } from '../../src/lib/bookmarklet';
+import { bookmarkletHref, fromPage, shortcutScript } from '../../src/lib/bookmarklet';
 
 /**
  * Кнопка «У вішліст» на панелі закладок (ROADMAP 8.4, ADR-076).
@@ -247,3 +247,58 @@ test.describe('що застосунок бере з адреси', () => {
     }
   });
 });
+
+/**
+ * Команда для Safari на iPhone (ROADMAP 8.5, ADR-079): той самий код, але
+ * адресу `/add` віддає через `completion` дії «Запустити JavaScript на
+ * вебсторінці». У Команди скрипт — тіло функції з `completion` в області видимості.
+ */
+test.describe('скрипт Команди для Safari', () => {
+  async function runShortcut(page: Page, head: string): Promise<string> {
+    await page.route('https://shop.example.com/**', (r) =>
+      r.fulfill({ contentType: 'text/html; charset=utf-8', body: `<!doctype html><html><head>${head}</head><body>shop</body></html>` }),
+    );
+    await page.goto('https://shop.example.com/p/kettle?id=7&ref=a#reviews');
+    await page.evaluate(() => {
+      window.open = () => {
+        throw new Error('Команда не відкриває вкладок');
+      };
+    });
+    return page.evaluate(
+      (code) => new Promise<string>((done) => new Function('completion', code)(done)),
+      shortcutScript(APP),
+    );
+  }
+
+  test('віддає Команді /add?src=page з назвою, ціною й фото; вкладок не відкриває', async ({ page }) => {
+    const out = await runShortcut(
+      page,
+      ld({ '@type': 'Product', name: 'Чайник', image: '/img/k.jpg', offers: { price: '129.99', priceCurrency: 'PLN' } }),
+    );
+    expect(out.startsWith(`${APP}/add?`)).toBe(true);
+    const q = new URL(out).searchParams;
+    expect(q.get('src')).toBe('page');
+    expect(q.get('url')).toBe('https://shop.example.com/p/kettle?id=7&ref=a');
+    expect(q.get('title')).toBe('Чайник');
+    expect(q.get('price')).toBe('129.99');
+    expect(q.get('currency')).toBe('PLN');
+    expect(q.get('image')).toBe('https://shop.example.com/img/k.jpg');
+  });
+
+  test('скрипт зламався на сторінці — Команда однаково отримує адресу сторінки', async ({ page }) => {
+    await page.route('https://shop.example.com/**', (r) =>
+      r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>x</title>' }),
+    );
+    await page.goto('https://shop.example.com/p/kettle?id=7');
+    // Сторінка, що зіпсувала собі URLSearchParams, — як будь-який збій посеред читання.
+    await page.evaluate(() => {
+      (window as unknown as { URLSearchParams: unknown }).URLSearchParams = undefined;
+    });
+    const out = await page.evaluate(
+      (code) => new Promise<string>((done) => new Function('completion', code)(done)),
+      shortcutScript(APP),
+    );
+    expect(out).toBe(`${APP}/add?src=ios&url=${encodeURIComponent('https://shop.example.com/p/kettle?id=7')}`);
+  });
+});
+
