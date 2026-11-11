@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { fromShare, iosShortcutPrefix, rawSharedUrl } from '../../src/lib/shareTarget';
+import { ANDROID_APK_URL } from '../../src/lib/androidApp';
 import { EMAIL, PASSWORD, hasAccount, unique } from './helpers';
 
 /**
@@ -275,6 +276,46 @@ test.describe('«Додати в Wishlist» з акаунтом', () => {
     await page.goto('/settings');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.getByTestId('ios-shortcut')).toHaveCount(0);
+  });
+
+  test('на Android — застосунок замість «Встановити» для PWA (ADR-082)', async ({ page }, info) => {
+    test.skip(info.project.name !== 'mobile', 'Pixel 7 — Android');
+    await signInV2(page);
+    await page.goto('/settings');
+    const link = page.getByTestId('android-app');
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute('href', ANDROID_APK_URL);
+    await expect(page.getByTestId('install').getByRole('listitem')).toHaveCount(4);
+    await expect(page.getByTestId('install').getByRole('button', { name: /^встановити$|^zainstaluj$|^install$/i })).toHaveCount(0);
+  });
+
+  test('у застосунку Android — підказка «Поділитися», без пропозиції (ADR-082)', async ({ page }, info) => {
+    test.skip(info.project.name !== 'mobile', 'Pixel 7 — Android');
+    // Те, що лишає перший запуск застосунку (referrer android-app://pl.yozh.wishlist).
+    await page.addInitScript(() => localStorage.setItem('wl.androidApp', '1'));
+    await signInV2(page);
+    await page.goto('/settings');
+    await expect(page.getByTestId('install')).toContainText(/у вішліст|do wishlisty|add to wishlist/i);
+    await expect(page.getByTestId('android-app')).toHaveCount(0);
+  });
+
+  test('на компʼютері пропозиції застосунку немає', async ({ page }, info) => {
+    test.skip(info.project.name !== 'chromium', 'десктоп');
+    await signInV2(page);
+    await page.goto('/settings');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByTestId('android-app')).toHaveCount(0);
+  });
+
+  test('магазин мовчить на Android — підказка про застосунок на /add (ADR-082)', async ({ page }, info) => {
+    test.skip(info.project.name !== 'mobile', 'Pixel 7 — Android');
+    await signInV2(page);
+    await page.goto(`/add?url=${encodeURIComponent(`https://shop.ua/android-${Date.now()}`)}`);
+    const hint = page.getByTestId('android-app-hint');
+    await expect(hint).toBeVisible();
+    await hint.getByRole('link').click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByTestId('android-app')).toBeVisible();
   });
 
   test('лише посилання, магазин мовчить — «Зберегти чернетку», у списку «Потрібна назва»', async ({ page }) => {

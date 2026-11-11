@@ -9,6 +9,7 @@ import './styles.css';
 // Стилі екранів (`designs/v2/v2.css`) імпортує таблиця маршрутів.
 // Слухач beforeinstallprompt має зʼявитися до того, як браузер надішле подію.
 import './lib/install';
+import './lib/androidApp';
 import App from './App';
 
 const root = document.getElementById('root');

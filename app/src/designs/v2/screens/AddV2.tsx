@@ -12,6 +12,7 @@ import { newId, run } from '../../../lib/outbox';
 import { ITEM_TITLE_MAX, ITEM_URL_MAX, PRIORITY_ORDER, draftTitle } from '../../../lib/itemsView';
 import { fromShare, rawSharedUrl, readLastList, writeLastList } from '../../../lib/shareTarget';
 import { fromPage } from '../../../lib/bookmarklet';
+import { androidOffer } from '../../../lib/androidApp';
 import { CURRENCIES } from '../../../lib/types';
 import type { Currency, ItemInput, ItemPriority, List } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
@@ -79,6 +80,7 @@ export default function AddV2() {
 
   const [lists, setLists] = useState<List[] | null>(null);
   const [offline, setOffline] = useState(false);
+  const [androidApp] = useState(androidOffer);
   const [target, setTarget] = useState<string>('');
   const [newName, setNewName] = useState('');
   const [title, setTitle] = useState(shared.title ?? '');
@@ -314,6 +316,13 @@ export default function AddV2() {
         {!reading && unread && !name && (
           <p className="v2-note v2-note--warm" role="status">
             <span>{t('v2add.unread')}</span>
+            {/* На Android поза застосунком: він приносить і ціну, і фото (ADR-082). */}
+            {androidApp === 'offer' && (
+              <span data-testid="android-app-hint">
+                {' '}
+                {t('v2add.unreadAndroid')} <Link to="/settings">{t('v2add.unreadAndroidLink')}</Link>
+              </span>
+            )}
           </p>
         )}
 

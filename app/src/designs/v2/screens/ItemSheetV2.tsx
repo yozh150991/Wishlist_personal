@@ -31,6 +31,7 @@ import { ConfirmSheetV2, usePriorityLabel } from './ListPartsV2';
 import { useFxRates } from '../../../lib/fx';
 import { useMediaQuery } from '../../../lib/media';
 import { DESKTOP } from '../ShellV2';
+import { androidOffer } from '../../../lib/androidApp';
 import { PHOTO_QUOTA, PhotoError, isOwnPhoto, uploadPhoto } from '../../../lib/photos';
 import type { PhotoErrorKey } from '../../../lib/photos';
 
@@ -167,6 +168,7 @@ export function ItemSheetV2({
   const { t, locale } = useI18n();
   /** На компʼютері є обхід для магазинів, що блокують сервер: кнопка «У вішліст» (ADR-076). */
   const desktop = useMediaQuery(DESKTOP);
+  const [androidApp] = useState(androidOffer);
   const priorityLabel = usePriorityLabel();
   const titleId = useId();
   const hintsId = useId();
@@ -331,7 +333,16 @@ export function ItemSheetV2({
     } catch (e) {
       if (ctl.signal.aborted) return;
       const key = e instanceof ParseError ? e.key : '';
-      const telling = key === 'parser.errors.blockedByShop' && desktop ? 'parser.errors.blockedByShopDesktop' : key;
+      // Що реально допоможе саме тут: на компʼютері — закладка, на Android —
+      // застосунок (або, вже в ньому, «Поділитися → У вішліст»), ADR-082.
+      const blockedHint = desktop
+        ? 'parser.errors.blockedByShopDesktop'
+        : androidApp === 'offer'
+          ? 'parser.errors.blockedByShopAndroid'
+          : androidApp === 'app'
+            ? 'parser.errors.blockedByShopAndroidApp'
+            : key;
+      const telling = key === 'parser.errors.blockedByShop' ? blockedHint : key;
       setParseNote({ tone: 'warn', text: TELLING.has(key) ? t(telling) : t('v2item.readFailed') });
     } finally {
       if (!ctl.signal.aborted) setReading(false);

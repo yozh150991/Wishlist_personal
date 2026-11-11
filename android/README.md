@@ -27,7 +27,7 @@
 
 ## Збірка
 
-**GitHub Actions** (`.github/workflows/android.yml`): Actions → запуск `android` → Artifacts → `wishlist-android` → `wishlist.apk`. З секретами ключа — підписаний release; без них — debug тимчасовим ключем (рядок адреси вгорі, поверх не оновлюється).
+**GitHub Actions** (`.github/workflows/android.yml`): Actions → запуск `android` → Artifacts → `wishlist-android` → `wishlist.apk`. Збірка з `main` іде ще й у Release `android-v<versionName>` (ADR-082) — постійне посилання на останню версію: `https://github.com/yozh150991/Wishlist_personal/releases/latest/download/wishlist.apk`. Нова версія — підняти `versionCode` і `versionName` у `app/build.gradle.kts`. З секретами ключа — підписаний release; без них — debug тимчасовим ключем (рядок адреси вгорі, поверх не оновлюється).
 
 **Android Studio:** Open → тека `android` → Run. Потрібна Studio з AGP 8.9 (Meerkat або новіша), Android SDK 36, JDK 17+. Щоб збірка ставилась поверх збірки з CI і Chrome її впізнавав — ключ у `%USERPROFILE%\.gradle\gradle.properties` (DEPLOY.md, 14.4).
 

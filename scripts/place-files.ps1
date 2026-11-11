@@ -252,6 +252,8 @@ $map = @{
   # Android app (ADR-080, ADR-081): grab.js generator, site-app pairing.
   'build-android-grab.mjs' = 'app\scripts'
   'assetlinks.json' = 'app\public\.well-known'
+  'androidApp.ts' = 'app\src\lib'
+  'android-app.spec.ts' = 'app\tests\e2e'
   'shops.live.ts' = 'app\tests\live'
   'shops.setup.ts' = 'app\tests\live'
   'shop-links.txt' = 'services\parser\tests'
