@@ -208,7 +208,9 @@
       "authUnavailable": "The parser couldn't verify your sign-in. Check its configuration or fill the fields in yourself.",
       "misconfigured": "The parser is misconfigured: its Supabase URL is missing.",
       "blockedByShop": "This shop blocks automated requests. Copy the name and price in yourself — the link will still be saved.",
-      "blockedByShopDesktop": "This shop blocks automated requests. Add it with the “To wishlist” button from the product page (Settings), or type the name and price yourself — the link will still be saved."
+      "blockedByShopDesktop": "This shop blocks automated requests. Add it with the “To wishlist” button from the product page (Settings), or type the name and price yourself — the link will still be saved.",
+      "blockedByShopAndroid": "This shop blocks automated requests. The Wishlist app for Android brings the name, price and photo even from here (Settings) — or type them yourself, the link will still be saved.",
+      "blockedByShopAndroidApp": "This shop blocks automated requests. Share the product from the shop page → “Add to Wishlist” — the name, price and photo will come through. Or type them yourself — the link will still be saved."
     }
   },
   "share": {
@@ -266,6 +268,16 @@
     "installManual": "Open the browser menu and choose “Install app” or “Add to Home screen”.",
     "qrShow": "Show QR code",
     "qrHint": "It is handier on a phone — scan the address."
+  },
+  "androidApp": {
+    "body": "Install Wishlist for Android — then “Add to Wishlist” in the Share menu brings the name, price and photo even from Allegro and Amazon. Same sign-in, same lists.",
+    "download": "Download the app",
+    "step1": "Tap “Download the app” — the file wishlist.apk will download.",
+    "step2": "Open it and allow installs from this source if Android asks.",
+    "step3": "Play Protect may warn about an unknown developer — “More details” → “Install anyway”.",
+    "step4": "If Wishlist is already on your home screen, remove that icon — the app replaces it.",
+    "update": "The app doesn’t come from Google Play, so it updates the same way: download the file again and install it over the old one.",
+    "inApp": "You’re in the Wishlist app. Add items from any shop: Share → “Add to Wishlist”."
   },
   "undo": {
     "offline": "It will be saved later — there is no connection right now"
@@ -958,7 +970,9 @@
     "draftNote": "It's a “Needs a name” draft — guests won't see it until you name it.",
     "open": "Open the list",
     "nothingTitle": "Nothing to add",
-    "nothingBody": "What was shared has neither a link nor a name. Try “Share” again from the product page."
+    "nothingBody": "What was shared has neither a link nor a name. Try “Share” again from the product page.",
+    "unreadAndroid": "The Wishlist app for Android brings the name, price and photo even from shops like this.",
+    "unreadAndroidLink": "How to install"
   },
   "v2notify": {
     "title": "Notifications",

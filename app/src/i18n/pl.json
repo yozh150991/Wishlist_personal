@@ -208,7 +208,9 @@
       "authUnavailable": "Parser nie mógł zweryfikować logowania. Sprawdź jego konfigurację albo uzupełnij pola ręcznie.",
       "misconfigured": "Parser jest źle skonfigurowany: nie ma adresu Supabase.",
       "blockedByShop": "Sklep blokuje automatyczne zapytania. Skopiuj nazwę i cenę ręcznie — link zostanie zapisany.",
-      "blockedByShopDesktop": "Sklep blokuje automatyczne zapytania. Dodaj produkt przyciskiem „Do wishlisty” z jego strony (Ustawienia) albo wpisz nazwę i cenę ręcznie — link zostanie zapisany."
+      "blockedByShopDesktop": "Sklep blokuje automatyczne zapytania. Dodaj produkt przyciskiem „Do wishlisty” z jego strony (Ustawienia) albo wpisz nazwę i cenę ręcznie — link zostanie zapisany.",
+      "blockedByShopAndroid": "Sklep blokuje automatyczne zapytania. Aplikacja Wishlist na Androida przyniesie nazwę, cenę i zdjęcie nawet stąd (Ustawienia) — albo wpisz je ręcznie, link zostanie zapisany.",
+      "blockedByShopAndroidApp": "Sklep blokuje automatyczne zapytania. Udostępnij produkt ze strony sklepu → „Do wishlisty” — przyjdą nazwa, cena i zdjęcie. Albo wpisz je ręcznie — link zostanie zapisany."
     }
   },
   "share": {
@@ -266,6 +268,16 @@
     "installManual": "Otwórz menu przeglądarki i wybierz „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”.",
     "qrShow": "Pokaż kod QR",
     "qrHint": "Wygodniej zainstalować na telefonie — zeskanuj adres."
+  },
+  "androidApp": {
+    "body": "Zainstaluj Wishlist na Androida — wtedy „Do wishlisty” w menu „Udostępnij” przyniesie nazwę, cenę i zdjęcie nawet z Allegro i Amazona. Logowanie i listy te same.",
+    "download": "Pobierz aplikację",
+    "step1": "Stuknij „Pobierz aplikację” — pobierze się plik wishlist.apk.",
+    "step2": "Otwórz go i zezwól na instalację z tego źródła, jeśli Android zapyta.",
+    "step3": "Play Protect może ostrzec o nieznanym deweloperze — „Więcej szczegółów” → „Zainstaluj mimo to”.",
+    "step4": "Jeśli Wishlist jest już na ekranie głównym, usuń tamtą ikonę — aplikacja ją zastępuje.",
+    "update": "Aplikacja nie pochodzi z Google Play, więc i aktualizuje się tak samo: pobierz plik jeszcze raz i zainstaluj na wierzchu.",
+    "inApp": "Jesteś w aplikacji Wishlist. Dodawaj produkty z dowolnego sklepu: „Udostępnij” → „Do wishlisty”."
   },
   "undo": {
     "offline": "Zapisze się później — teraz nie ma połączenia"
@@ -958,7 +970,9 @@
     "draftNote": "To szkic „Potrzebna nazwa” — goście go nie zobaczą, dopóki go nie nazwiesz.",
     "open": "Otwórz listę",
     "nothingTitle": "Nie ma czego dodać",
-    "nothingBody": "W udostępnionym nie ma ani linku, ani nazwy. Spróbuj „Udostępnij” jeszcze raz ze strony produktu."
+    "nothingBody": "W udostępnionym nie ma ani linku, ani nazwy. Spróbuj „Udostępnij” jeszcze raz ze strony produktu.",
+    "unreadAndroid": "Aplikacja Wishlist na Androida przynosi nazwę, cenę i zdjęcie nawet z takich sklepów.",
+    "unreadAndroidLink": "Jak zainstalować"
   },
   "v2notify": {
     "title": "Powiadomienia",

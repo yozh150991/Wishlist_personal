@@ -87,6 +87,8 @@
   → назва + ціна + фото — одразу; інакше чекаємо, за 15 с показуємо сторінку
   → LauncherActivity з цією адресою → форма /add у тому ж застосунку (fromPage)
 ```
+Роздача (ADR-082): `android.yml` кладе підписаний APK з `main` у GitHub Release `android-v<versionName>`; сайт на Android пропонує його (`lib/androidApp.ts`), поки на пристрої не відкривали застосунок — його впізнаємо за `document.referrer` `android-app://pl.yozh.wishlist`.
+
 Застосунок не має свого акаунта: вхід — у сайті, у сховищі Chrome. «У вішліст» нічого не надсилає, крім запитів самої сторінки магазину. `grab.js` генерується (`npm run build:android-grab`) і перевіряється в CI `android.yml`; там же перевіряється, що відбиток ключа APK є в `assetlinks.json`.
 
 ### Створення спільного посилання

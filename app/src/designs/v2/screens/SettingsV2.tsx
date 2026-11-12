@@ -7,6 +7,7 @@ import { SCHEMES, THEMES, useTheme } from '../../../lib/theme';
 import type { Scheme, Theme } from '../../../lib/theme';
 import { ios, promptInstall, useInstallState } from '../../../lib/install';
 import { iosShortcutPrefix } from '../../../lib/shareTarget';
+import { ANDROID_APK_URL, androidOffer } from '../../../lib/androidApp';
 import { useMediaQuery } from '../../../lib/media';
 import { errorText } from '../../../lib/errors';
 import { fetchAllItems, fetchLists } from '../../../lib/db';
@@ -78,6 +79,7 @@ export default function SettingsV2() {
   const install = useInstallState();
   const desktop = useMediaQuery(DESKTOP);
   const [iphone] = useState(ios);
+  const [androidApp] = useState(androidOffer);
   const email = session?.user.email ?? '';
   const contrastOn = highContrast || systemContrast;
 
@@ -181,8 +183,11 @@ export default function SettingsV2() {
           <h2 className="v2-settings__label" id="v2-set-install">
             {t('pwa.installTitle')}
           </h2>
-          {install === 'installed' && <p className="v2-hint v2-hint--start">{t('pwa.installed')}</p>}
-          {install === 'prompt' && !desktop && (
+          {/* Android: замість PWA — застосунок із «У вішліст» (ADR-082). */}
+          {androidApp === 'offer' && <AndroidAppOfferV2 />}
+          {androidApp === 'app' && <p className="v2-hint v2-hint--start">{t('androidApp.inApp')}</p>}
+          {androidApp === null && install === 'installed' && <p className="v2-hint v2-hint--start">{t('pwa.installed')}</p>}
+          {androidApp === null && install === 'prompt' && !desktop && (
             <>
               <p className="v2-hint v2-hint--start">{t('pwa.installHint')}</p>
               <button type="button" className="v2-btn v2-btn--primary v2-btn--start" onClick={() => void promptInstall()}>
@@ -191,7 +196,7 @@ export default function SettingsV2() {
             </>
           )}
           {install === 'ios' && <p className="v2-hint v2-hint--start">{t('pwa.installIos')}</p>}
-          {install === 'manual' && !desktop && <p className="v2-hint v2-hint--start">{t('pwa.installManual')}</p>}
+          {androidApp === null && install === 'manual' && !desktop && <p className="v2-hint v2-hint--start">{t('pwa.installManual')}</p>}
           {/* На десктопі ставити нікуди — туди ж переносить QR (README, розділ 6). */}
           {install !== 'installed' && desktop && <QrV2 />}
         </section>
@@ -235,6 +240,35 @@ export default function SettingsV2() {
  * напряму. На цій сторінці закладка не виконується: натиск лише підказує,
  * що її треба перетягнути (та й CSP сайту такий код не пустив би).
  */
+/**
+ * Застосунок для Android (ADR-082): посилання на APK з останнього Release і
+ * чотири кроки ручного встановлення. Показується на Android, поки людина не
+ * відкрила сам застосунок (`androidOffer`), — і замість «Встановити» для PWA:
+ * дві іконки Wishlist і два «Поділитися» лише плутали б.
+ */
+function AndroidAppOfferV2() {
+  const { t } = useI18n();
+  return (
+    <>
+      <p className="v2-hint v2-hint--start">{t('androidApp.body')}</p>
+      <a
+        className="v2-btn v2-btn--primary v2-btn--start"
+        href={ANDROID_APK_URL}
+        data-testid="android-app"
+      >
+        {t('androidApp.download')}
+      </a>
+      <ol className="v2-hint v2-hint--start v2-steps">
+        <li>{t('androidApp.step1')}</li>
+        <li>{t('androidApp.step2')}</li>
+        <li>{t('androidApp.step3')}</li>
+        <li>{t('androidApp.step4')}</li>
+      </ol>
+      <p className="v2-hint v2-hint--start">{t('androidApp.update')}</p>
+    </>
+  );
+}
+
 function BookmarkletCardV2() {
   const { t } = useI18n();
   const link = useRef<HTMLAnchorElement>(null);
