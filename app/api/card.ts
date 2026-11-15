@@ -11,6 +11,7 @@
  * людина однаково відкриє посилання, а бот не має бачити, чому.
  *
  * Нічого не пишемо в лог: у запиті — токен посилання (CLAUDE.md §3.5).
+ * І нічого не кладемо в спільний кеш — див. `CARD_HEADERS`.
  */
 import { renderCard, tokenFromPath } from '../src/lib/shareCard';
 import type { CardData } from '../src/lib/shareCard';
@@ -19,6 +20,30 @@ export const config = { runtime: 'edge' };
 
 /** Скільки чекати базу: картка, що не прийшла вчасно, гірша за загальну. */
 const DB_TIMEOUT_MS = 2500;
+
+/**
+ * Заголовки кожної відповіді функції — однакові для всіх гілок: жива картка,
+ * мертве посилання, збій бази, зіпсований токен, людина просто на `/api/card`.
+ *
+ * `private, no-store` — картка не зберігається ні в кеші Vercel, ні деінде.
+ * Бот і людина питають ту саму адресу `/l/{токен}`, а відрізняє їх лише
+ * user-agent у переписуванні `vercel.json`. Ключ кешу Vercel — метод, адреса,
+ * хост і деплой; чи це адреса до переписування, чи після, документація не
+ * каже. Якби до — людина, що відкрила посилання слідом за ботом, дістала б
+ * картку замість застосунку. Без кешу це неможливо за будь-якого ключа, а
+ * сторінці, прив'язаній до токена, у спільному кеші й так не місце
+ * (CLAUDE.md §3.5). `CDN-Cache-Control` і `Vercel-CDN-Cache-Control` сюди не
+ * додавати: вони сильніші за `private`.
+ *
+ * `Vary: User-Agent` — для кешів поза Vercel: відповідь залежить від того,
+ * хто питає. На сам Vercel без `s-maxage` він не впливає.
+ */
+export const CARD_HEADERS: Readonly<Record<string, string>> = {
+  'content-type': 'text/html; charset=utf-8',
+  'x-robots-tag': 'noindex, nofollow, noarchive',
+  'cache-control': 'private, no-store',
+  vary: 'User-Agent',
+};
 
 export async function fetchCard(
   token: string,
@@ -53,12 +78,7 @@ export async function handleCard(
     ? tokenFromPath(`/${prefix}/${fromQuery}`)
     : tokenFromPath(url.pathname);
 
-  const headers = {
-    'content-type': 'text/html; charset=utf-8',
-    'x-robots-tag': 'noindex, nofollow, noarchive',
-    // Хвилина в кеші Vercel: відкликане посилання недовго лишається з назвою.
-    'cache-control': 'public, max-age=0, s-maxage=60',
-  };
+  const headers = { ...CARD_HEADERS };
   if (!parsed) {
     return new Response(renderCard(null, { origin: url.origin, prefix, token: '' }), { status: 200, headers });
   }

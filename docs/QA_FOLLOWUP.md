@@ -234,6 +234,22 @@ pytest
 - [ ] Instagram або Facebook Messenger (iPhone й Android): те саме
 - [ ] У вбудованому браузері месенджера → «Відкрити в браузері» → бронь видно через «Уже маю броні» й код
 - [ ] Картка посилання в месенджері (ADR-060): назва списку й дата
+- [ ] Картка для бота не дістається людині (кеш картки, доповнення до ADR-060) — на production, у PowerShell, після деплою з цим виправленням. Токен — зі свого тестового посилання; `Read-Host` не лишає його в історії команд, у нотатки його не писати:
+
+  ```powershell
+  $t = Read-Host "token"
+  $u = "https://wishlist-personal.vercel.app/l/$t"
+  $bot = "TelegramBot (like TwitterBot)"
+  $ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+  $show = '^HTTP|^cache-control|^vary|^x-vercel-cache|og:title|id="root"'
+  # Бот, і тим самим рядком одразу за ним — браузер. Повторити тричі поспіль.
+  curl.exe -s -i -A $bot $u | Select-String $show; "-----"; curl.exe -s -i -A $ua $u | Select-String $show
+  # Мертве посилання й людина просто на адресі функції.
+  curl.exe -s -i -A $bot "https://wishlist-personal.vercel.app/l/nope" | Select-String $show
+  curl.exe -s -i -A $ua "https://wishlist-personal.vercel.app/api/card?p=l&t=$t" | Select-String $show
+  ```
+
+  Має бути. **Бот** (до риски): `200`, `cache-control: private, no-store`, `vary` з `User-Agent`, `x-vercel-cache` — не `HIT` і не `STALE` (звично `MISS`), рядок з `og:title` — назвою посилання (кирилиця в консолі може бути нечитабельна — це консоль), рядка `id="root"` немає. **Браузер** (після риски): рядок `<div id="root">`, рядка `og:title` немає, `cache-control` — не `private, no-store` (це статичний `index.html`; `x-vercel-cache: HIT` тут нормальний). В усіх трьох повторах однаково — це й є перевірка: браузер жодного разу не отримав картку. **`/l/nope`**: ті самі заголовки, що в бота, `og:title` — «Wishlist». **`/api/card` з браузерним user-agent**: картка, і теж `private, no-store`. Якщо браузер бодай раз отримав `og:title` або бот — `x-vercel-cache: HIT`, це дефект: записати як BUG-QA з виводом команд без токена.
 
 Готово, коли жоден гість не відкрив магазин без броні й кожна бронь повертається кодом.
 
