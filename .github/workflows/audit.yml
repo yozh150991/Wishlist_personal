@@ -1,0 +1,71 @@
+# Перевірка залежностей на відомі вразливості (ROADMAP 8.20).
+#
+# Окремий workflow, а не job у ci.yml, з двох причин:
+#   - нове попередження в чужому пакеті не має робити червоними перевірки тестів
+#     і ховати справжні падіння;
+#   - запуск за розкладом не тягне за собою pgTAP і Playwright.
+#
+# У правилі захисту `main` цієї перевірки немає навмисно (DEPLOY.md, розділ 8):
+# вона повідомляє, а не блокує. Що робити, коли вона червона, — TESTING.md,
+# «Перевірка залежностей».
+
+name: Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/package.json'
+      - 'app/package-lock.json'
+      - 'services/parser/requirements*.txt'
+      - '.github/workflows/audit.yml'
+  pull_request:
+    paths:
+      - 'app/package.json'
+      - 'app/package-lock.json'
+      - 'services/parser/requirements*.txt'
+      - '.github/workflows/audit.yml'
+  # Щопонеділка о 05:17 UTC: нові попередження з'являються й без комітів.
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Dependencies · npm audit і pip-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Лише те, що їде в збірку для людей (--omit=dev), і лише high та critical:
+      # помірні попередження react-router 6 стосуються серверного рендерингу,
+      # якого в застосунку немає, а виправлення є тільки в мажорній версії 7.
+      # Достатньо lock-файлу: `npm ci` для аудиту не потрібен.
+      - name: npm audit (app)
+        working-directory: app
+        run: npm audit --omit=dev --audit-level=high
+
+      - uses: actions/setup-python@v5
+        if: always()
+        with:
+          python-version: '3.12' # як у Dockerfile
+
+      # Версія закріплена: перевірка не має змінювати поведінку сама собою.
+      - name: pip-audit (services/parser)
+        if: always()
+        working-directory: services/parser
+        run: |
+          pip install pip-audit==2.10.1
+          pip-audit -r requirements.txt

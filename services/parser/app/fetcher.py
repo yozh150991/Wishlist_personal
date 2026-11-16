@@ -265,7 +265,7 @@ async def _read_page(res: httpx.Response, cfg, host: str | None) -> str:
         log.info("не HTML: host=%s status=%s ctype=%r empty=%s", host, res.status_code, ctype, empty)
         if empty:
             raise UpstreamError("upstream_forbidden", res.status_code)
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "unsupported_content")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "unsupported_content")
 
     # Читаємо потоком і обриваємо на ліміті, але не відмовляємо: мета-теги
     # лежать у <head>, тобто в перших кілобайтах. Сторінки на Shopify з
