@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Mail } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { authErrorKey } from '../../../lib/authErrors';
 import {
   authReturn,
@@ -49,6 +50,7 @@ const SAY = ['errors.noResponse', 'errors.offline', 'errors.rateLimited'];
  */
 export default function RegisterV2() {
   const { t, locale } = useI18n();
+  useDocumentTitle(t('v2auth.register.title'));
   const navigate = useNavigate();
   const location = useLocation();
   const rulesId = useId();

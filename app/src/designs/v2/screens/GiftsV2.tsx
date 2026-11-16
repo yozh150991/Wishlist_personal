@@ -4,6 +4,7 @@ import { AlertCircle, ExternalLink, Gift } from 'lucide-react';
 import { fetchMyGifts } from '../../../lib/gifts';
 import type { GiftItem, GiftList } from '../../../lib/gifts';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { errorText } from '../../../lib/errors';
 import { formatDay, localToday, moneyShort, num } from '../../../lib/format';
 import { useCounts } from './CommonV2';
@@ -23,6 +24,7 @@ const STROKE = 2.75;
  */
 export default function GiftsV2() {
   const { t, locale } = useI18n();
+  useDocumentTitle(t('v2gifts.title'));
   const counts = useCounts();
   const [gifts, setGifts] = useState<GiftList[]>([]);
   const [loading, setLoading] = useState(true);

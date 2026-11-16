@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Compass } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 
 /** Адреси, якої немає (ADR-065): один екран із дорогою на «Мої списки». */
 export default function NotFoundV2() {
   const { t } = useI18n();
+  useDocumentTitle(t('v2app.notFound.title'));
   return (
     <main className="v2-page">
       <div className="v2-empty">

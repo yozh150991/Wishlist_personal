@@ -2,6 +2,7 @@ import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { WifiOff } from 'lucide-react';
 import { useI18n } from '../../lib/i18n';
+import { useDocumentTitle } from '../../lib/documentTitle';
 
 /**
  * Запобіжник для лінивих чанків (ADR-067): екрани власника й гостьова
@@ -33,6 +34,7 @@ export class ChunkBoundary extends Component<{ children: ReactNode }, { failed: 
 
 function ChunkFailed() {
   const { t } = useI18n();
+  useDocumentTitle(t('v2app.screenFailed.title'));
   const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
   return (
     <main className="v2-page">

@@ -6,6 +6,7 @@ import { createList, deleteList, fetchDefaultCurrency, fetchListsOverview, impor
 import { fetchAppearances } from '../../../lib/appearances';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { useTheme } from '../../../lib/theme';
 import { errorText, isNetworkError } from '../../../lib/errors';
 import { formatDateTime, formatDay, localToday } from '../../../lib/format';
@@ -90,6 +91,7 @@ function day(iso: string): Date {
  */
 export default function ListsV2() {
   const { t, locale } = useI18n();
+  useDocumentTitle(t('v2app.lists.title'));
   const { session } = useAuth();
   const { resolved } = useTheme();
   const counts = useCounts();

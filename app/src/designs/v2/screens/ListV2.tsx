@@ -33,6 +33,7 @@ import { useItems } from '../../../lib/useItems';
 import { useFxRates } from '../../../lib/fx';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { errorText, isNetworkError } from '../../../lib/errors';
 import { formatDateTime, formatDay, localToday, moneyShort, num } from '../../../lib/format';
 import { listKey, readSnapshot, saveSnapshot, sectionsKey } from '../../../lib/cache';
@@ -187,6 +188,13 @@ export default function ListV2() {
   const [listState, setListState] = useState<ListState>('loading');
   const [listError, setListError] = useState<string | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
+
+  // Заголовок вкладки — назва списку: це екран власника на його ж пристрої.
+  // Поки список вантажиться (або в стані лишився попередній — перехід зі
+  // списку на список), назви немає: запасний «Wishlist», а не чужа назва.
+  useDocumentTitle(
+    listState === 'missing' ? t('v2list.notFound.title') : list && list.id === id ? list.title : null,
+  );
 
   const { items, loading, error, staleAt, reload, refresh, applyLocal, patchLocal } = useItems(
     id,

@@ -4,6 +4,7 @@ import { Check, ChevronLeft, CloudOff, PackageOpen } from 'lucide-react';
 import { createList, fetchDefaultCurrency, fetchListsOverview } from '../../../lib/db';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { errorText, isNetworkError } from '../../../lib/errors';
 import { hostOf, localToday, moneyShort } from '../../../lib/format';
 import { LISTS_KEY, readSnapshot } from '../../../lib/cache';
@@ -55,6 +56,8 @@ function byRelevance(today: string) {
  */
 export default function AddV2() {
   const { t, locale } = useI18n();
+  // Не `v2add.title`: «Додати в Wishlist · Wishlist» повторював би назву двічі.
+  useDocumentTitle(t('v2add.tabTitle'));
   const { session } = useAuth();
   const priorityLabel = usePriorityLabel();
   const location = useLocation();

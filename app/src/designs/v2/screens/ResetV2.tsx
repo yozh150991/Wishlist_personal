@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Mail } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { authErrorKey } from '../../../lib/authErrors';
 import { authReturn, emailProblem, recallAuthEmail, rememberAuthEmail } from '../../../lib/authFlow';
 import {
@@ -32,6 +33,7 @@ const SAY = ['errors.noResponse', 'errors.offline', 'errors.rateLimited'];
  */
 export default function ResetV2() {
   const { t } = useI18n();
+  useDocumentTitle(t('v2auth.reset.title'));
   const location = useLocation();
   const [email, setEmail] = useState(
     () => (location.state as { email?: string } | null)?.email || recallAuthEmail(),

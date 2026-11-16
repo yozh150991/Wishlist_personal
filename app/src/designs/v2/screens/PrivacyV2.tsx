@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { AuthFrameV2, BackHeaderV2 } from './AuthPartsV2';
 
 /** Розділи політики в порядку показу; тексти — `privacy.s.<id>` у словниках. */
@@ -39,6 +40,7 @@ function Body({ text }: { text: string }) {
  */
 export default function PrivacyV2() {
   const { t } = useI18n();
+  useDocumentTitle(t('privacy.title'));
   return (
     <AuthFrameV2 wide>
       <BackHeaderV2 to="/" title={t('privacy.title')} />

@@ -117,6 +117,8 @@ $map = @{
 
   'AuthLayout.tsx'  = 'app\src\components'; 'ui.tsx'       = 'app\src\components'
   'LocaleSync.tsx' = 'app\src\components'
+  # page language and tab titles (audit A-6, A-7)
+  'documentTitle.ts' = 'app\src\lib'; 'page-meta.spec.ts' = 'app\tests\e2e'
   'UpdatePrompt.tsx' = 'app\src\components'; 'install.ts' = 'app\src\lib'; 'errors.ts' = 'app\src\lib'
   'env-local.mjs' = 'app\scripts'
   'transfer.ts' = 'app\src\lib'; 'download.ts' = 'app\src\lib'

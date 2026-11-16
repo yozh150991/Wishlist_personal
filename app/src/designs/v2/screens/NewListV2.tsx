@@ -4,6 +4,7 @@ import { ChevronLeft, Plus } from 'lucide-react';
 import { createList, fetchDefaultCurrency, fetchListsOverview } from '../../../lib/db';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { errorText } from '../../../lib/errors';
 import { localToday } from '../../../lib/format';
 import { CURRENCIES } from '../../../lib/types';
@@ -73,6 +74,7 @@ function dropDraft() {
  */
 export default function NewListV2() {
   const { t } = useI18n();
+  useDocumentTitle(t('v2app.newList.title'));
   const { session } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

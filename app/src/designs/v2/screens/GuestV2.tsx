@@ -32,6 +32,7 @@ import {
   storedKey,
 } from '../../../lib/guest';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { useAuth } from '../../../lib/auth';
 import { attachGuestKey } from '../../../lib/gifts';
 import { formatDay, money, num, priceThresholds } from '../../../lib/format';
@@ -114,6 +115,19 @@ function markShopAsked(token: string) {
 
 type Filter = 'free' | 'all';
 type Changes = { fresh: Set<string>; freed: Set<string> } | null;
+
+/**
+ * Чи показувати назву списку в заголовку вкладки гостьової. Вимкнено
+ * навмисно: заголовок осідає в історії браузера й у перемикачі вкладок, а
+ * гість часто відкриває посилання на чужому чи спільному пристрої — назва
+ * («День народження Олі») розповіла б про список тим, кому його не показували.
+ * Тому вкладка зветься нейтрально: «Список бажань · Wishlist».
+ *
+ * ЄДИНЕ місце, де це вмикається: `true` — і в заголовку буде назва списку.
+ * Токен шеру й ключ гостя в заголовок не потрапляють за жодного значення
+ * (CLAUDE.md §3.5).
+ */
+const GUEST_TAB_SHOWS_LIST_NAME: boolean = false;
 
 export default function GuestV2() {
   const { token = '', key: urlKey, mailToken } = useParams();
@@ -236,6 +250,19 @@ export default function GuestV2() {
     if (urlKey || mailToken) return;
     void load();
   }, [load, urlKey, mailToken]);
+
+  // Заголовок вкладки. Мертве посилання має один заголовок на всі три причини
+  // (неіснуюче, відкликане, протерміноване — стан `gone` один, CLAUDE.md §3.3),
+  // тож він не підтверджує, що токен колись існував. Завантаження, збій і
+  // відкритий список — нейтральне «Список бажань», однакове для `/l/…`,
+  // `/l/…/g/…` і `/l/…/u/…`.
+  useDocumentTitle(
+    gone
+      ? t('v2guest.goneTitle')
+      : GUEST_TAB_SHOWS_LIST_NAME && data?.title.trim()
+        ? data.title
+        : t('v2guest.tabTitle'),
+  );
 
   useEffect(() => {
     if (data && !data.viewer_is_owner) void registerView(token);

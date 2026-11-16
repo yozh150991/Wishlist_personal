@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import uk from '../i18n/uk.json';
 import pl from '../i18n/pl.json';
@@ -43,9 +43,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLocale = useCallback((l: Locale) => {
     localStorage.setItem(KEY, l);
-    document.documentElement.lang = l;
     setLocaleState(l);
   }, []);
+
+  // `<html lang>` — завжди активна мова, звідки б вона не взялась: мова
+  // браузера при першому відкритті, збережений вибір, перемикач у
+  // Налаштуваннях, на вході чи в підвалі гостьової. Раніше атрибут ставив лише
+  // ручний вибір, і польський інтерфейс зчитувач екрана читав українським
+  // голосом (аудит A-6). Єдине місце, де він пишеться: `index.html` має
+  // статичне `lang="uk"` до першого рендера, інлайновий скрипт CSP не пускає.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   const t = useCallback(
     (key: string, vars?: Record<string, string | number>) => {

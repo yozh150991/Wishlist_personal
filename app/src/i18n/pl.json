@@ -959,6 +959,7 @@
   },
   "v2add": {
     "title": "Dodaj do Wishlist",
+    "tabTitle": "Dodaj pozycję",
     "list": "Do listy",
     "newList": "+ Nowa",
     "newListName": "Nazwa nowej listy",
@@ -1071,6 +1072,7 @@
     "shareNone": "Wśród zaznaczonych nie ma aktualnych pozycji — nie ma czym się dzielić."
   },
   "v2guest": {
+    "tabTitle": "Lista życzeń",
     "mine": "Moje rezerwacje · {n}",
     "haveCode": "Mam już rezerwacje",
     "ownerBanner": "To twój link. Rezerwacji gości tu nie widać — celowo, żeby prezent pozostał niespodzianką.",

@@ -4,6 +4,7 @@ import { AlertCircle, Check, Copy, Eye, Link2 } from 'lucide-react';
 import { deleteShare, fetchSharesOverview, revokeShare, shareUrl } from '../../../lib/shares';
 import type { ShareOverview } from '../../../lib/shares';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { errorText } from '../../../lib/errors';
 import { formatDeadline } from '../../../lib/format';
 import { NoteV2 } from './AuthPartsV2';
@@ -38,6 +39,7 @@ function stateOf(share: ShareOverview): State {
  */
 export default function SharesV2() {
   const { t, locale } = useI18n();
+  useDocumentTitle(t('share.title'));
   const counts = useCounts();
   const [shares, setShares] = useState<ShareOverview[]>([]);
   const [loading, setLoading] = useState(true);
