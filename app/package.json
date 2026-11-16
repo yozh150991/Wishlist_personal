@@ -1,7 +1,7 @@
 {
   "name": "wishlist-personal-app",
   "private": true,
-  "version": "0.2.15",
+  "version": "0.2.16",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
     "gen:types": "supabase gen types typescript --linked > src/types/database.ts",
     "test:logic": "playwright test --config=playwright.logic.config.ts",
     "check:shops": "playwright test --config=playwright.shops.config.ts",
+    "test:sw": "playwright test --config=playwright.sw.config.ts",
     "build:android-grab": "node scripts/build-android-grab.mjs"
   },
   "dependencies": {

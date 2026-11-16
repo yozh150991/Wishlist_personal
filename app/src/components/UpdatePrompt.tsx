@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation } from 'react-router-dom';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { isGuestPath } from '../lib/guestPath';
 import { useI18n } from '../lib/i18n';
 
 const HOUR = 60 * 60 * 1000;
@@ -33,9 +35,39 @@ function useModalHost(active: boolean): HTMLDialogElement | null {
 }
 
 /**
+ * Service Worker — лише для застосунку, не для гостя (ADR-084).
+ *
+ * На гостьових адресах (`/l/…` і старих `/s/…`) реєстрації немає: гість, який
+ * зайшов раз подивитися список, не має у фоні качати всю офлайн-оболонку разом
+ * з екранами власника. Реєстрацію запускає перша ж адреса застосунку — і при
+ * завантаженні сторінки, і при переході без перезавантаження (з гостьової на
+ * «Приватність», власник із перегляду назад у «Доступи»). Раз запущена, вона
+ * лишається до кінця життя вкладки.
+ *
+ * Чого тут навмисно НЕ робиться — `unregister()` на гостьовій. Service Worker
+ * один на сайт: у власника, який відкрив гостьове посилання на своєму
+ * телефоні, це зняло б офлайн-запуск і push-підписку встановленого застосунку.
+ * Тож наявний Service Worker гостьова не чіпає — лише не заводить нового й не
+ * показує смугу «Оновити»: вона зʼявиться, щойно людина відкриє сам застосунок.
+ *
+ * Перевіряє `npm run test:sw` (TESTING.md).
+ */
+export function UpdatePrompt() {
+  const guest = isGuestPath(useLocation().pathname);
+  const [started, setStarted] = useState(!guest);
+  useEffect(() => {
+    if (!guest) setStarted(true);
+  }, [guest]);
+  return started ? <UpdateBanner /> : null;
+}
+
+/**
  * Банер «Є нова версія». Service Worker нової збірки чекає, поки людина
  * натисне «Оновити», і лише тоді підміняє застосунок і перезавантажує сторінку —
  * щоб не зірвати введення посеред діалогу.
+ *
+ * Сам хук `useRegisterSW` і реєструє Service Worker — тому компонент монтується
+ * лише тоді, коли реєстрація доречна (див. `UpdatePrompt` вище).
  *
  * Коли шукати нову версію:
  * - щогодини — для вкладки, яка весь час відкрита на екрані;
@@ -50,7 +82,7 @@ function useModalHost(active: boolean): HTMLDialogElement | null {
  * У режимі розробки Service Worker не реєструється (devOptions у vite.config),
  * і банер ніколи не зʼявляється.
  */
-export function UpdatePrompt() {
+function UpdateBanner() {
   const { t } = useI18n();
   const {
     needRefresh: [needRefresh, setNeedRefresh],
