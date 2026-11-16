@@ -428,6 +428,18 @@ npx lighthouse http://localhost:4173/login --view
 
 **Ціна й назва з JSON-LD у живих формах** — `test_extract_offers.py` (ROADMAP 8.3): HTML-сутності в назві (Amazon), `AggregateOffer.lowPrice`, `priceSpecification` обʼєктом і списком, перша пропозиція без ціни, `ProductGroup` з ціною першого варіанта; ціна з JSON-LD перемагає евристику.
 
+**Кодування сторінки** — `test_page_encoding.py` (ROADMAP 8.19), мережу підміняє `MockTransport`, DNS — як у `test_fetch_pinning.py`
+- `charset=foo-bar` у заголовку — сторінка читається як UTF-8, `POST /parse` відповідає `200`, а не `500`; так само `hex`, `base64`, `rot13`, `undefined`, `idna`, `punycode`, EBCDIC, назва на 5000 символів і не-ASCII.
+- Кодування лише в `<meta charset>` чи `<meta http-equiv>` (windows-1251, iso-8859-2) — назва читається; різні написання тега; закоментований тег, `content` без `http-equiv`, тег після перших 4 КБ і UTF-16 у `<meta>` — не оголошення.
+- Порядок: BOM сильніший за заголовок, заголовок — за `<meta>`; windows-1251 у заголовку працює, як і раніше; UTF-8 без жодного оголошення — теж.
+- Биті байти стають «�», а не помилкою; сторінка, обрізана на ліміті посеред символу, читається без неповного хвоста.
+
+**Microdata** — `test_extract_microdata.py` (ROADMAP 8.19)
+- Сторінка з аудиту: `Organization` і `BreadcrumbList` перед `Product` — назва товару, а не «Sklep XYZ», і фото з Open Graph, а не логотип.
+- Без області товару назва й фото — з Open Graph або `<title>`; ціна з `itemprop="price"` без `itemscope` лишається.
+- Написання типу (`http`/`https`, слеш, `www`, `ProductGroup`, кілька типів); чужі типи — не товар.
+- Вкладені `brand`, `review`, `ImageObject` не дають назви й фото; ціна — з `Offer`, `AggregateOffer.lowPrice` і варіанта `hasVariant`; ціна схожого товару чи сусіда не береться; `<a itemprop="name" href>` — текст, а не адреса.
+
 **Тиха відмова магазину** — `test_fetch_pinning.py`, `TestShopBlocksQuietly`: `202`, відповідь без `Content-Type` і порожня не-HTML — `upstream_forbidden`; справжній PDF — `unsupported_content`. У застосунку — `list-v2.spec.ts`, «магазин блокує парсер»: на десктопі підказка про «У вішліст», на телефоні без неї; назву можна вписати.
 
 **Пін на перевірену IP** — `test_fetch_pinning.py`, мережу підміняє `MockTransport`
@@ -530,7 +542,7 @@ npx lighthouse http://localhost:4173/login --view
 
 ## Живий прогін по магазинах (ROADMAP 8.3)
 
-Не в CI і не в звичайному `pytest`: `addopts = -m "not live"` у `pytest.ini`, а Playwright-конфіг окремий. Набір посилань — `services/parser/tests/shop-links.txt`, порожній — тести пропускаються.
+Не в CI і не в звичайному `pytest`: `addopts = -m "not live"` у `pytest.ini`, а Playwright-конфіг окремий. Набір посилань — `services/parser/tests/shop-links.txt`, порожній — тести пропускаються. З 16 листопада 2026 в наборі є й українські магазини (Vivat, KSD, Makeup, BI, Bookclub) — вони ще чекають першого прогону; результати впишемо в API.md після нього.
 
 ```bash
 cd services/parser && pytest -m live                            # парсер → live-shops.md
