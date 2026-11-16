@@ -29,8 +29,8 @@ android {
         // і нижня картка «У вішліст» лягала б під панель навігації.
         // Застосунок ставиться вручну, не через Play.
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.2.2"
+        versionCode = 5
+        versionName = "0.2.3"
 
         buildConfigField("String", "APP_ORIGIN", "\"$wishlistOrigin\"")
         resValue("string", "launch_url", wishlistOrigin)

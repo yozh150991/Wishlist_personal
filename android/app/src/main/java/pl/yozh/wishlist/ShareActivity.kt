@@ -150,7 +150,10 @@ class ShareActivity : Activity() {
             lastRaw = raw
         }
         val elapsed = SystemClock.elapsedRealtime() - startedAt
-        Log.d(TAG, "probe ${elapsed}ms finished=$pageFinished same=$sameInARow -> $raw")
+        // У журнал — лише час, прапорці й довжина відповіді. Сама відповідь — це адреса
+        // `/add?url=…&title=…`: посилання на подарунок і його назва, а logcat читають
+        // інші застосунки з дозволом READ_LOGS і кожен, хто підключить телефон до adb.
+        Log.d(TAG, "probe ${elapsed}ms finished=$pageFinished same=$sameInARow len=${raw?.length ?: -1}")
 
         if (!pageShown && best?.hasTitle == true) status.setText(R.string.status_found_title)
 
