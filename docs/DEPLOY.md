@@ -912,7 +912,10 @@ npx supabase db push
 curl.exe -A "TelegramBot (like TwitterBot)" "https://wishlist-personal.vercel.app/l/<токен>"   # сторінка з og:title — назвою посилання
 curl.exe -A "TelegramBot (like TwitterBot)" "https://wishlist-personal.vercel.app/l/nope"      # og:title «Wishlist»
 curl.exe -I "https://wishlist-personal.vercel.app/l/<токен>"                                   # звичайний браузер — застосунок, як раніше
+curl.exe -s -D - -o NUL -A "TelegramBot (like TwitterBot)" "https://wishlist-personal.vercel.app/l/<токен>"   # cache-control: private, no-store; vary: User-Agent; x-vercel-cache не HIT
 ```
+
+Картка не кешується: бот і людина питають ту саму адресу, тож у спільному кеші Vercel відповідь бота могла б дістатися людині. Повна перевірка «бот, і одразу за ним браузер» — у `docs/QA_FOLLOWUP.md`, розділ «Гість на iPhone поза Safari і в месенджерах».
 
 **Після зміни коду** `services/parser` — передеплой `wishlist-guestmail` тією самою командою з 10.3 (можна без `--set-*`: змінні й секрети зберігаються) і, як і раніше, `wishlist-jobs`.
 

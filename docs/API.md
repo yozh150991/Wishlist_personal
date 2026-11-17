@@ -167,6 +167,8 @@ POST /rest/v1/rpc/get_share_card  { "p_token": "…" }
 ```
 Назва посилання, дата події й мова власника — і більше нічого: ні позицій, ні цін, ні позначок. Мертве, відкликане чи неіснуюче посилання — `null`, однаково. Перегляду не рахує, ідентичностей не створює.
 
+Сторінка, яку з цих даних будує `app/api/card.ts` (`GET /api/card?p=l|s&t={токен}`; боти потрапляють сюди переписуванням з `/l/{токен}` і `/s/{токен}`), завжди `200 text/html` із заголовками `Cache-Control: private, no-store`, `Vary: User-Agent` і `X-Robots-Tag: noindex, nofollow, noarchive` — однаково для живого посилання, мертвого, збою бази й зіпсованого токена. У спільний кеш вона не йде: відповідь, призначена боту, не має дістатися людині, яка відкрила ту саму адресу (доповнення до ADR-060).
+
 ### `set_claim_bought` — anon + authenticated (ADR-056)
 ```ts
 await supabase.rpc('set_claim_bought', { p_token: token, p_item_id: itemId, p_key: guestKey, p_bought: true });   // 204
