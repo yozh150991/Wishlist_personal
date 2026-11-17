@@ -4,6 +4,7 @@ import { KeyRound } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { authErrorKey } from '../../../lib/authErrors';
 import {
   authReturn,
@@ -40,6 +41,7 @@ const SAY = ['errors.noResponse', 'errors.offline', 'errors.rateLimited'];
  */
 export default function NewPasswordV2() {
   const { t } = useI18n();
+  useDocumentTitle(t('v2auth.update.title'));
   const { session, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

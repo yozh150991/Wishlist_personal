@@ -4,6 +4,7 @@ import { MailWarning, MailX } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { authErrorKey } from '../../../lib/authErrors';
 import { safeNext } from '../../../lib/safeNext';
 import { justDeletedAccount } from '../../../lib/account';
@@ -63,6 +64,9 @@ type Stage = 'form' | 'expired' | 'unconfirmed';
  */
 export default function LoginV2() {
   const { t } = useI18n();
+  // Заголовок вкладки — «Вхід» у всіх станах екрана (форма, «підтверди пошту»,
+  // протерміноване посилання): адреса та сама, і вкладка зветься так само.
+  useDocumentTitle(t('auth.login.title'));
   const { session, loading } = useAuth();
   const [params] = useSearchParams();
   const location = useLocation();

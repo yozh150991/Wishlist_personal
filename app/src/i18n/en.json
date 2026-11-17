@@ -959,6 +959,7 @@
   },
   "v2add": {
     "title": "Add to Wishlist",
+    "tabTitle": "Add item",
     "list": "To list",
     "newList": "+ New",
     "newListName": "New list name",
@@ -1071,6 +1072,7 @@
     "shareNone": "None of the selected items are active — nothing to share."
   },
   "v2guest": {
+    "tabTitle": "Wish list",
     "mine": "My picks · {n}",
     "haveCode": "I already have picks",
     "ownerBanner": "This is your own link. Guests' picks are hidden here on purpose, so the gift stays a surprise.",

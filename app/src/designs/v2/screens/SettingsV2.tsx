@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../../lib/auth';
 import { useI18n, LOCALES } from '../../../lib/i18n';
 import type { Locale } from '../../../lib/i18n';
+import { useDocumentTitle } from '../../../lib/documentTitle';
 import { SCHEMES, THEMES, useTheme } from '../../../lib/theme';
 import type { Scheme, Theme } from '../../../lib/theme';
 import { ios, promptInstall, useInstallState } from '../../../lib/install';
@@ -73,6 +74,7 @@ function Choice<T extends string>({
  */
 export default function SettingsV2() {
   const { t, locale, setLocale } = useI18n();
+  useDocumentTitle(t('settings.title'));
   const { session } = useAuth();
   const { theme, scheme, highContrast, systemContrast, setTheme, chooseScheme, setHighContrast } =
     useTheme();
