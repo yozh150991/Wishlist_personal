@@ -1,4 +1,7 @@
-fastapi==0.115.6
+fastapi==0.163.1
+# starlette закріплено явно: fastapi дозволяє будь-яку від 0.46, а версії до 1.3.1 мають
+# відомі вразливості (pip-audit, ROADMAP 8.20). Оновлювати разом із fastapi.
+starlette==1.10.0
 uvicorn[standard]==0.34.0
 httpx==0.28.1
 beautifulsoup4==4.12.3
