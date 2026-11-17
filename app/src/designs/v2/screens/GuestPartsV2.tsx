@@ -104,7 +104,9 @@ export function GuestHeadV2({
 
 /**
  * Картка гостя: фото → назва (посилання на магазин), ціна й домен, ознаки,
- * нотатка → дія праворуч. Три стани з потоку E: вільна («Беру», «У магазин»),
+ * нотатка → дії рядком під текстом (у широкій картці — стовпчиком праворуч;
+ * це той самий рендер, розкладку міняє CSS за шириною картки). «Беру» —
+ * залита головна кнопка. Три стани з потоку E: вільна («Беру», «У магазин»),
  * своя (контур, «Ви берете», «Уже куплено», «Зняти»), чужа («Уже взяли» — без
  * дії). Куплену бронь (S, ADR-056) з картки не зняти: «Зняти» після покупки —
  * лише в «Моїх бронях», щоб не скасувати її випадково.
@@ -253,11 +255,11 @@ export function GuestCardV2({
           {state === 'free' && (
             <>
               {preview ? (
-                <span className="v2-btn v2-btn--outline v2-btn--small v2-gcard__fake" aria-hidden="true">
+                <span className="v2-btn v2-btn--primary v2-btn--small v2-gcard__take v2-gcard__fake" aria-hidden="true">
                   {t('v2guest.take')}
                 </span>
               ) : (
-                <button type="button" className="v2-btn v2-btn--outline v2-btn--small" onClick={() => onTake(item)}>
+                <button type="button" className="v2-btn v2-btn--primary v2-btn--small v2-gcard__take" onClick={() => onTake(item)}>
                   {t('v2guest.take')}
                 </button>
               )}

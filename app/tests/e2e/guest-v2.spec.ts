@@ -561,3 +561,66 @@ test('аркуш на /l/ — сторінка, яку зсунули під в�
   await expect(sheet.getByRole('button', { name: /^(скасувати|anuluj|cancel)$/i })).toBeInViewport();
 });
 
+test('картка гостя на вузькому екрані — дії під текстом, «Беру» залита й від 44 px (ROADMAP 8.18)', async ({ page }) => {
+  // Відповідь бази підставляємо: тут лише розкладка картки. Позиція з фото, посиланням
+  // і довгою назвою — найтісніший випадок: «Беру», «Зібрати разом» і «У магазин».
+  await page.route('**/e2e-photo.png', (route) =>
+    route.fulfill({
+      contentType: 'image/png',
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'),
+    }),
+  );
+  const item = (id: string, title: string, extra: Record<string, unknown>) => ({
+    id, title, url: null, price: 899, currency: 'PLN', quantity: 1, priority: 'medium', note: null,
+    variants: [], image_url: '/e2e-photo.png', status: 'active', created_at: '2026-10-01T10:00:00Z',
+    section_id: null, taken_qty: 0, mine_qty: 0, ...extra,
+  });
+  await page.route('**/rpc/get_guest_list', (route) =>
+    route.fulfill({
+      json: {
+        title: 'Новосілля', message: null, currency: 'PLN', event_date: null,
+        expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+        hide_prices: false, allow_reservations: true, archived: false, viewer_is_owner: false,
+        guest: null, sections: [], thanks: null,
+        items: [
+          item('e2e-card-1', 'Кавоварка ріжкова з капучинатором', { url: 'https://www.sklep-internetowy.example.com/p/1' }),
+          item('e2e-card-2', 'Навушники бездротові', { taken_qty: 1, mine_qty: 1 }),
+        ],
+      },
+    }),
+  );
+  await page.route('**/rpc/register_share_view', (route) => route.fulfill({ status: 204, body: '' }));
+
+  await page.goto('/l/e2e-card-token');
+  const free = card(page, 'Кавоварка');
+  const mine = card(page, 'Навушники');
+  await expect(free).toBeVisible();
+  await expect(mine).toContainText(yours);
+
+  // Третій розмір — дві колонки на комп'ютері: картка там така сама вузька, як на телефоні.
+  for (const [width, minText] of [[320, 180], [360, 220], [1280, 200]] as const) {
+    await page.setViewportSize({ width, height: 800 });
+    const take = free.getByRole('button', { name: takeBtn });
+    const [text, actions, takeBox, shopBox] = await Promise.all([
+      free.locator('.v2-gcard__text').boundingBox(),
+      free.locator('.v2-gcard__actions').boundingBox(),
+      take.boundingBox(),
+      free.getByRole('link', { name: /^(у магазин|do sklepu|to the shop)$/i }).boundingBox(),
+    ]);
+    if (!text || !actions || !takeBox || !shopBox) throw new Error('картку не намальовано');
+    // Назві лишається ширина картки без фото, а не 38 px поруч зі стовпчиком кнопок.
+    expect(text.width, `текст на ${width} px`).toBeGreaterThanOrEqual(minText);
+    expect(actions.y, `дії під текстом на ${width} px`).toBeGreaterThanOrEqual(text.y + text.height);
+    // «Беру» — головна: від 44 px, на весь рядок дій і залита, а не контурна.
+    expect(takeBox.height).toBeGreaterThanOrEqual(44);
+    expect(takeBox.width).toBeGreaterThanOrEqual(actions.width - 1);
+    expect(await take.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+    expect(shopBox.height).toBeGreaterThanOrEqual(44);
+    // Дії своєї броні — теж від 44 px.
+    for (const b of await mine.locator('.v2-gcard__actions .v2-btn').all()) {
+      expect((await b.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    // Ніщо не виходить за край екрана.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  }
+});
