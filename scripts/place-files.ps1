@@ -262,6 +262,7 @@ $map = @{
   'test_live_shops.py' = 'services\parser\tests'
   'conftest.py' = 'services\parser\tests'
   'test_extract_offers.py' = 'services\parser\tests'
+  'test_page_encoding.py' = 'services\parser\tests'; 'test_extract_microdata.py' = 'services\parser\tests'
   'amazon_like.html' = 'services\parser\tests\fixtures'
   'guest_mail.py' = 'services\parser\app'
   'mail_main.py' = 'services\parser\app'

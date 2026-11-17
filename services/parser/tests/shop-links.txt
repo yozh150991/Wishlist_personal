@@ -22,3 +22,14 @@ Empik | https://www.empik.com/apple-iphone-18-pro-256gb-czarny-dual-esim-apple,p
 IKEA | https://www.ikea.com/pl/pl/p/droena-pudelko-ciemnoszary-10443974/
 Zalando | https://www.zalando.pl/nike-performance-free-metcon-7-buty-treningowe-blackfuchsia-blastlaser-crimsonmetallic-silver-coloured-n1241a1ha-q12.html
 Decathlon | https://www.decathlon.pl/p/koszulka-sportowa-damska-domyos-shape-krotki-rekaw/365365/c98m9029955
+
+# Українські магазини, з яких найчастіше додають у вішлісти (підсумки Rewish 2025).
+# Додано 16 листопада 2026; живого прогону по них ще не було — у таблиці API.md їх немає.
+# Bookclub — стара адреса Клубу Сімейного Дозвілля: сервер переадресовує її на ksd.ua,
+# тож цей рядок перевіряє ще й перехід між доменами.
+# Не знайдено адрес товару (допиши сам): yakaboo.ua, notino.ua, book-ye.com.ua.
+Vivat | https://vivat.com.ua/product/tilo-vede-lik/
+KSD | https://ksd.ua/product/chetverte-krilo
+Makeup | https://makeup.com.ua/ua/product/394763/
+BI | https://bi.ua/ukr/product/konstruktor-lego-creator-gorodskoy-magazin-igrushek-31105.html
+Bookclub | https://bookclub.ua/catalog/books/fantasy_books/dvir-shipiv-i-troyand-kniga-1-onovlene-vidannya

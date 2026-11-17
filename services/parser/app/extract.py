@@ -4,7 +4,7 @@ import math
 import re
 from urllib.parse import urljoin, urlparse
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from .models import ParseResponse
 
@@ -208,6 +208,121 @@ def _heuristic_price(soup: BeautifulSoup) -> float | None:
     return None
 
 
+# Microdata: `itemtype` — один або кілька типів через пробіл; магазини пишуть
+# і http://, і https://, зі слешем у кінці й без.
+_SCHEMA_TYPE = re.compile(r"^https?://(?:www\.)?schema\.org/(\w+)/?$", re.IGNORECASE)
+_PRODUCT_TYPES = ("product", "productgroup")
+_OFFER_TYPES = ("offer", "aggregateoffer")
+
+
+def _scope_is(tag: Tag, kinds: tuple[str, ...]) -> bool:
+    """Чи є тег областю (`itemscope`) одного з типів schema.org."""
+    if not tag.has_attr("itemscope"):
+        return False
+    for item_type in str(tag.get("itemtype") or "").split():
+        match = _SCHEMA_TYPE.match(item_type)
+        if match and match.group(1).lower() in kinds:
+            return True
+    return False
+
+
+def _prop_value(tag: Tag, prop: str) -> str | None:
+    """
+    Значення властивості. `content` — завжди перший: так магазини кладуть
+    машинне значення поруч із видимим («499.00» при тексті «499 zł»).
+    Адреса (`src`, `href`) — лише для фото: посилання з назвою товару
+    `<a itemprop="name" href="…">` — це назва, а не адреса.
+    """
+    content = tag.get("content")
+    if content:
+        return str(content)
+    if prop == "image":
+        for attr in ("src", "href", "data"):
+            if tag.get(attr):
+                return str(tag.get(attr))
+        return None
+    return tag.get_text(" ", strip=True) or None
+
+
+def _product_props(root: Tag) -> dict[str, str]:
+    """
+    Властивості одного товару з microdata: `name`, `image`, `price`,
+    `lowPrice`, `priceCurrency` — перше непорожнє значення кожної.
+
+    Властивість належить найближчій області над нею, тому у вкладені
+    `itemscope` не заходимо: `name` усередині `brand`, `review` чи хлібних
+    крихт — це назва бренду, відгуку чи розділу, а не товару. Винятки — лише
+    заради ціни, як у JSON-LD: пропозиція (`Offer`, `AggregateOffer`) і
+    варіант групи (`hasVariant`); назву й фото звідти не беремо.
+    """
+    found: dict[str, str] = {}
+    stack: list[tuple[Tag, bool]] = [(child, False) for child in reversed(root.find_all(True, recursive=False))]
+    while stack:
+        tag, price_only = stack.pop()
+        props = str(tag.get("itemprop") or "").split()
+        if tag.has_attr("itemscope"):
+            variant = "hasVariant" in props and _scope_is(tag, _PRODUCT_TYPES)
+            if not variant and not _scope_is(tag, _OFFER_TYPES):
+                continue
+            price_only = True
+        else:
+            for prop in props:
+                if prop in found or prop not in ("name", "image", "price", "lowPrice", "priceCurrency"):
+                    continue
+                if price_only and prop in ("name", "image"):
+                    continue
+                value = _prop_value(tag, prop)
+                if value:
+                    found[prop] = value
+        stack.extend((child, price_only) for child in reversed(tag.find_all(True, recursive=False)))
+    return found
+
+
+def _microdata_product(soup: BeautifulSoup) -> dict[str, str]:
+    """
+    Товар сторінки з microdata або порожньо, якщо області `Product` /
+    `ProductGroup` немає.
+
+    Раніше бралися перші `itemprop="name"` та `image` на всій сторінці — а
+    перед товаром зазвичай стоять `Organization` (шапка) і `BreadcrumbList`,
+    тож назвою ставав магазин, а фото — його логотип (аудит 15 листопада,
+    A-4). Тепер читається лише товар; сторінка без нього віддає назву й фото
+    наступним джерелам (Open Graph і далі).
+
+    Усі поля — з одного товару: першого на сторінці, що має назву (без
+    назви — просто першого). Товари всередині іншого товару (схожі,
+    аксесуари) самостійними не вважаються. Так назва не поєднається з ціною
+    сусіда з блока «Схожі товари».
+
+    Ціна й валюта на сторінці зовсім без області товару беруться, як і
+    раніше, з першого `itemprop="price"` / `priceCurrency`: недбала розмітка
+    без `itemscope` трапляється, а помилкою аудиту були саме назва й фото.
+    Так само читає ціну кнопка «У вішліст» (`meta[itemprop="price"]`).
+    """
+    first: dict[str, str] | None = None
+    for tag in soup.find_all(attrs={"itemscope": True}):
+        if not _scope_is(tag, _PRODUCT_TYPES):
+            continue
+        if any(_scope_is(parent, _PRODUCT_TYPES) for parent in tag.parents if isinstance(parent, Tag)):
+            continue
+        props = _product_props(tag)
+        if props.get("name"):
+            return props
+        if first is None:
+            first = props
+    if first is not None:
+        return first
+
+    loose: dict[str, str] = {}
+    for tag in soup.select("[itemprop]"):
+        for prop in str(tag.get("itemprop") or "").split():
+            if prop in ("price", "priceCurrency") and prop not in loose:
+                value = _prop_value(tag, prop)
+                if value:
+                    loose[prop] = value
+    return loose
+
+
 def extract(html: str, url: str) -> ParseResponse:
     """
     Порядок джерел: JSON-LD → microdata → OpenGraph → Twitter → <title>.
@@ -250,18 +365,15 @@ def extract(html: str, url: str) -> ParseResponse:
             put("price", price, "jsonld")
             put("currency", currency, "jsonld")
 
-    # 2. Microdata
-    for tag in soup.select("[itemprop]"):
-        prop = tag.get("itemprop")
-        value = tag.get("content") or tag.get("href") or tag.get("src") or tag.get_text(" ", strip=True)
-        if prop == "name":
-            put("title", value, "microdata")
-        elif prop == "price":
-            put("price", parse_price(value), "microdata")
-        elif prop == "priceCurrency":
-            put("currency", normalise_currency(value), "microdata")
-        elif prop == "image":
-            put("image_url", value, "microdata")
+    # 2. Microdata — лише область Product / ProductGroup (див. _microdata_product)
+    item = _microdata_product(soup)
+    put("title", item.get("name"), "microdata")
+    put("image_url", item.get("image"), "microdata")
+    micro_price = parse_price(item.get("price"))
+    if micro_price is None:
+        micro_price = parse_price(item.get("lowPrice"))
+    put("price", micro_price, "microdata")
+    put("currency", normalise_currency(item.get("priceCurrency")), "microdata")
 
     # 3. OpenGraph
     meta = {

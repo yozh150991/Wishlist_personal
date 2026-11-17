@@ -307,8 +307,8 @@ services/parser/
 ├── app/
 │   ├── main.py       # роути, CORS — відкритий парсер
 │   ├── auth.py       # перевірка токена (ADR-018, ADR-023)
-│   ├── fetcher.py    # SSRF-фільтр, редиректи, ліміти
-│   ├── extract.py    # JSON-LD → microdata → OG → Twitter → title → евристика; наявність товару
+│   ├── fetcher.py    # SSRF-фільтр, редиректи, ліміти; кодування сторінки (BOM → заголовок → <meta> → UTF-8)
+│   ├── extract.py    # JSON-LD → microdata (лише область Product) → OG → Twitter → title → евристика; наявність товару
 │   ├── cache.py  ratelimit.py  config.py  models.py
 │   ├── jobs_main.py  jobs_config.py  jobs_store.py  jobs_links.py
 │   ├── jobs_notify.py  jobs_push.py  jobs_mail.py  jobs_texts.py

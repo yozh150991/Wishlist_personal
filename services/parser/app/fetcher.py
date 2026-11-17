@@ -1,5 +1,7 @@
+import codecs
 import ipaddress
 import logging
+import re
 import socket
 from urllib.parse import urlsplit, urlunsplit
 
@@ -124,6 +126,114 @@ def _pinned_targets(url: str) -> tuple[list[str], str, str]:
     return targets, hostname, host_header
 
 
+# --- Кодування сторінки -----------------------------------------------------
+#
+# Порядок — як у браузера (HTML, «визначення кодування»): BOM → charset із
+# Content-Type → <meta> на початку сторінки → UTF-8. Раніше було лише друге й
+# четверте: сторінка у windows-1251 чи iso-8859-2, що називає кодування тільки
+# в <meta>, читалась як UTF-8, і назва приходила з «�» (аудит 15 листопада, A-3).
+
+_BOMS = (
+    (codecs.BOM_UTF8, "utf-8-sig"),
+    (codecs.BOM_UTF16_LE, "utf-16"),
+    (codecs.BOM_UTF16_BE, "utf-16"),
+)
+
+#: Скільки байтів з початку сторінки переглядаємо в пошуку <meta>. Стандарт
+#: вимагає оголошення в перших 1024; беремо із запасом — частина магазинів
+#: ставить перед ним довгі коментарі й скрипти.
+_META_SCAN_BYTES = 4096
+
+_PROBE = b'<meta charset="a-1">'
+_COMMENT = re.compile(rb"<!--.*?(?:-->|\Z)", re.DOTALL)
+_META_TAG = re.compile(rb"""<meta(?=[\s/])((?:[^>"']|"[^"]*"|'[^']*')*)>""", re.IGNORECASE)
+_ATTR = re.compile(rb"""([^\s=/"'>]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""")
+_CONTENT_CHARSET = re.compile(rb"""charset\s*=\s*["']?\s*([^\s"';]+)""", re.IGNORECASE)
+
+
+def _text_codec(label: str | None, *, from_meta: bool = False) -> str | None:
+    """
+    Назва кодування для `bytes.decode` або None, якщо такою сторінку не
+    прочитати. Невідома назва (`charset=foo-bar`) раніше давала LookupError і
+    500 на /parse (A-2); тепер вона — те саме, що відсутня.
+
+    `codecs.lookup` знає не лише кодування тексту: `hex` і `base64` — байти в
+    байти, `undefined` та `idna` кидають помилку на будь-якому вході, а
+    `punycode` на великій сторінці рахується хвилинами. Тому назву пробуємо на
+    шматку ASCII: веб-кодування, крім UTF-16/32, його не змінюють.
+
+    З <meta> UTF-16/32 не приймаємо: якби сторінка справді була такою, <meta>
+    не прочитався б побайтно (стандарт у цьому разі каже читати як UTF-8).
+    """
+    if not label or len(label) > 64:
+        return None
+    try:
+        name = codecs.lookup(label.strip()).name
+        ascii_compatible = _PROBE.decode(name, "replace") == _PROBE.decode("ascii")
+    except (LookupError, ValueError):  # UnicodeError — підклас ValueError
+        return None
+    if ascii_compatible:
+        return name
+    if not from_meta and name.startswith(("utf-16", "utf-32")):
+        return name
+    return None
+
+
+def _meta_charset(head: bytes) -> str | None:
+    """
+    Кодування з `<meta charset="…">` або
+    `<meta http-equiv="Content-Type" content="…; charset=…">` на початку
+    сторінки. Закоментований тег не рахується; `content` без
+    `http-equiv="Content-Type"` — теж (це може бути опис сторінки зі словом
+    «charset»). Невідома назва — шукаємо далі.
+    """
+    head = _COMMENT.sub(b"", head[:_META_SCAN_BYTES])
+    for tag in _META_TAG.finditer(head):
+        attrs: dict[bytes, bytes] = {}
+        for found in _ATTR.finditer(tag.group(1)):
+            name = found.group(1).lower()
+            # Перший атрибут із такою назвою виграє, як у браузері.
+            attrs.setdefault(name, found.group(2) or found.group(3) or found.group(4) or b"")
+
+        label = attrs.get(b"charset")
+        if label is None and attrs.get(b"http-equiv", b"").strip().lower() == b"content-type":
+            in_content = _CONTENT_CHARSET.search(attrs.get(b"content", b""))
+            label = in_content.group(1) if in_content else None
+        if label:
+            codec = _text_codec(label.decode("ascii", "ignore"), from_meta=True)
+            if codec:
+                return codec
+    return None
+
+
+def page_encoding(raw: bytes, header_charset: str | None) -> str:
+    """
+    Чим читати сторінку: BOM → charset із заголовка → <meta> → UTF-8.
+
+    Заголовок сильніший за <meta>, коли вони кажуть різне: так читає сторінку
+    й браузер, тож магазин бачить на ній те саме, що й ми.
+    """
+    for bom, codec in _BOMS:
+        if raw.startswith(bom):
+            return codec
+    return _text_codec(header_charset) or _meta_charset(raw) or "utf-8"
+
+
+def decode_page(raw: bytes, header_charset: str | None, truncated: bool = False) -> str:
+    """
+    Байти сторінки → текст. Ніколи не кидає: зіпсовані байти стають «�».
+
+    Сторінку, обрізану на ліміті розміру, могло розрізати посеред
+    багатобайтового символу — такий неповний хвіст просто відкидаємо.
+    """
+    codec = page_encoding(raw, header_charset)
+    try:
+        return codecs.getincrementaldecoder(codec)("replace").decode(raw, final=not truncated)
+    except (LookupError, ValueError):
+        # Запасний шлях: кодек пройшов пробу, але впав на справжніх байтах.
+        return raw.decode("utf-8", errors="replace")
+
+
 async def _read_page(res: httpx.Response, cfg, host: str | None) -> str:
     if res.status_code >= 400:
         log.info("магазин відмовив: host=%s status=%s", host, res.status_code)
@@ -164,18 +274,22 @@ async def _read_page(res: httpx.Response, cfg, host: str | None) -> str:
     chunks: list[bytes] = []
     size = 0
     truncated = False
-    async for chunk in res.aiter_bytes():
-        chunks.append(chunk)
-        size += len(chunk)
-        if size >= cfg.parser_max_bytes:
-            truncated = True
-            break
+    stream = res.aiter_bytes()
+    try:
+        async for chunk in stream:
+            chunks.append(chunk)
+            size += len(chunk)
+            if size >= cfg.parser_max_bytes:
+                truncated = True
+                break
+    finally:
+        # Обірваний на ліміті потік закриваємо самі, як і в гілці «не HTML».
+        await stream.aclose()
 
     if truncated:
         log.info("сторінку обрізано на ліміті: host=%s bytes=%s", host, size)
 
-    raw = b"".join(chunks)
-    return raw.decode(res.charset_encoding or "utf-8", errors="replace")
+    return decode_page(b"".join(chunks), res.charset_encoding, truncated)
 
 
 async def _fetch_hop(
