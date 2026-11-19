@@ -17,8 +17,10 @@ export default function App() {
   return (
     <ThemeProvider>
       <I18nProvider>
-        <UpdatePrompt />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          {/* Усередині маршрутизатора: Service Worker реєструється лише на
+              адресах застосунку, не на гостьових (див. компонент). */}
+          <UpdatePrompt />
           <AuthProvider>
             <LocaleSync />
             {/* Тема й схема власника їдуть у профіль, щоб переїжджали між

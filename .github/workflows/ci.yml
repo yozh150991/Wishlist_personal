@@ -131,6 +131,16 @@ jobs:
         # Обидва профілі (Desktop Chrome і Pixel 7) працюють на Chromium.
         run: npx playwright install --with-deps chromium
 
+      # Service Worker у зібраному застосунку (ROADMAP 8.22): гостьова його не
+      # реєструє, застосунок — реєструє. База не потрібна: відповіді підставлено,
+      # тож адреса Supabase у збірці — будь-яка.
+      - name: Service Worker · лише для застосунку, не для гостя
+        working-directory: app
+        env:
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_dummy
+        run: npx vite build && npm run test:sw
+
       # Фронтенд у режимі localdb бере адресу й ключ локального стеку.
       # VITE_PARSER_URL — будь-яка адреса: тест «Заповнити» підставляє відповідь парсера сам,
       # а без адреси він пропускається.

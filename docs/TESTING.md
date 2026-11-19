@@ -8,6 +8,7 @@
 | Парсер | pytest | витяг даних, SSRF-захист, перевірка токена | є |
 | Фронтенд, чиста логіка | Playwright без браузера | функції без DOM (`safeNext`) | є |
 | E2E | Playwright + TypeScript | сценарії користувача і гостя | є частково |
+| Service Worker у збірці | Playwright на `vite preview` (`npm run test:sw`) | гостьова без Service Worker, застосунок — із ним | є |
 | Палітри | `npm run check:contrast` | контраст WCAG AA у всіх шести палітрах | є |
 | Словники | `npm run check:i18n` | ключі трьох мов збігаються, підстановки на місці | є |
 
@@ -394,6 +395,24 @@ Service Worker у режимі розробки вимкнено, тож E2E н�
 - обидва гостьові префікси мають `X-Robots-Tag: noindex` у `vercel.json` і `Disallow` у `robots.txt`, а `Referrer-Policy` — одна з тих, що не віддають шлях за межі сайту (ADR-041);
 - CSP у `vercel.json`: є всі ключові директиви, у `script-src` немає `'unsafe-inline'`, а хеш інлайнового скрипта теми збігається з `index.html`. Перед хешуванням кінці рядків нормалізуються до `LF`: хеш має відповідати байтам, які віддасть Vercel, а він збирає на Linux.
 - Service Worker підключає `push-sw.js` (`importScripts`), а в ньому є обробники `push` і `notificationclick` (ADR-049).
+- розбиття пакета (ROADMAP 8.22): є рівно по одному файлу `vendor-react`, `vendor-supabase` і `vendor-dnd`; жоден не імпортує код застосунку (інакше його хеш мінявся б із кожним релізом); усі три лежать у кеші оболонки; вхідна сторінка одразу тягне лише `vendor-react` і `vendor-supabase`, а не ліниві чанки (`OwnerScreens`, `vendor-dnd`, гостьову, `workbox-window`);
+- `lib/guestPath.ts` покриває обидва гостьові префікси — на них Service Worker не реєструється.
+
+### Service Worker у браузері (`npm run test:sw`)
+
+Чи реєструється Service Worker, статичною перевіркою не побачити — це поведінка в браузері, і лише в зібраному застосунку. Тому окрема конфігурація `playwright.sw.config.ts` піднімає `vite preview` поверх `dist/` і проганяє `tests/sw/guest-no-sw.spec.ts`. База не потрібна: гостьові RPC підставлено.
+
+```powershell
+cd app
+npx vite build          # потрібні VITE_SUPABASE_URL і VITE_SUPABASE_PUBLISHABLE_KEY — будь-які, запити підставлено
+npm run test:sw
+```
+
+`SW_PORT` — порт сервера (усталено 4173); `PW_CHANNEL=chrome` — узяти встановлений Chrome, якщо Chromium від Playwright не завантажено. Сервер Playwright піднімає і зупиняє сам.
+
+Пʼять сценаріїв: на `/l/<токен>` і на старій `/s/<токен>` після завантаження `navigator.serviceWorker.getRegistrations()` порожній, і сторінка не запитує ні `sw.js`, ні `workbox-window`; на `/login` реєстрація є, зі scope `/`; перехід із гостьової на «Приватність» без перезавантаження запускає реєстрацію; гостьова не знімає Service Worker, який уже є. Чиста функція `isGuestPath` — у `tests/e2e/guest-path.spec.ts` (`npm run test:logic`).
+
+Чого тут немає і що лишається рукам: оновлення встановленого застосунку зі старої версії на телефоні, push і TWA — чекліст у QA_FOLLOWUP.md, «Легше завантаження (8.22)».
 
 ### Lighthouse
 
@@ -567,6 +586,7 @@ pytest
 cd app
 npm run typecheck
 npx playwright test
+npx vite build; npm run check:pwa; npm run test:sw   # зібраний застосунок: PWA і Service Worker
 ```
 
 ### CI
@@ -577,7 +597,7 @@ npx playwright test
 |---|---|---|
 | `frontend` | `npm run typecheck`, `vite build` | 1 хв |
 | `parser` | `pytest` | 1 хв |
-| `db-e2e` | локальний Supabase на раннері → `supabase test db` → Playwright на обох профілях | 6–10 хв |
+| `db-e2e` | локальний Supabase на раннері → `supabase test db` → збірка й `npm run test:sw` (Service Worker) → Playwright на обох профілях | 6–10 хв |
 
 Задачі йдуть паралельно й незалежно: зламаний парсер не ховає результат pgTAP. Новий push у ту саму гілку скасовує попередній незавершений прогін.
 

@@ -153,8 +153,56 @@ check(
   'vercel.json: переписування на index.html зачіпає /.well-known/',
 );
 
+// ── Легше завантаження (ROADMAP 8.22) ────────────────────────────────────────
+// Бібліотеки лежать окремими файлами (`manualChunks` у vite.config.ts), щоб
+// реліз застосунку не змушував телефон перекачувати React і supabase-js.
+// Хеш у назві файлу стабільний, лише поки файл бібліотек не імпортує нічого з
+// коду застосунку: інакше хеш застосунку потрапляє в його вміст.
+const assetNames = await readdir(join(dist, 'assets'));
+/** Статичні імпорти чанка: `from"./x.js"` та `import"./x.js"` (не `import(…)`). */
+const staticImports = (code) => [...code.matchAll(/(?:from|import)\s*"\.\/([^"]+\.js)"/g)].map((m) => m[1]);
+for (const lib of ['vendor-react', 'vendor-supabase', 'vendor-dnd']) {
+  const files = assetNames.filter((f) => f.startsWith(`${lib}-`) && f.endsWith('.js'));
+  check(files.length === 1, `assets/: очікувано рівно один файл ${lib}-*.js, знайдено ${files.length} — перевір manualChunks у vite.config.ts`);
+  for (const file of files) {
+    const foreign = staticImports(await readFile(join(dist, 'assets', file), 'utf8')).filter((f) => !f.startsWith('vendor-'));
+    check(
+      foreign.length === 0,
+      `assets/${file}: файл бібліотек імпортує код застосунку (${foreign.join(', ')}) — його хеш мінятиметься з кожним релізом`,
+    );
+    // Власникові без мережі бібліотеки потрібні так само, як і код застосунку.
+    check(sw.includes(`assets/${file}`), `sw.js: ${file} немає в кеші оболонки — застосунок не відкриється без мережі`);
+  }
+}
+
+// Головна сторінка одразу тягне лише вхідний файл і бібліотеки, потрібні всім.
+// Екрани власника, перетягування, гостьова й код реєстрації Service Worker —
+// ліниві (ADR-067): потрапивши сюди, вони їхали б і гостю.
+const entryFile = html.match(/<script type="module"[^>]*\ssrc="\/assets\/([^"]+\.js)"/)?.[1];
+check(entryFile, 'index.html: не знайдено вхідний скрипт застосунку');
+const LAZY_ONLY = /^(OwnerScreens|GuestV2|GuestPartsV2|vendor-dnd|qrcode|workbox-window)/;
+const eager = [
+  ...[...html.matchAll(/<link rel="modulepreload"[^>]*\shref="\/assets\/([^"]+\.js)"/g)].map((m) => m[1]),
+  ...(entryFile ? staticImports(await readFile(join(dist, 'assets', entryFile), 'utf8')) : []),
+];
+for (const file of new Set(eager)) {
+  check(/^vendor-(react|supabase)-/.test(file), `вхідний пакет одразу тягне ${file} — очікувано лише vendor-react і vendor-supabase`);
+  check(!LAZY_ONLY.test(file), `вхідний пакет одразу тягне лінивий чанк ${file} — він поїхав би й гостю`);
+}
+
+// На гостьових адресах Service Worker не реєструється (components/UpdatePrompt.tsx).
+// Список префіксів там свій — `lib/guestPath.ts`; він мусить покривати ті самі
+// префікси, що й решта захистів. Саму поведінку в браузері перевіряє `npm run test:sw`.
+const guestPathSrc = await readFile(join(dist, '..', 'src', 'lib', 'guestPath.ts'), 'utf8').catch(() => '');
+for (const p of GUEST_PREFIXES) {
+  check(
+    guestPathSrc.includes(`'/${p}/'`),
+    `src/lib/guestPath.ts: немає префікса '/${p}/' — на гостьовій /${p}/* реєструвався б Service Worker`,
+  );
+}
+
 if (failures.length) {
   console.error('PWA: знайдено проблеми:\n- ' + failures.join('\n- '));
   process.exit(1);
 }
-console.log('PWA: маніфест, іконки й Service Worker у порядку.');
+console.log('PWA: маніфест, іконки, Service Worker і розбиття пакета в порядку.');

@@ -27,6 +27,47 @@ function preconnectSupabase(url: string | undefined): Plugin {
  */
 const APP_VERSION = (JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }).version;
 
+/**
+ * Бібліотеки — окремими файлами від коду застосунку (ADR-084).
+ *
+ * Імʼя файлу містить хеш його вмісту, а `/assets/*` віддається з
+ * `Cache-Control: immutable` і лежить у кеші Service Worker за цим імʼям. Поки
+ * бібліотеки жили в одному файлі з кодом застосунку, кожен реліз міняв хеш
+ * усього пакета, і телефон перекачував React і supabase-js заради правки в
+ * одному екрані. Тепер реліз міняє лише файли застосунку.
+ *
+ * Групи — за тим, коли вони міняються:
+ * - `vendor-react` — React, його планувальник і маршрутизатор: оновлюються разом і рідко;
+ * - `vendor-supabase` — клієнт Supabase з його залежностями: окремо, бо
+ *   оновлюється частіше за React і є кандидатом на заміну (ROADMAP, 8.27);
+ * - `vendor-dnd` — перетягування позицій; потрібне лише екранам власника, тож
+ *   його тягне лінивий чанк `OwnerScreens`, а не головна сторінка й не гостьова.
+ *
+ * Навмисно НЕ тут: `lucide-react` (у кожен чанк їдуть лише його іконки; спільний
+ * файл міняв би хеш із кожною новою іконкою), `qrcode-generator` і
+ * `workbox-window` (уже окремі ліниві чанки).
+ *
+ * Список — точні назви пакетів, а не «усе з node_modules»: нова залежність не
+ * потрапить у стабільний файл мовчки. Хеші стабільні, лише поки ці файли не
+ * імпортують нічого з коду застосунку — це стереже `npm run check:pwa`.
+ */
+const VENDOR_CHUNKS: Record<string, readonly string[]> = {
+  'vendor-react': ['react', 'react-dom', 'scheduler', 'react-router', 'react-router-dom', '@remix-run/router'],
+  'vendor-supabase': ['@supabase/', 'tslib', 'iceberg-js'],
+  'vendor-dnd': ['@dnd-kit/'],
+};
+
+function vendorChunk(id: string): string | undefined {
+  const at = id.lastIndexOf('/node_modules/');
+  if (at < 0) return undefined;
+  const path = id.slice(at + '/node_modules/'.length);
+  for (const [chunk, packages] of Object.entries(VENDOR_CHUNKS)) {
+    // `@scope/` — усі пакети простору імен; інакше — точна назва пакета.
+    if (packages.some((p) => (p.endsWith('/') ? path.startsWith(p) : path.startsWith(`${p}/`)))) return chunk;
+  }
+  return undefined;
+}
+
 export default defineConfig(({ mode }) => ({
   define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   plugins: [
@@ -121,5 +162,6 @@ export default defineConfig(({ mode }) => ({
     // браузер такий шрифт мовчки блокував, і знак гривні в бою малювався
     // системним шрифтом. Перевіряє `npm run check:pwa`.
     assetsInlineLimit: (file: string) => (/\.(woff2?|ttf|otf|eot)$/i.test(file) ? false : undefined),
+    rollupOptions: { output: { manualChunks: vendorChunk } },
   },
 }));
