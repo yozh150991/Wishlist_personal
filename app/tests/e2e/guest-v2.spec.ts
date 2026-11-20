@@ -529,6 +529,45 @@ test('аркуш на /l/ — сторінка під ним не гортаєт
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow)).not.toBe('hidden');
 });
 
+test('аркуш «Беру» на телефоні відкривається без клавіатури; мишею — одразу в поле підпису (BUG-QA-32)', async ({ page }) => {
+  await page.route('**/rpc/get_guest_list', (route) =>
+    route.fulfill({
+      json: {
+        title: 'День народження', message: null, currency: 'PLN', event_date: null,
+        expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+        hide_prices: false, allow_reservations: true, archived: false, viewer_is_owner: false,
+        guest: null, sections: [], thanks: null,
+        items: [{
+          id: 'e2e-focus-1', title: 'Плед', url: null, price: 199, currency: 'PLN', quantity: 1, priority: 'medium',
+          note: null, variants: [], image_url: null, status: 'active', created_at: '2026-10-01T10:00:00Z',
+          section_id: null, taken_qty: 0, mine_qty: 0,
+        }],
+      },
+    }),
+  );
+  await page.route('**/rpc/register_share_view', (route) => route.fulfill({ status: 204, body: '' }));
+  await page.goto('/l/e2e-focus-token');
+
+  await card(page, 'Плед').getByRole('button', { name: takeBtn }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.locator('input[name="guest_name"]')).toBeVisible();
+  const touch = await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches);
+  const focused = await page.evaluate(() => {
+    const el = document.activeElement;
+    return el instanceof HTMLInputElement ? `input:${el.name}` : (el?.tagName.toLowerCase() ?? 'none');
+  });
+  // Телефон (профіль mobile): фокус на самому вікні — клавіатура не накриває
+  // «Забронювати». Комп'ютер: фокус у першому полі, як і раніше.
+  expect(focused).toBe(touch ? 'dialog' : 'input:guest_name');
+  // Головна дія на виду одразу, без прокрутки.
+  await expect(sheet.locator('button[type="submit"]')).toBeInViewport();
+  // Tab з вікна веде в поле: саме вікно в порядку обходу не стоїть.
+  if (touch) {
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => document.activeElement?.tagName.toLowerCase())).not.toBe('dialog');
+  }
+});
+
 test('аркуш на /l/ — сторінка, яку зсунули під вікном, повертається на місце (BUG-QA-31)', async ({ page }) => {
   // iOS зсуває сторінку під вікном, щоб показати поле, а прогорнути її назад
   // під заблокованим вікном нічим. Тут зсув роблять скриптом — як iOS.

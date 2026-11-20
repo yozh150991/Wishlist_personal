@@ -646,6 +646,9 @@
   border: 0;
   border-radius: 30px 30px 0 0;
 }
+/* На телефоні фокус при відкритті бере саме вікно, щоб не вилазила клавіатура
+   (BUG-QA-32, SheetV2): обвідка довкола всього аркуша там нічого не додає. */
+.v2-sheet:focus { outline: none; }
 .v2-sheet::backdrop { background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent); }
 .v2-sheet__body {
   display: grid;
