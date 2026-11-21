@@ -174,6 +174,12 @@ export default function GuestV2() {
   /** Броні, зняття яких ще відлічує тост: на екрані їх уже немає. */
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const pendingRelease = useRef<string | null>(null);
+  /**
+   * «Уже куплено», що ще відлічує тост «Відмінити»: на екрані вже «Куплено»,
+   * а запит піде після відліку — як у «Зняти» (`lib/undo.ts`). Випадковий
+   * дотик скасовується миттєво й без мережі.
+   */
+  const [boughtNow, setBoughtNow] = useState<Set<string>>(new Set());
   const undo = useUndo(UNDO_MS);
 
   /** Відписка з листа: секрет живе лише в стані історії цієї вкладки. */
@@ -282,7 +288,10 @@ export default function GuestV2() {
 
   /* ── Що на екрані ── */
 
-  const items = useMemo(() => data?.items ?? [], [data]);
+  const items = useMemo(
+    () => (data?.items ?? []).map((i) => (boughtNow.has(i.id) && !i.bought ? { ...i, bought: true } : i)),
+    [data, boughtNow],
+  );
   const canClaim = Boolean(data?.allow_reservations);
   /** Власник на своєму посиланні бачить сторінку гостя, але нічого не бронює (§3.2). */
   const asOwner = Boolean(data?.viewer_is_owner);
@@ -531,8 +540,30 @@ export default function GuestV2() {
     }
   }
 
-  /** «Уже куплено» / «Ще не куплено» (потік S): лише позначка гостя, власник її не бачить. */
-  async function bought(item: SharedItem, on: boolean) {
+  /**
+   * «Уже куплено» / «Ще не куплено» (потік S): лише позначка гостя, власник її
+   * не бачить. «Уже куплено» дає шість секунд на «Відмінити»: кнопка стоїть там,
+   * де щойно була «Уже куплено», тож випадковий дотик — звична справа, а
+   * «Ще не куплено» живе далеко, в «Моїх бронях».
+   */
+  function bought(item: SharedItem, on: boolean) {
+    if (!key) return;
+    if (!on && boughtNow.has(item.id)) {
+      // Ще не відправлено — просто скасовуємо відлік.
+      undo.undo();
+      return;
+    }
+    if (!on) return void commitBought(item, false);
+    setError(null);
+    setBoughtNow((s) => new Set(s).add(item.id));
+    undo.schedule({
+      label: t('v2guest.boughtToast', { title: item.title }),
+      commit: () => void commitBought(item, true),
+      revert: () => setBoughtNow((s) => without(s, item.id)),
+    });
+  }
+
+  async function commitBought(item: SharedItem, on: boolean) {
     const k = storedKey(token) ?? key;
     if (!k) return;
     setError(null);
@@ -542,6 +573,8 @@ export default function GuestV2() {
     } catch (e) {
       if (e instanceof GoneError) setGone(true);
       else setError(t('v2guest.error'));
+    } finally {
+      setBoughtNow((s) => without(s, item.id));
     }
   }
 
@@ -750,7 +783,8 @@ export default function GuestV2() {
       onTake={openBook}
       onRelease={release}
       onKeep={(i) => void keep(i)}
-      onBought={(i, on) => void bought(i, on)}
+      onBought={bought}
+      onPicks={() => setPicksOpen(true)}
       onShop={handleShop}
       onPool={canClaim && !asOwner ? (i, mode) => {
         setPoolError(null);
@@ -1080,7 +1114,7 @@ export default function GuestV2() {
         email={data.guest?.email ?? null}
         onRelease={release}
         onKeep={(i) => void keep(i)}
-        onBought={(i, on) => void bought(i, on)}
+        onBought={bought}
         onCopyCode={copyText}
         onSendLink={() => void sendLink()}
         onClose={() => setPicksOpen(false)}

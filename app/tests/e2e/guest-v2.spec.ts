@@ -442,6 +442,65 @@ test('код після першої броні: як повернути бро�
   await expect(page.getByRole('dialog').getByText(/нічого не оплачує|niczego nie opłaca|doesn.t pay for anything/i)).toBeVisible();
 });
 
+test('«Уже куплено» — шість секунд на «Відмінити»; з купленої картки дорога в «Мої броні» (BUG-QA-35)', async ({ page }) => {
+  test.setTimeout(45_000);
+  const TOKEN = 'e2e-bought-token';
+  let bought = false;
+  const calls: boolean[] = [];
+  await page.route('**/rpc/get_guest_list', (route) =>
+    route.fulfill({
+      json: {
+        title: 'Новосілля', message: null, currency: 'PLN', event_date: null,
+        expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+        hide_prices: false, allow_reservations: true, archived: false, viewer_is_owner: false,
+        guest: { code: 'K7M2Q', name: null, email: null }, sections: [], thanks: null,
+        items: [{
+          id: 'e2e-bought-1', title: 'Ваза', url: null, price: 100, currency: 'PLN', quantity: 1,
+          priority: 'medium', note: null, variants: [], image_url: null, status: 'active',
+          created_at: '2026-10-01T10:00:00Z', section_id: null, taken_qty: 1, mine_qty: 1, bought,
+        }],
+      },
+    }),
+  );
+  await page.route('**/rpc/register_share_view', (route) => route.fulfill({ status: 204, body: '' }));
+  await page.route('**/rpc/set_claim_bought', async (route) => {
+    const args = route.request().postDataJSON() as { p_bought: boolean };
+    calls.push(args.p_bought);
+    bought = args.p_bought;
+    await route.fulfill({ status: 204, body: '' });
+  });
+  await page.addInitScript((t) => localStorage.setItem(`wl.gk.${t}`, 'e2e-guest-key-000000000000'), TOKEN);
+  await page.goto(`/l/${TOKEN}`);
+
+  const vase = card(page, 'Ваза');
+  const markBought = /^(уже куплено|już kupione|already bought)$/i;
+  const undoBtn = page.getByRole('button', { name: /^(відмінити|cofnij|undo)$/i });
+  const boughtTag = /^(куплено|kupione|bought)$/i;
+
+  // Випадковий дотик: «Куплено» видно одразу, а «Відмінити» повертає все
+  // миттєво — у мережу нічого не пішло.
+  await vase.getByRole('button', { name: markBought }).click();
+  await expect(vase.getByText(boughtTag)).toBeVisible();
+  await undoBtn.click();
+  await expect(vase.getByRole('button', { name: markBought })).toBeVisible();
+  expect(calls).toEqual([]);
+
+  // Без «Відмінити» позначка доїжджає після відліку.
+  await vase.getByRole('button', { name: markBought }).click();
+  await expect.poll(() => calls, { timeout: 12_000 }).toEqual([true]);
+  await expect(undoBtn).toHaveCount(0);
+
+  // На купленій картці — дорога в «Мої броні», де є «Ще не куплено».
+  await vase.getByRole('button', { name: /мої броні|moich rezerwacjach|my picks/i }).click();
+  const picks = page.getByRole('dialog');
+  await expect(picks.getByRole('button', { name: /^(ще не куплено|jeszcze nie kupione|not bought yet)$/i })).toBeVisible();
+  // На телефоні жодна кнопка не виглядає виділеною: фокус на самому вікні.
+  const touch = await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches);
+  if (touch) expect(await page.evaluate(() => document.activeElement?.tagName.toLowerCase())).toBe('dialog');
+  await picks.getByRole('button', { name: /^(ще не куплено|jeszcze nie kupione|not bought yet)$/i }).click();
+  await expect.poll(() => calls).toEqual([true, false]);
+});
+
 test('фото позиції на /l/ — мініатюра відкриває перегляд на весь екран; тап, Escape і «Назад» закривають', async ({ page }) => {
   // Маленька PNG 1×1 як «фото» — адреса з того самого сайту, щоб не впиратись у CSP img-src.
   await page.route('**/e2e-photo.png', (route) =>

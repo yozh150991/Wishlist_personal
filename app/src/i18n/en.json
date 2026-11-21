@@ -1270,6 +1270,8 @@
     "bought": "Bought",
     "markBought": "Already bought",
     "unmarkBought": "Not bought yet",
+    "boughtToast": "Marked as bought: {title}",
+    "boughtChange": "Not bought yet? Change it in “My picks”",
     "shop": "To the shop",
     "shopHint": "Tap “Take” first — then nobody buys the same thing.",
     "shopSheet": {

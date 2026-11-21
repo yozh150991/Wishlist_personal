@@ -59,13 +59,6 @@ function coarsePointer(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
 }
 
-/** Поле, на якому телефон показує клавіатуру. */
-function isTextField(el: Element | null): boolean {
-  if (el instanceof HTMLTextAreaElement) return true;
-  if (!(el instanceof HTMLInputElement)) return false;
-  return !['button', 'checkbox', 'radio', 'range', 'color', 'file', 'submit', 'reset', 'image', 'hidden'].includes(el.type);
-}
-
 /**
  * Модальне вікно на рідному `<dialog>`: фокус замикає сам браузер, Escape
  * закриває, фокус після закриття повертається туди, звідки відкрили. На
@@ -98,14 +91,16 @@ export function SheetV2({
     if (!d) return;
     if (open && !d.open) {
       d.showModal();
-      // `showModal()` сам ставить фокус на перше поле вікна. На сенсорному
-      // екрані це піднімає клавіатуру ще до того, як людина щось вибрала: в
-      // аркуші «Беру» вона накривала «Забронювати», а в Telegram на iPhone ще й
-      // зсувала заголовок за адресний рядок (BUG-QA-32). Тож там фокус бере
-      // саме вікно — зчитувач екрана читає його назву, а клавіатура з'являється,
-      // лише коли людина торкнеться поля. Мишею й клавіатурою — як і було:
-      // фокус у першому полі, можна одразу друкувати.
-      if (coarsePointer() && isTextField(document.activeElement) && d.contains(document.activeElement)) {
+      // `showModal()` сам ставить фокус на перший елемент вікна. На сенсорному
+      // екрані поле з фокусом піднімає клавіатуру ще до того, як людина щось
+      // вибрала: в аркуші «Беру» вона накривала «Забронювати», а в Telegram на
+      // iPhone ще й зсувала заголовок за адресний рядок (BUG-QA-32). Кнопка з
+      // фокусом — рамка навколо неї, і першу кнопку на телефоні сприймають як
+      // виділену, рекомендовану («Уже куплено» в «Моїх бронях», BUG-QA-35).
+      // Тож там фокус бере саме вікно — зчитувач екрана читає його назву.
+      // Мишею й клавіатурою — як і було: фокус на першому елементі.
+      const first = document.activeElement;
+      if (coarsePointer() && first !== d && d.contains(first)) {
         d.focus({ preventScroll: true });
       }
     }
