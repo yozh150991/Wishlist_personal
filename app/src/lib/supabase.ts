@@ -38,6 +38,28 @@ function withTimeout(caller: AbortSignal | null | undefined, ms: number) {
 }
 
 /**
+ * Скільки разом іде спроб «усе одно в мережу» (`attemptNetwork`). Поки вона
+ * триває, `offlineAwareFetch` не відмовляє за `navigator.onLine === false`.
+ */
+let attempting = 0;
+
+/**
+ * Виконує `fn`, не довіряючи `navigator.onLine`: запити йдуть у мережу, навіть
+ * якщо браузер каже «офлайн». Для черги змін (`outbox.flush`): на iPhone після
+ * режиму польоту прапорець буває хибним, і тоді черга не відправлялась ніколи,
+ * хоч мережа вже була (BUG-QA-34). Справді без мережі запит однаково падає —
+ * просто не одразу, а для фонової відправки це не страшно.
+ */
+export async function attemptNetwork<T>(fn: () => Promise<T>): Promise<T> {
+  attempting += 1;
+  try {
+    return await fn();
+  } finally {
+    attempting -= 1;
+  }
+}
+
+/**
  * Мережевий шар клієнта: два різні лікування двох різних бід.
  *
  * **Дані без мережі падають одразу.** Клієнт PostgREST повторює GET-запит тричі
@@ -57,7 +79,7 @@ function withTimeout(caller: AbortSignal | null | undefined, ms: number) {
 const offlineAwareFetch: typeof fetch = (input, init) => {
   const target = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 
-  if (navigator.onLine === false && (target.includes('/rest/v1/') || target.includes('/storage/v1/'))) {
+  if (navigator.onLine === false && attempting === 0 && (target.includes('/rest/v1/') || target.includes('/storage/v1/'))) {
     return Promise.reject(new DOMException('Offline', 'AbortError'));
   }
 

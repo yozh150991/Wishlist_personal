@@ -322,6 +322,47 @@ test('зміна статусу без мережі доходить до баз
   await expect(doneGroup(page)).toContainText('Кавоварка черги');
 });
 
+/**
+ * BUG-QA-34. На iPhone подія `online` приходить, щойно ввімкнено Wi-Fi, коли
+ * запити ще падають, — і більше не повторюється. Раніше черга так і висіла
+ * «чекають на мережу». Відтворюємо: перша відправка після повернення мережі
+ * падає, а черга мусить спробувати знову сама, без нової події `online`.
+ */
+test('мережа повернулась, але перша відправка впала — черга пробує знову сама', async ({
+  page,
+  context,
+}) => {
+  await signIn(page);
+  const title = unique('E2E outbox retry');
+  await createList(page, title);
+  await addItem(page, 'Кавоварка повтору');
+
+  await context.setOffline(true);
+  await setStatus(page, 'Кавоварка повтору', GIFTED);
+  const waiting = pending(page);
+  await expect(waiting).toBeVisible();
+
+  // Перший запит до бази після повернення мережі обривається — як на iPhone,
+  // поки Wi-Fi ще не готовий.
+  let failed = 0;
+  await page.route('**/rest/v1/**', async (route) => {
+    if (failed === 0) {
+      failed += 1;
+      return route.abort('internetdisconnected');
+    }
+    return route.fallback();
+  });
+  await context.setOffline(false);
+
+  // Без повтору смуга лишалась би назавжди; перша пауза — 5 с.
+  await expect(waiting).toHaveCount(0, { timeout: 20_000 });
+  expect(failed).toBe(1);
+
+  await page.unroute('**/rest/v1/**');
+  await page.reload();
+  await expect(doneGroup(page)).toContainText('Кавоварка повтору');
+});
+
 test('позиція, створена без мережі, зʼявляється в списку й не дублюється в базі', async ({
   page,
   context,

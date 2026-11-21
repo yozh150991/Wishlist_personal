@@ -2233,3 +2233,17 @@ div.v2-chips { gap: var(--sp-3); }
   box-shadow: var(--shadow-lg);
 }
 .v2-viewer__close:hover { background: var(--color-surface); filter: brightness(0.96); }
+
+/* iPhone збільшує сторінку, щойно фокус потрапляє в поле з шрифтом менше
+   16 px, і назад сам не повертає: форма їде вбік, з'являється горизонтальна
+   прокрутка, кнопки — за краєм (BUG-QA-33). Тому на сенсорних екранах текст у
+   полях — щонайменше 16 px. Заборонити збільшення через viewport не можна:
+   на Android це забрало б збільшення пальцями — потрібне людям із поганим
+   зором. Стереже e2e «поля від 16 px на телефоні». */
+@media (pointer: coarse) {
+  .v2-input,
+  .v2-cursel,
+  .v2-lang__select {
+    font-size: max(16px, var(--t-item));
+  }
+}
