@@ -27,8 +27,13 @@ function useKeepPage(open: boolean) {
     const x = window.scrollX;
     const y = window.scrollY;
     const vv = window.visualViewport;
-    // Клавіатура з'їдає щонайменше п'яту частину висоти; масштаб пальцями — теж сюди.
-    const keyboard = () => !!vv && vv.height < document.documentElement.clientHeight * 0.8;
+    // Клавіатура з'їдає щонайменше п'яту частину висоти. Сторінку, збільшену
+    // пальцями чи самим iPhone, не чіпаємо взагалі: збільшення на 7 % (iOS
+    // збільшує, коли фокус у полі з шрифтом менше 16 px) висоту майже не
+    // змінює, і хук повертав сторінку при кожній прокрутці, борючись з iOS —
+    // «Додати» ставала недосяжною, а вікно мерехтіло (BUG-QA-33).
+    const keyboard = () =>
+      !!vv && (vv.scale > 1.01 || vv.height < document.documentElement.clientHeight * 0.8);
     let timer = 0;
     const check = () => {
       window.clearTimeout(timer);

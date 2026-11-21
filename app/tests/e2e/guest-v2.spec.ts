@@ -529,7 +529,7 @@ test('аркуш на /l/ — сторінка під ним не гортаєт
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow)).not.toBe('hidden');
 });
 
-test('аркуш «Беру» на телефоні відкривається без клавіатури; мишею — одразу в поле підпису (BUG-QA-32)', async ({ page }) => {
+test('аркуш «Беру» на телефоні відкривається без клавіатури й без збільшення полів; мишею — одразу в поле підпису (BUG-QA-32, 33)', async ({ page }) => {
   await page.route('**/rpc/get_guest_list', (route) =>
     route.fulfill({
       json: {
@@ -565,6 +565,17 @@ test('аркуш «Беру» на телефоні відкривається �
   if (touch) {
     await page.keyboard.press('Tab');
     expect(await page.evaluate(() => document.activeElement?.tagName.toLowerCase())).not.toBe('dialog');
+  }
+
+  // Поля від 16 px на телефоні (BUG-QA-33): менший шрифт iPhone збільшує при
+  // фокусі, і сторінка їде вбік. На комп'ютері розмір не чіпаємо.
+  const sizes = await sheet.locator('input.v2-input').evaluateAll((els) =>
+    els.map((el) => parseFloat(getComputedStyle(el).fontSize)),
+  );
+  expect(sizes.length).toBeGreaterThan(0);
+  for (const size of sizes) {
+    if (touch) expect(size).toBeGreaterThanOrEqual(16);
+    else expect(size).toBeLessThan(16);
   }
 });
 

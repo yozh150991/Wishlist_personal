@@ -24,6 +24,7 @@
 import { OUTBOX, openDb, req, txDone } from './idb';
 import { createItem, deleteItems, setItemsStatus, updateItem } from './db';
 import { isNetworkError } from './errors';
+import { attemptNetwork } from './supabase';
 import { allItemsKey, itemsKey, patchSnapshot } from './cache';
 import type { ItemsSnapshot } from './cache';
 import { applyToItems } from './outboxOps';
@@ -152,26 +153,32 @@ let flushing = false;
  * Відправляє чергу по порядку.
  *
  * Мережевий збій зупиняє відправку: решта змін лишається чекати, а порядок не
- * ламається. Відмова сервера (валідація, права, видалений список) не зникне
+ * ламається; `stalled` у результаті каже викликачеві спробувати пізніше.
+ * `navigator.onLine` тут не зважаємо — див. `attemptNetwork`. Відмова сервера (валідація, права, видалений список) не зникне
  * від повторів — така зміна викидається з черги й повертається викликачеві,
  * щоб той сказав про це людині.
  */
-export async function flush(userId: string): Promise<{ sent: number; dropped: Dropped[] }> {
-  const result = { sent: 0, dropped: [] as Dropped[] };
+export async function flush(userId: string): Promise<{ sent: number; dropped: Dropped[]; stalled: boolean }> {
+  const result = { sent: 0, dropped: [] as Dropped[], stalled: false };
   if (!userId || flushing) return result;
   flushing = true;
   try {
-    for (const entry of await pending(userId)) {
-      try {
-        await send(entry.op);
-        await remove(entry.seq);
-        result.sent += 1;
-      } catch (e) {
-        if (isNetworkError(e)) break;
-        await remove(entry.seq);
-        result.dropped.push({ op: entry.op, message: messageOf(e) });
+    await attemptNetwork(async () => {
+      for (const entry of await pending(userId)) {
+        try {
+          await send(entry.op);
+          await remove(entry.seq);
+          result.sent += 1;
+        } catch (e) {
+          if (isNetworkError(e)) {
+            result.stalled = true;
+            break;
+          }
+          await remove(entry.seq);
+          result.dropped.push({ op: entry.op, message: messageOf(e) });
+        }
       }
-    }
+    });
   } finally {
     flushing = false;
     notify();
