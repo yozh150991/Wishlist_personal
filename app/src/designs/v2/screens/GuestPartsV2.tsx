@@ -121,6 +121,7 @@ export function GuestCardV2({
   onRelease,
   onKeep,
   onBought,
+  onPicks,
   onShop,
   onPool,
   preview = false,
@@ -137,6 +138,8 @@ export function GuestCardV2({
   onKeep: (item: SharedItem) => void;
   /** «Уже куплено» (S, ADR-056). */
   onBought: (item: SharedItem, bought: boolean) => void;
+  /** Відкрити «Мої броні» — там «Ще не куплено» для купленої позиції. */
+  onPicks?: () => void;
   /** Перехід у магазин: сторінка може спершу спитати, чи забронювати (S1). */
   onShop: (item: SharedItem, event: ReactMouseEvent<HTMLAnchorElement>) => void;
   /** Спільний збір (ADR-063): відкрити, долучитися чи керувати своїм. */
@@ -232,7 +235,14 @@ export function GuestCardV2({
         )}
       </div>
       {/* Куплене — без дій: «Ще не куплено» живе в «Моїх бронях», щоб не зняти
-          покупку випадковим дотиком. */}
+          покупку випадковим дотиком. Сюди — лише дорога туди. */}
+      {bought && !changed && onPicks && !preview && (
+        <div className="v2-gcard__actions">
+          <button type="button" className="v2-link v2-linkbtn v2-gcard__picks" onClick={onPicks}>
+            {t('v2guest.boughtChange')}
+          </button>
+        </div>
+      )}
       {pool && onPool && (
         <div className="v2-gcard__actions">
           {pool.is_organizer ? (

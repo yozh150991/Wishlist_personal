@@ -174,6 +174,15 @@ export default function GuestV2() {
   /** Броні, зняття яких ще відлічує тост: на екрані їх уже немає. */
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const pendingRelease = useRef<string | null>(null);
+  /**
+   * «Уже куплено», запит на яке ще в дорозі: на екрані «Куплено» одразу, не
+   * чекаючи відповіді.
+   */
+  const [boughtNow, setBoughtNow] = useState<Set<string>>(new Set());
+  /** Позиція, для якої висить тост «Відмінити» після «Уже куплено». */
+  const pendingBought = useRef<string | null>(null);
+  /** Запити «куплено / ні» йдуть по черзі, щоб «Відмінити» не обігнало саму позначку. */
+  const boughtChain = useRef<Promise<void>>(Promise.resolve());
   const undo = useUndo(UNDO_MS);
 
   /** Відписка з листа: секрет живе лише в стані історії цієї вкладки. */
@@ -282,7 +291,10 @@ export default function GuestV2() {
 
   /* ── Що на екрані ── */
 
-  const items = useMemo(() => data?.items ?? [], [data]);
+  const items = useMemo(
+    () => (data?.items ?? []).map((i) => (boughtNow.has(i.id) && !i.bought ? { ...i, bought: true } : i)),
+    [data, boughtNow],
+  );
   const canClaim = Boolean(data?.allow_reservations);
   /** Власник на своєму посиланні бачить сторінку гостя, але нічого не бронює (§3.2). */
   const asOwner = Boolean(data?.viewer_is_owner);
@@ -531,18 +543,57 @@ export default function GuestV2() {
     }
   }
 
-  /** «Уже куплено» / «Ще не куплено» (потік S): лише позначка гостя, власник її не бачить. */
-  async function bought(item: SharedItem, on: boolean) {
-    const k = storedKey(token) ?? key;
-    if (!k) return;
-    setError(null);
-    try {
-      await setClaimBought(token, item.id, k, on);
-      setData(await fetchGuestList(token, k));
-    } catch (e) {
-      if (e instanceof GoneError) setGone(true);
-      else setError(t('v2guest.error'));
+  /**
+   * «Уже куплено» / «Ще не куплено» (потік S): лише позначка гостя, власник її
+   * не бачить. Після «Уже куплено» шість секунд висить «Відмінити»: кнопка
+   * стоїть там, де щойно була «Уже куплено», тож випадковий дотик — звична
+   * справа, а «Ще не куплено» живе далеко, в «Моїх бронях» (BUG-QA-35).
+   *
+   * На відміну від «Зняти», позначка йде на сервер одразу, а «Відмінити»
+   * відправляє зворотну. Відкладена відправка губилася б, якщо гість закрив
+   * вкладку протягом відліку: «Куплено» на екрані бачив, а наступного разу —
+   * знову «Ви берете».
+   */
+  function bought(item: SharedItem, on: boolean) {
+    if (!key) return;
+    if (!on && pendingBought.current === item.id) {
+      undo.undo();
+      return;
     }
+    void sendBought(item, on);
+    if (on) {
+      pendingBought.current = item.id;
+      undo.schedule({
+        label: t('v2guest.boughtToast', { title: item.title }),
+        commit: () => {
+          if (pendingBought.current === item.id) pendingBought.current = null;
+        },
+        revert: () => {
+          pendingBought.current = null;
+          void sendBought(item, false);
+        },
+      });
+    }
+  }
+
+  function sendBought(item: SharedItem, on: boolean): Promise<void> {
+    setError(null);
+    setBoughtNow((s) => (on ? new Set(s).add(item.id) : without(s, item.id)));
+    const run = async () => {
+      const k = storedKey(token) ?? key;
+      if (!k) return;
+      try {
+        await setClaimBought(token, item.id, k, on);
+        setData(await fetchGuestList(token, k));
+      } catch (e) {
+        if (e instanceof GoneError) setGone(true);
+        else setError(t('v2guest.error'));
+      } finally {
+        if (on) setBoughtNow((s) => without(s, item.id));
+      }
+    };
+    boughtChain.current = boughtChain.current.then(run, run);
+    return boughtChain.current;
   }
 
   /* ── Спільний збір (N, ADR-063) ── */
@@ -750,7 +801,8 @@ export default function GuestV2() {
       onTake={openBook}
       onRelease={release}
       onKeep={(i) => void keep(i)}
-      onBought={(i, on) => void bought(i, on)}
+      onBought={bought}
+      onPicks={() => setPicksOpen(true)}
       onShop={handleShop}
       onPool={canClaim && !asOwner ? (i, mode) => {
         setPoolError(null);
@@ -1080,7 +1132,7 @@ export default function GuestV2() {
         email={data.guest?.email ?? null}
         onRelease={release}
         onKeep={(i) => void keep(i)}
-        onBought={(i, on) => void bought(i, on)}
+        onBought={bought}
         onCopyCode={copyText}
         onSendLink={() => void sendLink()}
         onClose={() => setPicksOpen(false)}

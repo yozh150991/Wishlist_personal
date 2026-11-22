@@ -1270,6 +1270,8 @@
     "bought": "Kupione",
     "markBought": "Już kupione",
     "unmarkBought": "Jeszcze nie kupione",
+    "boughtToast": "Oznaczono jako kupione: {title}",
+    "boughtChange": "Jednak nie kupione? Zmień w „Moich rezerwacjach”",
     "shop": "Do sklepu",
     "shopHint": "Najpierw kliknij „Biorę” — wtedy nikt nie kupi tego samego.",
     "shopSheet": {
