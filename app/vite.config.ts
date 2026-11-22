@@ -57,6 +57,20 @@ const VENDOR_CHUNKS: Record<string, readonly string[]> = {
   'vendor-dnd': ['@dnd-kit/'],
 };
 
+/**
+ * Словники мов — кожен своїм чанком `locale-<мова>` (ROADMAP 8.24): застосунок
+ * качає лише активну мову (`lib/i18n.tsx`). Окреме імʼя, а не усталене `uk-*.js`,
+ * щоб `npm run check:pwa` впізнавав їх: ні вхідний файл, ні гостьова не тягнуть
+ * їх одразу, а в кеші оболонки — усі три (офлайн-перемикання мови).
+ */
+const LOCALE_FILE = /\/src\/i18n\/(uk|pl|en)\.json$/;
+
+function chunkFor(id: string): string | undefined {
+  const locale = LOCALE_FILE.exec(id.replace(/\\/g, '/'))?.[1];
+  if (locale) return `locale-${locale}`;
+  return vendorChunk(id);
+}
+
 function vendorChunk(id: string): string | undefined {
   const at = id.lastIndexOf('/node_modules/');
   if (at < 0) return undefined;
@@ -162,6 +176,6 @@ export default defineConfig(({ mode }) => ({
     // браузер такий шрифт мовчки блокував, і знак гривні в бою малювався
     // системним шрифтом. Перевіряє `npm run check:pwa`.
     assetsInlineLimit: (file: string) => (/\.(woff2?|ttf|otf|eot)$/i.test(file) ? false : undefined),
-    rollupOptions: { output: { manualChunks: vendorChunk } },
+    rollupOptions: { output: { manualChunks: chunkFor } },
   },
 }));

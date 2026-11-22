@@ -37,6 +37,7 @@ $map = @{
   'playwright.shops.config.ts' = 'app'
   'playwright.sw.config.ts' = 'app'
   'guest-no-sw.spec.ts' = 'app\tests\sw'
+  'locale-chunks.spec.ts' = 'app\tests\sw'
   'guest-path.spec.ts' = 'app\tests\e2e'
   'guestPath.ts' = 'app\src\lib'
   'qa-data-integrity.spec.ts' = 'app\tests\e2e'

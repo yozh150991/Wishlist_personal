@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Service Worker у справжній збірці: `npm run test:sw` (TESTING.md, «PWA»).
+ * Тут же — словники мов окремими чанками (ROADMAP 8.24): чанки й офлайн-кеш
+ * є лише у збірці.
  *
  * Окрема конфігурація, бо звичайні e2e ходять на dev-сервер, а там Service
  * Worker вимкнено (`devOptions` у `vite.config.ts`). Тут — `vite preview` поверх
