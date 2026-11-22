@@ -29,9 +29,12 @@ async function newList(page: Page, title: string) {
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
 }
 
-/** Запит видалення позиції дійшов до бази — перезавантажувати сторінку раніше не можна. */
+/**
+ * Запит видалення позиції дійшов до бази — перезавантажувати сторінку раніше
+ * не можна. Видалення, й одиночне, й масове, — RPC `delete_items` (ROADMAP 8.26).
+ */
 const itemDeleted = (page: Page) =>
-  page.waitForResponse((r) => r.url().includes('/rest/v1/items') && r.request().method() === 'DELETE', {
+  page.waitForResponse((r) => r.url().includes('/rest/v1/rpc/delete_items') && r.request().method() === 'POST', {
     timeout: 15_000,
   });
 

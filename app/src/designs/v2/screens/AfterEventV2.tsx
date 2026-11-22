@@ -430,7 +430,6 @@ export function CarrySheetV2({
   open,
   list,
   items,
-  userId,
   onClose,
   onDone,
 }: {
@@ -438,7 +437,6 @@ export function CarrySheetV2({
   list: List;
   /** Ще не отримане — статус «актуальна». */
   items: Item[];
-  userId: string;
   onClose: () => void;
   onDone: (target: { id: string; title: string }, n: number) => void;
 }) {
@@ -480,7 +478,7 @@ export function CarrySheetV2({
     const inputs = items.filter((i) => selected.has(i.id)).map((i) => copyInput(i, undefined, list.currency));
     try {
       if (target.kind === 'new') {
-        const created = await createListWithItems({ title: name.trim(), currency: list.currency }, inputs, userId);
+        const created = await createListWithItems({ title: name.trim(), currency: list.currency }, inputs);
         onDone({ id: created.id, title: created.title }, inputs.length);
       } else {
         await copyItems(target.id, inputs, target.currency);
@@ -591,7 +589,6 @@ export function RepeatSheetV2({
   list,
   sections,
   items,
-  userId,
   onClose,
   onCreated,
 }: {
@@ -600,7 +597,6 @@ export function RepeatSheetV2({
   sections: Section[];
   /** Ще не отримане — статус «актуальна». */
   items: Item[];
-  userId: string;
   onClose: () => void;
   onCreated: (created: List) => void;
 }) {
@@ -641,7 +637,6 @@ export function RepeatSheetV2({
       const created = await repeatList(
         { list, sections, items: carry ? items : [] },
         { title: name.trim(), event_date: date || null, repeats_yearly: Boolean(date) && yearly },
-        userId,
       );
       onCreated(created);
     } catch (e) {

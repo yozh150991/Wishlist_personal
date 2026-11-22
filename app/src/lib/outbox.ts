@@ -16,7 +16,13 @@
  * - **створення** йде з `id`, згенерованим на клієнті: повтор впирається в
  *   первинний ключ (`23505`) і вважається успіхом;
  * - **зміна** й **зміна статусу** — за `id`, тож повтор просто записує те саме;
- * - **видалення** — за `id`; нуль видалених рядків означає «уже немає».
+ * - **видалення** — за `id`; нуль видалених рядків означає «уже немає», а
+ *   `list_not_found` — що немає й самого списку.
+ *
+ * Зміна статусу й видалення кількох позицій — одна операція черги й один
+ * виклик RPC (`set_items_status`, `delete_items`), тобто одна транзакція в
+ * базі (ROADMAP 8.26): обрив посередині не лишає половини. Формат операцій
+ * у IndexedDB не змінився — збережені раніше черги відправляються так само.
  *
  * Конфлікти вирішуються останнім записом: черга відправляється в тому порядку,
  * у якому людина робила зміни, і перезаписує те, що на сервері.
@@ -139,12 +145,25 @@ async function send(op: Op): Promise<void> {
       await updateItem(op.id, op.input);
       return;
     case 'status':
-      await setItemsStatus(op.ids, op.status);
+      await setItemsStatus(op.listId, op.ids, op.status);
       return;
     case 'delete':
-      await deleteItems(op.ids);
+      // Списку вже немає — немає й позицій: видалення застосоване.
+      try {
+        await deleteItems(op.listId, op.ids);
+      } catch (e) {
+        if (!listGone(e)) throw e;
+      }
       return;
   }
+}
+
+/**
+ * `list_not_found` від масових RPC (ROADMAP 8.26): списку немає або він не
+ * свій. Для видалення це «уже видалено» — як нуль рядків раніше.
+ */
+function listGone(e: unknown): boolean {
+  return !!e && typeof e === 'object' && (e as { message?: string }).message === 'list_not_found';
 }
 
 let flushing = false;

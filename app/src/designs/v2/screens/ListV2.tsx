@@ -1531,7 +1531,6 @@ export default function ListV2() {
           open={afterStep === 'carry'}
           list={list}
           items={activeLive}
-          userId={userId}
           onClose={() => setAfterStep(null)}
           onDone={(target, n) => {
             setCarried({ ...target, n });
@@ -1560,7 +1559,6 @@ export default function ListV2() {
           list={list}
           sections={sections}
           items={activeLive}
-          userId={userId}
           onClose={() => setAfterStep(null)}
           onCreated={(created) => {
             setAfterStep(null);
