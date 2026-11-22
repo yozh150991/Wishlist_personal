@@ -442,7 +442,7 @@ test('код після першої броні: як повернути бро�
   await expect(page.getByRole('dialog').getByText(/нічого не оплачує|niczego nie opłaca|doesn.t pay for anything/i)).toBeVisible();
 });
 
-test('«Уже куплено» — шість секунд на «Відмінити»; з купленої картки дорога в «Мої броні» (BUG-QA-35)', async ({ page }) => {
+test('«Уже куплено» — записано одразу, шість секунд на «Відмінити»; з купленої картки дорога в «Мої броні» (BUG-QA-35)', async ({ page }) => {
   test.setTimeout(45_000);
   const TOKEN = 'e2e-bought-token';
   let bought = false;
@@ -477,18 +477,20 @@ test('«Уже куплено» — шість секунд на «Відмін�
   const undoBtn = page.getByRole('button', { name: /^(відмінити|cofnij|undo)$/i });
   const boughtTag = /^(куплено|kupione|bought)$/i;
 
-  // Випадковий дотик: «Куплено» видно одразу, а «Відмінити» повертає все
-  // миттєво — у мережу нічого не пішло.
+  // Випадковий дотик: «Куплено» видно й записано одразу (закрита вкладка її
+  // не загубить), а «Відмінити» відправляє зворотну позначку.
   await vase.getByRole('button', { name: markBought }).click();
   await expect(vase.getByText(boughtTag)).toBeVisible();
+  await expect.poll(() => calls).toEqual([true]);
   await undoBtn.click();
   await expect(vase.getByRole('button', { name: markBought })).toBeVisible();
-  expect(calls).toEqual([]);
+  await expect.poll(() => calls).toEqual([true, false]);
 
-  // Без «Відмінити» позначка доїжджає після відліку.
+  // Без «Відмінити» тост зникає сам, а позначка лишається.
   await vase.getByRole('button', { name: markBought }).click();
-  await expect.poll(() => calls, { timeout: 12_000 }).toEqual([true]);
-  await expect(undoBtn).toHaveCount(0);
+  await expect.poll(() => calls).toEqual([true, false, true]);
+  await expect(undoBtn).toHaveCount(0, { timeout: 12_000 });
+  await expect(vase.getByText(boughtTag)).toBeVisible();
 
   // На купленій картці — дорога в «Мої броні», де є «Ще не куплено».
   await vase.getByRole('button', { name: /мої броні|moich rezerwacjach|my picks/i }).click();
@@ -498,7 +500,7 @@ test('«Уже куплено» — шість секунд на «Відмін�
   const touch = await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches);
   if (touch) expect(await page.evaluate(() => document.activeElement?.tagName.toLowerCase())).toBe('dialog');
   await picks.getByRole('button', { name: /^(ще не куплено|jeszcze nie kupione|not bought yet)$/i }).click();
-  await expect.poll(() => calls).toEqual([true, false]);
+  await expect.poll(() => calls).toEqual([true, false, true, false]);
 });
 
 test('фото позиції на /l/ — мініатюра відкриває перегляд на весь екран; тап, Escape і «Назад» закривають', async ({ page }) => {
