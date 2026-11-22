@@ -186,7 +186,8 @@ test.describe('QA: наскрізні сценарії', () => {
 
     // TAKEN → BOUGHT → FREE («Зняти бронь» з «Моїх броней»)
     await card().getByRole('button', { name: /уже куплено|już kupione|already bought/i }).click();
-    await expect(card().getByRole('button')).toHaveCount(0);
+    await expect(card().getByRole('button')).toHaveCount(1);
+    await expect(card().getByRole('button')).toHaveText(/мої броні|moich rezerwacjach|my picks/i);
     await picks().click();
     const released = g.waitForResponse((r) => r.url().includes('/rpc/release_claim'), { timeout: 15_000 });
     await g.getByRole('dialog').getByRole('button', { name: /зняти бронь|zdejmij rezerwację|release pick/i }).click();
