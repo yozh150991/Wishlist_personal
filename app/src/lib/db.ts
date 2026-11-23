@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { CURRENCIES } from './types';
-import type { Currency, Item, ItemInput, ItemQuery, ItemStatus, List, Totals } from './types';
+import type { Currency, Item, ItemInput, ItemPrice, ItemQuery, ItemStatus, List, Totals } from './types';
 import type { TransferItem, TransferList } from './transfer';
 import { isNetworkError } from './errors';
 import { copyInput } from './afterEvent';
@@ -156,6 +156,22 @@ export async function updateItem(id: string, patch: Partial<ItemInput>): Promise
   const { data, error } = await supabase.from('items').update(patch).eq('id', id).select().single();
   if (error) throw error;
   return data as Item;
+}
+
+/**
+ * Історія ціни позиції (8.16) з дня `since` (`YYYY-MM-DD`). Під RLS: лише
+ * власник позиції бачить її точки; пише їх лише wishlist-jobs. Точок на
+ * позицію — щонайбільше 180, тож одного запиту досить.
+ */
+export async function fetchItemPrices(itemId: string, since: string): Promise<ItemPrice[]> {
+  const { data, error } = await supabase
+    .from('item_prices')
+    .select('item_id, day, price, currency, source, checked_at')
+    .eq('item_id', itemId)
+    .gte('day', since)
+    .order('day', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ItemPrice[];
 }
 
 /**

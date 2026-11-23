@@ -1816,6 +1816,19 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-linkcheck__line[data-tone='danger'] { color: var(--color-danger-ink); font-weight: 700; }
 .v2-linkcheck__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
 
+/* ── Історія ціни (8.16): найнижча за 30 днів, остання, маленький графік ── */
+.v2-pricehist {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--color-surface);
+  border-radius: var(--r-card);
+}
+.v2-pricehist__title { font-size: var(--t-body); font-weight: 700; margin: 0; }
+.v2-pricehist__line { font-size: var(--t-body); margin: 0; }
+.v2-pricehist__chart { display: block; width: 100%; height: 48px; overflow: visible; }
+.v2-pricehist__chart polyline { stroke: var(--color-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+
 /* ── Сповіщення (крок 4г-2, потік P; ADR-049) ── */
 
 /* Подія × канал: назва й підказка ліворуч, пігулки Push / Пошта праворуч. */

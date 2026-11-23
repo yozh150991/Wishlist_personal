@@ -218,6 +218,8 @@ class TestStore:
     @respx.mock
     async def test_save_writes_only_link_fields(self):
         route = respx.patch("https://ref.supabase.co/rest/v1/items").mock(return_value=httpx.Response(204))
+        # Точка історії ціни (8.16) — окремо, лише для «ok» з ціною: TestPriceHistory.
+        points = respx.post("https://ref.supabase.co/rest/v1/item_prices").mock(return_value=httpx.Response(201))
         checked = datetime(2026, 9, 29, 4, 0, tzinfo=timezone.utc)
         async with httpx.AsyncClient() as client:
             store = Store("https://ref.supabase.co", "sb_secret_test", client)
@@ -237,6 +239,7 @@ class TestStore:
         # Нічого певного — лише час: позиція стає в кінець черги.
         assert bodies[2] == {"link_checked_at": checked.isoformat()}
         assert [dict(c.request.url.params)["id"] for c in route.calls] == ["eq.1", "eq.2", "eq.3"]
+        assert points.call_count == 1
 
 
 class TestApp:
@@ -308,3 +311,75 @@ class TestApp:
         monkeypatch.delenv("SUPABASE_SECRET_KEY")
         with TestClient(parser_main.app) as client:
             assert client.get("/health").json()["secret_key_present"] is False
+
+
+class TestPriceHistory:
+    """Історія ціни (8.16): точка на день, лише коли сторінка є й ціна відома."""
+
+    BASE = "https://ref.supabase.co/rest/v1"
+
+    @respx.mock
+    async def test_ok_with_price_writes_one_point_for_the_day(self):
+        respx.patch(f"{self.BASE}/items").mock(return_value=httpx.Response(204))
+        points = respx.post(f"{self.BASE}/item_prices").mock(return_value=httpx.Response(201))
+        checked = datetime(2026, 12, 3, 3, 15, tzinfo=timezone.utc)
+        async with httpx.AsyncClient() as client:
+            store = Store("https://ref.supabase.co", "sb_secret_test", client)
+            await store.save(Target("1", "u"), Verdict("ok", 1390.0, "UAH"), checked)
+
+        assert points.call_count == 1
+        request = points.calls.last.request
+        assert request.headers["apikey"] == "sb_secret_test"
+        assert "authorization" not in request.headers
+        assert dict(request.url.params) == {"on_conflict": "item_id,day"}
+        assert "merge-duplicates" in request.headers["prefer"]
+        assert json.loads(request.content) == {
+            "item_id": "1",
+            "day": "2026-12-03",
+            "price": 1390.0,
+            "currency": "UAH",
+            "source": "check",
+            "checked_at": checked.isoformat(),
+        }
+
+    @respx.mock
+    @pytest.mark.parametrize(
+        "verdict",
+        [
+            Verdict("ok", None, None),  # сторінка є, ціни на ній немає
+            Verdict("ok", 0.0, "PLN"),  # нуль — збій розбору, не ціна
+            Verdict("out", 899.0, "UAH"),  # немає в наявності — не ціна покупки
+            Verdict("gone"),
+            Verdict(None),  # нічого певного
+        ],
+    )
+    async def test_no_point_without_a_price_to_buy_at(self, verdict):
+        items = respx.patch(f"{self.BASE}/items").mock(return_value=httpx.Response(204))
+        points = respx.post(f"{self.BASE}/item_prices").mock(return_value=httpx.Response(201))
+        async with httpx.AsyncClient() as client:
+            store = Store("https://ref.supabase.co", "sb_secret_test", client)
+            await store.save(Target("1", "u"), verdict, datetime(2026, 12, 3, tzinfo=timezone.utc))
+
+        assert items.call_count == 1
+        assert points.call_count == 0
+
+    @respx.mock
+    async def test_failed_point_does_not_undo_the_check(self):
+        items = respx.patch(f"{self.BASE}/items").mock(return_value=httpx.Response(204))
+        respx.post(f"{self.BASE}/item_prices").mock(return_value=httpx.Response(404))
+        async with httpx.AsyncClient() as client:
+            store = Store("https://ref.supabase.co", "sb_secret_test", client)
+            await store.save(Target("1", "u"), Verdict("ok", 10.0, "PLN"), datetime(2026, 12, 3, tzinfo=timezone.utc))
+
+        assert items.call_count == 1  # висновок записано, виняток не вилетів
+
+    @respx.mock
+    async def test_prune_keeps_only_recent_days(self):
+        route = respx.delete(f"{self.BASE}/item_prices").mock(return_value=httpx.Response(204))
+        async with httpx.AsyncClient() as client:
+            store = Store("https://ref.supabase.co", "sb_secret_test", client)
+            from datetime import date
+
+            await store.prune_prices(date(2026, 6, 6))
+
+        assert dict(route.calls.last.request.url.params) == {"day": "lt.2026-06-06"}

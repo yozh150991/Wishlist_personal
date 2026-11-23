@@ -8,6 +8,7 @@ import type { Currency, Item, ItemPriority, ItemStatus, List } from '../../../li
 import { SECTION_TITLE_MAX } from '../../../lib/sections';
 import type { Section } from '../../../lib/sections';
 import { EMPTY_RANGE, VIEW_SORTS, itemCurrency, linkPriceChange, parsePrice, toMinor } from '../../../lib/itemsView';
+import { targetReached } from '../../../lib/priceHistory';
 import type { ViewRange, ViewSort } from '../../../lib/itemsView';
 import { downloadText } from '../../../lib/download';
 import { fileName, toCsv, toJson } from '../../../lib/transfer';
@@ -207,7 +208,9 @@ export function ItemCardV2({
   // Що побачила щоденна перевірка посилання (ADR-048) — лише для актуального.
   const link = item.status === 'active' ? item.link_status : undefined;
   const priceMoved = item.status === 'active' ? linkPriceChange(item, currency)?.notable : false;
-  const linkTag = link === 'gone' || link === 'out' || priceMoved;
+  // Ціна в магазині не вища за ціль власника (8.16).
+  const atTarget = targetReached(item, currency);
+  const linkTag = link === 'gone' || link === 'out' || priceMoved || atTarget;
 
   const img = item.image_url ? <img className="v2-item__img" src={item.image_url} alt="" loading="lazy" /> : null;
   const body = (
@@ -232,10 +235,16 @@ export function ItemCardV2({
                 {t('v2list.item.linkOut')}
               </span>
             )}
-            {priceMoved && (
-              <span className="v2-tag" data-tone="warm">
-                {t('v2list.item.priceChanged')}
+            {atTarget ? (
+              <span className="v2-tag" data-tone="accent">
+                {t('v2list.item.targetReached')}
               </span>
+            ) : (
+              priceMoved && (
+                <span className="v2-tag" data-tone="warm">
+                  {t('v2list.item.priceChanged')}
+                </span>
+              )
             )}
             {draft && (
               <span className="v2-tag" data-tone="warm">

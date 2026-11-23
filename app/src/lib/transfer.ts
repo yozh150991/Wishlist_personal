@@ -56,6 +56,10 @@ export const CSV_COLUMNS = [
   'currency',
   // Назва розділу (ADR-036). Порожньо — «Інше», як у файлах до розділів.
   'section',
+  // «Повідомити, коли ціна ≤» (8.16), у валюті позиції. Порожньо — без цілі.
+  // Історія ціни у файл не йде: це спостереження сервісу за конкретним
+  // посиланням, а не частина бажання, і в іншому акаунті її нікому продовжити.
+  'price_target',
 ] as const;
 
 export type TransferItem = {
@@ -72,6 +76,8 @@ export type TransferItem = {
   currency: Currency | null;
   /** Назва розділу (ADR-036); null — «Інше». */
   section: string | null;
+  /** Ціль ціни (8.16); null — без цілі. */
+  price_target: number | null;
 };
 
 export type TransferList = {
@@ -137,6 +143,10 @@ export function toTransferItem(item: Item, section: string | null = null): Trans
     variants: item.variants ?? [],
     currency: item.currency ?? null,
     section,
+    price_target: (() => {
+      const t = item.price_target === null || item.price_target === undefined || item.price_target === '' ? null : Number(item.price_target);
+      return t !== null && Number.isFinite(t) && t > 0 ? t : null;
+    })(),
   };
 }
 
@@ -260,6 +270,7 @@ export function toCsv(items: Item[], sections: Section[] = []): string {
         csvCell(variantsOut(t.variants)),
         csvCell(t.currency),
         csvCell(t.section),
+        priceOut(t.price_target),
       ].join(','),
     );
   }
@@ -489,7 +500,7 @@ function rowToItem(
   get: (column: (typeof CSV_COLUMNS)[number]) => string,
   row: number,
   issues: Issue[],
-  numeric?: { price?: number },
+  numeric?: { price?: number; price_target?: number },
 ): TransferItem | null {
   const title = get('title');
   if (!title) {
@@ -550,10 +561,24 @@ function rowToItem(
     issues.push({ level: 'warning', row, key: 'transfer.issues.itemCurrency', vars: { value: rawCurrency } });
   }
 
+  // Ціль (8.16): та сама межа, що й у базі (> 0, numeric(12,2)). Хибна —
+  // зауваження й без цілі; без посилання ціль нічого не робить, тож теж без неї.
+  const url = checkUrl(get('url'), row, 'url', issues);
+  let priceTarget: number | null = null;
+  const rawTarget = get('price_target');
+  if (rawTarget && url) {
+    const n = numeric?.price_target ?? parsePrice(rawTarget);
+    if (n === null || !Number.isFinite(n) || n <= 0 || n > PRICE_MAX || roundToCents(n) <= 0) {
+      issues.push({ level: 'warning', row, key: 'transfer.issues.priceTarget', vars: { value: rawTarget } });
+    } else {
+      priceTarget = roundToCents(n);
+    }
+  }
+
   return {
     title,
     currency,
-    url: checkUrl(get('url'), row, 'url', issues),
+    url,
     price,
     quantity,
     priority,
@@ -562,6 +587,7 @@ function rowToItem(
     image_url: checkUrl(get('image_url'), row, 'image_url', issues),
     variants: parseVariants(get('variants'), row, issues),
     section: parseSection(get('section'), row, issues),
+    price_target: priceTarget,
   };
 }
 
@@ -709,7 +735,11 @@ export function parseJsonFile(text: string, fallbackTitle: string): ParseResult 
       return Array.isArray(raw) ? JSON.stringify(raw) : trimmed(raw);
     };
     const rawPrice = record.price;
-    const item = rowToItem(get, i + 1, issues, typeof rawPrice === 'number' ? { price: rawPrice } : undefined);
+    const rawTarget = record.price_target;
+    const item = rowToItem(get, i + 1, issues, {
+      ...(typeof rawPrice === 'number' ? { price: rawPrice } : {}),
+      ...(typeof rawTarget === 'number' ? { price_target: rawTarget } : {}),
+    });
     if (item) items.push(item);
   });
 

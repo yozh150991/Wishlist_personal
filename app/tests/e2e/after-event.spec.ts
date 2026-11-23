@@ -132,7 +132,12 @@ test.describe('копії позицій', () => {
       position: null,
       needs_title: false,
       currency: null,
+      price_target: null,
     });
+  });
+
+  test('ціль ціни (8.16) їде в копію: це частина бажання', () => {
+    expect(copyInput(item({ price_target: '999.00' })).price_target).toBe('999.00');
   });
 
   test('копія несе валюту позиції, розгорнуту з валюти списку-джерела (ADR-051)', () => {

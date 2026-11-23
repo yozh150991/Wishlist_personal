@@ -290,6 +290,9 @@ $map = @{
   '20261025100000_delete_account.sql' = 'supabase\migrations'
   '20261025120000_item_photos.sql' = 'supabase\migrations'
   '20261025140000_signin_alerts.sql' = 'supabase\migrations'
+  # price history and own target (ROADMAP 8.16)
+  '20261122211448_price_history.sql' = 'supabase\migrations'; '34_price_history.test.sql' = 'supabase\tests\database'
+  'priceHistory.ts' = 'app\src\lib'; 'PriceHistoryV2.tsx' = 'app\src\designs\v2\screens'; 'price-history.spec.ts' = 'app\tests\e2e'
   '14_guest_contact.test.sql' = 'supabase\tests\database'
   '15_guest_mail.test.sql' = 'supabase\tests\database'
   '16_guest_changes.test.sql' = 'supabase\tests\database'

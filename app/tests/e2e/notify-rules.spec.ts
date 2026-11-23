@@ -34,6 +34,12 @@ test.describe('сповіщення: вибір за замовчуванням'
     expect(IMPORTANT_KINDS).not.toContain('price');
   });
 
+  test('ціль ціни (8.16) — серед важливого: її людина ставить сама', () => {
+    expect(IMPORTANT_KINDS).toContain('target');
+    expect(enabledDefaults(true).target_push).toBe(true);
+    expect(enabledDefaults(false).target_email).toBe(true);
+  });
+
   test('усе вимкнене — те саме, що рядка немає (поведінка v1)', () => {
     expect(anyOn(allOff())).toBe(false);
     expect(anyOn(null)).toBe(false);
@@ -43,7 +49,7 @@ test.describe('сповіщення: вибір за замовчуванням'
   });
 
   test('серед подій немає нічого про позначки гостей (ADR-040)', () => {
-    expect([...NOTIFY_KINDS].sort()).toEqual(['after_event', 'link', 'price', 'share', 'yearly']);
+    expect([...NOTIFY_KINDS].sort()).toEqual(['after_event', 'link', 'price', 'share', 'target', 'yearly']);
   });
 });
 

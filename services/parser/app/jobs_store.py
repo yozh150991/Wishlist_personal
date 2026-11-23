@@ -3,7 +3,8 @@
 
 Secret-ключ дає роль service_role, яка обходить RLS, тож усе, що тут
 пишеться, має бути вузьким:
-- перевірка посилань — лише поля `items.link_*` за `id`;
+- перевірка посилань — лише поля `items.link_*` за `id` і точка історії
+  ціни в `item_prices` (8.16): одна на позицію на день, 180 днів;
 - курс НБП (ADR-051) — лише таблиця `fx_rates`, по рядку на валюту;
 - сповіщення (ADR-049) — журнал надісланого, час останнього надсилання й
   прибирання мертвих підписок push;
@@ -15,7 +16,7 @@ Secret-ключ дає роль service_role, яка обходить RLS, то�
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import httpx
 
@@ -91,6 +92,45 @@ class Store:
             json=body,
         )
         res.raise_for_status()
+        await self._save_price(target, verdict, checked_at)
+
+    async def _save_price(self, target: Target, verdict: Verdict, checked_at: datetime) -> None:
+        """
+        Точка історії ціни (8.16): лише коли сторінка є (`ok`) і ціна відома й
+        додатна. «Немає в наявності» — не ціна, за яку можна купити; без ціни
+        чи без висновку — нічого. Одна точка на день: повтор того самого дня
+        замінює її (`on_conflict`). Збій тут висновку перевірки не скасовує —
+        він уже записаний; точка просто пропаде за цей день.
+        """
+        if verdict.status != "ok" or verdict.price is None or verdict.price <= 0:
+            return
+        day = checked_at.astimezone(timezone.utc).date()
+        try:
+            res = await self._client.post(
+                f"{self._base}/item_prices",
+                headers={**self._headers, "Prefer": "resolution=merge-duplicates,return=minimal"},
+                params={"on_conflict": "item_id,day"},
+                json={
+                    "item_id": target.id,
+                    "day": day.isoformat(),
+                    "price": round(verdict.price, 2),
+                    "currency": verdict.currency,
+                    "source": "check",
+                    "checked_at": checked_at.isoformat(),
+                },
+            )
+            res.raise_for_status()
+        except httpx.HTTPError as e:
+            log.warning("точку ціни не записано: %s", type(e).__name__)
+
+    async def prune_prices(self, before: date) -> None:
+        """Історія ціни — 180 днів (8.16): старіші точки прибираються раз на добу."""
+        res = await self._client.delete(
+            f"{self._base}/item_prices",
+            headers={**self._headers, "Prefer": "return=minimal"},
+            params={"day": f"lt.{before.isoformat()}"},
+        )
+        res.raise_for_status()
 
     async def save_rates(self, rates: list[Rate]) -> None:
         """Курс НБП (ADR-051): по рядку на валюту, новий замінює вчорашній."""
@@ -140,7 +180,7 @@ class Store:
 # Сповіщення (ADR-049)
 # ─────────────────────────────────────────────
 
-KINDS = ("after_event", "yearly", "link", "price", "share")
+KINDS = ("after_event", "yearly", "link", "price", "share", "target")
 
 
 @dataclass(frozen=True)
@@ -221,7 +261,11 @@ class NotifyStore:
         return await self._get(
             "items",
             [
-                ("select", "id,list_id,title,url,price,currency,link_status,link_price,link_currency"),
+                (
+                    "select",
+                    "id,list_id,title,url,price,currency,link_status,link_price,link_currency,"
+                    "price_target,price_target_set_at,price_target_hit_at",
+                ),
                 ("owner_id", f"eq.{owner_id}"),
                 ("status", "eq.active"),
                 ("url", "not.is.null"),

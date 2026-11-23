@@ -72,6 +72,7 @@ test.describe('вивантаження', () => {
       variants: [],
       currency: null,
       section: null,
+      price_target: null,
     });
   });
 
@@ -86,7 +87,7 @@ test.describe('вивантаження', () => {
     const csv = toCsv([item()]);
     expect(csv.startsWith('﻿')).toBe(true);
     expect(csv.split('\r\n')[0]).toBe(
-      '﻿title,url,price,quantity,priority,status,note,image_url,variants,currency,section',
+      '﻿title,url,price,quantity,priority,status,note,image_url,variants,currency,section,price_target',
     );
   });
 
@@ -136,6 +137,7 @@ test.describe('повний оберт', () => {
       variants: i.variants,
       currency: null,
       section: null,
+      price_target: null,
     })));
   });
 
@@ -498,5 +500,33 @@ test.describe('розділи (ADR-036)', () => {
     expect(json.lists[0].list.sections).toEqual(['Спальня', 'Кухня', 'Балкон']);
     expect(json.lists[0].items[0]).toMatchObject({ title: 'Плед', section: 'Спальня' });
     expect(JSON.stringify(json)).not.toContain('"s1"');
+  });
+});
+
+test.describe('ціль ціни (8.16)', () => {
+  test('CSV і JSON: ціль переживає вивантаження й внесення, історії у файлі немає', () => {
+    const items = [item({ title: 'Лампа', url: 'https://shop.example.com/l', price: 1240, price_target: '999.50' })];
+    const csv = parseCsvFile(toCsv(items), 'Список');
+    expect(csv.issues).toEqual([]);
+    expect(csv.items[0]?.price_target).toBe(999.5);
+    const json = toJson(list, items);
+    expect(json).not.toContain('item_prices');
+    expect(json).not.toContain('price_target_hit_at');
+    expect(parseJsonFile(json, 'Список').items[0]?.price_target).toBe(999.5);
+  });
+
+  test('без колонки — без цілі, як у файлах до неї', () => {
+    const back = parseCsvFile('title,url\r\nЛампа,https://shop.example.com/l\r\n', 'Список');
+    expect(back.issues).toEqual([]);
+    expect(back.items[0]?.price_target).toBeNull();
+  });
+
+  test('хибна ціль — зауваження й без цілі; без посилання ціль не береться', () => {
+    const bad = parseCsvFile('title,url,price_target\r\nЛампа,https://shop.example.com/l,0\r\n', 'Список');
+    expect(bad.items[0]?.price_target).toBeNull();
+    expect(bad.issues.map((i) => i.key)).toEqual(['transfer.issues.priceTarget']);
+    const noUrl = parseCsvFile('title,url,price_target\r\nЛампа,,500\r\n', 'Список');
+    expect(noUrl.items[0]?.price_target).toBeNull();
+    expect(noUrl.issues).toEqual([]);
   });
 });

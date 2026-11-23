@@ -8,7 +8,8 @@
 - `yearly`      — щорічне свято за місяць до річниці;
 - `link`        — сторінки товару немає або його немає в наявності (ADR-048);
 - `price`       — ціна в магазині відрізняється від ціни в списку на 15 % і більше;
-- `share`       — посилання згасне протягом трьох днів.
+- `share`       — посилання згасне протягом трьох днів;
+- `target`      — ціна в магазині впала до цілі власника (8.16), раз на падіння.
 
 Про позначки гостей подій немає й не буде (CLAUDE.md §3.2, ADR-040): сервіс
 таблиць позначок не читає.
@@ -154,6 +155,39 @@ def price_change(item: dict, list_currency: str) -> tuple[int, int] | None:
     return shop, own
 
 
+def _moment(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def target_hit(item: dict, list_currency: str) -> tuple[int, int, str, datetime] | None:
+    """
+    Ціна в магазині досягла цілі власника (8.16): (ціна, ціль, валюта, початок
+    падіння). Стан веде база (`items_price_target_state`): `hit_at` — з якого
+    моменту ціна не вища за ціль. Ціль, якої ціна досягла вже тоді, коли її
+    задали (`hit_at == set_at`), не сповіщає: людина бачила ціну у формі.
+    Сторінка має бути `ok` і зараз — «немає в наявності» не про покупку.
+    """
+    if item.get("link_status") != "ok":
+        return None
+    hit = _moment(item.get("price_target_hit_at"))
+    target = _minor(item.get("price_target"))
+    shop = _minor(item.get("link_price"))
+    if hit is None or not target or not shop or shop > target:
+        return None
+    set_at = _moment(item.get("price_target_set_at"))
+    if set_at is not None and hit <= set_at:
+        return None
+    currency = item_currency(item, list_currency)
+    if item.get("link_currency") and item["link_currency"] != currency:
+        return None
+    return shop, target, currency, hit
+
+
 # ── Події ────────────────────────────────────
 
 def find_events(
@@ -203,6 +237,18 @@ def find_events(
                     Event(
                         "price", item["id"], f"{shop}:{currency}", path, "price", item["title"],
                         names + (("price", Money(shop, currency)), ("own", Money(own, currency))),
+                    )
+                )
+        if owner.wants("target"):
+            hit = target_hit(item, parent.get("currency") or "")
+            if hit:
+                shop, goal, currency, since = hit
+                # Привід — початок падіння: ще нижче того самого дня чи завтра
+                # — те саме падіння; вище цілі й знову вниз — нове.
+                out.append(
+                    Event(
+                        "target", item["id"], since.astimezone(timezone.utc).isoformat(), path, "target", item["title"],
+                        names + (("price", Money(shop, currency)), ("target", Money(goal, currency))),
                     )
                 )
 
@@ -364,7 +410,8 @@ async def _notify_owner(
         return
 
     lists = await store.lists(owner.id)
-    items = await store.items(owner.id) if owner.wants("link") or owner.wants("price") else []
+    wants_items = owner.wants("link") or owner.wants("price") or owner.wants("target")
+    items = await store.items(owner.id) if wants_items else []
     shares = await store.shares(owner.id, now, now + timedelta(days=SHARE_EXPIRY_DAYS)) if owner.wants("share") else []
     candidates = find_events(owner, lists, items, shares, today=local.date(), logged=set())
     if not candidates:
