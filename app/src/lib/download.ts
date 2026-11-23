@@ -9,7 +9,12 @@
  * директиви не зачіпає. Перевірено тестом, який ловить подію завантаження.
  */
 export function downloadText(name: string, text: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }));
+  downloadBlob(name, new Blob([text], { type: `${type};charset=utf-8` }));
+}
+
+/** Те саме для готового файлу — ZIP резервної копії (ROADMAP 8.12). */
+export function downloadBlob(name: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = name;

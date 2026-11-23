@@ -180,7 +180,7 @@ for (const lib of ['vendor-react', 'vendor-supabase', 'vendor-dnd']) {
 // ліниві (ADR-067): потрапивши сюди, вони їхали б і гостю.
 const entryFile = html.match(/<script type="module"[^>]*\ssrc="\/assets\/([^"]+\.js)"/)?.[1];
 check(entryFile, 'index.html: не знайдено вхідний скрипт застосунку');
-const LAZY_ONLY = /^(OwnerScreens|GuestV2|GuestPartsV2|vendor-dnd|qrcode|workbox-window)/;
+const LAZY_ONLY = /^(OwnerScreens|GuestV2|GuestPartsV2|vendor-dnd|qrcode|workbox-window|backupZip)/;
 const eager = [
   ...[...html.matchAll(/<link rel="modulepreload"[^>]*\shref="\/assets\/([^"]+\.js)"/g)].map((m) => m[1]),
   ...(entryFile ? staticImports(await readFile(join(dist, 'assets', entryFile), 'utf8')) : []),

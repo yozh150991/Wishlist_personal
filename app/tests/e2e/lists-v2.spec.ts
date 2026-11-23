@@ -160,7 +160,7 @@ test.describe('«Мої посилання» й «Налаштування» v2 
     await expect(card).toHaveCount(0);
   });
 
-  test('налаштування застосовуються одразу: тема, висока контрастність, мова; «Мої дані» — файл без адрес посилань', async ({
+  test('налаштування застосовуються одразу: тема, висока контрастність, мова; «Мої дані» — ZIP без адрес посилань', async ({
     page,
   }) => {
     await signInV2(page);
@@ -187,11 +187,13 @@ test.describe('«Мої посилання» й «Налаштування» v2 
     const downloading = page.waitForEvent('download');
     await page.getByRole('button', { name: /завантажити мої дані|pobierz moje dane|download my data/i }).click();
     const file = await downloading;
-    expect(file.suggestedFilename()).toMatch(/^wishlist-\d{4}-\d{2}-\d{2}\.json$/);
+    // Резервна копія — ZIP з JSON і своїми фото (ROADMAP 8.12).
+    expect(file.suggestedFilename()).toMatch(/^wishlist-backup-\d{4}-\d{2}-\d{2}\.zip$/);
     const path = await file.path();
     const { readFile } = await import('node:fs/promises');
-    const text = await readFile(path!, 'utf8');
-    expect(JSON.parse(text).format).toBe('wishlist-personal-account');
+    const { strFromU8, unzipSync } = await import('fflate');
+    const text = strFromU8(unzipSync(new Uint8Array(await readFile(path!)))['wishlist-backup.json']!);
+    expect(JSON.parse(text).format).toBe('wishlist-backup');
     expect(text).not.toMatch(/"token"/);
 
     // Тему й мову повертаємо, як були: акаунт тестовий, але вигляд і мова їдуть у профіль.

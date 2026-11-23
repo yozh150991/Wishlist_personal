@@ -13,6 +13,8 @@ export const PHOTO_INPUT_MAX = 25 * 1024 * 1024;
 export const PHOTO_OUTPUT_MAX = 2 * 1024 * 1024;
 /** Межа з `reserve_item_photo`; число лише для тексту помилки. */
 export const PHOTO_QUOTA = 1000;
+/** Скільки адрес `reserve_item_photo` видає за годину — для підказки у відновленні копії. */
+export const PHOTO_HOURLY = 60;
 
 export type PhotoExt = 'webp' | 'jpg';
 

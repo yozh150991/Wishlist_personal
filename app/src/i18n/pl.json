@@ -863,7 +863,7 @@
     "looksHint": "Własne wyglądy wydarzeń ustawia się na konkretnej liście — w menu listy, „Wygląd listy”.",
     "data": {
       "title": "Moje dane",
-      "body": "Plik zawiera wszystkie listy, pozycje i opis linków. Nie ma w nim adresów linków ani oznaczeń gości.",
+      "body": "ZIP ze wszystkimi listami, sekcjami, kolejnością, pozycjami i twoimi zdjęciami. Nie ma w nim linków, ich adresów ani oznaczeń gości. Można z niego przywrócić listy — na tym lub nowym koncie.",
       "cta": "Pobierz moje dane",
       "starting": "Przygotowuję…",
       "progress": "Eksportuję… {n} z {m}",
@@ -1325,7 +1325,7 @@
       },
       "rights": {
         "title": "Twoje prawa",
-        "body": "• Otrzymać swoje dane: „Ustawienia” → „Moje dane” — plik ze wszystkimi listami i pozycjami.\n• Poprawić lub usunąć: listy i pozycje — bezpośrednio w aplikacji; całe konto — „Ustawienia” → „Usuń konto”.\n• Wypisać się: wiadomości dla gości — linkiem w każdej wiadomości; powiadomienia właściciela — w „Ustawieniach”.\n• Złożyć skargę do organu ochrony danych — w Polsce to Prezes Urzędu Ochrony Danych Osobowych (UODO)."
+        "body": "• Otrzymać swoje dane: „Ustawienia” → „Moje dane” — ZIP ze wszystkimi listami, pozycjami i twoimi zdjęciami. Nie ma w nim linków ani oznaczeń gości.\n• Poprawić lub usunąć: listy i pozycje — bezpośrednio w aplikacji; całe konto — „Ustawienia” → „Usuń konto”.\n• Wypisać się: wiadomości dla gości — linkiem w każdej wiadomości; powiadomienia właściciela — w „Ustawieniach”.\n• Złożyć skargę do organu ochrony danych — w Polsce to Prezes Urzędu Ochrony Danych Osobowych (UODO)."
       },
       "changes": {
         "title": "Zmiany",
@@ -1334,5 +1334,58 @@
     },
     "link": "Polityka prywatności",
     "back": "Wstecz"
+  },
+  "backup": {
+    "export": {
+      "photos": "Dodaję zdjęcia… {n} z {m}",
+      "missing": "Zdjęcia, których nie ma już w magazynie: {n}. Zostały w kopii jako adresy."
+    },
+    "restore": {
+      "cta": "Przywróć z kopii",
+      "title": "Przywróć z kopii",
+      "intro": "Listy z kopii są dodawane do istniejących — nic na koncie nie zostaje nadpisane. Linki i oznaczenia gości nie są przywracane: nie ma ich w kopii.",
+      "file": "Plik kopii",
+      "choose": "Wybierz plik",
+      "noFile": "Nie wybrano pliku",
+      "hint": "ZIP z „Moich danych” albo stary JSON „Moich danych”. Do {max} MB.",
+      "reading": "Czytam plik…",
+      "summary": "W kopii: list — {lists}, pozycji — {items}, zdjęć — {photos}.",
+      "made": "Kopia z {date}.",
+      "legacy": "To stary plik „Moje dane”: zdjęcia są w nim tylko adresami, nie ma języka ani wyglądu.",
+      "warnings": "Wartości, które trzeba było przyciąć lub zastąpić domyślnymi: {n} — jak w imporcie listy.",
+      "existing": "Takie listy są już na koncie: {n}. Wygląda na to, że tę kopię już przywracano — zostaną pominięte.",
+      "includeExisting": "Przywróć też te",
+      "includeExistingHint": "Powstaną duplikaty z dopiskiem „(z kopii)” w nazwie.",
+      "copySuffix": "(z kopii)",
+      "applyLook": "Weź język i wygląd z kopii",
+      "applyLookHint": "Motyw, kolory, wysoki kontrast i język — jak w chwili robienia kopii.",
+      "rateAhead": "Zdjęć w kopii: {n}, a w tej godzinie można wgrać jeszcze {hour}. Przywracanie zatrzyma się na limicie — wtedy powtórz za godzinę, przywrócone zostanie pominięte.",
+      "quotaAhead": "Zdjęć w kopii: {n}, a miejsca na koncie zostało na {quota}. Część list się nie przywróci.",
+      "nothing": "Nie ma czego przywracać: wszystkie listy z kopii są już na koncie.",
+      "submit": "Przywróć listy: {n}",
+      "progress": "Przywracam… list {n} z {m}",
+      "progressPhotos": "Zdjęcia {n} z {m}",
+      "stop": "Zatrzymaj",
+      "done": "Przywrócono list: {n}.",
+      "skipped": "Pominięto, bo już są: {n}.",
+      "badPhotos": "Zdjęcia, których nie udało się odczytać: {n} — te pozycje przywrócono bez zdjęć.",
+      "stopped": "Zatrzymano. Powtórz przywracanie, aby dodać resztę: przywrócone zostanie pominięte."
+    },
+    "errors": {
+      "tooBig": "Plik jest większy niż {max} MB — to nie kopia z „Moich danych”.",
+      "brokenZip": "ZIP jest uszkodzony — nie udało się go odczytać. Nic nie zapisano.",
+      "noManifest": "W tym ZIP nie ma kopii „Moich danych” (wishlist-backup.json). Nic nie zapisano.",
+      "broken": "Plik kopii jest uszkodzony. Nic nie zapisano.",
+      "foreign": "To nie jest kopia „Moich danych”. Nic nie zapisano.",
+      "singleList": "To plik jednej listy — otwórz „Import z pliku” na „Moich listach”.",
+      "newer": "Kopię zrobiła nowsza wersja aplikacji (format {version}). Zaktualizuj aplikację i spróbuj ponownie.",
+      "tooManyLists": "W kopii jest ponad {max} list — to nie nasza kopia. Nic nie zapisano.",
+      "badItem": "W kopii jest uszkodzona pozycja: lista „{list}”, pozycja {row}. Nic nie zapisano.",
+      "needZip": "To JSON z kopii ze zdjęciami — wybierz cały ZIP, a nie plik z niego.",
+      "missingPhoto": "W ZIP brakuje zdjęcia {name}. Nic nie zapisano.",
+      "photoTooBig": "Zdjęcie {name} w ZIP jest za duże. Nic nie zapisano.",
+      "photoRate": "Limit to 60 zdjęć na godzinę. Przywrócono list: {done} z {total}. Powtórz za godzinę: przywrócone zostanie pominięte.",
+      "photoQuota": "Na koncie jest już {max} zdjęć — więcej się nie zmieści. Przywrócono list: {done} z {total}."
+    }
   }
 }
