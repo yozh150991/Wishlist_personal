@@ -294,8 +294,8 @@ export default function ListsV2() {
    * напівпорожнім: `importList` — один виклик RPC, одна транзакція (ROADMAP
    * 8.26). Розділи з файлу створюються разом зі списком (ADR-036).
    */
-  async function importFile(list: TransferList, items: TransferItem[]) {
-    const created = await importList({ list, items });
+  async function importFile(list: TransferList, items: TransferItem[], listId: string) {
+    const created = await importList({ list, items }, listId);
     setImportOpen(false);
     navigate(`/lists/${created.id}`, { state: { flash: t('v2import.done', { n: items.length }) } });
   }

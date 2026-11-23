@@ -27,6 +27,7 @@
 | `20261025120000_item_photos.sql` | бакет `item-photos`, `item_photos`, політика завантаження в `storage.objects`, `reserve_item_photo`, `item_photo_orphans`, `forget_item_photos` — своє фото позиції (ADR-073) |
 | `20261025140000_signin_alerts.sql` | `notification_settings.signin_push` / `signin_email`, `known_devices`, `recent_sign_ins`, `forget_all_push_subscriptions` — вхід із нового пристрою й вихід скрізь (ADR-074) |
 | `20261122210328_bulk_ops_rpc.sql` | `import_list`, `repeat_list`, `copy_items`, `set_items_status`, `delete_items` (і спільні `insert_owner_list`, `insert_list_contents`) — масові дії власника однією транзакцією, `SECURITY INVOKER` під RLS; таблиць і колонок не змінює (ROADMAP 8.26) |
+| `20261123065430_bulk_ops_list_id.sql` | id нового списку задає клієнт: `import_list(p_list_id, …)`, `repeat_list(p_source_list_id, p_list_id, …)`, `copy_items` з `p_new_list`; повтор з тим самим id — той самий список, чужий id — `list_id_taken`; старі сигнатури прибрано (ROADMAP 8.26) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 

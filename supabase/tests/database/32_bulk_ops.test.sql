@@ -3,6 +3,8 @@
 -- усе або нічого — штучна помилка посередині не лишає жодного рядка; чужий
 -- список — відмова без часткового запису; права — лише власник; RLS і
 -- check-обмеження діють як для одиночних запитів.
+-- id нового списку задає клієнт: повтор тієї самої дії — той самий список,
+-- чужий id — list_id_taken без запису, не uuid — відмова.
 -- §3.2 — масове видалення й статус зачіпають позначки лише так, як одиночні:
 -- мовчки, тригерами; відповідь власнику однакова, є позначки чи ні.
 
@@ -10,7 +12,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(56);
+select plan(74);
 
 create schema tests;
 grant usage on schema tests to anon, authenticated;
@@ -90,22 +92,22 @@ delete from guest_mail;
 -- ── Права (§3.4) ─────────────────────────────
 
 select ok(
-  not has_function_privilege('anon', 'public.import_list(jsonb, jsonb, jsonb)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.repeat_list(uuid, jsonb, jsonb, jsonb)', 'EXECUTE')
+  not has_function_privilege('anon', 'public.import_list(uuid, jsonb, jsonb, jsonb)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.repeat_list(uuid, uuid, jsonb, jsonb, jsonb)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.copy_items(uuid, jsonb, jsonb)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.set_items_status(uuid, uuid[], public.item_status)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.delete_items(uuid, uuid[])', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.insert_owner_list(jsonb)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.insert_owner_list(uuid, jsonb)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.insert_list_contents(uuid, jsonb, jsonb)', 'EXECUTE'),
   'anon не викликає жодної масової дії'
 );
 select ok(
-  has_function_privilege('authenticated', 'public.import_list(jsonb, jsonb, jsonb)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.repeat_list(uuid, jsonb, jsonb, jsonb)', 'EXECUTE')
+  has_function_privilege('authenticated', 'public.import_list(uuid, jsonb, jsonb, jsonb)', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.repeat_list(uuid, uuid, jsonb, jsonb, jsonb)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.copy_items(uuid, jsonb, jsonb)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.set_items_status(uuid, uuid[], public.item_status)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.delete_items(uuid, uuid[])', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.insert_owner_list(jsonb)', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.insert_owner_list(uuid, jsonb)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.insert_list_contents(uuid, jsonb, jsonb)', 'EXECUTE'),
   'власник викликає всі'
 );
@@ -119,7 +121,7 @@ select is_empty(
 
 select tests.as_anon();
 select throws_ok(
-  $$ select import_list('{"title":"Анонім"}', '[]', '[]') $$,
+  $$ select import_list(gen_random_uuid(), '{"title":"Анонім"}', '[]', '[]') $$,
   '42501', null, 'anon отримує permission denied'
 );
 reset role;
@@ -128,8 +130,8 @@ reset role;
 
 select tests.as_user('c3200000-0000-4000-8000-000000000001');
 select lives_ok(
-  $$ select import_list(
-       '{"title":"Імпорт добрий","description":"з файлу","currency":"UAH","event_date":"2026-12-31","owner_id":"c3200000-0000-4000-8000-000000000002"}',
+  $$ select import_list(gen_random_uuid(), 
+'{"title":"Імпорт добрий","description":"з файлу","currency":"UAH","event_date":"2026-12-31","owner_id":"c3200000-0000-4000-8000-000000000002"}',
        '[{"key":"Кухня","title":"Кухня","position":1},{"key":"Балкон","title":"Балкон","position":2}]',
        '[{"title":"Сковорода","section_key":"Кухня","position":1,"price":120.5,"priority":"high"},
          {"title":"Дошка","section_key":"Кухня","position":2,"variants":[{"label":"Колір","value":"дуб"}]},
@@ -173,43 +175,43 @@ select is(
 
 select tests.as_user('c3200000-0000-4000-8000-000000000001');
 select throws_ok(
-  $$ select import_list('{"title":"Імпорт битий 1"}', '[{"key":"Р","title":"Розділ битий"}]',
+  $$ select import_list(gen_random_uuid(), '{"title":"Імпорт битий 1"}', '[{"key":"Р","title":"Розділ битий"}]',
                         tests.payload(50, 25, '{"priority":"бозна"}')) $$,
   '22P02', null, 'заборонене значення пріоритету в 25-й позиції з 50 — відмова'
 );
 select throws_ok(
-  $$ select import_list('{"title":"Імпорт битий 2"}', '[]', tests.payload(50, 30, '{"quantity":0}')) $$,
+  $$ select import_list(gen_random_uuid(), '{"title":"Імпорт битий 2"}', '[]', tests.payload(50, 30, '{"quantity":0}')) $$,
   '23514', null, 'кількість 0 посередині — check-обмеження бази спрацьовує'
 );
 select throws_ok(
-  $$ select import_list('{"title":"Імпорт битий 3"}', '[]',
+  $$ select import_list(gen_random_uuid(), '{"title":"Імпорт битий 3"}', '[]',
                         tests.payload(10, 5, jsonb_build_object('title', repeat('я', 201)))) $$,
   '23514', null, 'назва довша за 200 — відмова'
 );
 select throws_ok(
-  $$ select import_list('{"title":"Імпорт битий 4"}', '[]', tests.payload(10, 9, '{"url":"ftp://x"}')) $$,
+  $$ select import_list(gen_random_uuid(), '{"title":"Імпорт битий 4"}', '[]', tests.payload(10, 9, '{"url":"ftp://x"}')) $$,
   '23514', null, 'посилання не http(s) — відмова'
 );
 select throws_ok(
-  $$ select import_list('{"title":"Імпорт битий 5"}', '[]', tests.payload(1001)) $$,
+  $$ select import_list(gen_random_uuid(), '{"title":"Імпорт битий 5"}', '[]', tests.payload(1001)) $$,
   '22023', 'too_many_items', 'понад 1000 позицій — відмова (MAX_IMPORT_ITEMS)'
 );
 select throws_ok(
-  $$ select import_list('{"title":"Імпорт битий 6"}', '[{"key":"A","title":"Розділ битий"}]',
+  $$ select import_list(gen_random_uuid(), '{"title":"Імпорт битий 6"}', '[{"key":"A","title":"Розділ битий"}]',
                         '[{"title":"Річ","section_key":"Б"}]') $$,
   '23514', 'section_not_in_list', 'позиція з невідомим розділом — відмова'
 );
 select throws_ok(
-  $$ select import_list('{"title":"Імпорт битий 7"}',
+  $$ select import_list(gen_random_uuid(), '{"title":"Імпорт битий 7"}',
                         '[{"key":"A","title":"Розділ битий"},{"key":"A","title":"Розділ битий"}]', '[]') $$,
   '22023', 'duplicate_section', 'два розділи з однією міткою — відмова'
 );
 select throws_ok(
-  $$ select import_list(jsonb_build_object('title', repeat('н', 121)), '[]', tests.payload(3)) $$,
+  $$ select import_list(gen_random_uuid(), jsonb_build_object('title', repeat('н', 121)), '[]', tests.payload(3)) $$,
   '23514', null, 'назва списку довша за 120 — відмова'
 );
 select throws_ok(
-  $$ select import_list('{"title":"Імпорт битий 8"}', '[{"key":"A","title":""}]', tests.payload(3)) $$,
+  $$ select import_list(gen_random_uuid(), '{"title":"Імпорт битий 8"}', '[{"key":"A","title":""}]', tests.payload(3)) $$,
   '23514', null, 'порожня назва розділу — відмова'
 );
 reset role;
@@ -236,7 +238,7 @@ select lives_ok(
   'копії в свій список'
 );
 select is(
-  (select title from copy_items(null, '[{"title":"Копія 3"}]', '{"title":"Ще хочу новий","currency":"EUR"}')),
+  (select title from copy_items(gen_random_uuid(), '[{"title":"Копія 3"}]', '{"title":"Ще хочу новий","currency":"EUR"}')),
   'Ще хочу новий', 'копії в новий список — повертає сам список'
 );
 select throws_ok(
@@ -244,7 +246,7 @@ select throws_ok(
   '23514', null, 'від’ємна ціна в другій копії — відмова'
 );
 select throws_ok(
-  $$ select copy_items(null, '[{"title":"Копія битa 3","quantity":1000}]', '{"title":"Ще хочу битий"}') $$,
+  $$ select copy_items(gen_random_uuid(), '[{"title":"Копія битa 3","quantity":1000}]', '{"title":"Ще хочу битий"}') $$,
   '23514', null, 'невдалі копії в новий список — відмова'
 );
 reset role;
@@ -271,11 +273,11 @@ insert into sections (id, list_id, title, position) values
   ('c3200000-0000-4000-8000-0000000000e1', 'c3200000-0000-4000-8000-00000000000d', 'Кухня Y', 1);
 
 select throws_ok(
-  $$ select repeat_list('c3200000-0000-4000-8000-00000000000c', '{"title":"Повтор чужого"}', '[]', '[]') $$,
+  $$ select repeat_list('c3200000-0000-4000-8000-00000000000c', gen_random_uuid(), '{"title":"Повтор чужого"}', '[]', '[]') $$,
   'P0002', 'list_not_found', 'повтор чужого списку — відмова'
 );
 select throws_ok(
-  $$ select repeat_list('c3200000-0000-4000-8000-00000000000d', '{"title":"Повтор битий","currency":"EUR"}',
+  $$ select repeat_list('c3200000-0000-4000-8000-00000000000d', gen_random_uuid(), '{"title":"Повтор битий","currency":"EUR"}',
        '[{"key":"c3200000-0000-4000-8000-0000000000e1","title":"Кухня Y","position":1}]',
        '[{"title":"Чайник","section_key":"c3200000-0000-4000-8000-0000000000e1"},{"title":"Тостер","priority":"бозна"}]') $$,
   '22P02', null, 'повтор із забороненим значенням у другій позиції — відмова'
@@ -291,7 +293,7 @@ select is(
 
 select tests.as_user('c3200000-0000-4000-8000-000000000001');
 select is(
-  (select title from repeat_list('c3200000-0000-4000-8000-00000000000d',
+  (select title from repeat_list('c3200000-0000-4000-8000-00000000000d', gen_random_uuid(),
        '{"title":"Повтор 2027","currency":"EUR","event_date":"2027-12-24","repeats_yearly":true}',
        '[{"key":"c3200000-0000-4000-8000-0000000000e1","title":"Кухня Y","position":1}]',
        '[{"title":"Чайник","section_key":"c3200000-0000-4000-8000-0000000000e1","position":1},{"title":"Тостер"}]')),
@@ -318,6 +320,83 @@ select isnt(
   'c3200000-0000-4000-8000-0000000000e1'::uuid,
   'розділ джерела не перечеплено — створено копію'
 );
+
+-- ── id нового списку від клієнта: повтор дії ──
+-- Відповідь загубилась — клієнт шле ту саму дію з тим самим id: другого
+-- списку немає, повертається той самий. Чужий id — відмова без запису й без
+-- подробиць; не uuid — відмова.
+
+select tests.as_user('c3200000-0000-4000-8000-000000000001');
+select lives_ok(
+  $$ select import_list('c3200000-0000-4000-8000-0000000000a1', '{"title":"Повтор імпорту"}',
+       '[{"key":"K","title":"Розділ повтору"}]', '[{"title":"Повторна 1","section_key":"K"},{"title":"Повторна 2"}]') $$,
+  'імпорт з id від клієнта'
+);
+select is(
+  (select id from import_list('c3200000-0000-4000-8000-0000000000a1', '{"title":"Повтор імпорту 2"}',
+       '[{"key":"K","title":"Розділ повтору"}]', tests.payload(5))),
+  'c3200000-0000-4000-8000-0000000000a1'::uuid,
+  'повтор з тим самим id — успіх і той самий список'
+);
+reset role;
+select is(tests.lists_titled('Повтор імпорту') + tests.lists_titled('Повтор імпорту 2'), 1, 'другого списку не створено');
+select is(
+  (select count(*)::int from items where list_id = 'c3200000-0000-4000-8000-0000000000a1'), 2,
+  'позицій не подвоєно'
+);
+select is(tests.sections_titled('Розділ повтору'), 1, 'розділів не подвоєно');
+
+select tests.as_user('c3200000-0000-4000-8000-000000000001');
+select throws_ok(
+  $$ select import_list('c3200000-0000-4000-8000-00000000000c', '{"title":"Захоплення"}', '[]', '[{"title":"Підкинуте 2"}]') $$,
+  '23505', 'list_id_taken', 'імпорт з id чужого списку — відмова'
+);
+select throws_ok(
+  $$ select repeat_list('c3200000-0000-4000-8000-00000000000b', 'c3200000-0000-4000-8000-00000000000c',
+       '{"title":"Захоплення"}', '[]', '[{"title":"Підкинуте 2"}]') $$,
+  '23505', 'list_id_taken', 'повтор з id чужого списку — та сама відмова'
+);
+select throws_ok(
+  $$ select copy_items('c3200000-0000-4000-8000-00000000000c', '[{"title":"Підкинуте 2"}]', '{"title":"Захоплення"}') $$,
+  '23505', 'list_id_taken', '«Ще хочу» в новий список з id чужого — та сама відмова'
+);
+select throws_ok(
+  $$ select import_list('не-uuid', '{"title":"Захоплення"}', '[]', '[]') $$,
+  '22P02', null, 'не uuid — відмова'
+);
+select throws_ok(
+  $$ select import_list(null, '{"title":"Захоплення"}', '[]', '[]') $$,
+  '22023', 'bad_payload', 'без id — відмова'
+);
+reset role;
+select is(
+  (select title || ':' || owner_id from lists where id = 'c3200000-0000-4000-8000-00000000000c'),
+  'Чужий XL:c3200000-0000-4000-8000-000000000002', 'чужий список не змінився'
+);
+select is(tests.items_titled('Підкинуте 2') + tests.lists_titled('Захоплення'), 0, 'від відмов — жодного рядка');
+
+select tests.as_user('c3200000-0000-4000-8000-000000000001');
+select lives_ok(
+  $$ select repeat_list('c3200000-0000-4000-8000-00000000000b', 'c3200000-0000-4000-8000-0000000000a2',
+       '{"title":"Повтор L2"}', '[]', '[{"title":"Повтор L2 річ"}]') $$,
+  '«Повторити список» з id від клієнта'
+);
+select is(
+  (select id from repeat_list('c3200000-0000-4000-8000-00000000000b', 'c3200000-0000-4000-8000-0000000000a2',
+       '{"title":"Повтор L2"}', '[]', '[{"title":"Повтор L2 річ"}]')),
+  'c3200000-0000-4000-8000-0000000000a2'::uuid, 'повтор «Повторити» — той самий список'
+);
+select lives_ok(
+  $$ select copy_items('c3200000-0000-4000-8000-0000000000a3', '[{"title":"Ще хочу повтор"}]', '{"title":"Ще хочу повтор"}') $$,
+  '«Ще хочу» в новий список з id від клієнта'
+);
+select is(
+  (select id from copy_items('c3200000-0000-4000-8000-0000000000a3', '[{"title":"Ще хочу повтор"}]', '{"title":"Ще хочу повтор"}')),
+  'c3200000-0000-4000-8000-0000000000a3'::uuid, 'повтор «Ще хочу» — той самий список'
+);
+reset role;
+select is(tests.lists_titled('Повтор L2') + tests.items_titled('Повтор L2 річ'), 2, '«Повторити» двічі — один список з однією позицією');
+select is(tests.lists_titled('Ще хочу повтор') + tests.items_titled('Ще хочу повтор'), 2, '«Ще хочу» двічі — один список з однією копією');
 
 -- ── set_items_status ─────────────────────────
 

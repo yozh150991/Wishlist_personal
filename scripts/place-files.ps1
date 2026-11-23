@@ -293,6 +293,7 @@ $map = @{
   '20261025140000_signin_alerts.sql' = 'supabase\migrations'
   # ROADMAP 8.26: bulk operations in one transaction.
   '20261122210328_bulk_ops_rpc.sql' = 'supabase\migrations'
+  '20261123065430_bulk_ops_list_id.sql' = 'supabase\migrations'
   'bulk-ops.spec.ts' = 'app\tests\e2e'
   '14_guest_contact.test.sql' = 'supabase\tests\database'
   '15_guest_mail.test.sql' = 'supabase\tests\database'

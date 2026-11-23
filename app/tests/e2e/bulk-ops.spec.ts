@@ -4,7 +4,9 @@ import { hasAccount, itemCard, signIn, unique } from './helpers';
 
 /**
  * Імпорт однією транзакцією (ROADMAP 8.26): обрив мережі посеред імпорту не
- * лишає половини списку — у базі або нічого, або все.
+ * лишає половини списку — у базі або нічого, або все. А повторне натискання
+ * після загубленої відповіді не створює другого списку: id нового списку
+ * задає клієнт, один на дію.
  *
  * Обрив — `page.route` на RPC `import_list`: або запит не доходить до бази
  * зовсім, або доходить, а відповідь до сторінки — ні. «Усе або нічого» на
@@ -73,30 +75,41 @@ test.describe('масові дії однією транзакцією (ROADMAP 
     await expect(listCard(page, title)).toHaveCount(0);
   });
 
-  test('імпорт дійшов, а відповідь — ні: у базі весь список, а не половина', async ({ page }) => {
+  test('імпорт дійшов, а відповідь — ні: повторне «Імпортувати» не створює другого списку', async ({ page }) => {
     await signIn(page);
     const title = unique('Bulk import cut');
     const sheet = await startImport(page, title);
 
-    let calls = 0;
+    // Перший виклик доходить до бази, але відповідь до сторінки — ні; далі мережа є.
+    const ids: string[] = [];
     await page.route('**/rest/v1/rpc/import_list', async (route) => {
-      calls += 1;
-      await route.fetch();
-      await route.abort('failed');
+      ids.push((route.request().postDataJSON() as { p_list_id: string }).p_list_id);
+      if (ids.length === 1) {
+        await route.fetch();
+        await route.abort('failed');
+        return;
+      }
+      await route.continue();
     });
 
-    await sheet.getByRole('button', { name: new RegExp(`\\(${N}\\)`) }).click();
+    const submit = sheet.getByRole('button', { name: new RegExp(`\\(${N}\\)`) });
+    await submit.click();
     await expect(sheet.getByText(offline)).toBeVisible();
-    expect(calls).toBe(1);
 
-    await page.unroute('**/rest/v1/rpc/import_list');
-    await page.goto('/lists');
-    const card = listCard(page, title);
-    await expect(card).toHaveCount(1);
-    await card.click();
+    // Людина бачить «немає з'єднання» й натискає ще раз — у тому самому аркуші.
+    await submit.click();
     await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(ids[1]).toBe(ids[0]);
+    // Список цілий — усі позиції й обидва розділи, а не половина.
     await expect(itemCard(page, `${title} · річ`)).toHaveCount(N);
     await expect(page.getByRole('region', { name: /^Кухня · \d+$/ })).toBeVisible();
     await expect(page.getByRole('region', { name: /^Балкон · \d+$/ })).toBeVisible();
+
+    await page.unroute('**/rest/v1/rpc/import_list');
+    await page.goto('/lists');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(listCard(page, title)).toHaveCount(1);
   });
 });

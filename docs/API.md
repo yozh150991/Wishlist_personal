@@ -199,21 +199,27 @@ await supabase.rpc('reorder_sections', { p_list_id: listId, p_section_ids: ids }
 
 ### Масові дії — `import_list` / `repeat_list` / `copy_items` / `set_items_status` / `delete_items` — authenticated (ROADMAP 8.26)
 ```ts
-await supabase.rpc('import_list', { p_list, p_sections, p_items });                          // → новий список (рядок lists)
-await supabase.rpc('repeat_list', { p_source_list_id, p_list, p_sections, p_items });        // → новий список
-await supabase.rpc('copy_items', { p_list_id: targetId, p_items });                          // → цільовий список
-await supabase.rpc('copy_items', { p_list_id: null, p_items, p_new_list: { title, currency } }); // → новий список
+await supabase.rpc('import_list', { p_list_id: newId, p_list, p_sections, p_items });                 // → новий список (рядок lists)
+await supabase.rpc('repeat_list', { p_source_list_id, p_list_id: newId, p_list, p_sections, p_items }); // → новий список
+await supabase.rpc('copy_items', { p_list_id: targetId, p_items });                                    // → цільовий список
+await supabase.rpc('copy_items', { p_list_id: newId, p_items, p_new_list: { title, currency } });      // → новий список
 await supabase.rpc('set_items_status', { p_list_id, p_item_ids: ids, p_status: 'gifted' });  // 204
 await supabase.rpc('delete_items', { p_list_id, p_item_ids: ids });                          // 204
 ```
 Одна операція — один виклик, тіло — одна транзакція: усе або нічого. Обрив мережі посередині, як і помилка в будь-якій позиції, не лишає жодного рядка. Усі — `SECURITY INVOKER`: RLS, `check`-обмеження й тригери таблиць діють так само, як для одиночних запитів (`items_sync_owner`, `items_check_section`, `items_guest_deleted`…), функції прав не додають.
 
+- **Id нового списку задає клієнт** (`p_list_id` в `import_list` і `repeat_list`; у `copy_items` з `p_new_list` — сам `p_list_id`), один на дію: `newId()` при відкритті аркуша (і на новий файл в імпорті), той самий у кожному повторі. Так повторне натискання після загубленої відповіді не створює другого списку (міграція `20261123065430_bulk_ops_list_id.sql`):
+  - списку з цим id немає — створюється;
+  - є, і він свій — нічого не створюється й не змінюється вдруге (ні розділів, ні позицій, ні щорічної позначки джерела), відповідь — той самий список, як успіх;
+  - id зайнятий чужим списком — `list_id_taken` (`23505`), без запису й без жодних подробиць (ні власника, ні назви, ні рядка з ключем у помилці). Неминучий один біт — «цей uuid зайнятий» — стосується 122-бітного випадкового id, який викликач уже знає, і доступу не дає;
+  - не uuid — `22P02` ще до тіла функції; `null` — `bad_payload` (`22023`).
+  `lists.id` після створення, як і раніше, незмінний (ADR-038).
 - `p_list` — `{ title, description?, currency?, event_date?, repeats_yearly?, appearance_id? }`. Власник — завжди `auth.uid()`; `owner_id` з тіла ігнорується.
 - `p_sections` — `[{ key, title, position }]`: `key` — мітка клієнта, на яку посилаються позиції (назва з файлу, `id` розділу-джерела при повторі). Дві однакові мітки — `duplicate_section` (`22023`).
 - `p_items` — `[{ title, url?, price?, quantity?, priority?, note?, variants?, image_url?, status?, position?, needs_title?, currency?, section_key? }]`. `section_key` без пари в `p_sections` — `section_not_in_list` (`23514`). `id`, `owner_id`, `section_id`, `link_*`, `created_at` з тіла не беруться. Валюта, що збігається з валютою списку, приходить уже `null` (ADR-051, `ownCurrency`).
 - `import_list` — не більше 1000 позицій (`too_many_items`, `22023`), як `MAX_IMPORT_ITEMS` у `lib/transfer.ts`.
 - `repeat_list` — джерело мусить бути списком власника, інакше `list_not_found` (`P0002`) і нічого не створено. Щорічна позначка джерела знімається в тій самій транзакції (ADR-047).
-- `copy_items` — у свій список (`p_list_id`) або в новий (`p_list_id = null`, поля в `p_new_list`). Чужий чи видалений список — `list_not_found`. Розділів не переносить.
+- `copy_items` — у свій список (`p_list_id`) або в новий (поля в `p_new_list`, `p_list_id` — його id). Чужий чи видалений наявний список — `list_not_found`. Розділів не переносить. Копії в **наявний** список ключа ідемпотентності не мають: повтор після загубленої відповіді додасть копії вдруге.
 - `set_items_status`, `delete_items` — список мусить бути своїм (`list_not_found`). Позиції, яких у ньому немає (видалені, з іншого списку), пропускаються мовчки: повтор із черги змін ідемпотентний (ADR-029). Позначки гостей (§3.2): статус їх не чіпає зовсім, видалення — лише каскадом і тригером `items_guest_deleted`, що нічого не повертає й не падає. Відповідь власнику однакова, є позначки чи ні (ADR-038, ADR-055).
 - `insert_owner_list`, `insert_list_contents` — спільні кроки трьох перших. Застосунок їх напряму не викликає, але `authenticated` має на них `EXECUTE`, бо викликач `SECURITY INVOKER` функції — він (CLAUDE.md §3.4). Прав понад вставку під RLS вони не дають.
 
