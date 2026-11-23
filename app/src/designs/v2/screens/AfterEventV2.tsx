@@ -154,8 +154,8 @@ export function ArchivedNoteV2({ busy, onRestore }: { busy: boolean; onRestore: 
   );
 }
 
-/** Шапка вікна на весь екран: «Скасувати · Назва · (дія)». */
-function Bar({ titleId, title, onClose }: { titleId: string; title: string; onClose: () => void }) {
+/** Шапка вікна на весь екран: «Скасувати · Назва · (дія)». Її ж бере аркуш «Скопіювати в список» (пошук). */
+export function Bar({ titleId, title, onClose }: { titleId: string; title: string; onClose: () => void }) {
   const { t } = useI18n();
   return (
     <div className="v2-bar">

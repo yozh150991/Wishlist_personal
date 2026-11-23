@@ -2247,3 +2247,55 @@ div.v2-chips { gap: var(--sp-3); }
     font-size: max(16px, var(--t-item));
   }
 }
+
+/* ── Пошук по всіх списках (ROADMAP 8.11) ─────────────────── */
+
+/* Шапка головної: «Пошук» і «+» поруч. Підпис «Пошук» — лише на широкому
+   екрані (оформлення; назва посилання — в aria-label завжди). */
+.v2-page__actions { display: flex; align-items: center; gap: var(--sp-3); }
+.v2-searchlink { gap: var(--sp-2); min-width: 48px; padding-inline: var(--sp-4); }
+.v2-searchlink__label { display: none; }
+@media (min-width: 40rem) {
+  .v2-searchlink__label { display: inline; }
+}
+
+/* Ширше за форму, вужче за сітку списків: назва, нотатка й «Скопіювати» в рядок. */
+.v2-searchpage { max-width: 48rem; }
+.v2-search__copied { flex-wrap: wrap; }
+.v2-search__copied a { color: inherit; text-decoration: underline; }
+.v2-search__count { margin-bottom: var(--sp-3); }
+
+.v2-results { display: grid; gap: var(--sp-4); margin: 0; padding: 0; list-style: none; }
+/* Один рендер на обидві розкладки: на телефоні «Скопіювати» — під текстом,
+   на широкому — праворуч від нього. */
+.v2-result {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--color-surface);
+  border-radius: var(--r-card);
+}
+@media (min-width: 40rem) {
+  .v2-result { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+}
+.v2-result__main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--color-text);
+  text-decoration: none;
+  border-radius: calc(var(--r-card) - var(--sp-2));
+}
+.v2-result__main:hover { color: var(--color-text); background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface)); }
+.v2-result__title { font-size: var(--t-item); font-weight: 700; overflow-wrap: anywhere; }
+.v2-result__list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-result__listname { font-weight: 700; overflow-wrap: anywhere; }
+.v2-result__meta,
+.v2-result__note { font-size: var(--t-small); color: var(--color-neutral-700); overflow-wrap: anywhere; }
+.v2-result__copy { justify-self: start; margin-inline-start: var(--sp-2); }
+@media (min-width: 40rem) {
+  .v2-result__copy { justify-self: end; margin-inline: 0 var(--sp-2); }
+}
+/* Збіг — та сама пара, що значок «Високий» (check:contrast, «Збіг у пошуку»). */
+.v2-mark { padding: 0 1px; color: var(--color-accent-800); background: var(--color-accent-100); border-radius: 3px; }

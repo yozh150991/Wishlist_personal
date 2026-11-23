@@ -423,6 +423,22 @@ export async function fetchItemsPage(
   return (data ?? []) as Item[];
 }
 
+/**
+ * Пошук по всіх своїх списках, разом з архівом (ROADMAP 8.11): назва,
+ * нотатка, магазин і ознаки, без регістру й діакритики. RPC `search_my_items`
+ * працює з правами викликача — чуже відсіює RLS, як і в будь-якому іншому
+ * запиті власника. Правило збігу — те саме, що в `lib/search.ts`.
+ *
+ * `signal` скасовує застарілий запит, поки людина ще друкує.
+ */
+export async function searchMyItems(query: string, limit: number, signal?: AbortSignal): Promise<Item[]> {
+  let request = supabase.rpc('search_my_items', { p_query: query.trim(), p_limit: limit });
+  if (signal) request = request.abortSignal(signal);
+  const { data, error } = await request;
+  if (error) throw error;
+  return (data ?? []) as Item[];
+}
+
 export async function fetchTotals(listId: string): Promise<Totals | null> {
   const { data, error } = await supabase.rpc('list_totals', { p_list_id: listId });
   if (error) throw error;

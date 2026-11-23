@@ -24,6 +24,7 @@ const SharesV2 = lazy(() => owner().then((m) => ({ default: m.SharesV2 })));
 const GiftsV2 = lazy(() => owner().then((m) => ({ default: m.GiftsV2 })));
 const SettingsV2 = lazy(() => owner().then((m) => ({ default: m.SettingsV2 })));
 const AddV2 = lazy(() => owner().then((m) => ({ default: m.AddV2 })));
+const SearchV2 = lazy(() => owner().then((m) => ({ default: m.SearchV2 })));
 
 /**
  * Таблиця маршрутів застосунку.
@@ -117,6 +118,8 @@ export default function AppRoutes() {
       >
         <Route path="/lists" element={<ListsV2 />} />
         <Route path="/lists/new" element={<NewListV2 />} />
+        {/* Пошук по всіх списках (ROADMAP 8.11); запит — у стані історії, не в адресі. */}
+        <Route path="/search" element={<SearchV2 />} />
         <Route path="/lists/:id" element={<ListV2 />} />
         <Route path="/lists/:id/preview" element={<PreviewRedirect />} />
         <Route path="/shares" element={<SharesV2 />} />

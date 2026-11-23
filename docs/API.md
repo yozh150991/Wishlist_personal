@@ -214,6 +214,17 @@ const { data } = await supabase.rpc('list_items_page', {
 ```
 Повернулося менше `p_limit` рядків → кінець списку. `p_limit` поза переліком, зокрема `null`, — `bad_limit`; `p_sort` поза переліком — `bad_sort`. Пошук — підрядок назви без регістру, буквально: `%`, `_` і `\` у ньому — звичайні символи (ADR-070).
 
+### `search_my_items` — authenticated
+```ts
+const { data } = await supabase.rpc('search_my_items', {
+  p_query: 'зимові свята',     // до 100 символів; слова через пробіл
+  p_limit: 51,                 // 1…100; екран просить 51, показує 50
+});                            // → items[] (ті самі рядки, що list_items_page)
+```
+Пошук по всіх своїх списках, разом з архівом (ROADMAP 8.11; `lib/db.ts`, `searchMyItems`). Кожне слово запиту — підрядок хоч одного поля: назви, нотатки, магазину (хост `url` без `www.` або `source_site`) чи ознаки (`variants`: підпис і значення). Поля склеєно переносом рядка, тож слово не зшиває два поля; шлях адреси — не магазин. Регістр і діакритика не важать: обидва боки проходять `lower()` і `translate()` з однією таблицею літер (польські ą/ł/ż…, західноєвропейські наголоси, ї/є/ґ/й, апострофи ’ ‘ ʼ \`) — та сама таблиця в `lib/search.ts` (`FOLD_FROM`/`FOLD_TO`), і тест `search.spec.ts` звіряє їх із міграцією. Розширення `unaccent` не потрібне. `%`, `_` і `\` — звичайні символи (`strpos`, не `LIKE`). Беруться перші 8 слів; порожній запит — порожня відповідь. Порядок: спершу ті, де все знайшлося в назві, далі живі списки перед архівом, далі свіжіше змінені, далі `id`. `p_limit` поза 1…100 чи `null` — `bad_limit`, запит понад 100 символів — `bad_query` (обидва `22023`; поле пошуку має `maxLength` 100).
+
+`SECURITY INVOKER`: чуже відсіюють `items_select_own` і `lists_select_own`, а `owner_id = auth.uid()` у тілі лише дає планувальнику `items_owner_idx`. Позначок гостей не читає. `anon` — `42501`. Перевіряє `supabase/tests/database/33_search_my_items.test.sql`.
+
 ### `list_totals` — authenticated
 ```ts
 const { data } = await supabase.rpc('list_totals', { p_list_id: listId });
@@ -274,7 +285,7 @@ await supabase.auth.signOut({ scope: 'global' });
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
 | `ack_claim_change`, `get_share_card`, `report_share`, `start_pool`, `pledge_pool`, `leave_pool`, `close_pool`, `cancel_pool` | `anon`, `authenticated` |
 | `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
-| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account`, `reserve_item_photo`, `forget_all_push_subscriptions` | `authenticated` |
+| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account`, `reserve_item_photo`, `forget_all_push_subscriptions`, `search_my_items` | `authenticated` |
 | `item_photo_orphans`, `forget_item_photos`, `recent_sign_ins` | лише `service_role` (`wishlist-jobs`) |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 

@@ -263,6 +263,10 @@ export default function ListV2() {
   const [flash, setFlash] = useState<string | null>(null);
   /** З нагадування про щорічне свято — «Повторити» відкриється, щойно позиції завантажаться. */
   const [repeatAsked, setRepeatAsked] = useState(false);
+  /** З пошуку по всіх списках (8.11): до якої позиції докрутити, щойно позиції завантажаться. */
+  const [focusItem, setFocusItem] = useState<string | null>(null);
+  /** Позиція з пошуку — серед купленого й подарованого: розгорнути той блок. */
+  const [revealDone, setRevealDone] = useState(false);
 
   const undo = useUndo(UNDO_MS);
 
@@ -286,15 +290,18 @@ export default function ListV2() {
   // Перший запуск «Вставити посилання на річ» (Q2) веде сюди з одразу
   // відкритою формою позиції. Стан історії чистимо, щоб F5 не відкривав її знову.
   useEffect(() => {
-    const state = location.state as { add?: boolean; flash?: string; repeat?: boolean } | null;
-    if (!state?.add && !state?.flash && !state?.repeat) {
+    const state = location.state as { add?: boolean; flash?: string; repeat?: boolean; item?: unknown } | null;
+    setRevealDone(false);
+    if (!state?.add && !state?.flash && !state?.repeat && typeof state?.item !== 'string') {
       setFlash(null);
+      setFocusItem(null);
       return;
     }
     navigate(location.pathname, { replace: true, state: null });
     if (state.add) setSheet({ open: true, item: null });
     setFlash(state.flash ?? null);
     setRepeatAsked(Boolean(state.repeat));
+    setFocusItem(typeof state.item === 'string' ? state.item : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -339,6 +346,18 @@ export default function ListV2() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, userId]);
+
+  // З пошуку (8.11): щойно позиція на екрані — підсвітити й докрутити, як
+  // нову картку. Куплене й подароване спершу розгортаємо, інакше прокручувати
+  // нема до чого. Позиції немає (видалили) — просто відкритий список.
+  useEffect(() => {
+    if (!focusItem || loading) return;
+    const target = items.find((i) => i.id === focusItem);
+    setFocusItem(null);
+    if (!target) return;
+    if (target.status !== 'active') setRevealDone(true);
+    setHighlight(target.id);
+  }, [focusItem, loading, items]);
 
   // Нова картка: докрутити до неї й підсвітити на дві секунди.
   useEffect(() => {
@@ -1205,7 +1224,7 @@ export default function ListV2() {
             ),
           )}
           {done.length > 0 && (
-            <details className="v2-done" open={activeShown === 0 || selecting || undefined}>
+            <details className="v2-done" open={activeShown === 0 || selecting || revealDone || undefined}>
               <summary className="v2-done__summary">
                 {t('v2list.group.done')} · {done.length}
               </summary>

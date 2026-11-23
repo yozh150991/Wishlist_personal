@@ -95,6 +95,33 @@ export async function readSnapshot<T>(key: string, userId: string): Promise<Snap
 }
 
 /**
+ * Усі збережені позиції власника — для пошуку без мережі (ROADMAP 8.11).
+ *
+ * Перша партія (`items:`) і повний список (`items-all:`) лежать під ключами з
+ * тим самим початком, тож беремо їх одним діапазоном. Списки, яких на цьому
+ * пристрої не відкривали, сюди не потрапляють — тому екран пошуку чесно каже,
+ * що результат без мережі може бути неповним. Повний список іде першим:
+ * `searchLocal` бере кожну позицію лише раз, і хай це буде копія з повного.
+ */
+export async function readItemSnapshots(userId: string): Promise<Item[]> {
+  if (!userId) return [];
+  const db = await openDb();
+  if (!db) return [];
+  try {
+    const tx = db.transaction(SNAPSHOTS, 'readonly');
+    const range = IDBKeyRange.bound('items', 'items\uffff');
+    const records = ((await req(tx.objectStore(SNAPSHOTS).getAll(range))) ?? []) as Record_<ItemsSnapshot>[];
+    const own = records.filter((r) => r.userId === userId && Array.isArray(r.data?.items));
+    own.sort((a, b) => Number(b.key.startsWith('items-all:')) - Number(a.key.startsWith('items-all:')));
+    return own.flatMap((r) => r.data.items);
+  } catch {
+    return [];
+  } finally {
+    db.close();
+  }
+}
+
+/**
  * Змінює збережений знімок на місці, не чіпаючи час збереження.
  *
  * Потрібно черзі змін (етап 6.5): позначку «подаровано», зроблену офлайн, має
