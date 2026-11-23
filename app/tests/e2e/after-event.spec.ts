@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   addDays,
   afterEventDue,
+  afterEventHome,
   copyInput,
   daysBetween,
   eventYear,
@@ -10,11 +11,15 @@ import {
   nextYear,
   openItems,
   repeatTarget,
+  readSnooze,
   repeatTitle,
+  snoozeLater,
   snoozeNext,
   yearlyDue,
+  yearlyReminders,
 } from '../../src/lib/afterEvent';
-import type { Item } from '../../src/lib/types';
+import type { Snooze } from '../../src/lib/afterEvent';
+import type { Item, List } from '../../src/lib/types';
 
 // Чисті правила «Після події» й «Повторити на наступний рік» (lib/afterEvent.ts,
 // ADR-045): ні сторінки, ні браузера — як items-view.spec.ts.
@@ -208,5 +213,116 @@ test.describe('щорічні свята (ADR-047)', () => {
     const list = { event_date: '2025-10-18', repeats_yearly: true };
     expect(yearlyDue(list, '2026-10-01', '2026-10-18')).toBeNull();
     expect(yearlyDue(list, '2027-10-01', '2026-10-18')).toEqual({ date: '2027-10-18', days: 17 });
+  });
+});
+
+test.describe('головна: «Як минуло свято?» (8.13)', () => {
+  type Home = Pick<List, 'id' | 'title' | 'event_date' | 'is_archived' | 'repeats_yearly' | 'active_count'>;
+  const home = (over: Partial<Home> & { id: string }): Home => ({
+    title: over.id,
+    event_date: '2026-10-18',
+    is_archived: false,
+    repeats_yearly: false,
+    active_count: 2,
+    ...over,
+  });
+  const none = () => null;
+  const ids = (lists: Home[]) => lists.map((l) => l.id);
+
+  test('ті самі правила, що й на сторінці списку: з наступного дня, не архів, з датою', () => {
+    const lists = [
+      home({ id: 'today', event_date: '2026-10-19' }),
+      home({ id: 'yesterday', event_date: '2026-10-18' }),
+      home({ id: 'archived', is_archived: true }),
+      home({ id: 'undated', event_date: null }),
+      home({ id: 'soon', event_date: '2026-11-01' }),
+    ];
+    expect(ids(afterEventHome(lists, '2026-10-19', none))).toEqual(['yesterday']);
+  });
+
+  test('лише там, де актуальні позиції ще є — розібране на головній не нагадує', () => {
+    const lists = [home({ id: 'open' }), home({ id: 'done', active_count: 0 }), home({ id: 'old', active_count: undefined })];
+    expect(ids(afterEventHome(lists, '2026-10-19', none))).toEqual(['open']);
+  });
+
+  test('найсвіжіше свято — першим, однакові дати — за назвою', () => {
+    const lists = [
+      home({ id: 'a', title: 'Весілля', event_date: '2026-09-01' }),
+      home({ id: 'b', title: 'Різдво', event_date: '2026-10-18' }),
+      home({ id: 'c', title: 'Іменини', event_date: '2026-10-18' }),
+    ];
+    expect(ids(afterEventHome(lists, '2026-10-19', none))).toEqual(['c', 'b', 'a']);
+  });
+
+  test('«Пізніше» — той самий стан, що й на сторінці списку: три дні, потім ще раз, потім назовсім', () => {
+    const list = home({ id: 'l' });
+    const first = snoozeNext(null, '2026-10-18', '2026-10-19');
+    const second = snoozeNext(first, '2026-10-18', '2026-10-22');
+    const of = (s: Snooze | null) => () => s;
+    expect(ids(afterEventHome([list], '2026-10-20', of(first)))).toEqual([]);
+    expect(ids(afterEventHome([list], '2026-10-22', of(first)))).toEqual(['l']);
+    expect(ids(afterEventHome([list], '2027-01-01', of(second)))).toEqual([]);
+    // Перенесли дату — відлік спочатку, як і на сторінці списку.
+    expect(ids(afterEventHome([{ ...list, event_date: '2026-12-01' }], '2026-12-02', of(second)))).toEqual(['l']);
+  });
+
+  test('«Пізніше» з головної й зі сторінки списку — один відлік на пристрої', () => {
+    const store = new Map<string, string>();
+    const fake = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+    const g = globalThis as { localStorage?: unknown };
+    const before = g.localStorage;
+    g.localStorage = fake;
+    try {
+      // Головна: перше «Пізніше».
+      const fromHome = snoozeLater('l1', '2026-10-18', '2026-10-19');
+      expect(fromHome.count).toBe(1);
+      expect(readSnooze('l1')).toEqual(fromHome);
+      // Сторінка списку відкрилась раніше й нічого не знала (known = null) —
+      // її «Пізніше» все одно друге, тобто назовсім.
+      const fromList = snoozeLater('l1', '2026-10-18', '2026-10-22', null);
+      expect(fromList.count).toBe(2);
+      expect(afterEventDue({ event_date: '2026-10-18', is_archived: false }, '2027-01-01', readSnooze('l1'))).toBe(false);
+      // Інший список — свій відлік.
+      expect(snoozeLater('l2', '2026-10-18', '2026-10-19').count).toBe(1);
+    } finally {
+      g.localStorage = before;
+    }
+  });
+
+  test('сховище не пише — відлік продовжує те, що екран уже знає', () => {
+    const known = snoozeNext(null, '2026-10-18', '2026-10-19');
+    expect(snoozeLater('l1', '2026-10-18', '2026-10-22', known).count).toBe(2);
+  });
+
+  test('щорічне у вікні нагадування — лише нагадування; «Не цього разу» картки не воскрешає', () => {
+    // Свято 2025-12-10, сьогодні 2026-11-22: до річниці 18 днів.
+    const yearly = home({ id: 'y', event_date: '2025-12-10', repeats_yearly: true });
+    const plain = home({ id: 'p', event_date: '2025-12-10' });
+    const today = '2026-11-22';
+    expect(yearlyReminders([yearly, plain], today, none).map((r) => r.list.id)).toEqual(['y']);
+    expect(ids(afterEventHome([yearly, plain], today, none))).toEqual(['p']);
+    // «Не цього разу»: нагадування немає, а картка все одно мовчить до кінця вікна.
+    expect(yearlyReminders([yearly], today, () => '2026-12-10')).toEqual([]);
+    expect(ids(afterEventHome([yearly], today, none))).toEqual([]);
+    // Вікно минуло (річниця позаду) — картка повертається, як на сторінці списку.
+    expect(ids(afterEventHome([yearly], '2026-12-11', none))).toEqual(['y']);
+  });
+
+  test('щорічне одразу після свята — картка є: до наступної річниці ще рік', () => {
+    const yearly = home({ id: 'y', event_date: '2026-10-18', repeats_yearly: true });
+    expect(yearlyReminders([yearly], '2026-10-19', none)).toEqual([]);
+    expect(ids(afterEventHome([yearly], '2026-10-19', none))).toEqual(['y']);
+  });
+
+  test('нагадування — найближча річниця першою, архівні теж', () => {
+    const lists = [
+      home({ id: 'late', event_date: '2025-12-15', repeats_yearly: true }),
+      home({ id: 'arch', event_date: '2025-12-01', repeats_yearly: true, is_archived: true }),
+    ];
+    expect(yearlyReminders(lists, '2026-11-22', none).map((r) => r.list.id)).toEqual(['arch', 'late']);
   });
 });
