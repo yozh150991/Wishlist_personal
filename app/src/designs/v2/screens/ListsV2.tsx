@@ -13,13 +13,22 @@ import { formatDateTime, formatDay, localToday } from '../../../lib/format';
 import { LISTS_KEY, readSnapshot, saveSnapshot } from '../../../lib/cache';
 import { overlayVars } from '../../../lib/hue-ramp.js';
 import { useUndo } from '../../../lib/undo';
-import { readYearlyDismissed, writeYearlyDismissed, yearlyDue } from '../../../lib/afterEvent';
+import {
+  afterEventHome,
+  readSnooze,
+  readYearlyDismissed,
+  snoozeLater,
+  writeYearlyDismissed,
+  yearlyReminders,
+} from '../../../lib/afterEvent';
+import type { Snooze } from '../../../lib/afterEvent';
 import type { Currency, List } from '../../../lib/types';
 import type { TransferItem, TransferList } from '../../../lib/transfer';
 import { NoteV2 } from './AuthPartsV2';
 import { useCounts } from './CommonV2';
 import { UndoToastV2 } from './ListPartsV2';
 import { ImportSheetV2 } from './ImportSheetV2';
+import { AfterEventHomeV2 } from './AfterEventV2';
 
 /** Стрічка «Вітаю!» після входу живе стільки (A4). */
 const WELCOME_MS = 4000;
@@ -85,6 +94,11 @@ function day(iso: string): Date {
  * «Повторити на 2027» веде в список із відкритим повтором, «Не цього разу»
  * ховає нагадування до наступної річниці.
  *
+ * Під ними — одна картка «Як минуло свято?» на всі минулі свята з
+ * нерозібраним (8.13, `afterEventHome`): кроки ведуть у список із відкритим
+ * вікном, «Пізніше» — той самий стан, що й на сторінці списку. Список у вікні
+ * щорічного нагадування в картку не потрапляє: про нього говорить нагадування.
+ *
  * Сюди ж повертається видалення списку зі сторінки списку: той, посилання на
  * який ніхто не відкривав, зникає одразу й видаляється після тосту
  * «Відмінити» (F3); видалений остаточно — рядок «Список … видалено».
@@ -124,6 +138,8 @@ export default function ListsV2() {
   }, [userId]);
   /** «Не цього разу» в цьому відкритті — щоб картка зникла одразу, без перечитування сховища. */
   const [notNow, setNotNow] = useState<Set<string>>(new Set());
+  /** «Пізніше» в цьому відкритті — поверх сховища, що в приватному режимі не пише. */
+  const [snoozed, setSnoozed] = useState<Map<string, Snooze>>(new Map());
   const undo = useUndo(UNDO_MS);
 
   // Стан історії — раз: чистимо одразу, інакше F5 показав би «Вітаю!» знову.
@@ -236,14 +252,21 @@ export default function ListsV2() {
 
   /** Щорічні свята, до річниці яких не більше місяця (U3). Архівні теж: саме з архіву й повторюють. */
   const reminders = useMemo(
-    () =>
-      visible
-        .filter((l) => !notNow.has(l.id))
-        .map((l) => ({ list: l, due: yearlyDue(l, today, readYearlyDismissed(l.id)) }))
-        .filter((r): r is { list: List; due: { date: string; days: number } } => r.due !== null)
-        .sort((a, b) => a.due.date.localeCompare(b.due.date)),
+    () => yearlyReminders(visible.filter((l) => !notNow.has(l.id)), today, readYearlyDismissed),
     [visible, today, notNow],
   );
+
+  /** «Як минуло свято?» (8.13): ті самі правила, що й на сторінці списку. */
+  const afterLists = useMemo(
+    () => afterEventHome(visible, today, (id) => snoozed.get(id) ?? readSnooze(id)),
+    [visible, today, snoozed],
+  );
+
+  function laterFor(l: List) {
+    if (!l.event_date) return;
+    const next = snoozeLater(l.id, l.event_date, today, snoozed.get(l.id) ?? null);
+    setSnoozed((prev) => new Map(prev).set(l.id, next));
+  }
 
   function skipYear(l: List, date: string) {
     writeYearlyDismissed(l.id, date);
@@ -491,7 +514,7 @@ export default function ListsV2() {
                 </h2>
                 <p className="v2-hint v2-hint--start">{t('v2yearly.body')}</p>
                 <div className="v2-yearly__actions">
-                  <Link to={`/lists/${l.id}`} state={{ repeat: true }} className="v2-btn v2-btn--primary">
+                  <Link to={`/lists/${l.id}`} state={{ after: 'repeat' }} className="v2-btn v2-btn--primary">
                     <Repeat size={20} strokeWidth={2.75} aria-hidden="true" />
                     {t('v2after.card.repeat', { year })}
                   </Link>
@@ -502,6 +525,7 @@ export default function ListsV2() {
               </section>
             );
           })}
+          <AfterEventHomeV2 lists={afterLists} onLater={laterFor} />
           {(groups.soon.length > 0 || groups.undated.length > 0) && (
             <section aria-labelledby="v2-soon">
               <h2 className="v2-kicker" id="v2-soon">
