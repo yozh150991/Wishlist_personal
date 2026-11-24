@@ -119,7 +119,10 @@ test('копія → відновлення: новий список із роз
   await page.getByRole('link', { name: new RegExp(escapeRegExp(restored)) }).first().click();
   await expect(page.getByRole('heading', { level: 1, name: restored })).toBeVisible();
   await expect(ownerTitles(page, 'Кухня')).toHaveText(['Сковорода', 'Дошка']);
-  await expect(ownerTitles(page, 'Балкон')).toHaveText(['Крісло']);
+  // «Крісло» куплене: власник бачить його не в розділі, а в згорнутому
+  // «Куплене й подароване» — статус відновився разом із позицією.
+  await expect(page.getByRole('region', { name: /^Балкон · \d+$/ })).toBeVisible();
+  await expect(page.locator('.v2-done .v2-item__title')).toHaveText(['Крісло']);
   await expect(ownerTitles(page, 'Інше|Inne|Other')).toHaveText(['Лампа']);
   await expect(page.getByRole('region', { name: /^Порожній · 0$/ })).toBeVisible();
 
