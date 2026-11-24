@@ -1334,5 +1334,28 @@
     },
     "link": "Privacy policy",
     "back": "Back"
+  },
+  "v2shareEdit": {
+    "visible": "{n} of {m} visible",
+    "edit": "Change items",
+    "editLabel": "Change items in the link “{title}”",
+    "title": "Items in “{title}”",
+    "loading": "Loading items…",
+    "save": "Save items",
+    "saving": "Saving…",
+    "saved": "Items in “{title}” updated. Guests will see the changes at the same link.",
+    "addNote": "Guests will see new items at the same link — no need to send a new one.",
+    "removeNote": "Removed items disappear for guests at this link. If someone picked an item and it isn't in any other live link of this list, we'll release the pick and email the guest if they left an address. You won't find out whether there are any.",
+    "notLive": "This link no longer works, so its items can't be changed. Refresh the page.",
+    "askOne": "Add “{item}” to the link “{share}”?",
+    "askMany": "Add “{item}” to a link?",
+    "askHint": "Guests will see it at the same link. Nothing gets added there on its own.",
+    "add": "Add",
+    "adding": "Adding…",
+    "notNow": "Not now",
+    "added": "Added to links: {n}.",
+    "pickOne": "Choose at least one link.",
+    "listTag": "Open to guests",
+    "itemTag": "Guests see this"
   }
 }

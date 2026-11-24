@@ -516,3 +516,37 @@ def test_pool_letters_render_in_every_locale(locale, kind):
     letter = render(kind, locale, item="", list_title="L", code="K7M2Q", url="u", unsubscribe="x",
                     details={**POOL, "name": "N", "amount": "10", "reason": "deleted"})
     assert letter.subject and letter.text and "{" not in letter.text
+
+
+# ── 8.9: позицію прибрали з посилання ────────
+
+
+def test_unshared_letter_says_item_is_gone_from_the_link():
+    job = Job.from_row(row(kind="deleted", item=None, details={"title": "Ваза", "reason": "unshared"}), NOW)
+    assert skip_reason(job) is None
+    letter = render("deleted", "uk", item="", list_title="Новосілля", code="K7M2Q", url="u", unsubscribe="x",
+                    details=job.details)
+    assert "Позиції «Ваза» більше немає в списку «Новосілля», який вам надіслали." in letter.text
+    assert "Бронь знято автоматично" in letter.text
+    # Тема та сама нейтральна, що й для видалення: пошта не приватна.
+    assert letter.subject == render("deleted", "uk", item="", list_title="L", code="K", url="u", unsubscribe="x",
+                                    details={"title": "A"}).subject
+    assert "Ваза" not in letter.subject
+    bought = render("deleted", "en", item="", list_title="Party", code="K7M2Q", url="u", unsubscribe="x",
+                    details={"title": "Lamp", "reason": "unshared", "bought": "2026-10-03"})
+    assert "is no longer on “Party”" in bought.text and "You marked it as bought" in bought.text
+
+
+def test_pool_cancel_unshared_says_item_is_gone():
+    letter = render("pool_cancel", "uk", item="", list_title="Новосілля", code="K7M2Q", url="u", unsubscribe="x",
+                    details={**POOL, "reason": "unshared", "amount": "50"})
+    assert "Позиції «Кавоварка» більше немає в списку «Новосілля»" in letter.text
+    assert "скасовано" not in letter.text
+
+
+@pytest.mark.parametrize("locale", guest_mail.LOCALES)
+def test_unshared_letters_render_in_every_locale(locale):
+    for kind in ("deleted", "pool_cancel"):
+        letter = render(kind, locale, item="", list_title="L", code="K7M2Q", url="u", unsubscribe="x",
+                        details={**POOL, "amount": "10", "reason": "unshared"})
+        assert letter.subject and letter.text and "{" not in letter.text

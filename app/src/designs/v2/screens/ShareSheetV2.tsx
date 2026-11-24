@@ -6,7 +6,7 @@ import { errorText } from '../../../lib/errors';
 import { localToday, moneyShort } from '../../../lib/format';
 import { useMediaQuery } from '../../../lib/media';
 import { createShare, revokeShare, shareUrl } from '../../../lib/shares';
-import type { List } from '../../../lib/types';
+import type { Currency, Item, List } from '../../../lib/types';
 import { DateFieldV2, FieldV2, IconCircleV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { SheetV2, SwitchV2, useCounts } from './CommonV2';
 import { ConfirmSheetV2 } from './ListPartsV2';
@@ -18,6 +18,75 @@ import { DESKTOP } from '../ShellV2';
 /** Межі з `shares` і форми v1: заголовок до 120, повідомлення до 1000. */
 const TITLE_MAX = 120;
 const MESSAGE_MAX = 1000;
+
+/**
+ * «Що побачать гості · 13 з 15 · 2 приховано» — спільне для «Поділитися» й
+ * «Змінити склад» (8.9): той самий рядок, а не копія.
+ */
+export function ShareSummaryV2({ chosen, all }: { chosen: number; all: number }) {
+  const { t } = useI18n();
+  const hidden = all - chosen;
+  return (
+    <p className="v2-share__summary">
+      <span className="v2-share__summary-label">{t('v2share.whatGuestsSee')}</span>
+      <span className="v2-share__summary-count">
+        {t('v2share.chosen', { n: chosen, m: all })}
+        {hidden > 0 && ` · ${t('v2share.hiddenShort', { n: hidden })}`}
+      </span>
+    </p>
+  );
+}
+
+/** Вибір видимих позицій: «Усі / Жодної» і прапорець на кожну (D, H, W1; 8.9). */
+export function SharePickListV2({
+  items,
+  selected,
+  currency,
+  onChange,
+}: {
+  items: Item[];
+  selected: Set<string>;
+  currency: Currency;
+  onChange: (next: Set<string>) => void;
+}) {
+  const { t, locale } = useI18n();
+  function toggle(id: string) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange(next);
+  }
+  return (
+    <fieldset className="v2-pick">
+      <legend className="v2-sr">{t('v2share.whatGuestsSee')}</legend>
+      <div className="v2-pick__bulk">
+        <button type="button" className="v2-btn v2-btn--ghost" onClick={() => onChange(new Set(items.map((i) => i.id)))}>
+          {t('v2share.all')}
+        </button>
+        <button type="button" className="v2-btn v2-btn--ghost" onClick={() => onChange(new Set())}>
+          {t('v2share.none')}
+        </button>
+      </div>
+      <ul className="v2-pick__list">
+        {items.map((item) => {
+          const on = selected.has(item.id);
+          const price = moneyShort(item.price, itemCurrency(item, currency), locale);
+          return (
+            <li key={item.id}>
+              <label className="v2-pick__row" data-on={on || undefined}>
+                <input type="checkbox" checked={on} onChange={() => toggle(item.id)} />
+                <span className="v2-pick__text">
+                  <span className="v2-pick__name">{item.title}</span>
+                  <span className="v2-pick__meta">{on ? price ?? t('v2list.item.noPrice') : t('v2share.notIncluded')}</span>
+                </span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </fieldset>
+  );
+}
 
 type Step = 'form' | 'pick' | 'preview' | 'creating' | 'done' | 'revoked';
 
@@ -56,7 +125,7 @@ export function ShareSheetV2({
   preselect?: string[];
   onClose: () => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const counts = useCounts();
   const desktop = useMediaQuery(DESKTOP);
   const titleId = useId();
@@ -107,15 +176,6 @@ export function ShareSheetV2({
   const titleError = submitted && !title.trim() ? t('share.errors.titleRequired') : null;
   const pastError = expiresOn && expiresOn < localToday() ? t('share.errors.expiresInPast') : null;
   const noneError = submitted && chosen.length === 0 ? t('share.errors.nothingSelected') : null;
-
-  function toggle(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   async function create() {
     if (busy.current || !list) return;
@@ -196,45 +256,10 @@ export function ShareSheetV2({
 
   /* ── Частини ── */
 
-  const summary = (
-    <p className="v2-share__summary">
-      <span className="v2-share__summary-label">{t('v2share.whatGuestsSee')}</span>
-      <span className="v2-share__summary-count">
-        {t('v2share.chosen', { n: chosen.length, m: all.length })}
-        {hidden > 0 && ` · ${t('v2share.hiddenShort', { n: hidden })}`}
-      </span>
-    </p>
-  );
+  const summary = <ShareSummaryV2 chosen={chosen.length} all={all.length} />;
 
   const pickList = (
-    <fieldset className="v2-pick">
-      <legend className="v2-sr">{t('v2share.whatGuestsSee')}</legend>
-      <div className="v2-pick__bulk">
-        <button type="button" className="v2-btn v2-btn--ghost" onClick={() => setSelected(new Set(all.map((i) => i.id)))}>
-          {t('v2share.all')}
-        </button>
-        <button type="button" className="v2-btn v2-btn--ghost" onClick={() => setSelected(new Set())}>
-          {t('v2share.none')}
-        </button>
-      </div>
-      <ul className="v2-pick__list">
-        {all.map((item) => {
-          const on = selected.has(item.id);
-          const price = moneyShort(item.price, itemCurrency(item, list?.currency ?? 'PLN'), locale);
-          return (
-            <li key={item.id}>
-              <label className="v2-pick__row" data-on={on || undefined}>
-                <input type="checkbox" checked={on} onChange={() => toggle(item.id)} />
-                <span className="v2-pick__text">
-                  <span className="v2-pick__name">{item.title}</span>
-                  <span className="v2-pick__meta">{on ? price ?? t('v2list.item.noPrice') : t('v2share.notIncluded')}</span>
-                </span>
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-    </fieldset>
+    <SharePickListV2 items={all} selected={selected} currency={list?.currency ?? 'PLN'} onChange={setSelected} />
   );
 
   const preview = list && (

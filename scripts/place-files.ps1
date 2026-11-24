@@ -97,6 +97,7 @@ $map = @{
   '29_delete_account.test.sql' = 'supabase\tests\database'
   '30_item_photos.test.sql' = 'supabase\tests\database'
   '31_signin_alerts.test.sql' = 'supabase\tests\database'
+  '36_share_edit_items.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -176,6 +177,8 @@ $map = @{
   'ShareSheetV2.tsx' = 'app\src\designs\v2\screens'; 'PreviewV2.tsx' = 'app\src\designs\v2\screens'
   'AppearanceSheetV2.tsx' = 'app\src\designs\v2\screens'; 'ListSettingsV2.tsx' = 'app\src\designs\v2\screens'
   'ReorderV2.tsx' = 'app\src\designs\v2\screens'
+  # 8.9: change a live link's items, add a new item to links.
+  'ShareEditV2.tsx' = 'app\src\designs\v2\screens'; 'share-edit.spec.ts' = 'app\tests\e2e'
   # Design v2 step 3c: my links, settings; outbox flushing shared by both designs.
   'SharesV2.tsx' = 'app\src\designs\v2\screens'; 'SettingsV2.tsx' = 'app\src\designs\v2\screens'
   'useOutbox.ts' = 'app\src\lib'
@@ -290,6 +293,7 @@ $map = @{
   '20261025100000_delete_account.sql' = 'supabase\migrations'
   '20261025120000_item_photos.sql' = 'supabase\migrations'
   '20261025140000_signin_alerts.sql' = 'supabase\migrations'
+  '20261123070042_share_edit_items.sql' = 'supabase\migrations'
   '14_guest_contact.test.sql' = 'supabase\tests\database'
   '15_guest_mail.test.sql' = 'supabase\tests\database'
   '16_guest_changes.test.sql' = 'supabase\tests\database'

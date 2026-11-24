@@ -87,9 +87,13 @@ select set_eq(
   -- нічого не повертає й ковтає помилки.
   -- ADR-062: get_my_gifts — «Я дарую»: лише власні позначки користувача на
   -- чужих списках.
+  -- 8.9: guest_item_unshared_trg — позицію прибрали з останнього живого
+  -- посилання: броні знімаються мовчки, гостям — лист у чергу; тригер нічого
+  -- не повертає й ковтає помилки.
   array['get_shared_list', 'claim_item', 'release_claim', 'redeem_guest_code', 'release_item_claims',
         'get_guest_list', 'ack_claim_change', 'guest_item_changed_trg', 'guest_item_deleted_trg',
-        'enqueue_guest_reminders', 'set_claim_bought', 'lists_thanks_mail_trg', 'get_my_gifts'],
+        'enqueue_guest_reminders', 'set_claim_bought', 'lists_thanks_mail_trg', 'get_my_gifts',
+        'guest_item_unshared_trg'],
   'claims згадують лише гостьові функції й сліпе скидання; нова функція над позначками має бути додана сюди свідомо'
 );
 
@@ -136,12 +140,13 @@ select set_eq(
   -- delete_my_account — видалення власного акаунта після звірки пароля (ADR-072).
   -- reserve_item_photo — адреса для свого фото позиції (ADR-073).
   -- forget_all_push_subscriptions — «Вийти на всіх пристроях», нічого не повертає (ADR-074).
+  -- edit_share_items — склад свого живого посилання, SECURITY INVOKER, нічого не повертає (8.9).
   array['register_share_view', 'release_claim', 'redeem_guest_code',
         'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set', 'ack_claim_change',
         'set_claim_bought', 'get_share_card', 'report_share', 'get_my_gifts', 'attach_guest_key',
         'start_pool', 'pledge_pool', 'leave_pool', 'close_pool', 'cancel_pool', 'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
         'reorder_items', 'reorder_sections', 'save_push_subscription', 'forget_push_subscription',
-        'delete_my_account', 'reserve_item_photo', 'forget_all_push_subscriptions'],
+        'delete_my_account', 'reserve_item_photo', 'forget_all_push_subscriptions', 'edit_share_items'],
   'authenticated може викликати лише гостьові RPC і функції власника'
 );
 

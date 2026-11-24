@@ -28,7 +28,8 @@ import {
 } from 'lucide-react';
 import { deleteList, fetchList, setListArchived, updateList } from '../../../lib/db';
 import type { ListInput } from '../../../lib/db';
-import { fetchListViews } from '../../../lib/shares';
+import { fetchListViews, fetchLiveShares } from '../../../lib/shares';
+import type { LiveShare } from '../../../lib/shares';
 import { useItems } from '../../../lib/useItems';
 import { useFxRates } from '../../../lib/fx';
 import { useAuth } from '../../../lib/auth';
@@ -80,10 +81,12 @@ import type { PreviewGroup } from './PreviewV2';
 import { ReorderV2 } from './ReorderV2';
 import type { OrderGroup } from './ReorderV2';
 import { ShareSheetV2 } from './ShareSheetV2';
+import { AddToSharesV2 } from './ShareEditV2';
 import { AfterEventCardV2, ArchivedNoteV2, CarrySheetV2, ReceivedSheetV2, RepeatSheetV2, ThanksSheetV2 } from './AfterEventV2';
 import type { AfterStep } from './AfterEventV2';
 import {
   ConfirmSheetV2,
+  GuestsSeeTagV2,
   ItemCardV2,
   ItemMenuV2,
   ItemSkeletonsV2,
@@ -251,6 +254,24 @@ export default function ListV2() {
   /** «Поділитися» з режиму вибору: що позначити в аркуші одразу. */
   const [sharePick, setSharePick] = useState<string[] | undefined>(undefined);
   const hue = useAppearanceHue(list?.appearance_id);
+  /**
+   * Живі посилання списку (8.9): «Видно гостям» на позиціях і «Додати в
+   * посилання?» після нової. Лише `shares` і `share_items` — про гостей і
+   * броні тут нічого (ADR-040). Не вдалося — просто без позначок.
+   */
+  const [liveShares, setLiveShares] = useState<LiveShare[]>([]);
+  const [askShare, setAskShare] = useState<{ id: string; title: string } | null>(null);
+  const loadLiveShares = useCallback(() => {
+    fetchLiveShares(id)
+      .then(setLiveShares)
+      .catch(() => setLiveShares([]));
+  }, [id]);
+  useEffect(() => {
+    setLiveShares([]);
+    setAskShare(null);
+    loadLiveShares();
+  }, [loadLiveShares]);
+  const sharedIds = useMemo(() => new Set(liveShares.flatMap((s) => s.item_ids)), [liveShares]);
 
   /* ── Після свята й архів (ADR-045) ── */
   const [snooze, setSnooze] = useState<Snooze | null>(() => readSnooze(id));
@@ -466,6 +487,7 @@ export default function ListV2() {
     const result = await run(userId, op);
     applyLocal(op);
     if (result === 'sent') void refresh();
+    return result;
   }
 
   async function saveItem(input: ItemInput, itemId: string | null) {
@@ -475,8 +497,14 @@ export default function ListV2() {
       return;
     }
     const created = newId();
-    await send({ kind: 'create', listId: id, id: created, input });
+    const result = await send({ kind: 'create', listId: id, id: created, input });
     setHighlight(created);
+    // Список уже роздано — спитати, чи показати нову позицію й там (8.9).
+    // Само туди не потрапляє нічого; чернетку гості не бачать (ADR-046), а
+    // позиція в офлайн-черзі ще не існує на сервері — питаємо лише про дійшлу.
+    if (result === 'sent' && !input.needs_title && (input.status ?? 'active') === 'active' && liveShares.length > 0) {
+      setAskShare({ id: created, title: input.title });
+    }
     // Щойно додана позиція ще не в жодному посиланні, тож відкат — звичайне
     // видалення, без відліку.
     undo.schedule({
@@ -903,6 +931,7 @@ export default function ListV2() {
         onRetry={removeItem}
         onDelete={removeItem}
         select={selecting ? { on: picked.has(item.id), onToggle: togglePick } : undefined}
+        shared={item.status === 'active' && sharedIds.has(item.id)}
       />
     );
   }
@@ -936,7 +965,17 @@ export default function ListV2() {
             <p className="v2-listhead__meta">{t('v2select.hint')}</p>
           ) : (
             ready && (
-              <p className="v2-listhead__meta">{[counts.items(live.length), eventDay].filter(Boolean).join(' · ')}</p>
+              <p className="v2-listhead__meta">
+                {[counts.items(live.length), eventDay].filter(Boolean).join(' · ')}
+                {liveShares.length > 0 && (
+                  <>
+                    {' '}
+                    <Link to="/shares" className="v2-listhead__shared">
+                      <GuestsSeeTagV2 kind="list" />
+                    </Link>
+                  </>
+                )}
+              </p>
             )
           )}
         </div>
@@ -1490,8 +1529,27 @@ export default function ListV2() {
         onClose={() => {
           setShareOpen(false);
           setSharePick(undefined);
+          loadLiveShares();
         }}
       />
+
+      <SheetV2 open={askShare !== null} onClose={() => setAskShare(null)} labelledBy="v2-addshare-title">
+        {askShare && (
+          <AddToSharesV2
+            shares={liveShares}
+            itemId={askShare.id}
+            itemTitle={askShare.title}
+            headingId="v2-addshare-title"
+            onDone={(added) => {
+              setAskShare(null);
+              if (added > 0) {
+                setBulkNote(t('v2shareEdit.added', { n: added }));
+                loadLiveShares();
+              }
+            }}
+          />
+        )}
+      </SheetV2>
 
       <SheetV2 open={bulkStatusOpen} onClose={() => setBulkStatusOpen(false)} labelledBy="v2-bulk-status-title">
         <h2 className="v2-sheet__title" id="v2-bulk-status-title">

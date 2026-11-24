@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, Check, Copy, Eye, Link2 } from 'lucide-react';
-import { deleteShare, fetchSharesOverview, revokeShare, shareUrl } from '../../../lib/shares';
+import { AlertCircle, Check, Copy, Eye, Link2, ListChecks } from 'lucide-react';
+import { deleteShare, fetchShareableIds, fetchSharesOverview, revokeShare, shareUrl } from '../../../lib/shares';
 import type { ShareOverview } from '../../../lib/shares';
 import { useI18n } from '../../../lib/i18n';
 import { useDocumentTitle } from '../../../lib/documentTitle';
@@ -10,6 +10,8 @@ import { formatDeadline } from '../../../lib/format';
 import { NoteV2 } from './AuthPartsV2';
 import { SheetV2, useCounts } from './CommonV2';
 import { ConfirmSheetV2 } from './ListPartsV2';
+import { ShareEditSheetV2 } from './ShareEditV2';
+import type { EditableShare } from './ShareEditV2';
 
 const STROKE = 2.75;
 /** «Скопійовано» живе дві секунди (README, «Мої посилання»). */
@@ -50,12 +52,22 @@ export default function SharesV2() {
   const [manual, setManual] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ share: ShareOverview; kind: 'revoke' | 'delete' } | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Що гостю можна показати в кожному списку — для «Видно N з M» (8.9). */
+  const [shareable, setShareable] = useState<Map<string, Set<string>> | null>(null);
+  const [editing, setEditing] = useState<EditableShare | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setShares(await fetchSharesOverview());
+      const fresh = await fetchSharesOverview();
+      setShares(fresh);
       setError(null);
+      // «Видно N з M» — додаток до картки: без нього картка лишається робочою.
+      const lists = [...new Set(fresh.filter((s) => stateOf(s) === 'active').map((s) => s.source_list_id))];
+      fetchShareableIds(lists)
+        .then(setShareable)
+        .catch(() => setShareable(null));
     } catch (e) {
       setError(errorText(e, t));
     } finally {
@@ -120,6 +132,11 @@ export default function SharesV2() {
           : t('share.until', { date: deadline.day })
         : null,
     ].filter(Boolean);
+    // «Видно N з M»: N — позиції посилання, які гість справді бачить, M — усе,
+    // що можна показати зі списку. Лише з share_items, нічого про броні (§3.2).
+    const pool = shareable?.get(s.source_list_id);
+    const visible =
+      pool && s.item_ids ? { n: s.item_ids.filter((id) => pool.has(id)).length, m: pool.size } : null;
     return (
       <li key={s.id} className="v2-sharecard" data-state={state}>
         <div className="v2-sharecard__head">
@@ -132,6 +149,32 @@ export default function SharesV2() {
         </div>
         {s.list_title && <p className="v2-sharecard__list">{t('v2shares.fromList', { title: s.list_title })}</p>}
         <p className="v2-sharecard__meta">{meta.join(' · ')}</p>
+        {state === 'active' && visible && (
+          <p className="v2-sharecard__meta v2-sharecard__visible">
+            {t('v2shareEdit.visible', { n: visible.n, m: visible.m })}
+            {' · '}
+            <button
+              type="button"
+              className="v2-link v2-sharecard__edit"
+              aria-label={t('v2shareEdit.editLabel', { title: s.title })}
+              onClick={() => {
+                setFlash(null);
+                setEditing({
+                  id: s.id,
+                  title: s.title,
+                  message: s.message,
+                  hide_prices: s.hide_prices,
+                  allow_reservations: s.allow_reservations,
+                  source_list_id: s.source_list_id,
+                  item_ids: s.item_ids ?? [],
+                });
+              }}
+            >
+              <ListChecks size={16} strokeWidth={STROKE} aria-hidden="true" />
+              {t('v2shareEdit.edit')}
+            </button>
+          </p>
+        )}
         <div className="v2-sharecard__actions">
           {state === 'active' && (
             <>
@@ -180,6 +223,7 @@ export default function SharesV2() {
       </div>
 
       {actionError && <NoteV2 tone="error">{actionError}</NoteV2>}
+      {flash && <NoteV2 tone="info">{flash}</NoteV2>}
 
       {loading ? (
         <>
@@ -263,6 +307,17 @@ export default function SharesV2() {
           {t('common.close')}
         </button>
       </SheetV2>
+
+      <ShareEditSheetV2
+        open={editing !== null}
+        share={editing}
+        onClose={() => setEditing(null)}
+        onSaved={(message) => {
+          setEditing(null);
+          setFlash(message);
+          void load();
+        }}
+      />
 
       <ConfirmSheetV2
         open={confirm !== null}

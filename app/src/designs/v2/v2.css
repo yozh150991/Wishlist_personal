@@ -580,6 +580,8 @@
   overflow-wrap: anywhere;
 }
 .v2-listcard__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
+/* «Відкрито гостям» (8.9) — лише про живі посилання, нічого про броні (ADR-040). */
+.v2-listcard__tags { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-1); }
 .v2-listcard__chevron { color: var(--color-neutral-700); }
 
 /* Скелет — картка точної висоти, пульс зі зсувом (README, «Завантаження»). */
@@ -957,6 +959,7 @@ div.v2-chips { gap: var(--sp-3); }
   font-weight: 700;
   border-radius: var(--r-pill);
 }
+.v2-tag--icon { gap: var(--sp-1); }
 .v2-tag[data-tone='accent'] { color: var(--color-accent-800); background: var(--color-accent-100); }
 .v2-tag[data-tone='warm'] { color: var(--color-accent-2-800); background: var(--color-accent-2-100); }
 .v2-tag[data-tone='neutral'] { color: var(--color-neutral-800); background: var(--color-neutral-100); }
@@ -1612,6 +1615,21 @@ div.v2-chips { gap: var(--sp-3); }
 }
 .v2-sharecard__list { font-size: var(--t-small); font-weight: 700; overflow-wrap: anywhere; }
 .v2-sharecard__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
+/* «Видно 5 з 7 · Змінити склад» (8.9): посилання-кнопка в рядку, але з
+   висотою пальця — на телефоні це головна дія з карткою після «Копіювати». */
+.v2-sharecard__visible { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--sp-1); }
+.v2-sharecard__edit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: var(--tap);
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
 .v2-sharecard__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-2); }
 /* «Видалити» — окремо від корисних дій, у кінці рядка. */
 .v2-sharecard__actions > .v2-btn--danger { margin-inline-start: auto; }
@@ -2247,3 +2265,6 @@ div.v2-chips { gap: var(--sp-3); }
     font-size: max(16px, var(--t-item));
   }
 }
+
+/* «Додати в посилання «…»?» (8.9) — аркуш після нової позиції й блок на «Додати». */
+.v2-addshare { text-align: start; width: 100%; }
