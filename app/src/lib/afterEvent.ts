@@ -140,6 +140,57 @@ export function yearlyDue(
   return { date, days };
 }
 
+/* ── Головна: нагадування й «Як минуло свято?» (ADR-047, ROADMAP 8.13) ── */
+
+/** Що потрібно головній від списку з `fetchListsOverview`. */
+type HomeList = Pick<List, 'id' | 'title' | 'event_date' | 'is_archived' | 'repeats_yearly' | 'active_count'>;
+
+/**
+ * Нагадування про щорічні свята на головній: найближча річниця — першою.
+ * Архівні теж: саме з архіву їх і повторюють (ADR-047).
+ */
+export function yearlyReminders<T extends Pick<List, 'id' | 'event_date' | 'repeats_yearly'>>(
+  lists: T[],
+  today: string,
+  dismissedOf: (listId: string) => string | null,
+): { list: T; due: { date: string; days: number } }[] {
+  return lists
+    .map((list) => ({ list, due: yearlyDue(list, today, dismissedOf(list.id)) }))
+    .filter((r): r is { list: T; due: { date: string; days: number } } => r.due !== null)
+    .sort((a, b) => a.due.date.localeCompare(b.due.date));
+}
+
+/**
+ * Списки для картки «Як минуло свято?» на головній (8.13). Ті самі правила,
+ * що й на сторінці списку (`afterEventDue`, той самий «Пізніше»), плюс одне:
+ * актуальні позиції ще є — розбирати на головній нема чого, якщо все вже
+ * позначено (сторінка списку й тоді пропонує архів і повтор).
+ *
+ * Співіснування з нагадуванням про щорічне (ADR-047): поки до річниці не
+ * більше місяця, про список говорить лише нагадування — його «Повторити»
+ * й так переносить неподароване. «Не цього разу» картки не воскрешає: вона
+ * повертається, коли вікно нагадування мине. Перевіряється саме вікно, а не
+ * показане нагадування, — щоб відмова від повтору лишалась тихою.
+ *
+ * Порядок — найсвіжіше свято першим (найближче до сьогодні), далі за назвою.
+ * «Не розібрано» — статуси самого власника; про позначки гостей тут нічого
+ * немає й бути не може (ADR-040).
+ */
+export function afterEventHome<T extends HomeList>(
+  lists: T[],
+  today: string,
+  snoozeOf: (listId: string) => Snooze | null,
+): T[] {
+  return lists
+    .filter(
+      (l) =>
+        (l.active_count ?? 0) > 0 &&
+        afterEventDue(l, today, snoozeOf(l.id)) &&
+        yearlyDue(l, today, null) === null,
+    )
+    .sort((a, b) => b.event_date!.localeCompare(a.event_date!) || a.title.localeCompare(b.title));
+}
+
 /**
  * Копія позиції для іншого списку: те, що людина хоче, — без статусу, бо це
  * знову бажання, і без позначок, які живуть окремо й не копіюються ніколи.
@@ -226,4 +277,17 @@ export function writeSnooze(listId: string, snooze: Snooze) {
   } catch {
     /* приватний режим — картка просто повернеться наступного разу */
   }
+}
+
+/**
+ * «Пізніше» — один стан для сторінки списку й головної (8.13): відлік
+ * продовжує записане на пристрої, а не те, що екран прочитав при відкритті,
+ * тож «Пізніше» на головній і потім на сторінці списку — це перше й друге.
+ * `known` — те, що екран уже знає, на випадок сховища, яке не пише
+ * (приватний режим).
+ */
+export function snoozeLater(listId: string, eventDate: string, today: string, known: Snooze | null = null): Snooze {
+  const next = snoozeNext(readSnooze(listId) ?? known, eventDate, today);
+  writeSnooze(listId, next);
+  return next;
 }
