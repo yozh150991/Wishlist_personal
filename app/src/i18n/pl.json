@@ -857,7 +857,9 @@
     "poolPledge": "obiecano przez Ciebie {amount} · zbiera {name}",
     "poolOrganizer": "Moja zrzutka",
     "poolIn": "Dokładam się",
-    "poolClosed": "Zrzutka zamknięta"
+    "poolClosed": "Zrzutka zamknięta",
+    "poolReceived": "otrzymano {received}",
+    "poolMineReceived": "wpłata dotarła"
   },
   "v2settings": {
     "looksHint": "Własne wyglądy wydarzeń ustawia się na konkretnej liście — w menu listy, „Wygląd listy”.",
@@ -1144,7 +1146,12 @@
       "code": "Twój kod do tej listy: {code}. Przyda się na innym urządzeniu.",
       "email": "E-mail (opcjonalnie)",
       "emailOrganizer": "Napiszemy, gdy ktoś dołączy. Właściciel listy go nie widzi.",
-      "emailJoin": "Napiszemy, jeśli zrzutka zostanie zamknięta lub anulowana. Organizator i właściciel listy go nie widzą."
+      "emailJoin": "Napiszemy, jeśli zrzutka zostanie zamknięta lub anulowana albo organizator otrzyma Twoją wpłatę. Organizator i właściciel listy go nie widzą.",
+      "received": "Otrzymano {received} z {raised}",
+      "mineReceived": "Twoja wpłata {amount} dotarła",
+      "gotIt": "Otrzymano",
+      "gotHint": "Zaznacz „Otrzymano”, gdy pieniądze dotrą: uczestnik zobaczy to u siebie, a pozostali goście — tylko łączną kwotę.",
+      "pledgeGone": "Ten uczestnik już wycofał się ze zrzutki."
     },
     "take": "Biorę",
     "takeMore": "Biorę więcej",

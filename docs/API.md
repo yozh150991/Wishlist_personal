@@ -138,15 +138,18 @@ await supabase.rpc('pledge_pool', { p_token, p_pool_id, p_key, p_name: 'Тара
 await supabase.rpc('leave_pool',  { p_token, p_pool_id, p_key });
 await supabase.rpc('close_pool',  { p_token, p_pool_id, p_key, p_closed: true });   // лише організатор
 await supabase.rpc('cancel_pool', { p_token, p_pool_id, p_key });                   // лише організатор: знімає бронь
+await supabase.rpc('set_pledge_received', { p_token, p_pool_id, p_key, p_pledge_id, p_received: true }); // лише організатор (ROADMAP 8.14)
 ```
 `get_guest_list` додає на позицію зі збором `pool`: `{ id, organizer, instructions, goal, currency, closed, raised, count, mine, is_organizer, pledges }` — `mine` лише учаснику, `pledges` (імена й суми) лише організатору. Власник `pool` не отримує ніколи. Пошта учасника (`p_email`, ADR-064) — для листів «збір закрито» й «скасовано»; організатор отримує лист про кожного нового учасника. Помилки: `not_found`, `owner_cannot_reserve`, `bad_key`, `bad_email`, `item_not_in_share`, `pool_single_only`, `bad_goal`, `bad_name`, `bad_instructions`, `bad_amount`, `not_enough_left`, `list_archived`, `pool_not_found`, `pool_closed`, `pool_full` (50 учасників), `not_organizer`. Суму й ціль база спершу округлює до копійок, тож 0,004 — це `bad_amount` / `bad_goal`, а не порушення обмеження. Імена без невидимих символів і керування напрямом тексту (U+200B, U+202E тощо; ZWJ у емодзі можна) — інакше `bad_name`, так само в `claim_item_v2`. `close_pool` з `p_closed: null` нічого не змінює (ADR-070).
+
+**«Отримано» (ROADMAP 8.14).** `set_pledge_received` — організатор позначає внесок отриманим (`p_received: true`) чи знімає позначку (`false`; `null` нічого не змінює); гроші застосунок не перевіряє. `p_pledge_id` — `id` з `pledges`, які бачить лише організатор. Мертве посилання — `not_found`; усім, хто не організатор цього збору (власник списку навіть із чужим ключем, інший гість, гість без ключа чи з ключем не тієї форми, неіснуючий збір), — однакове `not_organizer` (42501), до будь-якого пошуку для власника (ADR-038). Організатору про внесок, якого вже немає, — `pledge_gone`. Закритий збір і архівний список позначати не заважають. Учаснику з поштою — лист `pool_received`, один на внесок у зборі (зняв і поставив знову — другого немає; організатору про себе — ні). У `pool` з `get_guest_list` — ще `received` (сума отриманого, усім гостям посилання) і `mine_received` (мій внесок отримано); у `pledges` організатору — `{ id, name, amount, received }`. Нова сума в `pledge_pool` знімає позначку, та сама — лишає. Власник, як і раніше, поля `pool` не отримує.
 
 ### `get_my_gifts` / `attach_guest_key` — authenticated (ADR-062)
 ```ts
 const { data } = await supabase.rpc('get_my_gifts');
 // → [{ token, title, event_date, archived, thanks, code,
 //      items: [{ id, title, url, price, currency, mine_qty, quantity, bought, changed,
-//                pool: { organizer, instructions, goal, currency, closed, raised, is_organizer, mine } | null }] }]
+//                pool: { organizer, instructions, goal, currency, closed, raised, received, is_organizer, mine, mine_received } | null }] }]
 
 const { data: ok } = await supabase.rpc('attach_guest_key', { p_token: token, p_key: newKey });
 // → true — ключ цього браузера додано до броней акаунта на цьому посиланні; false — їх тут немає
@@ -272,7 +275,7 @@ await supabase.auth.signOut({ scope: 'global' });
 |---|---|
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
-| `ack_claim_change`, `get_share_card`, `report_share`, `start_pool`, `pledge_pool`, `leave_pool`, `close_pool`, `cancel_pool` | `anon`, `authenticated` |
+| `ack_claim_change`, `get_share_card`, `report_share`, `start_pool`, `pledge_pool`, `leave_pool`, `close_pool`, `cancel_pool`, `set_pledge_received` | `anon`, `authenticated` |
 | `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
 | `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account`, `reserve_item_photo`, `forget_all_push_subscriptions` | `authenticated` |
 | `item_photo_orphans`, `forget_item_photos`, `recent_sign_ins` | лише `service_role` (`wishlist-jobs`) |
@@ -620,7 +623,7 @@ x-wake-secret: <секрет>
 
 Що робить: бере до 50 невідправлених рядків (найстаріші першими), кожен — атомарно (`PATCH … sent_at=is.null` з `Prefer: return=representation`), тож дві копії сервісу не надішлють той самий лист. Пропускає (`skipped`): пошти немає, гість відписався (для листа на бронь), посилання відкликане чи протерміноване, позиції немає. Brevo відмовив — `attempts + 1`, після п'ятої спроби рядок лишається в спокої. Наприкінці прибирає рядки, старші за 30 днів. У журнал — лише лічильники: ні адрес, ні токенів, ні секретів відписки.
 
-Види листів: `claim`, `code` (ADR-054), `changed`, `deleted`, `reminder` (ADR-055), `thanks` (ADR-059, без коду, текст подяки рядками), `pool_join`, `pool_closed`, `pool_cancel` (ADR-064, зміст збору знімком). Для чотирьох останніх зміст — знімком у `details` (з ADR-056 — ще дата покупки для `deleted` і вже куплене для `reminder`); ціна — лише якщо посилання її показує (змінилась лише прихована ціна — `skipped`); відписка діє на все, крім коду. Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist» / «Зміни у вашій броні в Wishlist» / «Нагадування від Wishlist» / «Подяка у Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
+Види листів: `claim`, `code` (ADR-054), `changed`, `deleted`, `reminder` (ADR-055), `thanks` (ADR-059, без коду, текст подяки рядками), `pool_join`, `pool_closed`, `pool_cancel` (ADR-064, зміст збору знімком), `pool_received` (ROADMAP 8.14: «ваш внесок отримано» — сума, позиція, організатор; тема «Ваш внесок у Wishlist отримано»). Для чотирьох останніх зміст — знімком у `details` (з ADR-056 — ще дата покупки для `deleted` і вже куплене для `reminder`); ціна — лише якщо посилання її показує (змінилась лише прихована ціна — `skipped`); відписка діє на все, крім коду. Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist» / «Зміни у вашій броні в Wishlist» / «Нагадування від Wishlist» / «Подяка у Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
 
 ### `GET /health`
 `{ "status": "ok", "service": "wishlist-guestmail", "configured": true }` — без назв змінних: сервіс відкритий.

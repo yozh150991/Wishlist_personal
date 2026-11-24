@@ -111,10 +111,11 @@ select set_eq(
   -- get_share_card — картка посилання для ботів месенджерів (ADR-060).
   -- report_share — «Поскаржитись» на гостьовій (ADR-061).
   -- start/pledge/leave/close/cancel_pool — спільний подарунок (ADR-063).
+  -- set_pledge_received — «отримано» організатором збору (ROADMAP 8.14).
   array['register_share_view', 'release_claim', 'redeem_guest_code',
         'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set', 'ack_claim_change',
         'set_claim_bought', 'get_share_card', 'report_share',
-        'start_pool', 'pledge_pool', 'leave_pool', 'close_pool', 'cancel_pool'],
+        'start_pool', 'pledge_pool', 'leave_pool', 'close_pool', 'cancel_pool', 'set_pledge_received'],
   'anon може викликати лише гостьові RPC'
 );
 
@@ -139,7 +140,7 @@ select set_eq(
   array['register_share_view', 'release_claim', 'redeem_guest_code',
         'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set', 'ack_claim_change',
         'set_claim_bought', 'get_share_card', 'report_share', 'get_my_gifts', 'attach_guest_key',
-        'start_pool', 'pledge_pool', 'leave_pool', 'close_pool', 'cancel_pool', 'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
+        'start_pool', 'pledge_pool', 'leave_pool', 'close_pool', 'cancel_pool', 'set_pledge_received', 'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
         'reorder_items', 'reorder_sections', 'save_push_subscription', 'forget_push_subscription',
         'delete_my_account', 'reserve_item_photo', 'forget_all_push_subscriptions'],
   'authenticated може викликати лише гостьові RPC і функції власника'

@@ -30,9 +30,13 @@ export type GiftItem = {
     currency: Currency;
     closed: boolean;
     raised: number | string;
+    /** Скільки організатор позначив отриманим (ROADMAP 8.14); до міграції — немає. */
+    received?: number | string;
     is_organizer: boolean;
     /** Моя обіцянка; null — я лише організатор. */
     mine: number | string | null;
+    /** Організатор позначив мій внесок отриманим. */
+    mine_received?: boolean;
   } | null;
 };
 
