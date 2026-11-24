@@ -90,8 +90,12 @@ export async function fetchShares(): Promise<ShareWithCount[]> {
   return (data ?? []) as ShareWithCount[];
 }
 
-/** Посилання з назвою списку, з якого його створено, — для «Моїх посилань» v2. */
-export type ShareOverview = ShareWithCount & { list_title: string | null };
+/**
+ * Посилання з назвою списку, з якого його створено, — для «Моїх посилань» v2.
+ * `item_ids` — склад посилання (8.9): з нього картка рахує «Видно N з M».
+ * Без вкладення (запасний шлях) — null: тоді «Змінити склад» не пропонуємо.
+ */
+export type ShareOverview = ShareWithCount & { list_title: string | null; item_ids: string[] | null };
 
 /**
  * Посилання разом із назвою їхнього списку. Список — власника, тож RLS
@@ -102,14 +106,95 @@ export type ShareOverview = ShareWithCount & { list_title: string | null };
 export async function fetchSharesOverview(): Promise<ShareOverview[]> {
   const { data, error } = await supabase
     .from('shares')
-    .select('*, share_items(count), list:lists(title)')
+    .select('*, share_items(count), members:share_items(item_id), list:lists(title)')
     .order('created_at', { ascending: false });
   if (error) {
     if (isNetworkError(error)) throw error;
-    return (await fetchShares()).map((s) => ({ ...s, list_title: null }));
+    return (await fetchShares()).map((s) => ({ ...s, list_title: null, item_ids: null }));
   }
-  type Row = ShareWithCount & { list?: { title: string } | null };
-  return ((data ?? []) as Row[]).map(({ list, ...s }) => ({ ...s, list_title: list?.title ?? null }));
+  type Row = ShareWithCount & { list?: { title: string } | null; members?: { item_id: string }[] | null };
+  return ((data ?? []) as Row[]).map(({ list, members, ...s }) => ({
+    ...s,
+    list_title: list?.title ?? null,
+    item_ids: members ? members.map((m) => m.item_id) : null,
+  }));
+}
+
+/** Живе: не відкликане й термін не минув. Те саме правило, що `live_share` у базі. */
+export function isLiveShare(share: { revoked_at: string | null; expires_at: string | null }, now = Date.now()): boolean {
+  return !share.revoked_at && (!share.expires_at || Date.parse(share.expires_at) > now);
+}
+
+/** Живе посилання списку зі складом — для позначки «Відкрито гостям» і «Додати в посилання» (8.9). */
+export type LiveShare = { id: string; title: string; source_list_id: string; item_ids: string[] };
+
+/**
+ * Живі посилання власника — усі або одного списку. Лише `shares` і
+ * `share_items`: позначка «Відкрито гостям» каже про посилання, а не про
+ * гостей чи броні (ADR-040). Токенів у відповіді немає — їх тут не треба.
+ */
+export async function fetchLiveShares(listId?: string): Promise<LiveShare[]> {
+  let query = supabase
+    .from('shares')
+    .select('id, title, source_list_id, revoked_at, expires_at, members:share_items(item_id)')
+    .is('revoked_at', null)
+    .order('created_at', { ascending: false });
+  if (listId) query = query.eq('source_list_id', listId);
+  const { data, error } = await query;
+  if (error) throw error;
+  type Row = {
+    id: string;
+    title: string;
+    source_list_id: string;
+    revoked_at: string | null;
+    expires_at: string | null;
+    members: { item_id: string }[] | null;
+  };
+  const now = Date.now();
+  return ((data ?? []) as Row[])
+    .filter((r) => isLiveShare(r, now))
+    .map((r) => ({
+      id: r.id,
+      title: r.title,
+      source_list_id: r.source_list_id,
+      item_ids: (r.members ?? []).map((m) => m.item_id),
+    }));
+}
+
+/**
+ * Що гостю можна показати в кожному списку: id актуальних позицій з назвою
+ * (ADR-046). Для «Видно N з M» на картках «Моїх посилань» (8.9).
+ */
+export async function fetchShareableIds(listIds: string[]): Promise<Map<string, Set<string>>> {
+  const out = new Map<string, Set<string>>(listIds.map((id) => [id, new Set<string>()]));
+  if (listIds.length === 0) return out;
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('items')
+      .select('id, list_id')
+      .in('list_id', listIds)
+      .eq('status', 'active')
+      .eq('needs_title', false)
+      .order('id')
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as { id: string; list_id: string }[];
+    for (const r of rows) out.get(r.list_id)?.add(r.id);
+    if (rows.length < PAGE) return out;
+  }
+}
+
+/**
+ * «Змінити склад» і «Додати в посилання» (8.9): різницею, однією транзакцією.
+ * Нічого не повертає. Броні прибраних позицій база знімає сама й мовчки —
+ * лише коли позиції вже не видно за жодним живим посиланням списку
+ * (ADR-035, CLAUDE.md §3.2); відповідь та сама, є броні чи ні.
+ * Помилки: `not_found`, `share_not_live`, `no_items`.
+ */
+export async function editShareItems(shareId: string, add: string[], remove: string[]): Promise<void> {
+  const { error } = await supabase.rpc('edit_share_items', { p_share_id: shareId, p_add: add, p_remove: remove });
+  if (error) throw error;
 }
 
 /** Відкликання, а не видалення: історія і лічильник переглядів лишаються. */

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent, ReactNode, MouseEvent as ReactMouseEvent } from 'react';
-import { Braces, ExternalLink, FileSpreadsheet, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Braces, ExternalLink, Eye, FileSpreadsheet, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { hostOf, moneyShort } from '../../../lib/format';
 import { STATUSES } from '../../../lib/types';
@@ -164,6 +164,21 @@ function useSwipe(enabled: boolean) {
  * вибирає, а не відкриває. «⋯» і свайп ховаються — дії з вибраними живуть
  * у панелі внизу, а не на кожній картці.
  */
+/**
+ * Позначка «Відкрито гостям» / «Видно гостям» (8.9, аудит 15 листопада).
+ * Каже лише, що є живе посилання власника, — нічого про гостей чи броні
+ * (ADR-040): рахується з `shares` і `share_items`.
+ */
+export function GuestsSeeTagV2({ kind }: { kind: 'list' | 'item' }) {
+  const { t } = useI18n();
+  return (
+    <span className="v2-tag v2-tag--icon" data-tone="accent">
+      <Eye size={14} strokeWidth={2.75} aria-hidden="true" />
+      {kind === 'list' ? t('v2shareEdit.listTag') : t('v2shareEdit.itemTag')}
+    </span>
+  );
+}
+
 export function ItemCardV2({
   item,
   currency,
@@ -175,6 +190,7 @@ export function ItemCardV2({
   onRetry,
   onDelete,
   select,
+  shared,
 }: {
   item: Item;
   currency: Currency;
@@ -191,6 +207,8 @@ export function ItemCardV2({
   onDelete?: (item: Item) => void;
   /** Режим вибору: чи вибрана й як перемкнути. */
   select?: { on: boolean; onToggle: (item: Item) => void };
+  /** Позиція стоїть у живому посиланні власника — «Видно гостям» (8.9). Нічого про броні. */
+  shared?: boolean;
 }) {
   const { t, locale } = useI18n();
   const priority = usePriorityLabel();
@@ -220,8 +238,9 @@ export function ItemCardV2({
           {host && ` · ${host}`}
         </span>
         {variants && <span className="v2-item__meta">{variants}</span>}
-        {(tagPriority || item.status !== 'active' || draft || linkTag) && (
+        {(tagPriority || item.status !== 'active' || draft || linkTag || shared) && (
           <span className="v2-item__tags">
+            {shared && <GuestsSeeTagV2 kind="item" />}
             {link === 'gone' && (
               <span className="v2-tag" data-tone="danger">
                 {t('v2list.item.linkGone')}

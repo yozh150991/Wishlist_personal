@@ -17,7 +17,8 @@ secret-ключем. Тож навіть витеклий секрет сигн�
 
 Види листів: `claim` — на бронь, `code` — код на прохання (ADR-054);
 `changed` і `deleted` — власник змінив чи прибрав позицію, яку взяли (потік J),
-`reminder` — за 7 днів до свята (P5) (ADR-055), `thanks` — подяка власника
+`reminder` — за 7 днів до свята (P5) (ADR-055); `deleted` з `reason: unshared` —
+позицію прибрали з посилання, і гостям її більше не видно (8.9), `thanks` — подяка власника
 після свята, раз на список (ADR-059), `pool_join` / `pool_closed` /
 `pool_cancel` — спільний збір (ADR-064). Що сказати, для чотирьох останніх
 лежить знімком у `details`: сервіс позначок не читає ніколи.
@@ -61,6 +62,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "deleted.subject": "Зміни у вашій броні в Wishlist",
         "deleted.lead": "Позицію «{item}» прибрано зі списку «{list}». Бронь знято автоматично.",
         "deleted.bought": "Якщо ви вже купили її — нічого страшного: подарунок від цього не гірший.",
+        "unshared.lead": "Позиції «{item}» більше немає в списку «{list}», який вам надіслали. Бронь знято автоматично.",
         "deleted.boughtOn": "Ви позначили її купленою {date}. Подарунок усе одно доречний — власник не дізнається, що позиції вже немає, якщо ви не скажете.",
         "reminder.bought": "Уже куплено: {items}.",
         "reminder.subject": "Нагадування від Wishlist",
@@ -78,6 +80,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "pool_cancel.subject": "Збір у Wishlist скасовано",
         "pool_cancel.cancelled": "Збір на «{item}» у списку «{list}» скасовано. Обіцянка більше не діє — переказувати нічого не треба.",
         "pool_cancel.deleted": "Позицію «{item}» прибрано зі списку «{list}», тож збору на неї більше немає. Переказувати нічого не треба.",
+        "pool_cancel.unshared": "Позиції «{item}» більше немає в списку «{list}», тож збору на неї більше немає. Переказувати нічого не треба.",
         "pool_cancel.paid": "Якщо ви вже переказали {amount}, напишіть організатору — {organizer}.",
         "why.pool": "Ви вказали цю адресу, коли долучалися до збору. Власник списку її не бачить.",
         "noprice": "не вказана",
@@ -102,6 +105,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "deleted.subject": "Zmiany w twojej rezerwacji w Wishlist",
         "deleted.lead": "Pozycję „{item}” usunięto z listy „{list}”. Rezerwację zdjęto automatycznie.",
         "deleted.bought": "Jeśli prezent jest już kupiony — nic się nie stało, nie jest przez to gorszy.",
+        "unshared.lead": "Pozycji „{item}” nie ma już na liście „{list}”, którą ci wysłano. Rezerwację zdjęto automatycznie.",
         "deleted.boughtOn": "Oznaczono ją jako kupioną {date}. Prezent nadal jest trafiony — właściciel nie dowie się, że pozycji już nie ma, jeśli mu nie powiesz.",
         "reminder.bought": "Już kupione: {items}.",
         "reminder.subject": "Przypomnienie od Wishlist",
@@ -119,6 +123,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "pool_cancel.subject": "Zrzutka w Wishlist anulowana",
         "pool_cancel.cancelled": "Zrzutka na „{item}” z listy „{list}” została anulowana. Obietnica już nie obowiązuje — nie trzeba nic przelewać.",
         "pool_cancel.deleted": "Pozycja „{item}” zniknęła z listy „{list}”, więc zrzutki już nie ma. Nie trzeba nic przelewać.",
+        "pool_cancel.unshared": "Pozycji „{item}” nie ma już na liście „{list}”, więc zrzutki już nie ma. Nie trzeba nic przelewać.",
         "pool_cancel.paid": "Jeśli już przelano {amount}, napisz do organizatora — {organizer}.",
         "why.pool": "Ten adres podano przy dołączaniu do zrzutki. Właściciel listy go nie widzi.",
         "noprice": "nie podana",
@@ -143,6 +148,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "deleted.subject": "Changes to your pick on Wishlist",
         "deleted.lead": "“{item}” was removed from “{list}”. Your pick was released automatically.",
         "deleted.bought": "If you've already bought it, no harm done — the gift is just as good.",
+        "unshared.lead": "“{item}” is no longer on “{list}”, the list you were sent. Your pick was released automatically.",
         "deleted.boughtOn": "You marked it as bought on {date}. The gift still fits — the owner won't know the item is gone unless you say so.",
         "reminder.bought": "Already bought: {items}.",
         "reminder.subject": "A reminder from Wishlist",
@@ -160,6 +166,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "pool_cancel.subject": "Collection cancelled on Wishlist",
         "pool_cancel.cancelled": "The collection for “{item}” on “{list}” was cancelled. Your promise no longer stands — there's nothing to transfer.",
         "pool_cancel.deleted": "“{item}” was removed from “{list}”, so there's no collection for it any more. There's nothing to transfer.",
+        "pool_cancel.unshared": "“{item}” is no longer on “{list}”, so there's no collection for it any more. There's nothing to transfer.",
         "pool_cancel.paid": "If you've already sent {amount}, get in touch with the organiser — {organizer}.",
         "why.pool": "You gave this address when joining the collection. The list's owner can't see it.",
         "noprice": "not set",
@@ -288,8 +295,11 @@ def render(
     elif kind == "deleted":
         subject = text("deleted.subject", locale)
         bought_on = _day(details.get("bought"), locale)
+        # 8.9: власник прибрав позицію з посилання (вона лишилась у його списку,
+        # але гостям її вже не видно) — той самий лист, інший перший рядок.
+        lead = "unshared.lead" if details.get("reason") == "unshared" else "deleted.lead"
         lines = [
-            text("deleted.lead", locale, item=str(details.get("title") or item), list=list_title),
+            text(lead, locale, item=str(details.get("title") or item), list=list_title),
             text("deleted.boughtOn", locale, date=bought_on) if bought_on else text("deleted.bought", locale),
         ]
     elif kind == "reminder":
@@ -330,7 +340,12 @@ def render(
         why = text("why.pool", locale)
     elif kind == "pool_cancel":
         subject = text("pool_cancel.subject", locale)
-        key = "pool_cancel.deleted" if details.get("reason") == "deleted" else "pool_cancel.cancelled"
+        reason = details.get("reason")
+        key = (
+            "pool_cancel.deleted"
+            if reason == "deleted"
+            else "pool_cancel.unshared" if reason == "unshared" else "pool_cancel.cancelled"
+        )
         lines = [
             text(key, locale, item=_title(details, item), list=list_title),
             text("pool_cancel.paid", locale, amount=_price(details.get("amount"), details.get("currency"), locale),

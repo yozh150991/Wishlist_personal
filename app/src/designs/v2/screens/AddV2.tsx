@@ -18,13 +18,16 @@ import { CURRENCIES } from '../../../lib/types';
 import type { Currency, ItemInput, ItemPriority, List } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { usePriorityLabel } from './ListPartsV2';
+import { AddToSharesV2 } from './ShareEditV2';
+import { fetchLiveShares } from '../../../lib/shares';
+import type { LiveShare } from '../../../lib/shares';
 
 const STROKE = 2.75;
 /** Межа з БД (`lists.title`). */
 const LIST_TITLE_MAX = 120;
 const FALLBACK_CURRENCY: Currency = 'PLN';
 
-type Done = { listId: string; listTitle: string; queued: boolean; draft: boolean };
+type Done = { listId: string; listTitle: string; queued: boolean; draft: boolean; itemId: string; itemTitle: string };
 
 /** Порядок списків у виборі: найближчі за датою, далі без дати, далі минулі. */
 function byRelevance(today: string) {
@@ -99,6 +102,9 @@ export default function AddV2() {
   const [busy, setBusy] = useState(false);
   const [server, setServer] = useState<string | null>(null);
   const [done, setDone] = useState<Done | null>(null);
+  /** Живі посилання списку, куди можна додати щойно збережене (8.9). */
+  const [askShares, setAskShares] = useState<LiveShare[]>([]);
+  const [shareNote, setShareNote] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   /** Назву вже правила людина — парсер її не чіпає (C2). Поширене — не її слова. */
@@ -206,9 +212,17 @@ export default function AddV2() {
         priority,
         ...(draft ? { needs_title: true } : {}),
       };
-      const result = await run(userId, { kind: 'create', listId, id: newId(), input });
+      const itemId = newId();
+      const result = await run(userId, { kind: 'create', listId, id: itemId, input });
       writeLastList(listId);
-      setDone({ listId, listTitle, queued: result === 'queued', draft });
+      setDone({ listId, listTitle, queued: result === 'queued', draft, itemId, itemTitle: input.title });
+      // Список уже роздано — спитати, чи показати позицію й гостям (8.9).
+      // Чернетку гості не бачать, а позиції з черги на сервері ще немає.
+      if (result === 'sent' && !draft) {
+        fetchLiveShares(listId)
+          .then(setAskShares)
+          .catch(() => setAskShares([]));
+      }
     } catch (e) {
       setServer(errorText(e, t));
     } finally {
@@ -241,6 +255,18 @@ export default function AddV2() {
             </h1>
             {done.draft && <p className="v2-lede">{t('v2add.draftNote')}</p>}
           </div>
+          {shareNote && <NoteV2 tone="info">{shareNote}</NoteV2>}
+          {askShares.length > 0 && (
+            <AddToSharesV2
+              shares={askShares}
+              itemId={done.itemId}
+              itemTitle={done.itemTitle}
+              onDone={(added) => {
+                setAskShares([]);
+                if (added > 0) setShareNote(t('v2shareEdit.added', { n: added }));
+              }}
+            />
+          )}
           <Link to={`/lists/${done.listId}`} className="v2-btn v2-btn--primary">
             {t('v2add.open')}
           </Link>

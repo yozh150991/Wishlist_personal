@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AlertCircle, Check, ChevronRight, FileUp, Link2, ListPlus, Plus, Repeat } from 'lucide-react';
 import { createList, deleteList, fetchDefaultCurrency, fetchListsOverview, importList } from '../../../lib/db';
 import { fetchAppearances } from '../../../lib/appearances';
+import { fetchLiveShares } from '../../../lib/shares';
 import { useAuth } from '../../../lib/auth';
 import { useI18n } from '../../../lib/i18n';
 import { useDocumentTitle } from '../../../lib/documentTitle';
@@ -26,7 +27,7 @@ import type { Currency, List } from '../../../lib/types';
 import type { TransferItem, TransferList } from '../../../lib/transfer';
 import { NoteV2 } from './AuthPartsV2';
 import { useCounts } from './CommonV2';
-import { UndoToastV2 } from './ListPartsV2';
+import { GuestsSeeTagV2, UndoToastV2 } from './ListPartsV2';
 import { ImportSheetV2 } from './ImportSheetV2';
 import { AfterEventHomeV2 } from './AfterEventV2';
 
@@ -115,6 +116,12 @@ export default function ListsV2() {
 
   const [lists, setLists] = useState<List[]>([]);
   const [hues, setHues] = useState<Map<string, number>>(new Map());
+  /**
+   * Списки з живим посиланням — «Відкрито гостям» (8.9). Лише з `shares`:
+   * нічого про гостей чи броні (ADR-040). Без мережі позначки просто немає —
+   * у копію вона не пишеться (токенів тут немає, але й зайвого теж).
+   */
+  const [openLists, setOpenLists] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [staleAt, setStaleAt] = useState<string | null>(null);
@@ -202,6 +209,9 @@ export default function ListsV2() {
       setError(null);
       setStaleAt(null);
       void saveSnapshot(LISTS_KEY, userId, fresh);
+      fetchLiveShares()
+        .then((live) => setOpenLists(new Set(live.map((x) => x.source_list_id))))
+        .catch(() => setOpenLists(new Set()));
       // Відтінки — лише якщо хоч один список оформлено: зайвий запит не потрібен.
       if (fresh.some((l) => l.appearance_id)) {
         fetchAppearances()
@@ -302,6 +312,11 @@ export default function ListsV2() {
           <span className="v2-listcard__text">
             <span className="v2-listcard__title">{l.title}</span>
             <span className="v2-listcard__meta">{meta(l, tone)}</span>
+            {openLists.has(l.id) && (
+              <span className="v2-listcard__tags">
+                <GuestsSeeTagV2 kind="list" />
+              </span>
+            )}
           </span>
           <ChevronRight className="v2-listcard__chevron" size={20} strokeWidth={2.75} aria-hidden="true" />
         </Link>

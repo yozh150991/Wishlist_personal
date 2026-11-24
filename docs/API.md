@@ -190,6 +190,22 @@ await supabase.rpc('release_item_claims', { p_item_id: itemId });   // 204, бе
 ```
 Сліпе «скинути позицію» власником: знімає позначки гостей, якщо вони є, і не повертає нічого — ні скільки, ні чи були. Чужа позиція — `not_found`. У інтерфейсі кнопка стоїть на кожній позиції завжди однаково: інакше сама її поява була б індикатором.
 
+### `edit_share_items` — authenticated (8.9)
+```ts
+await supabase.rpc('edit_share_items', { p_share_id: shareId, p_add: [itemId], p_remove: [] });   // 204, без тіла
+```
+«Змінити склад» у «Моїх посиланнях» і «Додати в посилання» після нової позиції (`editShareItems` у `lib/shares.ts`). Різницею, а не повним набором, — однією транзакцією: позиція, яку власник тим часом додав деінде, не зникає через старий набір. URL посилання не змінюється; гість бачить новий склад з наступним завантаженням.
+
+`SECURITY INVOKER`: позиції іншого списку й чужі RLS відсіює ще до вставки (`share_items_insert_own`, ADR-070), чернетку мовчки не пускає `share_items_skip_drafts` (ADR-046), повторне додавання — без помилки. Помилки залежать лише від посилання й складу, ніколи від броней:
+
+| Помилка | Коли |
+|---|---|
+| `not_found` (`P0002`) | посилання немає або воно чуже |
+| `share_not_live` (`22023`) | посилання відкликане чи протерміноване |
+| `no_items` (`22023`) | після зміни в посиланні не лишилось жодної позиції (як `create_share`) |
+
+Броні прибраної позиції знімає тригер `share_items_unshared` — мовчки, лише коли позиції вже не видно за жодним живим посиланням списку, і з листом гостю через чергу (DATA_MODEL.md, `share_items`). Відповідь власнику однакова, є броні чи ні (CLAUDE.md §3.2). Пряме `delete` з `share_items` (політика `share_items_delete_own`) спрацьовує так само.
+
 ### `reorder_items` / `reorder_sections` — authenticated
 ```ts
 await supabase.rpc('reorder_items', { p_list_id: listId, p_section_id: sectionId /* або null */, p_item_ids: ids });
@@ -273,8 +289,8 @@ await supabase.auth.signOut({ scope: 'global' });
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
 | `ack_claim_change`, `get_share_card`, `report_share`, `start_pool`, `pledge_pool`, `leave_pool`, `close_pool`, `cancel_pool` | `anon`, `authenticated` |
-| `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
-| `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account`, `reserve_item_photo`, `forget_all_push_subscriptions` | `authenticated` |
+| `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg`, `guest_item_unshared_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
+| `edit_share_items`, `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account`, `reserve_item_photo`, `forget_all_push_subscriptions` | `authenticated` |
 | `item_photo_orphans`, `forget_item_photos`, `recent_sign_ins` | лише `service_role` (`wishlist-jobs`) |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
 
@@ -295,6 +311,16 @@ await supabase.from('items').update({ status: 'gifted' }).in('id', ids);
 await supabase.from('items').delete().in('id', ids);
 ```
 Окремої RPC не потрібно: RLS так само відсіює чужі позиції, як і в одиночних запитах.
+
+Живі посилання й їхній склад (8.9), `lib/shares.ts` — для позначок «Відкрито гостям» / «Видно гостям», «Додати в посилання» і «Видно N з M» у «Моїх посиланнях»:
+```ts
+await supabase.from('shares')
+  .select('id, title, source_list_id, revoked_at, expires_at, members:share_items(item_id)')
+  .is('revoked_at', null).eq('source_list_id', listId);   // термін відсіює браузер
+await supabase.from('items').select('id, list_id').in('list_id', listIds)
+  .eq('status', 'active').eq('needs_title', false);         // що гостю можна показати — «M»
+```
+Лише `shares`, `share_items` і `items` власника: позначки кажуть про посилання, а не про гостей чи броні (ADR-040).
 
 Оформлення списку (ADR-034) — теж звичайними запитами, `lib/appearances.ts`:
 ```ts
@@ -620,7 +646,7 @@ x-wake-secret: <секрет>
 
 Що робить: бере до 50 невідправлених рядків (найстаріші першими), кожен — атомарно (`PATCH … sent_at=is.null` з `Prefer: return=representation`), тож дві копії сервісу не надішлють той самий лист. Пропускає (`skipped`): пошти немає, гість відписався (для листа на бронь), посилання відкликане чи протерміноване, позиції немає. Brevo відмовив — `attempts + 1`, після п'ятої спроби рядок лишається в спокої. Наприкінці прибирає рядки, старші за 30 днів. У журнал — лише лічильники: ні адрес, ні токенів, ні секретів відписки.
 
-Види листів: `claim`, `code` (ADR-054), `changed`, `deleted`, `reminder` (ADR-055), `thanks` (ADR-059, без коду, текст подяки рядками), `pool_join`, `pool_closed`, `pool_cancel` (ADR-064, зміст збору знімком). Для чотирьох останніх зміст — знімком у `details` (з ADR-056 — ще дата покупки для `deleted` і вже куплене для `reminder`); ціна — лише якщо посилання її показує (змінилась лише прихована ціна — `skipped`); відписка діє на все, крім коду. Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist» / «Зміни у вашій броні в Wishlist» / «Нагадування від Wishlist» / «Подяка у Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
+Види листів: `claim`, `code` (ADR-054), `changed`, `deleted` (з 8.9 — ще й `reason: "unshared"`: позицію прибрали з посилання, лист каже «позиції більше немає в списку, який вам надіслали»), `reminder` (ADR-055), `thanks` (ADR-059, без коду, текст подяки рядками), `pool_join`, `pool_closed`, `pool_cancel` (ADR-064, зміст збору знімком; причина `cancelled`, `deleted` або з 8.9 `unshared`). Старий сервіс `unshared` пише як звичайне «прибрано зі списку» / «збір скасовано», тож порядок деплою сервісу й міграції 8.9 не важливий. Для чотирьох останніх зміст — знімком у `details` (з ADR-056 — ще дата покупки для `deleted` і вже куплене для `reminder`); ціна — лише якщо посилання її показує (змінилась лише прихована ціна — `skipped`); відписка діє на все, крім коду. Лист: тема нейтральна («Ваша бронь у Wishlist» / «Ваш код для Wishlist» / «Зміни у вашій броні в Wishlist» / «Нагадування від Wishlist» / «Подяка у Wishlist») — пошта не приватна, а сюрприз має лишитись сюрпризом; у тілі — позиція, список, поточний код, посилання `/l/{токен}` і «Не надсилати листів про цей список» (`/l/{токен}/u/{mail_token}`). Ключа гостя в листі немає (ADR-041, п. 3). До гостя — на «ви».
 
 ### `GET /health`
 `{ "status": "ok", "service": "wishlist-guestmail", "configured": true }` — без назв змінних: сервіс відкритий.

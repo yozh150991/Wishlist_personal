@@ -1339,5 +1339,28 @@
     },
     "link": "Polityka prywatności",
     "back": "Wstecz"
+  },
+  "v2shareEdit": {
+    "visible": "Widać {n} z {m}",
+    "edit": "Zmień skład",
+    "editLabel": "Zmień skład linku „{title}”",
+    "title": "Skład „{title}”",
+    "loading": "Wczytuję pozycje…",
+    "save": "Zapisz skład",
+    "saving": "Zapisuję…",
+    "saved": "Skład linku „{title}” zmieniony. Goście zobaczą zmiany pod tym samym linkiem.",
+    "addNote": "Nowe pozycje goście zobaczą pod tym samym linkiem — nie trzeba wysyłać nowego.",
+    "removeNote": "Usunięte pozycje znikną gościom z tego linku. Jeśli ktoś zarezerwował pozycję, a nie ma jej w żadnym innym aktywnym linku tej listy, zdejmiemy rezerwację, a gościowi, który zostawił e-mail, napiszemy. Czy tacy są — nie dowiesz się.",
+    "notLive": "Link już nie działa — składu nie da się zmienić. Odśwież stronę.",
+    "askOne": "Dodać „{item}” do linku „{share}”?",
+    "askMany": "Dodać „{item}” do linku?",
+    "askHint": "Goście zobaczą pozycję pod tym samym linkiem. Sama się tam nie dodaje.",
+    "add": "Dodaj",
+    "adding": "Dodaję…",
+    "notNow": "Nie teraz",
+    "added": "Dodano do linków: {n}.",
+    "pickOne": "Wybierz co najmniej jeden link.",
+    "listTag": "Widoczna dla gości",
+    "itemTag": "Widzą goście"
   }
 }
