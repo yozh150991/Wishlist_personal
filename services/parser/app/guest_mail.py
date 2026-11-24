@@ -19,7 +19,8 @@ secret-ключем. Тож навіть витеклий секрет сигн�
 `changed` і `deleted` — власник змінив чи прибрав позицію, яку взяли (потік J),
 `reminder` — за 7 днів до свята (P5) (ADR-055), `thanks` — подяка власника
 після свята, раз на список (ADR-059), `pool_join` / `pool_closed` /
-`pool_cancel` — спільний збір (ADR-064). Що сказати, для чотирьох останніх
+`pool_cancel` — спільний збір (ADR-064), `pool_received` — організатор
+позначив внесок отриманим (ROADMAP 8.14). Що сказати, для чотирьох останніх
 лежить знімком у `details`: сервіс позначок не читає ніколи.
 Посилання на список — з посилання, де діяв гість; приховані там ціни не
 з'являються й у листі.
@@ -80,6 +81,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "pool_cancel.deleted": "Позицію «{item}» прибрано зі списку «{list}», тож збору на неї більше немає. Переказувати нічого не треба.",
         "pool_cancel.paid": "Якщо ви вже переказали {amount}, напишіть організатору — {organizer}.",
         "why.pool": "Ви вказали цю адресу, коли долучалися до збору. Власник списку її не бачить.",
+        "pool_received.subject": "Ваш внесок у Wishlist отримано",
+        "pool_received.lead": "Збір на «{item}» у списку «{list}»: ваш внесок {amount} отримано — так позначив організатор, {organizer}.",
+        "pool_received.check": "Застосунок грошей не перевіряє: якщо щось не так, напишіть організатору.",
         "noprice": "не вказана",
     },
     "pl": {
@@ -121,6 +125,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "pool_cancel.deleted": "Pozycja „{item}” zniknęła z listy „{list}”, więc zrzutki już nie ma. Nie trzeba nic przelewać.",
         "pool_cancel.paid": "Jeśli już przelano {amount}, napisz do organizatora — {organizer}.",
         "why.pool": "Ten adres podano przy dołączaniu do zrzutki. Właściciel listy go nie widzi.",
+        "pool_received.subject": "Twoja wpłata w Wishlist dotarła",
+        "pool_received.lead": "Zrzutka na „{item}” z listy „{list}”: Twoja wpłata {amount} dotarła — tak zaznaczył organizator, {organizer}.",
+        "pool_received.check": "Aplikacja nie sprawdza pieniędzy: jeśli coś się nie zgadza, napisz do organizatora.",
         "noprice": "nie podana",
     },
     "en": {
@@ -162,6 +169,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "pool_cancel.deleted": "“{item}” was removed from “{list}”, so there's no collection for it any more. There's nothing to transfer.",
         "pool_cancel.paid": "If you've already sent {amount}, get in touch with the organiser — {organizer}.",
         "why.pool": "You gave this address when joining the collection. The list's owner can't see it.",
+        "pool_received.subject": "Your contribution arrived on Wishlist",
+        "pool_received.lead": "Collection for “{item}” on “{list}”: your {amount} has arrived — the organiser, {organizer}, marked it as received.",
+        "pool_received.check": "The app doesn't check money: if something's off, get in touch with the organiser.",
         "noprice": "not set",
     },
 }
@@ -335,6 +345,16 @@ def render(
             text(key, locale, item=_title(details, item), list=list_title),
             text("pool_cancel.paid", locale, amount=_price(details.get("amount"), details.get("currency"), locale),
                  organizer=str(details.get("organizer") or "")),
+        ]
+        why = text("why.pool", locale)
+    elif kind == "pool_received":
+        # ROADMAP 8.14: організатор позначив внесок учасника отриманим.
+        subject = text("pool_received.subject", locale)
+        lines = [
+            text("pool_received.lead", locale, item=_title(details, item), list=list_title,
+                 amount=_price(details.get("amount"), details.get("currency"), locale),
+                 organizer=str(details.get("organizer") or "")),
+            text("pool_received.check", locale),
         ]
         why = text("why.pool", locale)
     elif kind == "thanks":

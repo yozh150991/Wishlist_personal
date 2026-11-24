@@ -176,6 +176,67 @@ test.describe('з акаунтом власника', () => {
     await ctx.close();
   });
 
+  test('збір: організатор позначає внесок отриманим — інший гість бачить «отримано», власник нічого (ROADMAP 8.14)', async ({ page, browser }) => {
+    await signIn(page);
+    await createList(page, unique('Guest v2 pool'));
+    // Друга позиція вільна: інакше учасник, що вже скинувся, бачить «Усе вже розібрали».
+    for (const name of ['Проектор', 'Лампа']) await addItem(page, name);
+    const link = await shareLink(page, ['Проектор', 'Лампа'], unique('Гостям'));
+    const gpool = (p: Page) => card(p, 'Проектор').locator('.v2-gpool');
+
+    // Оля відкриває збір: ціни немає — ціль своя.
+    const a = await guest(browser, link);
+    await card(a, 'Проектор').getByRole('button', { name: /зібрати разом|zrzućmy się|chip in together/i }).click();
+    let sheet = a.getByRole('dialog');
+    await sheet.locator('input[name="pool_name"]').fill('Оля-e2e');
+    await sheet.locator('textarea[name="pool_instructions"]').fill('BLIK e2e');
+    await sheet.locator('input[name="pool_amount"]').fill('300');
+    await sheet.getByRole('button', { name: /відкрити збір|otwórz zrzutkę|start the collection/i }).click();
+    await expect(sheet).toHaveCount(0);
+
+    // Тарас долучається на 120.
+    const b = await guest(browser, link);
+    await card(b, 'Проектор').getByRole('button', { name: /^(долучитися|dołącz|chip in)$/i }).click();
+    sheet = b.getByRole('dialog');
+    await sheet.locator('input[name="pool_name"]').fill('Тарас-e2e');
+    await sheet.locator('input[name="pool_amount"]').fill('120');
+    await sheet.getByRole('button', { name: /^(долучитися|dołączam|count me in)$/i }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(gpool(b).locator('.v2-gpool__mine')).toContainText(/ви обіцяли|obiecałeś|you pledged/i);
+    await expect(gpool(b).locator('.v2-gpool__received')).toHaveCount(0);
+
+    // Оля позначає внесок Тараса отриманим.
+    await a.reload();
+    await card(a, 'Проектор').getByRole('button', { name: /керувати збором|zarządzaj zrzutką|manage collection/i }).click();
+    sheet = a.getByRole('dialog');
+    const row = sheet.locator('.v2-giftrow--pledge').filter({ hasText: 'Тарас-e2e' });
+    const got = row.getByRole('button', { name: /^(отримано|otrzymano|received)$/i });
+    await expect(got).toHaveAttribute('aria-pressed', 'false');
+    const marked = a.waitForResponse((r) => r.url().includes('/rpc/set_pledge_received') && r.ok());
+    await got.click();
+    await marked;
+    await expect(got).toHaveAttribute('aria-pressed', 'true');
+    await a.keyboard.press('Escape');
+
+    // Новий гість бачить «отримано 120 з 120» — без імен.
+    const c = await guest(browser, link);
+    await expect(gpool(c).locator('.v2-gpool__received')).toContainText('120');
+    await expect(c.getByText('Тарас-e2e')).toHaveCount(0);
+
+    // Тарас бачить, що його внесок отримано.
+    await b.reload();
+    await expect(gpool(b).locator('.v2-gpool__mine')).toContainText(/отримано|dotarła|has arrived/i);
+
+    // Власник на своєму посиланні — нічого про збір.
+    await page.goto(link);
+    await expect(page.getByText(/це твоє посилання|to twój link|your own link/i)).toBeVisible();
+    await expect(page.locator('.v2-gpool')).toHaveCount(0);
+    await expect(page.getByText(/тарас-e2e|оля-e2e/i)).toHaveCount(0);
+    await expect(page.locator('.v2-gcard').filter({ hasText: /отримано|otrzymano|received/i })).toHaveCount(0);
+
+    for (const p of [a, b, c]) await p.context().close();
+  });
+
   test('два гості на одну штуку через «Забронювати й перейти»: магазин відкриває лише переможець (ADR-075)', async ({ page, browser }) => {
     await signIn(page);
     await createList(page, unique('Guest v2 race'));
@@ -395,6 +456,92 @@ test('спільний збір на /l/ — відкрити, долучити�
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.locator('.v2-gpool')).toHaveCount(0);
   await expect(page.getByText(/оля|ігор|blik/i)).toHaveCount(0);
+});
+
+test('збір на /l/ — «Отримано» в аркуші організатора, підсумок гостям, свій внесок учаснику (ROADMAP 8.14)', async ({ page }) => {
+  const item = {
+    id: 'i-bike', title: 'Велосипед', url: null, price: 1200, currency: 'PLN', quantity: 1, priority: 'medium', note: null,
+    variants: [], image_url: null, status: 'active', created_at: '2026-10-01T10:00:00Z', section_id: null,
+    taken_qty: 1, mine_qty: 1,
+  };
+  const lamp = { ...item, id: 'i-lamp', title: 'Лампа', price: 400, taken_qty: 0, mine_qty: 0 };
+  let pledges = [
+    { id: 'pl-1', name: 'Тарас', amount: '150.00', received: false },
+    { id: 'pl-2', name: 'Марія', amount: '150.00', received: false },
+  ];
+  let viewer: 'organizer' | 'member' | 'owner' = 'organizer';
+  const calls: Record<string, unknown>[] = [];
+  const received = () => pledges.filter((p) => p.received).reduce((s, p) => s + Math.round(Number(p.amount) * 100), 0) / 100;
+  const pool = () => ({
+    id: 'pool-1', organizer: 'Оля', instructions: 'BLIK на +48 500 000 000', goal: '1200.00', currency: 'PLN',
+    closed: false, raised: '300.00', received: received(), count: 2,
+    mine: viewer === 'member' ? '150.00' : null,
+    mine_received: viewer === 'member' ? pledges[0]!.received : false,
+    is_organizer: viewer === 'organizer',
+    pledges: viewer === 'organizer' ? pledges : null,
+  });
+  const body = () => ({
+    title: 'Ювілей тата', message: null, currency: 'PLN', event_date: null, expires_at: null, expires_tz: null,
+    owner_scheme: null, appearance_hue: null, hide_prices: false, allow_reservations: viewer !== 'owner', archived: false,
+    viewer_is_owner: viewer === 'owner', guest: null, sections: [], thanks: null,
+    // Друга позиція вільна: інакше гостьова показує «Усе вже розібрали» замість карток.
+    items: viewer === 'owner'
+      ? [{ ...item, taken_qty: null, mine_qty: null }, { ...lamp, taken_qty: null, mine_qty: null }]
+      : [{ ...item, mine_qty: viewer === 'organizer' ? 1 : 0, pool: pool() }, lamp],
+  });
+  await page.route('**/rpc/get_guest_list', (r) => r.fulfill({ json: body() }));
+  await page.route('**/rpc/register_share_view', (r) => r.fulfill({ status: 204, body: '' }));
+  await page.route('**/rpc/set_pledge_received', async (r) => {
+    const req = r.request().postDataJSON();
+    calls.push(req);
+    pledges = pledges.map((p) => (p.id === req.p_pledge_id ? { ...p, received: req.p_received } : p));
+    await r.fulfill({ status: 204, body: '' });
+  });
+
+  await page.goto('/l/e2e-pool-token');
+  const gpool = page.locator('.v2-gcard').filter({ hasText: 'Велосипед' }).locator('.v2-gpool');
+  // Поки ніхто нічого не позначив — картка така, як до 8.14.
+  await expect(gpool).toBeVisible();
+  await expect(gpool.locator('.v2-gpool__received')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /керувати збором|zarządzaj zrzutką|manage collection/i }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByText(/позначте «отримано»|zaznacz „otrzymano”|mark “received”/i)).toBeVisible();
+  const row = sheet.locator('.v2-giftrow--pledge').filter({ hasText: 'Тарас' });
+  const got = row.getByRole('button', { name: /^(отримано|otrzymano|received)$/i });
+  await expect(got).toHaveAttribute('aria-pressed', 'false');
+  await got.click();
+  await expect(got).toHaveAttribute('aria-pressed', 'true');
+  expect(calls.at(-1)).toMatchObject({ p_pool_id: 'pool-1', p_pledge_id: 'pl-1', p_received: true });
+  expect(calls.at(-1)).toHaveProperty('p_key');
+  // Аркуш лишається відкритим: можна позначити наступного.
+  await expect(sheet.locator('.v2-gpool__received')).toContainText('150');
+  // Кнопка — не нижче 44 px і не вилазить за рядок ні на телефоні, ні на широкому.
+  const box = (await got.boundingBox())!;
+  const rowBox = (await row.boundingBox())!;
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.x + box.width).toBeLessThanOrEqual(rowBox.x + rowBox.width + 1);
+  // Зняти позначку — так само.
+  await got.click();
+  await expect(got).toHaveAttribute('aria-pressed', 'false');
+  expect(calls.at(-1)).toMatchObject({ p_pledge_id: 'pl-1', p_received: false });
+  await got.click();
+  await expect(got).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+
+  // Учасник: свій внесок отримано, підсумок — без імен.
+  viewer = 'member';
+  await page.reload();
+  await expect(gpool.locator('.v2-gpool__received')).toContainText('150');
+  await expect(gpool.locator('.v2-gpool__mine')).toContainText(/отримано|dotarła|has arrived/i);
+  await expect(page.getByText(/марія/i)).toHaveCount(0);
+
+  // Власник: ні збору, ні «отримано».
+  viewer = 'owner';
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('.v2-gpool')).toHaveCount(0);
+  await expect(page.locator('.v2-gcard').filter({ hasText: /отримано|otrzymano|received/i })).toHaveCount(0);
 });
 
 test('код після першої броні: як повернути броні й лист на пошту гостя (ROADMAP 8.6, 8.7)', async ({ page }) => {

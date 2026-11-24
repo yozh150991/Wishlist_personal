@@ -7,6 +7,7 @@ import { useI18n } from '../../../lib/i18n';
 import { useDocumentTitle } from '../../../lib/documentTitle';
 import { errorText } from '../../../lib/errors';
 import { formatDay, localToday, moneyShort, num } from '../../../lib/format';
+import { toMinor } from '../../../lib/itemsView';
 import { useCounts } from './CommonV2';
 
 const STROKE = 2.75;
@@ -57,10 +58,14 @@ export default function GiftsV2() {
     const p = i.pool;
     const fmt = (v: number | string | null) => (p ? (moneyShort(num(v), p.currency, locale) ?? '') : '');
     // Збір: свій — скільки обіцяно; чужий — моя сума, хто збирає й як скинутися.
+    // «Отримано» (ROADMAP 8.14): організатору — скільки вже дійшло, учаснику — чи дійшов його внесок.
+    const got = p && (toMinor(p.received ?? 0) ?? 0) > 0 ? t('v2gifts.poolReceived', { received: fmt(p.received ?? 0) }) : null;
     const poolMeta = p
       ? p.is_organizer
-        ? t('v2gifts.poolMine', { raised: fmt(p.raised), goal: fmt(p.goal) })
-        : t('v2gifts.poolPledge', { amount: fmt(p.mine), name: p.organizer })
+        ? [t('v2gifts.poolMine', { raised: fmt(p.raised), goal: fmt(p.goal) }), got].filter(Boolean).join(' · ')
+        : [t('v2gifts.poolPledge', { amount: fmt(p.mine), name: p.organizer }), p.mine_received ? t('v2gifts.poolMineReceived') : null]
+            .filter(Boolean)
+            .join(' · ')
       : null;
     return (
       <li key={i.id} className="v2-giftrow">

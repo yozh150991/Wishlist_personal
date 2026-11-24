@@ -1589,6 +1589,15 @@ div.v2-chips { gap: var(--sp-3); }
 .v2-giftrow > .v2-tag { grid-area: tag; }
 .v2-giftrow { grid-template-areas: 'title tag' 'meta tag' 'how how'; }
 .v2-giftrow__how { grid-area: how; font-size: var(--t-small); white-space: pre-line; overflow-wrap: anywhere; }
+/* Внесок в аркуші організатора (ROADMAP 8.14): ім'я, сума й «Отримано». На
+   вузькому екрані кнопка — окремим рядком на всю ширину, на широкому — праворуч. */
+.v2-giftrow--pledge { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'title tag' 'got got'; row-gap: var(--sp-2); }
+.v2-giftrow__got { grid-area: got; width: 100%; min-height: var(--tap); gap: var(--sp-2); }
+.v2-giftrow__got[aria-pressed='true'] { background: var(--color-accent-100); border-color: var(--color-accent-700); }
+@media (min-width: 40rem) {
+  .v2-giftrow--pledge { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: 'title tag got'; }
+  .v2-giftrow__got { width: auto; }
+}
 .v2-giftthanks { margin: 0; padding: var(--sp-3) var(--sp-4); background: var(--color-accent-100); border-radius: 16px; }
 .v2-giftthanks__text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
 @media (min-width: 56rem) {
@@ -2071,8 +2080,12 @@ div.v2-chips { gap: var(--sp-3); }
 }
 .v2-gpool__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0; font-weight: 700; }
 .v2-gpool__bar { height: 8px; background: color-mix(in srgb, var(--color-accent) 18%, transparent); border-radius: 999px; overflow: hidden; }
-.v2-gpool__bar > span { display: block; height: 100%; background: var(--color-accent-700); border-radius: inherit; }
+.v2-gpool__bar { position: relative; }
+.v2-gpool__bar > span { position: absolute; inset-block: 0; inset-inline-start: 0; display: block; background: var(--color-accent-700); border-radius: inherit; }
 .v2-gpool[data-closed] .v2-gpool__bar > span { background: var(--color-neutral-700); }
+/* «Отримано» (ROADMAP 8.14): обіцяне світлішає, отримане — суцільне поверх. Смужка
+   декоративна (aria-hidden): те саме сказано текстом під нею. */
+.v2-gpool__bar[data-received] > .v2-gpool__promised { opacity: 0.4; }
 .v2-gpool__sum, .v2-gpool__mine, .v2-gpool__how { margin: 0; font-size: var(--t-small); }
 .v2-gpool__mine { font-weight: 700; }
 .v2-gpool__how { overflow-wrap: anywhere; white-space: pre-line; }

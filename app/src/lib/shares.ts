@@ -322,6 +322,11 @@ export async function sendGuestCode(
  * Спільний збір (ADR-063): ім'я організатора, «як скинутися», ціль і скільки
  * обіцяно. `mine` — своя сума учасника; `pledges` — імена й суми, лише
  * організатору.
+ *
+ * «Отримано» (ROADMAP 8.14): `received` — сума внесків, які організатор
+ * позначив отриманими, бачать усі гості посилання; `mine_received` — чи
+ * отримано мій внесок. У `pledges` організатору — ще `id` (ним він позначає
+ * внесок) і `received`. Без імен і часу для інших гостей.
  */
 export type GuestPool = {
   id: string;
@@ -331,11 +336,17 @@ export type GuestPool = {
   currency: Currency;
   closed: boolean;
   raised: number | string;
+  /** До міграції 8.14 поля немає — тоді 0. */
+  received?: number | string;
   count: number;
   mine: number | string | null;
+  mine_received?: boolean;
   is_organizer: boolean;
-  pledges: { name: string; amount: number | string }[] | null;
+  pledges: PoolPledge[] | null;
 };
+
+/** Внесок, як його бачить організатор. */
+export type PoolPledge = { id?: string; name: string; amount: number | string; received?: boolean };
 
 export const POOL_NAME_MAX = 60;
 export const POOL_TEXT_MAX = 500;
@@ -395,6 +406,28 @@ export async function leavePool(token: string, poolId: string, key: string): Pro
 
 export async function closePool(token: string, poolId: string, key: string, closed: boolean): Promise<void> {
   const { error } = await supabase.rpc('close_pool', { p_token: token, p_pool_id: poolId, p_key: key, p_closed: closed });
+  if (error) throw rpcError(error);
+}
+
+/**
+ * Організатор позначає внесок отриманим чи знімає позначку (ROADMAP 8.14).
+ * Гроші застосунок не перевіряє — це позначка організатора для всіх гостей.
+ * Хто не організатор, отримує `not_organizer`; мертве посилання — `not_found`.
+ */
+export async function setPledgeReceived(
+  token: string,
+  poolId: string,
+  key: string,
+  pledgeId: string,
+  received: boolean,
+): Promise<void> {
+  const { error } = await supabase.rpc('set_pledge_received', {
+    p_token: token,
+    p_pool_id: poolId,
+    p_key: key,
+    p_pledge_id: pledgeId,
+    p_received: received,
+  });
   if (error) throw rpcError(error);
 }
 
