@@ -40,7 +40,7 @@ import { listKey, readSnapshot, saveSnapshot, sectionsKey } from '../../../lib/c
 import { newId, run } from '../../../lib/outbox';
 import type { Op } from '../../../lib/outbox';
 import { useUndo } from '../../../lib/undo';
-import { afterEventDue, isPastEvent, readSnooze, repeatTarget, snoozeNext, writeSnooze } from '../../../lib/afterEvent';
+import { afterEventDue, isPastEvent, readSnooze, repeatTarget, snoozeLater } from '../../../lib/afterEvent';
 import type { Snooze } from '../../../lib/afterEvent';
 import {
   createSection,
@@ -261,8 +261,12 @@ export default function ListV2() {
   const [carried, setCarried] = useState<{ id: string; title: string; n: number } | null>(null);
   /** Одноразовий рядок, з яким сюди прийшли (напр. «Повторено з …»). */
   const [flash, setFlash] = useState<string | null>(null);
-  /** З нагадування про щорічне свято — «Повторити» відкриється, щойно позиції завантажаться. */
-  const [repeatAsked, setRepeatAsked] = useState(false);
+  /**
+   * Крок «Після свята», з яким сюди прийшли з головної: з нагадування про
+   * щорічне — «Повторити», з картки «Як минуло свято?» — будь-який (8.13).
+   * Вікно відкриється, щойно позиції завантажаться.
+   */
+  const [stepAsked, setStepAsked] = useState<AfterStep | null>(null);
   /** З пошуку по всіх списках (8.11): до якої позиції докрутити, щойно позиції завантажаться. */
   const [focusItem, setFocusItem] = useState<string | null>(null);
   /** Позиція з пошуку — серед купленого й подарованого: розгорнути той блок. */
@@ -290,9 +294,9 @@ export default function ListV2() {
   // Перший запуск «Вставити посилання на річ» (Q2) веде сюди з одразу
   // відкритою формою позиції. Стан історії чистимо, щоб F5 не відкривав її знову.
   useEffect(() => {
-    const state = location.state as { add?: boolean; flash?: string; repeat?: boolean; item?: unknown } | null;
+    const state = location.state as { add?: boolean; flash?: string; repeat?: boolean; after?: AfterStep; item?: unknown } | null;
     setRevealDone(false);
-    if (!state?.add && !state?.flash && !state?.repeat && typeof state?.item !== 'string') {
+    if (!state?.add && !state?.flash && !state?.repeat && !state?.after && typeof state?.item !== 'string') {
       setFlash(null);
       setFocusItem(null);
       return;
@@ -300,7 +304,8 @@ export default function ListV2() {
     navigate(location.pathname, { replace: true, state: null });
     if (state.add) setSheet({ open: true, item: null });
     setFlash(state.flash ?? null);
-    setRepeatAsked(Boolean(state.repeat));
+    // `repeat: true` — старіша форма того самого `after: 'repeat'`.
+    setStepAsked(state.after ?? (state.repeat ? 'repeat' : null));
     setFocusItem(typeof state.item === 'string' ? state.item : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -785,12 +790,13 @@ export default function ListV2() {
     }
   }
 
-  /** «Пізніше»: вперше — на три дні, вдруге — назовсім (M1). */
+  /**
+   * «Пізніше»: вперше — на три дні, вдруге — назовсім (M1). Той самий стан,
+   * що й «Пізніше» на головній (8.13): відлік продовжує записане на пристрої.
+   */
   function later() {
     if (!list?.event_date) return;
-    const next = snoozeNext(snooze, list.event_date, localToday());
-    writeSnooze(id, next);
-    setSnooze(next);
+    setSnooze(snoozeLater(id, list.event_date, localToday(), snooze));
   }
 
   /**
@@ -823,14 +829,18 @@ export default function ListV2() {
     writeSort(id, next);
   }
 
-  // Нагадування про щорічне свято привело сюди з «Повторити» (U3): вікно — коли
-  // вже відомо, що переносити, інакше перемикач «Неподаровані позиції» показав би нуль.
+  // Головна привела сюди з кроком (U3, 8.13): вікно — коли вже відомо, що
+  // переносити, інакше перемикач «Неподаровані позиції» показав би нуль. Без
+  // актуальних позицій «Позначити отримане» й «Ще хочу» не відкриваються:
+  // там нема чого вибрати, а картка вгорі вже каже «Усе розібрано».
   const itemsReady = !loading && !error;
   useEffect(() => {
-    if (!repeatAsked || !list || !itemsReady) return;
-    setRepeatAsked(false);
-    setAfterStep('repeat');
-  }, [repeatAsked, list, itemsReady]);
+    if (!stepAsked || !list || !itemsReady) return;
+    setStepAsked(null);
+    if ((stepAsked === 'received' || stepAsked === 'carry') && activeLive.length === 0) return;
+    setAfterStep(stepAsked);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepAsked, list, itemsReady]);
 
   /* ── Розмітка ── */
 
