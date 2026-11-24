@@ -188,6 +188,116 @@ test.describe('після свята й архів v2', () => {
   });
 });
 
+/** Картка на головній: якщо минулих свят кілька — спершу вибрати своє. */
+async function pickOnHome(page: Page, title: string) {
+  const home = afterCard(page);
+  await expect(home).toBeVisible();
+  const pick = home.getByRole('group');
+  if ((await pick.count()) > 0) await pick.getByRole('button', { name: title, exact: true }).click();
+  await expect(home.getByRole('link', { name: title, exact: true })).toBeVisible();
+  return home;
+}
+
+test.describe('«Як минуло свято?» на головній (8.13)', () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('людина сама знаходить з головної «Ще хочу», «Позначити отримане» й повтор, а «Пізніше» — одне на обох екранах', async ({
+    page,
+  }) => {
+    await signInV2(page);
+    const yesterday = inDays(-1);
+    const year = Number(yesterday.slice(0, 4));
+    const title = unique(`V2 home after ${year}`);
+    await newList(page, title);
+    const listPath = new URL(page.url()).pathname;
+    const lamp = unique('Лампа');
+    const plaid = unique('Плед');
+    await addManual(page, lamp);
+    await addManual(page, plaid);
+
+    // У день свята картки на головній немає — наступного дня вона є.
+    await setEventDate(page, inDays(0));
+    await page.goto('/lists');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(afterCard(page).getByRole('link', { name: title, exact: true })).toHaveCount(0);
+    await page.goto(listPath);
+    await setEventDate(page, yesterday);
+
+    await page.goto('/lists');
+    let home = await pickOnHome(page, title);
+    await expect(home).toContainText(/2 позиції не розібрані|2 pozycje do rozliczenia|2 items to sort out/i);
+    // Лише статуси власника — про гостей ні слова (ADR-040).
+    await expect(home).not.toContainText(/гост|gości|guest/i);
+
+    // «Ще хочу» з головної — у список із уже відкритим вікном, усе вибрано.
+    await home.getByRole('link', { name: /що ще хочу|czego wciąż chcę|what i still want/i }).click();
+    await expect(page).toHaveURL(new RegExp(`${listPath}$`));
+    const carry = page.getByRole('dialog', { name: /що ще хочеш|czego jeszcze chcesz|what do you still want/i });
+    await expect(carry.getByRole('checkbox', { name: lamp })).toBeChecked();
+    await expect(carry.getByRole('checkbox', { name: plaid })).toBeChecked();
+    const target = unique('V2 home still want');
+    await carry.locator('input[name="carry_title"]').fill(target);
+    await carry.getByRole('button', { name: /\(2\)$/ }).click();
+    await expect(carry).toHaveCount(0);
+    await expect(page.getByRole('status').filter({ hasText: target })).toBeVisible();
+    // Після F5 вікно саме не відкривається: крок був одноразовий.
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    // «Позначити отримане» з головної — нічого не позначено наперед.
+    await page.goto('/lists');
+    home = await pickOnHome(page, title);
+    await home.getByRole('link', { name: /позначити отримане|oznacz otrzymane|mark what you received/i }).click();
+    const received = page.getByRole('dialog', { name: /що подарували|co podarowano|what did you receive/i });
+    await expect(received.getByRole('checkbox', { name: lamp })).not.toBeChecked();
+    await received.getByRole('checkbox', { name: lamp }).check();
+    await received.getByRole('button', { name: /\(1\)$/ }).click();
+    await expect(received).toHaveCount(0);
+    await expect(page.locator('.v2-done__summary')).toContainText(/· 1$/);
+
+    // Повтор з головної: рік у назві посунуто, неподароване — копіями.
+    await page.goto('/lists');
+    home = await pickOnHome(page, title);
+    await expect(home).toContainText(/1 позиція не розібрана|1 pozycja do rozliczenia|1 item to sort out/i);
+    await home.getByRole('link', { name: new RegExp(String(year + 1)) }).click();
+    const repeat = page.getByRole('dialog', { name: new RegExp(String(year + 1)) });
+    const nextTitle = title.replace(String(year), String(year + 1));
+    await expect(repeat.locator('input[name="repeat_title"]')).toHaveValue(nextTitle);
+    await repeat.getByRole('button', { name: /^(створити|utwórz|create)$/i }).click();
+    await expect(page.getByRole('heading', { level: 1, name: nextTitle })).toBeVisible();
+    await expect(card(page, plaid)).toBeVisible();
+    await expect(card(page, lamp)).toHaveCount(0);
+
+    // «Пізніше» на головній — і на сторінці списку картки теж немає.
+    await page.goto('/lists');
+    home = await pickOnHome(page, title);
+    await home.getByRole('button', { name: /^(пізніше|później|later)$/i }).click();
+    await expect(afterCard(page).getByRole('link', { name: title, exact: true })).toHaveCount(0);
+    await page.goto(listPath);
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expect(afterCard(page)).toHaveCount(0);
+    await page.goto('/lists');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(afterCard(page).getByRole('link', { name: title, exact: true })).toHaveCount(0);
+  });
+
+  test('«Пізніше» на сторінці списку ховає й картку на головній', async ({ page }) => {
+    await signInV2(page);
+    const title = unique('V2 home later');
+    await newList(page, title);
+    await addManual(page, unique('Книга'));
+    await setEventDate(page, inDays(-3));
+    await afterCard(page).getByRole('button', { name: /^(пізніше|później|later)$/i }).click();
+    await expect(afterCard(page)).toHaveCount(0);
+    await page.goto('/lists');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    // Сам список на місці, серед минулих, — зникла лише картка.
+    await expect(page.getByRole('region', { name: /минулі|minione|past/i }).getByRole('link', { name: title })).toBeVisible();
+    await expect(afterCard(page).getByRole('link', { name: title, exact: true })).toHaveCount(0);
+  });
+});
+
 test.describe('щорічні свята v2', () => {
   test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
 
