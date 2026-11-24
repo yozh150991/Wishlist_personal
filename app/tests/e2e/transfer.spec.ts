@@ -72,6 +72,7 @@ test.describe('вивантаження', () => {
       variants: [],
       currency: null,
       section: null,
+      needs_title: false,
     });
   });
 
@@ -136,6 +137,7 @@ test.describe('повний оберт', () => {
       variants: i.variants,
       currency: null,
       section: null,
+      needs_title: false,
     })));
   });
 

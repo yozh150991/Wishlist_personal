@@ -251,7 +251,7 @@ const { data: path } = await supabase.rpc('reserve_item_photo', { p_ext: 'webp' 
 await supabase.storage.from('item-photos').upload(path, blob, { contentType: 'image/webp', upsert: false });
 const url = supabase.storage.from('item-photos').getPublicUrl(path).data.publicUrl;   // → items.image_url
 ```
-Адреса для свого фото позиції (ADR-073). `SECURITY DEFINER`: видає 32 випадкові шістнадцяткові символи й розширення (`webp` чи `jpg`, інакше `22023 bad_request`) і записує рядок `item_photos` — лише в таку адресу політика `storage.objects` пускає завантаження, і лише цьому власникові. Ліміти — `P0001 photo_quota` (1000 фото на акаунт) і `P0001 photo_rate` (60 адрес за годину). Стиснення й стирання EXIF — до виклику, у браузері (`lib/photos.ts`).
+Адреса для свого фото позиції (ADR-073). `SECURITY DEFINER`: видає 32 випадкові шістнадцяткові символи й розширення (`webp` чи `jpg`, інакше `22023 bad_request`) і записує рядок `item_photos` — лише в таку адресу політика `storage.objects` пускає завантаження, і лише цьому власникові. Ліміти — `P0001 photo_quota` (1000 фото на акаунт) і `P0001 photo_rate` (60 адрес за годину). Стиснення й стирання EXIF — до виклику, у браузері (`lib/photos.ts`). «Відновити з копії» (ROADMAP 8.12) бере адреси так само, по одній на фото, — окремої RPC чи іншого ліміту для відновлення немає: `photo_rate` зупиняє його перед списком, що не вмістився, а повтор докладає решту.
 
 ### `item_photo_orphans` / `forget_item_photos` — лише `service_role`
 Прибирання своїх фото (ADR-073), викликає `wishlist-jobs` раз на добу. `item_photo_orphans(p_limit)` — адреси, видані понад добу тому, на які не посилається жоден `items.image_url` (будь-якого власника); `forget_item_photos(p_paths)` — забути рядки після того, як файли видалено зі сховища (`DELETE /storage/v1/object/item-photos`, тіло `{"prefixes": [...]}`).
@@ -303,6 +303,12 @@ await supabase.from('appearances').insert({ owner_id, name, hue, source: 'manual
 await supabase.from('lists').update({ appearance_id }).eq('id', listId);   // null — без оформлення
 ```
 Вбудовані події видно кожному власникові, змінити чи видалити їх не можна. Посилання на чуже оформлення база відхиляє з `42501`.
+
+Резервна копія (ROADMAP 8.12, `lib/backupZip.ts`) — нових RPC немає. Збирання: `fetchLists`, `fetchAllItems`, `fetchSections`, `fetchAppearances` і `fetch` публічної адреси кожного свого фото (лише з домену нашого сховища). Відновлення: `importList` на кожен список (після злиття 8.26 — RPC `import_list`), `updateList` для архіву й щорічності, якщо вставка їх не взяла, `appearances.insert` для свого оформлення, якого ще немає, і `uploadPhoto` на кожне фото. Скільки фото ще можна завантажити — підказка за своїми ж рядками:
+```ts
+await supabase.from('item_photos').select('path', { count: 'exact', head: true });                        // квота
+await supabase.from('item_photos').select('path', { count: 'exact', head: true }).gt('created_at', hourAgo); // за годину
+```
 
 Розділи (ADR-036), `lib/sections.ts`:
 ```ts

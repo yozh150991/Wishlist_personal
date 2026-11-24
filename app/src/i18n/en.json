@@ -863,7 +863,7 @@
     "looksHint": "Your own event looks are set on a particular list — in the list menu, “List style”.",
     "data": {
       "title": "My data",
-      "body": "The file holds all your lists, items and a description of your links. It has no link addresses and no guest marks.",
+      "body": "A ZIP with all your lists, sections, order, items and your photos. It has no links, link addresses or guest marks. You can restore the lists from it — into this account or a new one.",
       "cta": "Download my data",
       "starting": "Preparing…",
       "progress": "Exporting… {n} of {m}",
@@ -1330,7 +1330,7 @@
       },
       "rights": {
         "title": "Your rights",
-        "body": "• Get your data: Settings → My data — a file with all your lists and items.\n• Correct or delete: lists and items — right in the app; the whole account — Settings → Delete account.\n• Unsubscribe: guest emails — with the link in every email; owner notifications — in Settings.\n• Complain to a data protection authority — in Poland that's the President of the Personal Data Protection Office (UODO)."
+        "body": "• Get your data: Settings → My data — a ZIP with all your lists, items and your photos. It has no links and no guest marks.\n• Correct or delete: lists and items — right in the app; the whole account — Settings → Delete account.\n• Unsubscribe: guest emails — with the link in every email; owner notifications — in Settings.\n• Complain to a data protection authority — in Poland that's the President of the Personal Data Protection Office (UODO)."
       },
       "changes": {
         "title": "Changes",
@@ -1339,5 +1339,58 @@
     },
     "link": "Privacy policy",
     "back": "Back"
+  },
+  "backup": {
+    "export": {
+      "photos": "Adding photos… {n} of {m}",
+      "missing": "Photos no longer in storage: {n}. They stay in the backup as addresses."
+    },
+    "restore": {
+      "cta": "Restore from backup",
+      "title": "Restore from backup",
+      "intro": "Lists from the backup are added next to the ones you have — nothing in the account is overwritten. Links and guest marks are not restored: the backup has none.",
+      "file": "Backup file",
+      "choose": "Choose file",
+      "noFile": "No file chosen",
+      "hint": "A ZIP from My data, or an older My data JSON. Up to {max} MB.",
+      "reading": "Reading the file…",
+      "summary": "In the backup: {lists} lists, {items} items, {photos} photos.",
+      "made": "Backup made on {date}.",
+      "legacy": "This is an older My data file: photos are only addresses in it, and it has no language or look.",
+      "warnings": "Values that had to be trimmed or replaced with defaults: {n} — same as in list import.",
+      "existing": "These lists are already in the account: {n}. Looks like this backup was restored before — they will be skipped.",
+      "includeExisting": "Restore these too",
+      "includeExistingHint": "You will get duplicates marked “(from backup)” in the name.",
+      "copySuffix": "(from backup)",
+      "applyLook": "Take language and look from the backup",
+      "applyLookHint": "Theme, colours, high contrast and language — as they were when the backup was made.",
+      "rateAhead": "Photos in the backup: {n}, and {hour} more can be uploaded this hour. Restoring will stop at the limit — then repeat in an hour, what is already restored will be skipped.",
+      "quotaAhead": "Photos in the backup: {n}, and the account has room for {quota}. Some lists will not be restored.",
+      "nothing": "Nothing to restore: every list from the backup is already in the account.",
+      "submit": "Restore lists: {n}",
+      "progress": "Restoring… list {n} of {m}",
+      "progressPhotos": "Photo {n} of {m}",
+      "stop": "Stop",
+      "done": "Lists restored: {n}.",
+      "skipped": "Skipped as already there: {n}.",
+      "badPhotos": "Photos that could not be read: {n} — those items were restored without a photo.",
+      "stopped": "Stopped. Restore again to add the rest: what is already restored will be skipped."
+    },
+    "errors": {
+      "tooBig": "The file is larger than {max} MB — it is not a My data backup.",
+      "brokenZip": "The ZIP is damaged and could not be read. Nothing was saved.",
+      "noManifest": "This ZIP has no My data backup in it (wishlist-backup.json). Nothing was saved.",
+      "broken": "The backup file is damaged. Nothing was saved.",
+      "foreign": "This is not a My data backup. Nothing was saved.",
+      "singleList": "This is a single-list file — use Import from file on My lists.",
+      "newer": "The backup was made by a newer version of the app (format {version}). Update the app and try again.",
+      "tooManyLists": "The backup has over {max} lists — it is not ours. Nothing was saved.",
+      "badItem": "The backup has a damaged item: list “{list}”, item {row}. Nothing was saved.",
+      "needZip": "This is the JSON from a backup with photos — choose the whole ZIP, not a file from it.",
+      "missingPhoto": "Photo {name} is missing from the ZIP. Nothing was saved.",
+      "photoTooBig": "Photo {name} in the ZIP is too large. Nothing was saved.",
+      "photoRate": "The limit is 60 photos an hour. Lists restored: {done} of {total}. Repeat in an hour: what is already restored will be skipped.",
+      "photoQuota": "The account already has {max} photos — no more will fit. Lists restored: {done} of {total}."
+    }
   }
 }

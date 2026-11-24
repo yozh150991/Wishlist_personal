@@ -11,12 +11,7 @@ import { iosShortcutPrefix } from '../../../lib/shareTarget';
 import { ANDROID_APK_URL, androidOffer } from '../../../lib/androidApp';
 import { useMediaQuery } from '../../../lib/media';
 import { errorText } from '../../../lib/errors';
-import { fetchAllItems, fetchLists } from '../../../lib/db';
-import { fetchSharesOverview } from '../../../lib/shares';
-import { toAccountJson } from '../../../lib/transfer';
-import { fetchSections } from '../../../lib/sections';
-import type { Section } from '../../../lib/sections';
-import { downloadText } from '../../../lib/download';
+import { downloadBlob } from '../../../lib/download';
 import { deleteAccount } from '../../../lib/account';
 import { bookmarkletHref, shortcutScript } from '../../../lib/bookmarklet';
 import { publicOrigin } from '../../../lib/supabase';
@@ -25,6 +20,7 @@ import { NoteV2, PasswordFieldV2 } from './AuthPartsV2';
 import { SheetV2, SignOutV2, SwitchV2 } from './CommonV2';
 import { NotifyCardV2 } from './NotifyV2';
 import { SecurityCardV2 } from './SecurityV2';
+import { RestoreSheetV2 } from './RestoreSheetV2';
 
 const LANGUAGE: Record<Locale, string> = { uk: 'Українська', pl: 'Polski', en: 'English' };
 
@@ -421,58 +417,45 @@ function QrV2() {
 }
 
 /**
- * «Мої дані» (потік I3): усі списки з позиціями й опис посилань одним файлом
- * (`toAccountJson`). Кнопка не гасне мовчки — «Експортую… 3 з 12», і
- * скасувати можна з першої секунди. Адрес посилань і позначок у файлі немає.
+ * «Мої дані» (потік I3, ROADMAP 8.12): резервна копія — ZIP з JSON акаунта й
+ * своїми фото (`lib/backupZip.ts`, лінивим чанком разом із `fflate`).
+ * Кнопка не гасне мовчки — «Експортую… 3 з 12», «Додаю фото… 4 з 9», і
+ * скасувати можна з першої секунди. Посилань, їхніх адрес і позначок гостей
+ * у копії немає. Поруч — «Відновити з копії» (`RestoreSheetV2`).
  */
 function MyDataV2() {
-  const { t } = useI18n();
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const { t, locale } = useI18n();
+  const { theme, scheme, highContrast } = useTheme();
+  const [progress, setProgress] = useState<{ stage: 'lists' | 'photos'; done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<{ missing: number } | null>(null);
+  const [restoring, setRestoring] = useState(false);
   /** Номер запуску: «Скасувати» його міняє, і старий запуск тихо згасає. */
   const runId = useRef(0);
 
   async function run() {
     if (progress) return;
     const mine = ++runId.current;
-    const cancelled = { get current() { return runId.current !== mine; } };
+    const cancelled = () => runId.current !== mine;
     setError(null);
-    setSaved(false);
-    setProgress({ done: 0, total: 0 });
+    setSaved(null);
+    setProgress({ stage: 'lists', done: 0, total: 0 });
     try {
-      const lists = await fetchLists();
-      setProgress({ done: 0, total: lists.length });
-      const out: {
-        list: (typeof lists)[number];
-        items: Awaited<ReturnType<typeof fetchAllItems>>;
-        sections: Section[];
-      }[] = [];
-      for (const list of lists) {
-        if (cancelled.current) return;
-        const [items, sections] = await Promise.all([fetchAllItems(list.id), fetchSections(list.id)]);
-        out.push({ list, items, sections });
-        setProgress({ done: out.length, total: lists.length });
-      }
-      if (cancelled.current) return;
-      const titles = new Map(lists.map((l) => [l.id, l.title]));
-      const shares = (await fetchSharesOverview()).map((s) => ({
-        title: s.title,
-        list_title: s.list_title ?? titles.get(s.source_list_id) ?? null,
-        created_at: s.created_at,
-        expires_at: s.expires_at,
-        revoked_at: s.revoked_at,
-        view_count: s.view_count ?? 0,
-        items_count: s.share_items[0]?.count ?? 0,
-      }));
-      if (cancelled.current) return;
-      const day = new Date().toISOString().slice(0, 10);
-      downloadText(`wishlist-${day}.json`, toAccountJson(out, shares), 'application/json');
-      setSaved(true);
+      const { exportBackup } = await import('../../../lib/backupZip');
+      const out = await exportBackup(
+        { locale, theme, scheme, high_contrast: highContrast },
+        (p) => {
+          if (!cancelled()) setProgress(p);
+        },
+        cancelled,
+      );
+      if (!out || cancelled()) return;
+      downloadBlob(out.name, out.blob);
+      setSaved({ missing: out.missing });
     } catch (e) {
-      if (!cancelled.current) setError(errorText(e, t));
+      if (!cancelled()) setError(errorText(e, t));
     } finally {
-      if (!cancelled.current) setProgress(null);
+      if (!cancelled()) setProgress(null);
     }
   }
 
@@ -483,7 +466,12 @@ function MyDataV2() {
       </h2>
       <p className="v2-hint v2-hint--start">{t('v2settings.data.body')}</p>
       {error && <NoteV2 tone="error">{error}</NoteV2>}
-      {saved && <NoteV2 tone="info">{t('v2settings.data.saved')}</NoteV2>}
+      {saved && (
+        <NoteV2 tone="info">
+          {t('v2settings.data.saved')}
+          {saved.missing > 0 && ` ${t('backup.export.missing', { n: saved.missing })}`}
+        </NoteV2>
+      )}
       <div className="v2-settings__row">
         <button
           type="button"
@@ -494,12 +482,14 @@ function MyDataV2() {
         >
           {progress && <span className="v2-spinner" aria-hidden="true" />}
           {progress
-            ? progress.total
-              ? t('v2settings.data.progress', { n: progress.done, m: progress.total })
-              : t('v2settings.data.starting')
+            ? progress.stage === 'photos'
+              ? t('backup.export.photos', { n: progress.done, m: progress.total })
+              : progress.total
+                ? t('v2settings.data.progress', { n: progress.done, m: progress.total })
+                : t('v2settings.data.starting')
             : t('v2settings.data.cta')}
         </button>
-        {progress && (
+        {progress ? (
           <button
             type="button"
             className="v2-btn v2-btn--ghost"
@@ -510,8 +500,13 @@ function MyDataV2() {
           >
             {t('v2settings.data.cancel')}
           </button>
+        ) : (
+          <button type="button" className="v2-btn v2-btn--ghost" onClick={() => setRestoring(true)}>
+            {t('backup.restore.cta')}
+          </button>
         )}
       </div>
+      <RestoreSheetV2 open={restoring} onClose={() => setRestoring(false)} />
     </section>
   );
 }

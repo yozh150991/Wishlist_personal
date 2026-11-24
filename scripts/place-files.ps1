@@ -196,6 +196,10 @@ $map = @{
   # own item photo (ADR-073)
   'photos.ts' = 'app\src\lib'; 'photoRules.ts' = 'app\src\lib'
   'photo-rules.spec.ts' = 'app\tests\e2e'; 'photo-upload.spec.ts' = 'app\tests\e2e'
+  # backup ZIP with photos (ROADMAP 8.12)
+  'backup.ts' = 'app\src\lib'; 'zip.ts' = 'app\src\lib'; 'backupZip.ts' = 'app\src\lib'
+  'RestoreSheetV2.tsx' = 'app\src\designs\v2\screens'
+  'backup.spec.ts' = 'app\tests\e2e'; 'backup-restore.spec.ts' = 'app\tests\e2e'
   'push-sw.js' = 'app\public'
 
   # Five taste schemes, high contrast, list appearance (ADR-033).

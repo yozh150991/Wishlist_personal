@@ -22,6 +22,7 @@ import type { PhotoErrorKey, PhotoExt } from './photoRules';
 
 export {
   PHOTO_BUCKET,
+  PHOTO_HOURLY,
   PHOTO_INPUT_MAX,
   PHOTO_MAX_SIDE,
   PHOTO_OUTPUT_MAX,

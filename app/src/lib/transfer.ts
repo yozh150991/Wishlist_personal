@@ -72,6 +72,12 @@ export type TransferItem = {
   currency: Currency | null;
   /** Назва розділу (ADR-036); null — «Інше». */
   section: string | null;
+  /**
+   * Чернетка без назви (ADR-046): у `title` — адреса, гостям невидима. Лише
+   * в JSON: без позначки чернетка після імпорту стала б видимою позицією з
+   * адресою замість назви. У CSV колонки немає — там завжди `false`.
+   */
+  needs_title: boolean;
 };
 
 export type TransferList = {
@@ -137,6 +143,7 @@ export function toTransferItem(item: Item, section: string | null = null): Trans
     variants: item.variants ?? [],
     currency: item.currency ?? null,
     section,
+    needs_title: Boolean(item.needs_title),
   };
 }
 
@@ -190,7 +197,11 @@ export function toJson(list: List, items: Item[], sections: Section[] = []): str
 }
 
 /**
- * «Мої дані» (потік I3): усі списки з позиціями й опис посилань одним файлом.
+ * «Мої дані» (потік I3) до резервної копії з фото (ROADMAP 8.12): усі списки
+ * з позиціями й опис посилань одним файлом. Застосунок цього файлу більше не
+ * пише — тепер це ZIP (`backup.ts`), — але люди такі файли мають, і
+ * «Відновити з копії» їх приймає; функція лишається еталоном старого формату
+ * для тестів.
  *
  * Це файл на збереження, не на імпорт: імпорт приймає файл одного списку
  * (ADR-027), а кожен запис у `lists` — той самий список і позиції, що й у
@@ -489,7 +500,7 @@ function rowToItem(
   get: (column: (typeof CSV_COLUMNS)[number]) => string,
   row: number,
   issues: Issue[],
-  numeric?: { price?: number },
+  numeric?: { price?: number; needsTitle?: boolean },
 ): TransferItem | null {
   const title = get('title');
   if (!title) {
@@ -562,6 +573,7 @@ function rowToItem(
     image_url: checkUrl(get('image_url'), row, 'image_url', issues),
     variants: parseVariants(get('variants'), row, issues),
     section: parseSection(get('section'), row, issues),
+    needs_title: numeric?.needsTitle === true,
   };
 }
 
@@ -624,7 +636,7 @@ function checkList(
   return { title, description, currency, event_date: eventDate, sections };
 }
 
-function capItems(items: TransferItem[], issues: Issue[]): TransferItem[] {
+export function capItems(items: TransferItem[], issues: Issue[]): TransferItem[] {
   if (items.length <= MAX_IMPORT_ITEMS) return items;
   issues.push({
     level: 'warning',
@@ -701,25 +713,42 @@ export function parseJsonFile(text: string, fallbackTitle: string): ParseResult 
 
   const items: TransferItem[] = [];
   rawItems.forEach((entry, i) => {
-    const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
-    // Ознаки у JSON-файлі — справжній масив, а не рядок. Повертаємо його як
-    // JSON-текст: далі обидва формати читає одна й та сама `parseVariants`.
-    const get = (column: (typeof CSV_COLUMNS)[number]) => {
-      const raw = record[column];
-      return Array.isArray(raw) ? JSON.stringify(raw) : trimmed(raw);
-    };
-    const rawPrice = record.price;
-    const item = rowToItem(get, i + 1, issues, typeof rawPrice === 'number' ? { price: rawPrice } : undefined);
+    const item = parseJsonItem(entry, i + 1, issues);
     if (item) items.push(item);
   });
 
-  const listRaw = (obj.list && typeof obj.list === 'object' ? obj.list : {}) as Record<string, unknown>;
   const kept = capItems(items, issues);
-  return {
-    list: checkList(listRaw as Partial<TransferList>, fallbackTitle, issues, collectSections(listRaw.sections, kept, issues)),
-    items: kept,
-    issues,
+  return { list: parseJsonList(obj.list, kept, fallbackTitle, issues), items: kept, issues };
+}
+
+/**
+ * Одна позиція з JSON — і з файлу списку, і з резервної копії (`backup.ts`).
+ * `null`, якщо позиція непридатна; чому — у `issues`.
+ */
+export function parseJsonItem(entry: unknown, row: number, issues: Issue[]): TransferItem | null {
+  const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+  // Ознаки у JSON-файлі — справжній масив, а не рядок. Повертаємо його як
+  // JSON-текст: далі обидва формати читає одна й та сама `parseVariants`.
+  const get = (column: (typeof CSV_COLUMNS)[number]) => {
+    const raw = record[column];
+    return Array.isArray(raw) ? JSON.stringify(raw) : trimmed(raw);
   };
+  const rawPrice = record.price;
+  return rowToItem(get, row, issues, {
+    ...(typeof rawPrice === 'number' ? { price: rawPrice } : {}),
+    needsTitle: record.needs_title === true,
+  });
+}
+
+/** Поля списку й розділи з JSON — і з файлу списку, і з резервної копії. */
+export function parseJsonList(
+  rawList: unknown,
+  items: TransferItem[],
+  fallbackTitle: string,
+  issues: Issue[],
+): TransferList {
+  const listRaw = (rawList && typeof rawList === 'object' ? rawList : {}) as Record<string, unknown>;
+  return checkList(listRaw as Partial<TransferList>, fallbackTitle, issues, collectSections(listRaw.sections, items, issues));
 }
 
 /** Формат обираємо за розширенням, а якщо його немає — за вмістом. */
