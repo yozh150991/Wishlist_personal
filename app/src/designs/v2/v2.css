@@ -1779,6 +1779,25 @@ div.v2-chips { gap: var(--sp-3); }
   .v2-after__steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* «Як минуло свято?» на головній (8.13): одна картка на всі минулі свята.
+   Пігулки — вибір свята; довга назва обрізається, а не розпирає рядок. */
+.v2-afterhome__pick { gap: var(--sp-2); }
+.v2-afterhome__chip {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--color-bg);
+}
+.v2-afterhome__chip:hover { background: color-mix(in srgb, var(--color-text) 6%, var(--color-bg)); }
+.v2-afterhome__line { overflow-wrap: anywhere; }
+.v2-afterhome__title { font-weight: 700; }
+@media (min-width: 56rem) {
+  /* Три кроки — у ряд: на головній їх рівно три. */
+  .v2-afterhome .v2-after__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 /* Архівний список: полиця, а не замок — рядок із «Повернути з архіву». */
 .v2-archived {
   display: flex;

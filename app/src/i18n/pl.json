@@ -950,6 +950,11 @@
       "removed": "Podziękowanie usunięte."
     }
   },
+  "v2afterHome": {
+    "kickerMany": "Święta minęły · {n}",
+    "pick": "Które święto rozliczyć",
+    "body": "Otworzymy listę od razu na tym kroku — podziękowanie i archiwum też tam są."
+  },
   "v2yearly": {
     "label": "Powtarzaj co roku",
     "hint": "Przypomnimy miesiąc przed {date} — nowych list sami nie tworzymy.",
