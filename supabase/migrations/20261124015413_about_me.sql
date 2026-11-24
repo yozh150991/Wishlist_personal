@@ -109,8 +109,10 @@ comment on function public.guest_about(public.shares) is
 -- get_guest_list — ще й `about`, лише з дозволу
 -- ─────────────────────────────────────────────
 --
--- Решта — як у 20261020140000_gift_pools. `about` додається до розгалуження
--- на власника: власник бачить свою сторінку такою, як гість.
+-- Тіло — з 20261123070305_pool_received.sql (ROADMAP 8.14: `received`,
+-- `mine_received`, `id`/`received` у `pledges` організатора) без жодних змін;
+-- додано лише `v_about` і блок `about` до розгалуження на власника: власник
+-- бачить свою сторінку такою, як гість.
 
 create or replace function public.get_guest_list(p_token text, p_key text default null)
 returns jsonb
@@ -155,22 +157,30 @@ begin
              || case when c.changed_at   is not null then jsonb_build_object('changed', true) else '{}'::jsonb end
              || case when c.purchased_at is not null then jsonb_build_object('bought',  true) else '{}'::jsonb end
              || case when p.id is null then '{}'::jsonb else jsonb_build_object('pool', jsonb_build_object(
-                  'id',           p.id,
-                  'organizer',    p.organizer,
-                  'instructions', p.instructions,
-                  'goal',         p.goal,
-                  'currency',     p.currency,
-                  'closed',       p.closed_at is not null,
-                  'raised',       coalesce((select sum(x.amount) from public.gift_pool_pledges x where x.pool_id = p.id), 0),
-                  'count',        (select count(*) from public.gift_pool_pledges x where x.pool_id = p.id),
-                  'mine',         (select x.amount from public.gift_pool_pledges x
-                                    where x.pool_id = p.id and x.identity_id = v_identity),
-                  'is_organizer', v_identity is not null and p.organizer_id = v_identity,
-                  'pledges',      case when v_identity is not null and p.organizer_id = v_identity then
-                                    (select coalesce(jsonb_agg(jsonb_build_object('name', x.name, 'amount', x.amount)
-                                                               order by x.created_at), '[]'::jsonb)
-                                       from public.gift_pool_pledges x where x.pool_id = p.id)
-                                  end
+                  'id',            p.id,
+                  'organizer',     p.organizer,
+                  'instructions',  p.instructions,
+                  'goal',          p.goal,
+                  'currency',      p.currency,
+                  'closed',        p.closed_at is not null,
+                  'raised',        coalesce((select sum(x.amount) from public.gift_pool_pledges x where x.pool_id = p.id), 0),
+                  'received',      coalesce((select sum(x.amount) from public.gift_pool_pledges x
+                                              where x.pool_id = p.id and x.received_at is not null), 0),
+                  'count',         (select count(*) from public.gift_pool_pledges x where x.pool_id = p.id),
+                  'mine',          (select x.amount from public.gift_pool_pledges x
+                                     where x.pool_id = p.id and x.identity_id = v_identity),
+                  'mine_received', coalesce((select x.received_at is not null from public.gift_pool_pledges x
+                                              where x.pool_id = p.id and x.identity_id = v_identity), false),
+                  'is_organizer',  v_identity is not null and p.organizer_id = v_identity,
+                  'pledges',       case when v_identity is not null and p.organizer_id = v_identity then
+                                     (select coalesce(jsonb_agg(jsonb_build_object(
+                                                'id',       x.id,
+                                                'name',     x.name,
+                                                'amount',   x.amount,
+                                                'received', x.received_at is not null)
+                                              order by x.created_at), '[]'::jsonb)
+                                        from public.gift_pool_pledges x where x.pool_id = p.id)
+                                   end
                 )) end
            order by t.ord), '[]'::jsonb)
     into v_items
