@@ -104,6 +104,8 @@ await supabase.rpc('release_claim', { p_token: token, p_item_id: itemId, p_key: 
 const { data } = await supabase.rpc('get_guest_list', { p_token: token, p_key: guestKey });
 // те саме, що get_shared_list, але guest: { "code": "7K4M2", "name": "Іра", "email": null }
 // і thanks: "Дякуємо, що були з нами!" або null — подяка власника (ADR-059), однакова для всіх
+// і about: { "sizes": "M / 42 / EU 43", "avoid": "Парфуми" } — «Про мене» власника (ROADMAP 8.10),
+//    лише коли на ЦЬОМУ посиланні shares.show_about = true і в профілі щось заповнено
 
 const { data } = await supabase.rpc('claim_item_v2', {
   p_token: token, p_item_id: itemId, p_key: guestKey, p_quantity: 1, p_name: 'Іра', p_email: null,
@@ -111,6 +113,8 @@ const { data } = await supabase.rpc('claim_item_v2', {
 // → { "taken_qty": 1, "mine_qty": 1, "code": "7K4M2", "name": "Іра", "email": null }
 ```
 Обгортки над внутрішніми `get_shared_list` і `claim_item` (ADR-039, п. 10; з ADR-065 клієнтам ці дві недоступні): позначки, гонка, мертве посилання й власник поводяться так само, додаються підпис і пошта гостя. `get_guest_list` віддає їх тільки гостю з ключем цієї ідентичності; власнику на власному посиланні `guest` — `null`. У `claim_item_v2` `p_name` / `p_email`: `null` — лишити як є, `''` — прибрати, інше — записати (пошта — у нижньому регістрі). Перевірка йде **до** позначки: `bad_name` (понад 60 символів чи перенос рядка) і `bad_email` позначки не роблять. Решта помилок — як вище. Перенести тіла в ці функції й видалити внутрішні — окремим рішенням: зараз вони лише закриті.
+
+`about` (ROADMAP 8.10) — лише заповнені поля з `sizes`, `likes`, `avoid`. Без дозволу на цьому посиланні або з порожнім профілем ключа `about` у відповіді **немає зовсім** — не `null` і не порожні рядки. Дозвіл на посиланні A не відкриває профіль через посилання B того самого списку. Мертве посилання — `not_found` ще до читання профілю. Власник на власному посиланні отримує той самий `about`, що й гість. Збирає поле внутрішня `guest_about(shares)` — клієнтам недоступна. У картку для ботів (`get_share_card`) «Про мене» не потрапляє.
 
 ### `send_guest_code` / `guest_mail_set` — anon + authenticated (ADR-054)
 ```ts
@@ -276,7 +280,7 @@ await supabase.auth.signOut({ scope: 'global' });
 | `create_share`, `list_items_page`, `list_totals` | `authenticated` |
 | `get_shared_list`, `register_share_view`, `claim_item`, `release_claim`, `redeem_guest_code`, `get_guest_list`, `claim_item_v2`, `send_guest_code`, `guest_mail_set` | `anon`, `authenticated` |
 | `ack_claim_change`, `get_share_card`, `report_share`, `start_pool`, `pledge_pool`, `leave_pool`, `close_pool`, `cancel_pool`, `set_pledge_received` | `anon`, `authenticated` |
-| `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
+| `wake_guest_mail`, `enqueue_guest_mail`, `live_share_of_item`, `enqueue_guest_reminders`, `lists_thanks_mail_trg`, `guest_about` | нікому — внутрішні (тригери, гостьові RPC, `pg_cron`) |
 | `release_item_claims`, `reorder_items`, `reorder_sections`, `save_push_subscription`, `forget_push_subscription`, `get_my_gifts`, `attach_guest_key`, `delete_my_account`, `reserve_item_photo`, `forget_all_push_subscriptions` | `authenticated` |
 | `item_photo_orphans`, `forget_item_photos`, `recent_sign_ins` | лише `service_role` (`wishlist-jobs`) |
 | `gen_share_token` | `authenticated` — лише тому, що її викликає `create_share` з правами викликача; сама даних не читає |
@@ -324,6 +328,14 @@ await supabase.from('push_subscriptions').select('id', { count: 'exact', head: t
 await supabase.from('push_subscriptions').select('endpoint');   // чи цей пристрій ще на сервері — порівняння в браузері
 ```
 Налаштування й пристрої бачить лише власник. `notification_log` (що вже надіслано) клієнту недоступний зовсім.
+
+«Про мене» (ROADMAP 8.10), `lib/about.ts` і `lib/shares.ts`:
+```ts
+await supabase.from('profiles').select('about_sizes, about_likes, about_avoid').eq('id', userId).maybeSingle();
+await supabase.from('profiles').update({ about_sizes, about_likes, about_avoid }).eq('id', userId);   // '' і пробіли → null
+await supabase.from('shares').update({ show_about: true }).eq('id', shareId).select('id');            // дозвіл на одному посиланні
+```
+Профіль і посилання — лише свої (`profiles_*_own`, `shares_update_own`). Межі: розміри до 120 символів, «що люблю» й «не дарувати» — до 500 (`23514`). «Поділитися» створює посилання через `create_share`, а дозвіл вмикає другим запитом; не пройшов — посилання лишається без «Про мене», і аркуш про це каже.
 
 ---
 

@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, Check, Copy, Eye, Link2 } from 'lucide-react';
-import { deleteShare, fetchSharesOverview, revokeShare, shareUrl } from '../../../lib/shares';
+import { deleteShare, fetchSharesOverview, revokeShare, setShareAbout, shareUrl } from '../../../lib/shares';
 import type { ShareOverview } from '../../../lib/shares';
 import { useI18n } from '../../../lib/i18n';
 import { useDocumentTitle } from '../../../lib/documentTitle';
 import { errorText } from '../../../lib/errors';
 import { formatDeadline } from '../../../lib/format';
 import { NoteV2 } from './AuthPartsV2';
-import { SheetV2, useCounts } from './CommonV2';
+import { SheetV2, SwitchV2, useCounts } from './CommonV2';
 import { ConfirmSheetV2 } from './ListPartsV2';
 
 const STROKE = 2.75;
@@ -34,6 +34,9 @@ function stateOf(share: ShareOverview): State {
  * тому він дозволений. Поруч не з'являється нічого, що з позначками корелює
  * (CLAUDE.md §3.2, ADR-040).
  *
+ * На живій картці — «Показати гостям „Про мене“» (ROADMAP 8.10): дозвіл
+ * саме цього посилання, перемикається одразу.
+ *
  * Збереженої копії без мережі тут немає й не буде: токени не кешуються
  * (CLAUDE.md §3.5) — без мережі сторінка чесно каже «Немає зʼєднання».
  */
@@ -50,6 +53,8 @@ export default function SharesV2() {
   const [manual, setManual] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ share: ShareOverview; kind: 'revoke' | 'delete' } | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Посилання, на яких зараз пишеться дозвіл «Про мене». */
+  const [aboutBusy, setAboutBusy] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,6 +92,26 @@ export default function SharesV2() {
       setCopied(true);
     } catch {
       setManual(url);
+    }
+  }
+
+  async function toggleAbout(s: ShareOverview, on: boolean) {
+    if (aboutBusy.has(s.id)) return;
+    setActionError(null);
+    setAboutBusy((b) => new Set(b).add(s.id));
+    // Одразу на екрані; не записалось — назад і помилка.
+    setShares((list) => list.map((x) => (x.id === s.id ? { ...x, show_about: on } : x)));
+    try {
+      await setShareAbout(s.id, on);
+    } catch (e) {
+      setShares((list) => list.map((x) => (x.id === s.id ? { ...x, show_about: !on } : x)));
+      setActionError(errorText(e, t));
+    } finally {
+      setAboutBusy((b) => {
+        const next = new Set(b);
+        next.delete(s.id);
+        return next;
+      });
     }
   }
 
@@ -132,6 +157,15 @@ export default function SharesV2() {
         </div>
         {s.list_title && <p className="v2-sharecard__list">{t('v2shares.fromList', { title: s.list_title })}</p>}
         <p className="v2-sharecard__meta">{meta.join(' · ')}</p>
+        {state === 'active' && (
+          <div className="v2-sharecard__about" data-testid="sharecard-about">
+            <SwitchV2
+              label={t('about.showToGuests')}
+              checked={s.show_about ?? false}
+              onChange={(on) => void toggleAbout(s, on)}
+            />
+          </div>
+        )}
         <div className="v2-sharecard__actions">
           {state === 'active' && (
             <>

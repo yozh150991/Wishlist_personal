@@ -345,6 +345,41 @@ test('подяка власника на /l/ — видно всім, з пер�
   await expect(thanks).toContainText('До зустрічі');
 });
 
+test('«Про мене» на /l/ — лише коли воно прийшло; на телефоні згорнуто (ROADMAP 8.10)', async ({ page, isMobile }) => {
+  // Відповідь бази підставляємо: що без дозволу ключа `about` немає, стереже pgTAP 38.
+  const body = {
+    title: 'День народження', message: null, currency: 'PLN', event_date: null,
+    expires_at: null, expires_tz: null, owner_scheme: null, appearance_hue: null,
+    hide_prices: false, allow_reservations: true, archived: false, viewer_is_owner: false,
+    guest: null, sections: [], items: [], thanks: null,
+  };
+  let withAbout = false;
+  await page.route('**/rpc/get_guest_list', (route) =>
+    route.fulfill({
+      json: withAbout ? { ...body, about: { sizes: 'M / 42 / EU 43', avoid: 'Парфуми\nСвічки' } } : body,
+    }),
+  );
+  await page.route('**/rpc/register_share_view', (route) => route.fulfill({ status: 204, body: '' }));
+
+  await page.goto('/l/e2e-about-token');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByTestId('guest-about')).toHaveCount(0);
+
+  withAbout = true;
+  await page.reload();
+  const block = page.getByTestId('guest-about');
+  await expect(block).toBeVisible();
+  const sizes = block.getByText('M / 42 / EU 43');
+  if (isMobile) {
+    await expect(sizes).toBeHidden();
+    await block.getByText(/^(про мене|o mnie|about me)$/i).click();
+  }
+  await expect(sizes).toBeVisible();
+  await expect(block).toContainText('Свічки');
+  // Поля, якого немає у відповіді, немає й на сторінці.
+  await expect(block.locator('[data-field="likes"]')).toHaveCount(0);
+});
+
 test('«Поскаржитись» на /l/ — причина, коментар, подяка; власнику кнопки немає (ADR-061)', async ({ page }) => {
   const body = {
     title: 'Виграй айфон', message: null, currency: 'PLN', event_date: null,

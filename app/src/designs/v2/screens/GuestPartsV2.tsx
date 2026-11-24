@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
-import { Check, ExternalLink, Minus, Plus, Users } from 'lucide-react';
+import { Check, ChevronDown, ExternalLink, Minus, Plus, Users } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { THEMES, useTheme } from '../../../lib/theme';
 import type { Theme } from '../../../lib/theme';
@@ -16,12 +16,13 @@ import {
   reportShare,
   sendGuestCode,
 } from '../../../lib/shares';
-import type { GuestPool, ReportReason } from '../../../lib/shares';
+import type { GuestAbout, GuestPool, ReportReason } from '../../../lib/shares';
 import type { SharedItem } from '../../../lib/shares';
 import type { Currency } from '../../../lib/types';
 import { FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { PhotoThumbV2, SheetV2, SwitchV2 } from './CommonV2';
 import { usePriorityLabel } from './ListPartsV2';
+import { useMediaQuery } from '../../../lib/media';
 
 /**
  * Частини гостьової v2 (потік E, ADR-041, ADR-053): картка позиції й аркуші —
@@ -33,6 +34,12 @@ import { usePriorityLabel } from './ListPartsV2';
  */
 
 const STROKE = 2.75;
+
+/**
+ * Той самий поріг, що `DESKTOP` у `ShellV2.tsx`; тут — своя копія, щоб
+ * гостьова не тягнула оболонку власника у свій файл (ADR-084).
+ */
+const WIDE = '(min-width: 56rem)';
 
 /** Та сама перевірка, що в базі (`claim_item_v2`): до 254 символів, одне «@», крапка після нього. */
 const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -99,6 +106,52 @@ export function GuestHeadV2({
       {message && <p className="v2-guest__message">{message}</p>}
       {validUntil && <p className="v2-guest__valid">{validUntil}</p>}
     </header>
+  );
+}
+
+/**
+ * «Про мене» власника на гостьовій (ROADMAP 8.10): розміри, що любить, чого
+ * не дарувати — лише ті поля, що прийшли з `get_guest_list`. Приходять вони
+ * лише з дозволу на цьому посиланні; без нього блоку немає зовсім.
+ *
+ * Компактно над списком: на телефоні згорнуто (заголовок — це кнопка
+ * розгортання), на широкому екрані — розгорнуто. `<details>` — рідний
+ * елемент: клавіатура й зчитувач без коду.
+ */
+export function GuestAboutV2({ about }: { about: GuestAbout | null | undefined }) {
+  const { t } = useI18n();
+  const desktop = useMediaQuery(WIDE);
+  const [open, setOpen] = useState(desktop);
+  useEffect(() => setOpen(desktop), [desktop]);
+  if (!about) return null;
+  const rows = (
+    [
+      ['sizes', t('about.sizes')],
+      ['likes', t('about.likes')],
+      ['avoid', t('about.avoid')],
+    ] as const
+  ).filter(([k]) => about[k]);
+  if (rows.length === 0) return null;
+  return (
+    <details
+      className="v2-gabout"
+      data-testid="guest-about"
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary className="v2-gabout__summary">
+        <span className="v2-kicker">{t('about.title')}</span>
+        <ChevronDown className="v2-gabout__chevron" size={20} strokeWidth={STROKE} aria-hidden="true" />
+      </summary>
+      <dl className="v2-gabout__list">
+        {rows.map(([k, label]) => (
+          <div key={k} className="v2-gabout__row" data-field={k}>
+            <dt>{label}</dt>
+            <dd>{about[k]}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   );
 }
 

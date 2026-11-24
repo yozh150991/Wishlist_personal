@@ -18,6 +18,7 @@ import { fetchSections } from '../../../lib/sections';
 import type { Section } from '../../../lib/sections';
 import { downloadText } from '../../../lib/download';
 import { deleteAccount } from '../../../lib/account';
+import { fetchAbout } from '../../../lib/about';
 import { bookmarkletHref, shortcutScript } from '../../../lib/bookmarklet';
 import { publicOrigin } from '../../../lib/supabase';
 import { DESKTOP } from '../ShellV2';
@@ -25,6 +26,7 @@ import { NoteV2, PasswordFieldV2 } from './AuthPartsV2';
 import { SheetV2, SignOutV2, SwitchV2 } from './CommonV2';
 import { NotifyCardV2 } from './NotifyV2';
 import { SecurityCardV2 } from './SecurityV2';
+import { AboutCardV2 } from './AboutV2';
 
 const LANGUAGE: Record<Locale, string> = { uk: 'Українська', pl: 'Polski', en: 'English' };
 
@@ -63,7 +65,7 @@ function Choice<T extends string>({
  * Налаштування v2 (потік I; README, розділ 6).
  *
  * Кожен вибір застосовується одразу — кнопки «Зберегти» немає. Порядок:
- * акаунт → доступність (висока контрастність над кольорами, бо важливіша за
+ * акаунт → «Про мене» (ROADMAP 8.10) → доступність (висока контрастність над кольорами, бо важливіша за
  * смак) → кольори → тема → мова → сповіщення (P, ADR-049) → застосунок на
  * телефоні → кнопка «У вішліст» (лише на компʼютері, ADR-076) → Команда для iPhone (лише iOS, ADR-077) → мої дані → вигляд застосунку → вихід і видалення акаунта (ADR-072).
  * Безпека (вхід із нового пристрою, вихід скрізь, ADR-074) — одразу після сповіщень. Тема, схема й контраст їдуть у профіль (`AppearanceSync`)
@@ -118,6 +120,8 @@ export default function SettingsV2() {
             <span className="v2-profile__email">{email}</span>
           </div>
         </section>
+
+        <AboutCardV2 />
 
         <section className="v2-settings__card v2-settings__card--a11y" aria-labelledby="v2-set-a11y">
           <h2 className="v2-settings__label" id="v2-set-a11y">
@@ -421,12 +425,14 @@ function QrV2() {
 }
 
 /**
- * «Мої дані» (потік I3): усі списки з позиціями й опис посилань одним файлом
- * (`toAccountJson`). Кнопка не гасне мовчки — «Експортую… 3 з 12», і
+ * «Мої дані» (потік I3): усі списки з позиціями, «Про мене» й опис посилань
+ * одним файлом (`toAccountJson`). Кнопка не гасне мовчки — «Експортую… 3 з 12», і
  * скасувати можна з першої секунди. Адрес посилань і позначок у файлі немає.
  */
 function MyDataV2() {
   const { t } = useI18n();
+  const { session } = useAuth();
+  const userId = session?.user.id ?? null;
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -464,10 +470,13 @@ function MyDataV2() {
         revoked_at: s.revoked_at,
         view_count: s.view_count ?? 0,
         items_count: s.share_items[0]?.count ?? 0,
+        show_about: s.show_about ?? false,
       }));
+      // «Про мене» — частина акаунта (ROADMAP 8.10).
+      const about = userId ? await fetchAbout(userId) : null;
       if (cancelled.current) return;
       const day = new Date().toISOString().slice(0, 10);
-      downloadText(`wishlist-${day}.json`, toAccountJson(out, shares), 'application/json');
+      downloadText(`wishlist-${day}.json`, toAccountJson(out, shares, new Date().toISOString(), about), 'application/json');
       setSaved(true);
     } catch (e) {
       if (!cancelled.current) setError(errorText(e, t));

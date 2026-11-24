@@ -377,6 +377,7 @@ test.describe('«Мої дані» — усі списки одним файло
           revoked_at: null,
           view_count: 3,
           items_count: 2,
+          show_about: true,
         },
       ],
       '2026-09-28T12:00:00Z',
@@ -389,7 +390,16 @@ test.describe('«Мої дані» — усі списки одним файло
     expect(data.lists[0].items).toEqual(single.items);
     // Ні токена, ні id — адреса посилання й ключі лишаються в застосунку.
     expect(text).not.toMatch(/"token"|"id"|"owner_id"/);
-    expect(data.shares[0]).toMatchObject({ title: 'Для бабусі', view_count: 3, items_count: 2 });
+    expect(data.shares[0]).toMatchObject({ title: 'Для бабусі', view_count: 3, items_count: 2, show_about: true });
+    // Без «Про мене» — порожні поля, а не відсутній розділ.
+    expect(data.about).toEqual({ sizes: null, likes: null, avoid: null });
+  });
+
+  test('«Про мене» — частина акаунта (ROADMAP 8.10)', () => {
+    const data = JSON.parse(
+      toAccountJson([], [], '2026-11-24T00:00:00Z', { sizes: ' M / 42 ', likes: 'Чай', avoid: '   ' }),
+    );
+    expect(data.about).toEqual({ sizes: 'M / 42', likes: 'Чай', avoid: null });
   });
 });
 

@@ -6,10 +6,11 @@ import { useTheme } from '../../../lib/theme';
 import { fetchAppearanceHue } from '../../../lib/appearances';
 import { formatDay } from '../../../lib/format';
 import { overlayVars } from '../../../lib/hue-ramp.js';
-import type { SharedItem } from '../../../lib/shares';
+import type { GuestAbout, SharedItem } from '../../../lib/shares';
+import type { AboutMe } from '../../../lib/about';
 import type { Currency, Item } from '../../../lib/types';
 import { SheetV2, useCounts } from './CommonV2';
-import { GuestCardV2, GuestHeadV2 } from './GuestPartsV2';
+import { GuestAboutV2, GuestCardV2, GuestHeadV2 } from './GuestPartsV2';
 
 /**
  * «Як побачать гості» — превʼю гостьової сторінки для власника (потоки D, H,
@@ -75,6 +76,7 @@ export function GuestPreviewV2({
   currency,
   hidePrices,
   canClaim = true,
+  about = null,
   hue,
 }: {
   title: string;
@@ -86,6 +88,8 @@ export function GuestPreviewV2({
   hidePrices: boolean;
   /** «Гості можуть бронювати» в посиланні: без цього — картки без «Беру». */
   canClaim?: boolean;
+  /** «Про мене» власника, якщо на посиланні його ввімкнено (ROADMAP 8.10). */
+  about?: AboutMe | null;
   hue: number | null;
 }) {
   const { t, locale } = useI18n();
@@ -101,6 +105,7 @@ export function GuestPreviewV2({
     <div className="v2-guest v2-guest--preview" style={style}>
       <GuestHeadV2 as="p" day={day} title={title} count={counts.items(total)} message={message} />
       <div className="v2-guest__body">
+        <GuestAboutV2 about={about ? previewAbout(about) : null} />
         {total === 0 ? (
           <p className="v2-hint">{t('appearance.previewEmpty')}</p>
         ) : (
@@ -190,4 +195,14 @@ export function PreviewSheetV2({
       </div>
     </SheetV2>
   );
+}
+
+/** Як прийде гостю: лише заповнені поля (як `guest_about` у базі). */
+function previewAbout(about: AboutMe): GuestAbout {
+  const out: GuestAbout = {};
+  for (const k of ['sizes', 'likes', 'avoid'] as const) {
+    const v = about[k]?.trim();
+    if (v) out[k] = v;
+  }
+  return out;
 }

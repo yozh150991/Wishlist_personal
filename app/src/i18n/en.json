@@ -865,7 +865,7 @@
     "looksHint": "Your own event looks are set on a particular list — in the list menu, “List style”.",
     "data": {
       "title": "My data",
-      "body": "The file holds all your lists, items and a description of your links. It has no link addresses and no guest marks.",
+      "body": "The file holds all your lists, items, “About me” and a description of your links. It has no link addresses and no guest marks.",
       "cta": "Download my data",
       "starting": "Preparing…",
       "progress": "Exporting… {n} of {m}",
@@ -1309,7 +1309,7 @@
     "s": {
       "owner": {
         "title": "What we store about account owners",
-        "body": "• Email and password. The password is stored only as a protected hash in the sign-in service — nobody can read it.\n• If you sign in with Google — your email, plus the profile name and photo Google passes on at sign-in. The app uses only the email.\n• Your lists, items, sections, guest links, list style, language, theme and notification settings.\n• Photos you upload yourself. They are downsized in your browser, and data about where they were taken and the phone is removed. A photo sits at a random address: anyone shown the item sees it — you and the guests of a link.\n• For push notifications — this device's subscription address; signing out removes it.\n• For the new-device sign-in email — the names of browsers and systems you've signed in from (“Chrome · Android”). The time and IP address of a sign-in go into that email to you and aren't stored anywhere else."
+        "body": "• Email and password. The password is stored only as a protected hash in the sign-in service — nobody can read it.\n• If you sign in with Google — your email, plus the profile name and photo Google passes on at sign-in. The app uses only the email.\n• Your lists, items, sections, guest links, list style, language, theme and notification settings.\n• “About me” — your sizes, what you like and what not to give, if you fill it in. Guests see it only on the links where you turned it on.\n• Photos you upload yourself. They are downsized in your browser, and data about where they were taken and the phone is removed. A photo sits at a random address: anyone shown the item sees it — you and the guests of a link.\n• For push notifications — this device's subscription address; signing out removes it.\n• For the new-device sign-in email — the names of browsers and systems you've signed in from (“Chrome · Android”). The time and IP address of a sign-in go into that email to you and aren't stored anywhere else."
       },
       "guests": {
         "title": "What we store about guests",
@@ -1346,5 +1346,27 @@
     },
     "link": "Privacy policy",
     "back": "Back"
+  },
+  "about": {
+    "title": "About me",
+    "body": "Your sizes, what you like and what not to give. Guests see this only on the links where you turn it on.",
+    "sizes": "Sizes",
+    "sizesHint": "Clothes and shoes, any way you like, e.g. “M / 42 / EU 43”.",
+    "likes": "What I like",
+    "likesHint": "Colours, tastes, hobbies.",
+    "avoid": "Please don’t give",
+    "avoidHint": "Things I already have or that won’t suit me.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "loading": "Loading…",
+    "tooLong": "No more than {n} characters.",
+    "showToGuests": "Show “About me” to guests",
+    "showToGuestsHint": "Your sizes, likes and what not to give — on this link only.",
+    "emptyForGuests": "“About me” is still empty — guests won’t see anything.",
+    "fill": "Fill in",
+    "edit": "Edit “About me”",
+    "loadFailed": "Couldn’t load “About me”. Try again",
+    "shareFailed": "The link is ready, but “About me” wasn’t turned on for it. Turn it on in “My links”."
   }
 }

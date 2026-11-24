@@ -6,12 +6,15 @@ import { errorText } from '../../../lib/errors';
 import { localToday, moneyShort } from '../../../lib/format';
 import { useMediaQuery } from '../../../lib/media';
 import { createShare, revokeShare, shareUrl } from '../../../lib/shares';
+import { aboutIsEmpty } from '../../../lib/about';
+import type { AboutMe } from '../../../lib/about';
 import type { List } from '../../../lib/types';
 import { DateFieldV2, FieldV2, IconCircleV2, NoteV2, SubmitV2 } from './AuthPartsV2';
 import { SheetV2, SwitchV2, useCounts } from './CommonV2';
 import { ConfirmSheetV2 } from './ListPartsV2';
 import { NotifyAskV2 } from './NotifyV2';
 import { GuestPreviewV2, useAppearanceHue } from './PreviewV2';
+import { AboutSheetV2, useAbout } from './AboutV2';
 import type { PreviewGroup } from './PreviewV2';
 import { DESKTOP } from '../ShellV2';
 
@@ -34,6 +37,10 @@ type Step = 'form' | 'pick' | 'preview' | 'creating' | 'done' | 'revoked';
  * Після створення посилання копіюється само — тост лише підтверджує (D3).
  * Якщо браузер не дав скопіювати без натиску, лишаються «Копіювати» й
  * «Поділитися». «Відкликати доступ» — одразу тут, з підтвердженням.
+ *
+ * «Показати гостям „Про мене“» (ROADMAP 8.10) — усталено вимкнено: розміри й
+ * «не дарувати» не всім адресатам потрібні. Дозвіл — на цьому посиланні, не
+ * на профілі. Порожнє «Про мене» можна заповнити тут же («Заповнити»).
  *
  * Жодного слова про позначки — ні скільки, ні чиї (ADR-040). Посилання —
  * `/l/…`, гостьова v2 (крок 5г); роздані раніше `/s/…` працюють і далі.
@@ -70,6 +77,11 @@ export function ShareSheetV2({
   const [message, setMessage] = useState('');
   const [showPrices, setShowPrices] = useState(true);
   const [allowClaims, setAllowClaims] = useState(true);
+  const [showAbout, setShowAbout] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  /** Просили «Про мене», а дозвіл не записався: посилання є, але без нього. */
+  const [aboutFailed, setAboutFailed] = useState(false);
+  const own = useAbout(open);
   const [expiresOn, setExpiresOn] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitted, setSubmitted] = useState(false);
@@ -89,6 +101,9 @@ export function ShareSheetV2({
     setMessage('');
     setShowPrices(true);
     setAllowClaims(true);
+    setShowAbout(false);
+    setAboutOpen(false);
+    setAboutFailed(false);
     setExpiresOn('');
     const picked = preselect ? all.filter((i) => preselect.includes(i.id)) : [];
     setSelected(new Set((picked.length > 0 ? picked : all).map((i) => i.id)));
@@ -134,12 +149,14 @@ export function ShareSheetV2({
         message: message.trim() || null,
         hidePrices: !showPrices,
         allowReservations: allowClaims,
+        showAbout,
         // Лише день: кінець дня за зоною власника рахує база (ADR-037).
         expiresOn: expiresOn || null,
       });
       const url = shareUrl(share.token);
       setLink(url);
       setShareId(share.id);
+      setAboutFailed(showAbout && !share.show_about);
       let ok = false;
       try {
         await navigator.clipboard.writeText(url);
@@ -246,6 +263,7 @@ export function ShareSheetV2({
       currency={list.currency}
       hidePrices={!showPrices}
       canClaim={allowClaims}
+      about={showAbout ? own.about : null}
       hue={hue}
     />
   );
@@ -292,6 +310,36 @@ export function ShareSheetV2({
           checked={allowClaims}
           onChange={setAllowClaims}
         />
+        <SwitchV2
+          label={t('about.showToGuests')}
+          hint={t('about.showToGuestsHint')}
+          checked={showAbout}
+          onChange={setShowAbout}
+        />
+        {showAbout && (
+          <div className="v2-share__about" data-testid="share-about">
+            {/* Кнопка — лише коли профіль прочитано: порожня форма поверх
+                незчитаного «Про мене» стерла б його збереженням. */}
+            {own.error ? (
+              <button type="button" className="v2-btn v2-btn--ghost v2-btn--small v2-btn--start" onClick={() => void own.reload()}>
+                {t('about.loadFailed')}
+              </button>
+            ) : (
+              own.about && (
+                <>
+                  {aboutIsEmpty(own.about) && <p className="v2-hint v2-hint--start">{t('about.emptyForGuests')}</p>}
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn--ghost v2-btn--small v2-btn--start"
+                    onClick={() => setAboutOpen(true)}
+                  >
+                    {aboutIsEmpty(own.about) ? t('about.fill') : t('about.edit')}
+                  </button>
+                </>
+              )
+            )}
+          </div>
+        )}
       </div>
       <DateFieldV2
         label={t('v2share.expires')}
@@ -336,6 +384,7 @@ export function ShareSheetV2({
           <IconCircleV2 icon={Check} tone="calm" />
           <h3 className="v2-title v2-title--sm">{t('share.ready')}</h3>
           {copied && <NoteV2 tone="info">{t('v2share.copied')}</NoteV2>}
+          {aboutFailed && <NoteV2 tone="error">{t('about.shareFailed')}</NoteV2>}
           {server && <NoteV2 tone="error">{server}</NoteV2>}
           <div className="v2-field">
             <label className="v2-field__label" htmlFor={`${titleId}-link`}>
@@ -469,6 +518,13 @@ export function ShareSheetV2({
       </SheetV2>
 
       {/* Поруч, а не всередині: вкладене вікно ловило б Escape разом із цим. */}
+      <AboutSheetV2
+        open={aboutOpen}
+        userId={own.userId}
+        initial={own.about}
+        onClose={() => setAboutOpen(false)}
+        onSaved={(a: AboutMe) => own.setAbout(a)}
+      />
       <ConfirmSheetV2
         open={askRevoke}
         id="v2-revoke-title"
