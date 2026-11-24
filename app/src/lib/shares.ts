@@ -4,6 +4,7 @@ import { isScheme } from './appearance';
 import { deviceTimeZone } from './zones';
 import { isNetworkError } from './errors';
 import type { Scheme } from './appearance';
+import type { AboutMe } from './aboutRules';
 
 export type Share = {
   id: string;
@@ -14,6 +15,11 @@ export type Share = {
   message: string | null;
   hide_prices: boolean;
   allow_reservations: boolean;
+  /**
+   * Показати гостям цього посилання «Про мене» (ROADMAP 8.10). Необовʼязкове —
+   * база до міграції `about_me` поля не має; тоді це «вимкнено».
+   */
+  show_about?: boolean;
   expires_at: string | null;
   /** IANA-зона власника, у якій рахується «діє до» (ADR-037); null — без зони. */
   expires_tz: string | null;
@@ -32,6 +38,8 @@ export type ShareInput = {
   message?: string | null;
   hidePrices?: boolean;
   allowReservations?: boolean;
+  /** Показати гостям «Про мене» (ROADMAP 8.10); усталено — ні. */
+  showAbout?: boolean;
   /** День `YYYY-MM-DD`, до кінця якого діє посилання, — за зоною власника. */
   expiresOn?: string | null;
 };
@@ -44,7 +52,35 @@ export function shareUrl(token: string): string {
   return `${publicOrigin.replace(/\/$/, '')}/l/${token}`;
 }
 
+/**
+ * Створює посилання; якщо просили — одразу вмикає на ньому «Про мене».
+ * Дозвіл — окремим записом, після створення: якщо він не пройде, посилання
+ * лишається без «Про мене» (безпечний бік), а повернений `show_about: false`
+ * каже екрану, що вмикати доведеться ще раз.
+ */
 export async function createShare(input: ShareInput): Promise<Share> {
+  const share = await createShareRow(input);
+  if (!input.showAbout) return { ...share, show_about: share.show_about ?? false };
+  try {
+    await setShareAbout(share.id, true);
+    return { ...share, show_about: true };
+  } catch {
+    return { ...share, show_about: false };
+  }
+}
+
+/**
+ * «Показати гостям „Про мене“» на одному посиланні (ROADMAP 8.10). Пише сам
+ * власник через RLS `shares_update_own`; чуже посилання оновлення просто не
+ * зачепить — тоді помилка, а не тиша.
+ */
+export async function setShareAbout(id: string, on: boolean): Promise<void> {
+  const { data, error } = await supabase.from('shares').update({ show_about: on }).eq('id', id).select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('not_found');
+}
+
+async function createShareRow(input: ShareInput): Promise<Share> {
   const base = {
     p_list_id: input.listId,
     p_item_ids: input.itemIds,
@@ -176,6 +212,9 @@ export type SharedItem = {
   pool?: GuestPool;
 };
 
+/** «Про мене» на гостьовій: лише заповнені поля. */
+export type GuestAbout = Partial<Record<keyof AboutMe, string>>;
+
 export type GuestInfo = { code: string; name?: string | null; email?: string | null };
 
 export type SharedList = {
@@ -201,6 +240,12 @@ export type SharedList = {
   archived?: boolean;
   /** Подяка власника гостям (ADR-059); лише з `get_guest_list`, null — немає. */
   thanks?: string | null;
+  /**
+   * «Про мене» власника (ROADMAP 8.10) — лише заповнені поля. Ключа немає
+   * зовсім, якщо на цьому посиланні власник його не ввімкнув або профіль
+   * порожній.
+   */
+  about?: GuestAbout;
   viewer_is_owner: boolean;
   /**
    * Ключ гостя впізнано — ось його короткий код. null — ключа немає або він
@@ -253,9 +298,22 @@ function normalizeShared(data: unknown): SharedList {
     expires_at: list.expires_at ?? null,
     expires_tz: typeof list.expires_tz === 'string' ? list.expires_tz : null,
     guest: list.guest ?? null,
+    about: normalizeAbout(list.about),
     sections: Array.isArray(list.sections) ? list.sections : [],
     items: list.items.map((i) => ({ ...i, section_id: i.section_id ?? null })),
   };
+}
+
+/** Лише непорожні рядки; нічого не лишилось — поля немає, як і з бази. */
+function normalizeAbout(raw: unknown): GuestAbout | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const src = raw as Record<string, unknown>;
+  const out: GuestAbout = {};
+  for (const k of ['sizes', 'likes', 'avoid'] as const) {
+    const v = src[k];
+    if (typeof v === 'string' && v.trim()) out[k] = v;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 export async function registerView(token: string): Promise<void> {

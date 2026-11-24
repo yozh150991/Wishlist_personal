@@ -26,6 +26,7 @@
 | `20261025100000_delete_account.sql` | `account_delete_attempts` і `delete_my_account` — видалення акаунта власником після звірки пароля (ADR-072) |
 | `20261025120000_item_photos.sql` | бакет `item-photos`, `item_photos`, політика завантаження в `storage.objects`, `reserve_item_photo`, `item_photo_orphans`, `forget_item_photos` — своє фото позиції (ADR-073) |
 | `20261025140000_signin_alerts.sql` | `notification_settings.signin_push` / `signin_email`, `known_devices`, `recent_sign_ins`, `forget_all_push_subscriptions` — вхід із нового пристрою й вихід скрізь (ADR-074) |
+| `20261124015413_about_me.sql` | `profiles.about_sizes` / `about_likes` / `about_avoid` і тригер `profiles_about_tidy`; `shares.show_about`; внутрішня `guest_about`; `get_guest_list` віддає `about` лише з дозволу на посиланні (ROADMAP 8.10) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 
@@ -34,7 +35,8 @@
 ```
 auth.users
     │
-    ├──1:1── profiles          (locale, theme, scheme, high_contrast, default_currency)
+    ├──1:1── profiles          (locale, theme, scheme, high_contrast, default_currency,
+    │                           about_sizes, about_likes, about_avoid)
     │
     ├──1:1── notification_settings (time_zone, подія × канал, last_sent_at)   ADR-049
     ├──1:N── push_subscriptions    (endpoint, p256dh, auth)                   ADR-049
@@ -58,7 +60,7 @@ auth.users
                  │           └──1:N── claims ──N:1── guest_identities ──1:N── guest_keys
                  │                        ↑ ізольовано від власника (усе праворуч теж)
                  │
-                 └──1:N── shares      (token, hide_prices, expires_at, expires_tz, revoked_at)
+                 └──1:N── shares      (token, hide_prices, show_about, expires_at, expires_tz, revoked_at)
 ```
 
 ## Мова користувача
@@ -80,6 +82,16 @@ auth.users
 Гостьова сторінка — у схемі власника: `get_shared_list` віддає `owner_scheme`. Контраст власника гостю не віддається — це налаштування глядача, не списку.
 
 **Гість свого вигляду на сервер не шле.** Схеми він не обирає зовсім, а тема й висока контрастність лишаються в його браузері: акаунта в нього немає, а запис про вибір вигляду був би ще одним сигналом про те, що хтось відкрив посилання (CLAUDE.md §3.2).
+
+## «Про мене» (ROADMAP 8.10)
+
+`profiles.about_sizes` (до 120 символів), `about_likes` і `about_avoid` (до 500) — короткий вільний текст власника: розміри («M / 42 / EU 43»), що любить, чого не дарувати. Усталено `null` — нічого не заповнено. Межі рахуються на тексті без пробілів по краях; тригер `profiles_about_tidy` обрізає пробіли й робить порожнє `null`, тож поле прибирається просто стертим текстом. Читає й пише лише власник через наявні `profiles_select_own` / `profiles_update_own`; `anon` прав на `profiles` не має.
+
+Окремої таблиці немає: це три поля одного рядка власника з тим самим доступом, що й тема чи схема, а нова таблиця дала б лише ще одну RLS для тієї самої умови `id = auth.uid()`.
+
+**Дозвіл — на посиланні, не на профілі:** `shares.show_about boolean not null default false`. Власник роздає різні посилання різним людям — колегам без розмірів, рідним з ними. Пише його власник через `shares_update_own` (з аркуша «Поділитися» другим запитом після `create_share` або перемикачем на картці «Моїх посилань»). `get_guest_list` додає `about` лише тоді, коли дозвіл увімкнено саме на цьому посиланні й у профілі щось заповнено; інакше ключа немає зовсім. Мертве посилання — `not_found` до будь-якого читання профілю. Картка для ботів (`get_share_card`, ADR-060) профілю не читає.
+
+Видалення акаунта стирає «Про мене» разом із рядком `profiles`.
 
 ## Таблиці
 
@@ -155,6 +167,8 @@ RLS: власник бачить свої й вбудовані, змінює й
 `token` — 16 байтів із `gen_random_uuid()` у base64url, 22 символи і 122 біти випадковості (ADR-014: шість бітів UUIDv4 зайнято під версію і варіант). Перебір нереальний, тому окремого пароля не треба.
 
 Посилання **живе**: `get_shared_list` щоразу читає актуальні `items`. Видалив позицію в себе — вона зникла й у гостей (через `ON DELETE CASCADE` на `share_items.item_id`).
+
+`show_about` — чи бачать гості цього посилання «Про мене» власника (ROADMAP 8.10, розділ вище). Усталено `false`.
 
 Відкликання — `revoked_at`, а не `DELETE`: збереження історії й статистики переглядів.
 

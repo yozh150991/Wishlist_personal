@@ -1410,6 +1410,7 @@ div.v2-chips { gap: var(--sp-3); }
 
 /* Перемикач на всю смугу: role="switch", стан каже і повзунок, і зчитувач. */
 .v2-switches { display: grid; gap: var(--sp-2); }
+.v2-share__about { display: grid; gap: var(--sp-2); padding-inline: var(--sp-2); }
 .v2-switch-row {
   display: flex;
   align-items: center;
@@ -1612,6 +1613,7 @@ div.v2-chips { gap: var(--sp-3); }
 }
 .v2-sharecard__list { font-size: var(--t-small); font-weight: 700; overflow-wrap: anywhere; }
 .v2-sharecard__meta { font-size: var(--t-small); color: var(--color-neutral-700); }
+.v2-sharecard__about { margin-inline: calc(-1 * var(--sp-2)); }
 .v2-sharecard__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-2); }
 /* «Видалити» — окремо від корисних дій, у кінці рядка. */
 .v2-sharecard__actions > .v2-btn--danger { margin-inline-start: auto; }
@@ -2047,6 +2049,35 @@ div.v2-chips { gap: var(--sp-3); }
 }
 .v2-gthanks .v2-kicker { margin: 0; }
 .v2-gthanks__text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+
+/* «Про мене» власника (ROADMAP 8.10): компактно над списком; на телефоні
+   згорнуто, заголовок — рідний <summary>. */
+.v2-gabout {
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--color-guest-card);
+  border-radius: 20px;
+}
+.v2-gabout__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+}
+.v2-gabout__summary::-webkit-details-marker { display: none; }
+.v2-gabout__summary .v2-kicker { margin: 0; }
+.v2-gabout__chevron { flex: none; transition: transform 0.2s ease; }
+.v2-gabout[open] .v2-gabout__chevron { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .v2-gabout__chevron { transition: none; } }
+.v2-gabout__list { display: grid; gap: var(--sp-3); margin: var(--sp-2) 0 var(--sp-2); }
+.v2-gabout__row { display: grid; gap: 2px; align-content: start; }
+.v2-gabout__row dt { font-size: var(--t-small); font-weight: 800; }
+.v2-gabout__row dd { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+@media (min-width: 56rem) {
+  .v2-gabout__list { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); column-gap: var(--sp-5); }
+}
 
 .v2-gbanner {
   display: flex;

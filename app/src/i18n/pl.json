@@ -863,7 +863,7 @@
     "looksHint": "Własne wyglądy wydarzeń ustawia się na konkretnej liście — w menu listy, „Wygląd listy”.",
     "data": {
       "title": "Moje dane",
-      "body": "Plik zawiera wszystkie listy, pozycje i opis linków. Nie ma w nim adresów linków ani oznaczeń gości.",
+      "body": "Plik zawiera wszystkie listy, pozycje, „O mnie” i opis linków. Nie ma w nim adresów linków ani oznaczeń gości.",
       "cta": "Pobierz moje dane",
       "starting": "Przygotowuję…",
       "progress": "Eksportuję… {n} z {m}",
@@ -1302,7 +1302,7 @@
     "s": {
       "owner": {
         "title": "Co przechowujemy o właścicielu konta",
-        "body": "• E-mail i hasło. Hasło jest przechowywane wyłącznie jako zabezpieczony skrót w usłudze logowania — nikt nie może go odczytać.\n• Jeśli logujesz się przez Google — e-mail oraz imię i zdjęcie profilu, które Google przekazuje przy logowaniu. Aplikacja korzysta tylko z e-maila.\n• Twoje listy, pozycje, działy, linki dla gości, wygląd, język, motyw i ustawienia powiadomień.\n• Zdjęcia, które sam przesłałeś. Jeszcze w przeglądarce są pomniejszane, a dane o miejscu zrobienia i telefonie — usuwane. Zdjęcie leży pod losowym adresem: widzi je każdy, komu pokazano pozycję — Ty i goście linku.\n• Dla powiadomień push — adres subskrypcji tego urządzenia; wylogowanie go usuwa.\n• Dla e-maila o logowaniu z nowego urządzenia — nazwy przeglądarek i systemów, z których się logowałeś („Chrome · Android”). Czas i adres IP logowania trafiają do tego e-maila do Ciebie i nigdzie indziej nie są przechowywane."
+        "body": "• E-mail i hasło. Hasło jest przechowywane wyłącznie jako zabezpieczony skrót w usłudze logowania — nikt nie może go odczytać.\n• Jeśli logujesz się przez Google — e-mail oraz imię i zdjęcie profilu, które Google przekazuje przy logowaniu. Aplikacja korzysta tylko z e-maila.\n• Twoje listy, pozycje, działy, linki dla gości, wygląd, język, motyw i ustawienia powiadomień.\n• „O mnie” — rozmiary, co lubisz i czego nie kupować, jeśli to uzupełnisz. Goście widzą je tylko w tych linkach, w których to włączysz.\n• Zdjęcia, które sam przesłałeś. Jeszcze w przeglądarce są pomniejszane, a dane o miejscu zrobienia i telefonie — usuwane. Zdjęcie leży pod losowym adresem: widzi je każdy, komu pokazano pozycję — Ty i goście linku.\n• Dla powiadomień push — adres subskrypcji tego urządzenia; wylogowanie go usuwa.\n• Dla e-maila o logowaniu z nowego urządzenia — nazwy przeglądarek i systemów, z których się logowałeś („Chrome · Android”). Czas i adres IP logowania trafiają do tego e-maila do Ciebie i nigdzie indziej nie są przechowywane."
       },
       "guests": {
         "title": "Co przechowujemy o gościach",
@@ -1339,5 +1339,27 @@
     },
     "link": "Polityka prywatności",
     "back": "Wstecz"
+  },
+  "about": {
+    "title": "O mnie",
+    "body": "Rozmiary, co lubisz i czego nie kupować. Goście widzą to tylko w tych linkach, w których włączysz „Pokaż gościom »O mnie«”.",
+    "sizes": "Rozmiary",
+    "sizesHint": "Ubrania i buty — jak wygodnie, np. „M / 42 / EU 43”.",
+    "likes": "Co lubię",
+    "likesHint": "Kolory, smaki, pasje.",
+    "avoid": "Proszę nie kupować",
+    "avoidHint": "Co już mam albo na pewno nie pasuje.",
+    "save": "Zapisz",
+    "saving": "Zapisuję…",
+    "saved": "Zapisano.",
+    "loading": "Wczytuję…",
+    "tooLong": "Nie więcej niż {n} znaków.",
+    "showToGuests": "Pokaż gościom „O mnie”",
+    "showToGuestsHint": "Rozmiary, co lubisz i czego nie kupować — tylko w tym linku.",
+    "emptyForGuests": "„O mnie” jest jeszcze puste — goście nic nie zobaczą.",
+    "fill": "Uzupełnij",
+    "edit": "Zmień „O mnie”",
+    "loadFailed": "Nie udało się wczytać „O mnie”. Spróbuj ponownie",
+    "shareFailed": "Link utworzono, ale „O mnie” nie zostało w nim włączone. Włącz je w „Moich linkach”."
   }
 }

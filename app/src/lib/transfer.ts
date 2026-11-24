@@ -9,6 +9,8 @@ import {
 import { groupItems } from './order';
 import { parsePrice as parsePriceField } from './itemsView';
 import { dateTextToIso, isoToDateText } from './dateText';
+import { EMPTY_ABOUT, tidyAbout } from './aboutRules';
+import type { AboutMe } from './aboutRules';
 import type { Currency, Item, ItemPriority, ItemStatus, ItemVariant, List, Section } from './types';
 
 /**
@@ -208,12 +210,19 @@ export type AccountShare = {
   revoked_at: string | null;
   view_count: number;
   items_count: number;
+  /** Чи бачать гості цього посилання «Про мене» (ROADMAP 8.10). */
+  show_about: boolean;
 };
 
+/**
+ * «Про мене» — частина акаунта (ROADMAP 8.10): у файл іде як є, порожнє —
+ * `null` у кожному полі.
+ */
 export function toAccountJson(
   lists: { list: List; items: Item[]; sections?: Section[] }[],
   shares: AccountShare[],
   now = new Date().toISOString(),
+  about: AboutMe | null = null,
 ): string {
   const payload = {
     format: ACCOUNT_FORMAT,
@@ -229,6 +238,7 @@ export function toAccountJson(
       },
       items: exportItems(items, sections),
     })),
+    about: about ? tidyAbout(about) : { ...EMPTY_ABOUT },
     shares,
   };
   return JSON.stringify(payload, null, 2) + '\n';

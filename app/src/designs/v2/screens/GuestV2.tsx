@@ -46,6 +46,7 @@ import { useCounts } from './CommonV2';
 import { usePriorityLabel } from './ListPartsV2';
 import {
   BookSheetV2,
+  GuestAboutV2,
   GuestCardV2,
   GuestHeadV2,
   LookSheetV2,
@@ -860,6 +861,8 @@ export default function GuestV2() {
             <p className="v2-gthanks__text">{data.thanks}</p>
           </section>
         )}
+        {/* «Про мене» власника — лише якщо він увімкнув це на цьому посиланні (ROADMAP 8.10). */}
+        <GuestAboutV2 about={data.about} />
         {data.archived && (
           // Свято минуло, власник склав список в архів (ADR-058): дивитись — так, бронювати — ні.
           <div className="v2-gbanner" role="status">

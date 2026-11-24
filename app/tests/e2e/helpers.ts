@@ -99,6 +99,8 @@ export async function listMenu(page: Page, item: RegExp) {
 export type ShareOptions = {
   /** «Діє до» — `YYYY-MM-DD`. */
   expires?: string;
+  /** Увімкнути «Показати гостям „Про мене“» (ROADMAP 8.10); усталено — ні. */
+  about?: boolean;
 };
 
 /**
@@ -131,6 +133,11 @@ export async function createShare(
 
   await sheet.locator('input[name="share_title"]').fill(title);
   if (opts.expires) await sheet.locator('input[name="share_expires"]').fill(opts.expires);
+  if (opts.about) {
+    const toggle = sheet.getByRole('switch', { name: /про мене|o mnie|about me/i });
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  }
   await sheet.getByRole('button', { name: /^(створити посилання|utwórz link|create link)$/i }).click();
 
   const ready = sheet.getByRole('heading', { name: /посилання готове|link gotowy|link is ready/i });
