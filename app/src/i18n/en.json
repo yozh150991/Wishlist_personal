@@ -948,6 +948,11 @@
       "removed": "Thank-you removed."
     }
   },
+  "v2afterHome": {
+    "kickerMany": "Celebrations are over · {n}",
+    "pick": "Which celebration to wrap up",
+    "body": "We'll open the list at that step — the thank-you and archive are there too."
+  },
   "v2yearly": {
     "label": "Repeat every year",
     "hint": "We'll remind you a month before {date} — no new lists are created on their own.",
