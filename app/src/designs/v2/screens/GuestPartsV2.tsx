@@ -5,7 +5,7 @@ import { useI18n } from '../../../lib/i18n';
 import { THEMES, useTheme } from '../../../lib/theme';
 import type { Theme } from '../../../lib/theme';
 import { hostOf, moneyShort, num } from '../../../lib/format';
-import { parsePrice } from '../../../lib/itemsView';
+import { parsePrice, toMinor } from '../../../lib/itemsView';
 import {
   GoneError,
   POOL_NAME_MAX,
@@ -1198,12 +1198,27 @@ export function ReportSheetV2({ open, token, onClose }: { open: boolean; token: 
 
 /* ── Спільний збір (N, ADR-063) ─────────────────────────────── */
 
-/** Підсумок збору на картці: хто збирає, скільки обіцяно, як скинутися. */
+/**
+ * Частка `part` від `whole` у відсотках, 0…100. Рахуємо в мінорних одиницях
+ * (CLAUDE.md §4): суми приходять рядками `numeric(12,2)`.
+ */
+export function poolPercent(part: number | string | null | undefined, whole: number | string | null | undefined): number {
+  const p = toMinor(part) ?? 0;
+  const w = toMinor(whole) ?? 0;
+  return w > 0 ? Math.min(100, Math.round((p * 100) / w)) : 0;
+}
+
+/**
+ * Підсумок збору на картці: хто збирає, скільки обіцяно, як скинутися.
+ * «Отримано» (ROADMAP 8.14) — другим рядком і темнішою частиною смужки, лише
+ * коли організатор уже щось позначив: до того картка така, як була.
+ */
 function PoolBoxV2({ pool }: { pool: GuestPool }) {
   const { t, locale } = useI18n();
   const goal = num(pool.goal) ?? 0;
   const raised = num(pool.raised) ?? 0;
-  const pct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+  const received = num(pool.received ?? 0) ?? 0;
+  const hasReceived = (toMinor(received) ?? 0) > 0;
   const mine = num(pool.mine);
   const fmt = (v: number) => moneyShort(v, pool.currency, locale) ?? String(v);
   return (
@@ -1217,13 +1232,25 @@ function PoolBoxV2({ pool }: { pool: GuestPool }) {
           </span>
         )}
       </p>
-      <div className="v2-gpool__bar" aria-hidden="true">
-        <span style={{ width: `${pct}%` }} />
+      <div className="v2-gpool__bar" aria-hidden="true" data-received={hasReceived || undefined}>
+        <span className="v2-gpool__promised" style={{ width: `${poolPercent(raised, goal)}%` }} />
+        {hasReceived && <span className="v2-gpool__got" style={{ width: `${poolPercent(received, goal)}%` }} />}
       </div>
       <p className="v2-gpool__sum">
         {t('v2guest.pool.raised', { raised: fmt(raised), goal: fmt(goal) })} · {t('v2guest.pool.count', { n: pool.count })}
       </p>
-      {mine !== null && <p className="v2-gpool__mine">{t('v2guest.pool.mine', { amount: fmt(mine) })}</p>}
+      {hasReceived && (
+        <p className="v2-gpool__sum v2-gpool__received">
+          {t('v2guest.pool.received', { received: fmt(received), raised: fmt(raised) })}
+        </p>
+      )}
+      {mine !== null && (
+        <p className="v2-gpool__mine">
+          {pool.mine_received
+            ? t('v2guest.pool.mineReceived', { amount: fmt(mine) })
+            : t('v2guest.pool.mine', { amount: fmt(mine) })}
+        </p>
+      )}
       <p className="v2-gpool__how">
         <strong>{t('v2guest.pool.how')}</strong> {pool.instructions}
       </p>
@@ -1248,6 +1275,7 @@ export function PoolSheetV2({
   onPledge,
   onLeave,
   onToggleClosed,
+  onToggleReceived,
   onCancel,
   onClose,
 }: {
@@ -1261,6 +1289,8 @@ export function PoolSheetV2({
   onPledge: (name: string, amount: number, email: string | null) => void;
   onLeave: () => void;
   onToggleClosed: (closed: boolean) => void;
+  /** Організатор: внесок отримано чи ні (ROADMAP 8.14). */
+  onToggleReceived: (pledgeId: string, received: boolean) => void;
   onCancel: () => void;
   onClose: () => void;
 }) {
@@ -1336,20 +1366,43 @@ export function PoolSheetV2({
             </h3>
             {pool.pledges && pool.pledges.length > 0 ? (
               <ul className="v2-giftrows">
-                {pool.pledges.map((p, i) => (
-                  <li key={i} className="v2-giftrow">
-                    <span className="v2-giftrow__title">{p.name}</span>
-                    <span className="v2-tag" data-tone="accent">
-                      {fmt(p.amount)}
-                    </span>
-                  </li>
-                ))}
+                {pool.pledges.map((p, i) => {
+                  const nameId = `${titleId}-p${i}`;
+                  const pid = p.id;
+                  return (
+                    <li key={pid ?? i} className="v2-giftrow v2-giftrow--pledge" data-received={p.received || undefined}>
+                      <span className="v2-giftrow__title" id={nameId}>
+                        {p.name}
+                      </span>
+                      <span className="v2-tag" data-tone="accent">
+                        {fmt(p.amount)}
+                      </span>
+                      {pid && (
+                        // Перемикач: підпис сталий, стан — aria-pressed; чий внесок — з опису.
+                        <button
+                          type="button"
+                          className="v2-btn v2-btn--outline v2-btn--small v2-giftrow__got"
+                          aria-pressed={p.received ? 'true' : 'false'}
+                          aria-describedby={nameId}
+                          aria-disabled={busy || undefined}
+                          onClick={() => !busy && onToggleReceived(pid, !p.received)}
+                        >
+                          {p.received && <Check size={16} strokeWidth={STROKE} aria-hidden="true" />}
+                          {t('v2guest.pool.gotIt')}
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="v2-hint v2-hint--start">{t('v2guest.pool.nobody')}</p>
             )}
           </section>
           <p className="v2-hint v2-hint--start">{t('v2guest.pool.noMoney')}</p>
+          {pool.pledges && pool.pledges.length > 0 && (
+            <p className="v2-hint v2-hint--start">{t('v2guest.pool.gotHint')}</p>
+          )}
           <button
             type="button"
             className="v2-btn v2-btn--primary v2-btn--block"

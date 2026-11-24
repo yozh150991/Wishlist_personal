@@ -511,8 +511,30 @@ def test_pool_letters_skip_without_snapshot_and_respect_unsubscribe():
 
 
 @pytest.mark.parametrize("locale", guest_mail.LOCALES)
-@pytest.mark.parametrize("kind", ["pool_join", "pool_closed", "pool_cancel"])
+@pytest.mark.parametrize("kind", ["pool_join", "pool_closed", "pool_cancel", "pool_received"])
 def test_pool_letters_render_in_every_locale(locale, kind):
     letter = render(kind, locale, item="", list_title="L", code="K7M2Q", url="u", unsubscribe="x",
                     details={**POOL, "name": "N", "amount": "10", "reason": "deleted"})
     assert letter.subject and letter.text and "{" not in letter.text
+
+
+# ── 8.14: внесок отримано ────────────────────
+
+
+def test_pool_received_letter_names_amount_and_organizer_not_in_subject():
+    letter = render("pool_received", "uk", item="", list_title="Новосілля", code="K7M2Q", url="u", unsubscribe="x",
+                    details={**POOL, "amount": "120.00", "pool_id": "p1"})
+    assert "«Кавоварка»" in letter.text and "«Новосілля»" in letter.text
+    assert "120" in letter.text and "Оля" in letter.text
+    assert "Кавоварка" not in letter.subject and "Оля" not in letter.subject
+    assert "BLIK" not in letter.text
+    assert "не перевіряє" in letter.text
+
+
+def test_pool_received_skips_without_snapshot_and_respects_unsubscribe():
+    assert skip_reason(Job.from_row(row(kind="pool_received", item=None, details={"amount": "1"}), NOW)) == "nothing_visible"
+    ok = Job.from_row(row(kind="pool_received", item=None, details={**POOL, "amount": "1"}), NOW)
+    assert skip_reason(ok) is None
+    off = Job.from_row(row(kind="pool_received", item=None, details={**POOL, "amount": "1"},
+                           identity={**row()["identity"], "mail_off": True}), NOW)
+    assert skip_reason(off) == "unsubscribed"

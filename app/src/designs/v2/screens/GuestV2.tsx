@@ -11,6 +11,7 @@ import {
   GoneError,
   leavePool,
   pledgePool,
+  setPledgeReceived,
   registerView,
   releaseClaim,
   setClaimBought,
@@ -607,6 +608,7 @@ export default function GuestV2() {
     } else if (msg.includes('not_enough_left')) setPoolError(t('v2guest.pool.race'));
     else if (msg.includes('pool_closed')) setPoolError(t('v2guest.pool.closedNow'));
     else if (msg.includes('pool_not_found')) setPoolError(t('v2guest.pool.gone'));
+    else if (msg.includes('pledge_gone')) setPoolError(t('v2guest.pool.pledgeGone'));
     else if (msg.includes('bad_goal')) setPoolError(t('v2guest.pool.needGoal'));
     else if (msg.includes('bad_amount')) setPoolError(t('v2guest.pool.badAmount'));
     else if (msg.includes('bad_email')) setPoolError(t('v2guest.book.badEmail'));
@@ -1190,6 +1192,10 @@ export default function GuestV2() {
         onToggleClosed={(closed) => {
           const p = items.find((i) => i.id === poolSheet?.id)?.pool;
           if (p) void poolAction((k) => closePool(token, p.id, k, closed), true);
+        }}
+        onToggleReceived={(pledgeId, received) => {
+          const p = items.find((i) => i.id === poolSheet?.id)?.pool;
+          if (p) void poolAction((k) => setPledgeReceived(token, p.id, k, pledgeId, received), true);
         }}
         onCancel={() => {
           const p = items.find((i) => i.id === poolSheet?.id)?.pool;

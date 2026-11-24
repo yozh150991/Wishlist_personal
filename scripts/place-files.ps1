@@ -97,6 +97,7 @@ $map = @{
   '29_delete_account.test.sql' = 'supabase\tests\database'
   '30_item_photos.test.sql' = 'supabase\tests\database'
   '31_signin_alerts.test.sql' = 'supabase\tests\database'
+  '37_pool_received.test.sql' = 'supabase\tests\database'
   '38_about_me.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
@@ -295,6 +296,7 @@ $map = @{
   '20261025100000_delete_account.sql' = 'supabase\migrations'
   '20261025120000_item_photos.sql' = 'supabase\migrations'
   '20261025140000_signin_alerts.sql' = 'supabase\migrations'
+  '20261123070305_pool_received.sql' = 'supabase\migrations'
   '20261124015413_about_me.sql' = 'supabase\migrations'
   '14_guest_contact.test.sql' = 'supabase\tests\database'
   '15_guest_mail.test.sql' = 'supabase\tests\database'
