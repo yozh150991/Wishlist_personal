@@ -267,6 +267,10 @@ export default function ListV2() {
    * Вікно відкриється, щойно позиції завантажаться.
    */
   const [stepAsked, setStepAsked] = useState<AfterStep | null>(null);
+  /** З пошуку по всіх списках (8.11): до якої позиції докрутити, щойно позиції завантажаться. */
+  const [focusItem, setFocusItem] = useState<string | null>(null);
+  /** Позиція з пошуку — серед купленого й подарованого: розгорнути той блок. */
+  const [revealDone, setRevealDone] = useState(false);
 
   const undo = useUndo(UNDO_MS);
 
@@ -290,9 +294,11 @@ export default function ListV2() {
   // Перший запуск «Вставити посилання на річ» (Q2) веде сюди з одразу
   // відкритою формою позиції. Стан історії чистимо, щоб F5 не відкривав її знову.
   useEffect(() => {
-    const state = location.state as { add?: boolean; flash?: string; repeat?: boolean; after?: AfterStep } | null;
-    if (!state?.add && !state?.flash && !state?.repeat && !state?.after) {
+    const state = location.state as { add?: boolean; flash?: string; repeat?: boolean; after?: AfterStep; item?: unknown } | null;
+    setRevealDone(false);
+    if (!state?.add && !state?.flash && !state?.repeat && !state?.after && typeof state?.item !== 'string') {
       setFlash(null);
+      setFocusItem(null);
       return;
     }
     navigate(location.pathname, { replace: true, state: null });
@@ -300,6 +306,7 @@ export default function ListV2() {
     setFlash(state.flash ?? null);
     // `repeat: true` — старіша форма того самого `after: 'repeat'`.
     setStepAsked(state.after ?? (state.repeat ? 'repeat' : null));
+    setFocusItem(typeof state.item === 'string' ? state.item : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -344,6 +351,18 @@ export default function ListV2() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, userId]);
+
+  // З пошуку (8.11): щойно позиція на екрані — підсвітити й докрутити, як
+  // нову картку. Куплене й подароване спершу розгортаємо, інакше прокручувати
+  // нема до чого. Позиції немає (видалили) — просто відкритий список.
+  useEffect(() => {
+    if (!focusItem || loading) return;
+    const target = items.find((i) => i.id === focusItem);
+    setFocusItem(null);
+    if (!target) return;
+    if (target.status !== 'active') setRevealDone(true);
+    setHighlight(target.id);
+  }, [focusItem, loading, items]);
 
   // Нова картка: докрутити до неї й підсвітити на дві секунди.
   useEffect(() => {
@@ -1215,7 +1234,7 @@ export default function ListV2() {
             ),
           )}
           {done.length > 0 && (
-            <details className="v2-done" open={activeShown === 0 || selecting || undefined}>
+            <details className="v2-done" open={activeShown === 0 || selecting || revealDone || undefined}>
               <summary className="v2-done__summary">
                 {t('v2list.group.done')} · {done.length}
               </summary>

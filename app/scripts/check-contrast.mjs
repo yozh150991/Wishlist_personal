@@ -95,6 +95,7 @@ const PAIRS = [
   ['Кнопка-привид на поверхні', '--color-ghost-ink', '--color-surface', 4.5],
   ['Активний пункт навігації', '--color-accent-800', '--color-accent-200', 4.5],
   ['Значок «Високий»', '--color-accent-800', '--color-accent-100', 4.5],
+  ['Збіг у пошуку', '--color-accent-800', '--color-accent-100', 4.5],
   ['Значок «Низький»', '--color-accent-2-800', '--color-accent-2-100', 4.5],
   ['Значок нейтральний', '--color-neutral-800', '--color-neutral-100', 4.5],
   ['Банер небезпеки', '--color-danger-ink', '--color-danger-bg', 4.5],

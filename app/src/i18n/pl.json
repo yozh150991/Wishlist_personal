@@ -1339,5 +1339,36 @@
     },
     "link": "Polityka prywatności",
     "back": "Wstecz"
+  },
+  "v2search": {
+    "title": "Szukaj we wszystkich listach",
+    "open": "Szukaj",
+    "placeholder": "Nazwa, notatka, sklep…",
+    "hint": "Szukam w nazwach, notatkach, sklepach i cechach wszystkich list — także w archiwum.",
+    "short": "Wpisz co najmniej dwie litery.",
+    "searching": "Szukam…",
+    "none": "Nic nie znaleziono dla „{q}”.",
+    "noneHint": "Spróbuj krótszego słowa albo innej pisowni.",
+    "found": {
+      "one": "Znaleziono {n} pozycję",
+      "few": "Znaleziono {n} pozycje",
+      "many": "Znaleziono {n} pozycji",
+      "other": "Znaleziono {n} pozycji"
+    },
+    "more": "Pokazano pierwsze {n}. Doprecyzuj zapytanie, aby zobaczyć resztę.",
+    "offline": "Brak połączenia. Szukam w kopiach na tym urządzeniu — wynik może być niepełny: są tu tylko listy otwierane na nim.",
+    "errorTitle": "Wyszukiwanie się nie powiodło",
+    "unknownList": "Lista",
+    "copy": "Skopiuj do listy…",
+    "copyAria": "Skopiuj „{title}” do listy…",
+    "copyTitle": "Skopiuj do listy",
+    "copyBody": "Kopia to nowa pozycja: bez oznaczeń gości i poza linkami. Oryginał zostaje na miejscu.",
+    "copyWhere": "Dokąd skopiować",
+    "copyNone": "Brak listy, do której można skopiować: do archiwalnych nie dodaje się nowych pozycji.",
+    "copyPick": "Wybierz listę.",
+    "copySubmit": "Skopiuj",
+    "copying": "Kopiuję…",
+    "copied": "Skopiowano do „{title}”.",
+    "copiedQueued": "Brak połączenia: kopia pojawi się w „{title}”, gdy tylko wróci."
   }
 }

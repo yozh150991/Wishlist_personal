@@ -1339,5 +1339,36 @@
     },
     "link": "Privacy policy",
     "back": "Back"
+  },
+  "v2search": {
+    "title": "Search all lists",
+    "open": "Search",
+    "placeholder": "Name, note, shop…",
+    "hint": "Looks in names, notes, shops and details of all your lists, archive included.",
+    "short": "Type at least two letters.",
+    "searching": "Searching…",
+    "none": "Nothing found for “{q}”.",
+    "noneHint": "Try a shorter word or a different spelling.",
+    "found": {
+      "one": "{n} item found",
+      "few": "{n} items found",
+      "many": "{n} items found",
+      "other": "{n} items found"
+    },
+    "more": "Showing the first {n}. Narrow the search to see the rest.",
+    "offline": "No connection. Searching the copies on this device — results may be incomplete: only lists opened here are saved.",
+    "errorTitle": "Search failed",
+    "unknownList": "List",
+    "copy": "Copy to list…",
+    "copyAria": "Copy “{title}” to a list…",
+    "copyTitle": "Copy to a list",
+    "copyBody": "The copy is a new item: no guests' picks and not in any link. The original stays where it is.",
+    "copyWhere": "Copy to",
+    "copyNone": "There's no list to copy to: archived lists don't take new items.",
+    "copyPick": "Choose a list.",
+    "copySubmit": "Copy",
+    "copying": "Copying…",
+    "copied": "Copied to “{title}”.",
+    "copiedQueued": "No connection: the copy will appear in “{title}” once you're back online."
   }
 }

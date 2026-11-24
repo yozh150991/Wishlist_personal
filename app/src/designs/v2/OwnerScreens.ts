@@ -14,3 +14,4 @@ export { default as SharesV2 } from './screens/SharesV2';
 export { default as GiftsV2 } from './screens/GiftsV2';
 export { default as SettingsV2 } from './screens/SettingsV2';
 export { default as AddV2 } from './screens/AddV2';
+export { default as SearchV2 } from './screens/SearchV2';

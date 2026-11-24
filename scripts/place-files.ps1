@@ -97,6 +97,7 @@ $map = @{
   '29_delete_account.test.sql' = 'supabase\tests\database'
   '30_item_photos.test.sql' = 'supabase\tests\database'
   '31_signin_alerts.test.sql' = 'supabase\tests\database'
+  '33_search_my_items.test.sql' = 'supabase\tests\database'
 
   # auth email templates (uk + pl)
   'confirmation.html' = 'supabase\templates'; 'recovery.html' = 'supabase\templates'
@@ -182,6 +183,8 @@ $map = @{
   # Design v2 step 4a: after the event, archive, repeat next year.
   'AfterEventV2.tsx' = 'app\src\designs\v2\screens'; 'afterEvent.ts' = 'app\src\lib'
   'after-event.spec.ts' = 'app\tests\e2e'; 'after-event-v2.spec.ts' = 'app\tests\e2e'
+  'SearchV2.tsx' = 'app\src\designs\v2\screens'; 'search.ts' = 'app\src\lib'
+  'search.spec.ts' = 'app\tests\e2e'; 'search-v2.spec.ts' = 'app\tests\e2e'
   # Design v2 step 4b: drafts, share target (/add), v1 bridge.
   'AddV2.tsx' = 'app\src\designs\v2\screens'
   'shareTarget.ts' = 'app\src\lib'; 'share-target.spec.ts' = 'app\tests\e2e'
@@ -290,6 +293,7 @@ $map = @{
   '20261025100000_delete_account.sql' = 'supabase\migrations'
   '20261025120000_item_photos.sql' = 'supabase\migrations'
   '20261025140000_signin_alerts.sql' = 'supabase\migrations'
+  '20261122211409_search_my_items.sql' = 'supabase\migrations'
   '14_guest_contact.test.sql' = 'supabase\tests\database'
   '15_guest_mail.test.sql' = 'supabase\tests\database'
   '16_guest_changes.test.sql' = 'supabase\tests\database'

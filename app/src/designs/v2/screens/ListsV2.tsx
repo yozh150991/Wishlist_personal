@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AlertCircle, Check, ChevronRight, FileUp, Link2, ListPlus, Plus, Repeat } from 'lucide-react';
+import { AlertCircle, Check, ChevronRight, FileUp, Link2, ListPlus, Plus, Repeat, Search } from 'lucide-react';
 import { createList, deleteList, fetchDefaultCurrency, fetchListsOverview, importList } from '../../../lib/db';
 import { fetchAppearances } from '../../../lib/appearances';
 import { useAuth } from '../../../lib/auth';
@@ -468,9 +468,17 @@ export default function ListsV2() {
       <div className="v2-page__head">
         <h1 className="v2-page__title">{t('v2app.lists.title')}</h1>
         {!error && (
-          <Link to="/lists/new" className="v2-fab" aria-label={t('v2app.lists.new')}>
-            <Plus size={24} strokeWidth={2.75} aria-hidden="true" />
-          </Link>
+          <div className="v2-page__actions">
+            {/* Пошук по всіх списках (ROADMAP 8.11). Підпис «Пошук» — лише на
+                широкому екрані; назва посилання — завжди повна. */}
+            <Link to="/search" className="v2-btn v2-btn--ghost v2-searchlink" aria-label={t('v2search.title')}>
+              <Search size={20} strokeWidth={2.75} aria-hidden="true" />
+              <span className="v2-searchlink__label">{t('v2search.open')}</span>
+            </Link>
+            <Link to="/lists/new" className="v2-fab" aria-label={t('v2app.lists.new')}>
+              <Plus size={24} strokeWidth={2.75} aria-hidden="true" />
+            </Link>
+          </div>
         )}
       </div>
 

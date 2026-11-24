@@ -171,6 +171,14 @@ export function useCounts() {
         many: t('v2list.delete.viewed.many', { n }),
         other: t('v2list.delete.viewed.other', { n }),
       }),
+    /** «Знайдено 3 позиції» — пошук по всіх списках (ROADMAP 8.11). */
+    found: (n: number) =>
+      pick(n, {
+        one: t('v2search.found.one', { n }),
+        few: t('v2search.found.few', { n }),
+        many: t('v2search.found.many', { n }),
+        other: t('v2search.found.other', { n }),
+      }),
     /** «23 перегляди» — на картці посилання (перегляди, не позначки). */
     views: (n: number) =>
       pick(n, {
