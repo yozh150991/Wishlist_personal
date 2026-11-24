@@ -26,6 +26,8 @@
 | `20261025100000_delete_account.sql` | `account_delete_attempts` і `delete_my_account` — видалення акаунта власником після звірки пароля (ADR-072) |
 | `20261025120000_item_photos.sql` | бакет `item-photos`, `item_photos`, політика завантаження в `storage.objects`, `reserve_item_photo`, `item_photo_orphans`, `forget_item_photos` — своє фото позиції (ADR-073) |
 | `20261025140000_signin_alerts.sql` | `notification_settings.signin_push` / `signin_email`, `known_devices`, `recent_sign_ins`, `forget_all_push_subscriptions` — вхід із нового пристрою й вихід скрізь (ADR-074) |
+| `20261122210328_bulk_ops_rpc.sql` | `import_list`, `repeat_list`, `copy_items`, `set_items_status`, `delete_items` (і спільні `insert_owner_list`, `insert_list_contents`) — масові дії власника однією транзакцією, `SECURITY INVOKER` під RLS; таблиць і колонок не змінює (ROADMAP 8.26) |
+| `20261123065430_bulk_ops_list_id.sql` | id нового списку задає клієнт: `import_list(p_list_id, …)`, `repeat_list(p_source_list_id, p_list_id, …)`, `copy_items` з `p_new_list`; повтор з тим самим id — той самий список, чужий id — `list_id_taken`; старі сигнатури прибрано (ROADMAP 8.26) |
 
 База одна і вона бойова: застосовані міграції не редагуються, зміни — лише новими файлами через `npx supabase migration new <name>`.
 
@@ -103,7 +105,7 @@ RLS: власник бачить свої й вбудовані, змінює й
 
 `thanks_message` (ADR-059) — подяка власника гостям, до 1000 символів; порожня — `null`. Гість бачить її на сторінці списку (`get_guest_list` → `thanks`). `thanks_sent_at` — коли подяку вперше збережено: ставить і тримає лише тригер `lists_thanks_stamp`, однаково, є гості чи ні. Тоді ж тригер `lists_thanks_mail` ставить лист `thanks` кожному гостю списку з позначкою, поштою й без відписки — один раз.
 
-`repeats_yearly` (`false` за замовчуванням, ADR-047) — щорічне свято: за місяць до найближчої річниці `event_date` v2 нагадує «Повторити на …». Нових списків база не створює. Позначка належить найсвіжішому списку «ряду»: коли список повторюють, новий її отримує, а старий утрачає (`repeatList` у `lib/db.ts`). Посилання списку на список для цього не потрібне.
+`repeats_yearly` (`false` за замовчуванням, ADR-047) — щорічне свято: за місяць до найближчої річниці `event_date` v2 нагадує «Повторити на …». Нових списків база не створює. Позначка належить найсвіжішому списку «ряду»: коли список повторюють, новий її отримує, а старий утрачає — у тій самій транзакції, що й створення нового (`repeat_list`, ROADMAP 8.26). Посилання списку на список для цього не потрібне.
 
 ### `items`
 `url` і `price` — nullable. Це пряма вимога: користувач може додати «навушники, приблизно 400 zł» або взагалі без ціни.

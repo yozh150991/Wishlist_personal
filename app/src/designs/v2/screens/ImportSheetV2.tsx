@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { FileUp } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
 import { moneyShort } from '../../../lib/format';
@@ -6,6 +6,7 @@ import { errorText } from '../../../lib/errors';
 import { MAX_IMPORT_ITEMS, parseFile } from '../../../lib/transfer';
 import type { Issue, TransferItem, TransferList } from '../../../lib/transfer';
 import { CURRENCIES } from '../../../lib/types';
+import { newId } from '../../../lib/outboxOps';
 import type { Currency } from '../../../lib/types';
 import { FieldV2, NoteV2 } from './AuthPartsV2';
 import { SheetV2 } from './CommonV2';
@@ -36,7 +37,8 @@ export function ImportSheetV2({
   defaultCurrency: Currency;
   onClose: () => void;
   /** Кидає помилку, якщо сервер відмовив; на успіх екран сам іде в новий список. */
-  onImport: (list: TransferList, items: TransferItem[]) => Promise<void>;
+  /** `listId` — id нового списку, той самий у кожному повторі тієї самої дії (ROADMAP 8.26). */
+  onImport: (list: TransferList, items: TransferItem[], listId: string) => Promise<void>;
 }) {
   const { t, locale } = useI18n();
   const fileId = useId();
@@ -50,9 +52,14 @@ export function ImportSheetV2({
   const [error, setError] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Id нового списку — один на дію: відкриття аркуша чи новий файл. Повторне
+  // «Імпортувати» після обриву шле той самий id, і база повертає вже створений
+  // список замість другого (ROADMAP 8.26).
+  const listId = useRef(newId());
 
   useEffect(() => {
     if (!open) return;
+    listId.current = newId();
     setName('');
     setItems([]);
     setIssues([]);
@@ -76,6 +83,7 @@ export function ImportSheetV2({
       // Запасна назва — з імені файлу: так найчастіше й називають список.
       const fallback = file.name.replace(/\.(csv|json)$/i, '').replace(/[-_]+/g, ' ').trim();
       const parsed = parseFile(file.name, text, fallback || t('transfer.import.fallbackTitle'));
+      listId.current = newId();
       setName(file.name);
       setItems(parsed.items);
       setIssues(parsed.issues);
@@ -104,6 +112,7 @@ export function ImportSheetV2({
           sections: parsedList?.sections ?? [],
         },
         items,
+        listId.current,
       );
     } catch (e) {
       setError(errorText(e, t));

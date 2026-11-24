@@ -136,12 +136,18 @@ select set_eq(
   -- delete_my_account — видалення власного акаунта після звірки пароля (ADR-072).
   -- reserve_item_photo — адреса для свого фото позиції (ADR-073).
   -- forget_all_push_subscriptions — «Вийти на всіх пристроях», нічого не повертає (ADR-074).
+  -- import_list, repeat_list, copy_items, set_items_status, delete_items — масові
+  -- дії однією транзакцією (ROADMAP 8.26), SECURITY INVOKER під RLS;
+  -- insert_owner_list, insert_list_contents — їхні спільні кроки, яким
+  -- authenticated потрібен EXECUTE, бо викликач — він. Прав не додають.
   array['register_share_view', 'release_claim', 'redeem_guest_code',
         'get_guest_list', 'claim_item_v2', 'send_guest_code', 'guest_mail_set', 'ack_claim_change',
         'set_claim_bought', 'get_share_card', 'report_share', 'get_my_gifts', 'attach_guest_key',
         'start_pool', 'pledge_pool', 'leave_pool', 'close_pool', 'cancel_pool', 'create_share', 'list_items_page', 'list_totals', 'gen_share_token', 'release_item_claims',
         'reorder_items', 'reorder_sections', 'save_push_subscription', 'forget_push_subscription',
-        'delete_my_account', 'reserve_item_photo', 'forget_all_push_subscriptions'],
+        'delete_my_account', 'reserve_item_photo', 'forget_all_push_subscriptions',
+        'import_list', 'repeat_list', 'copy_items', 'set_items_status', 'delete_items',
+        'insert_owner_list', 'insert_list_contents'],
   'authenticated може викликати лише гостьові RPC і функції власника'
 );
 

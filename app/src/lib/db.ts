@@ -192,59 +192,66 @@ export async function fetchAllItems(
 
 /* ── Масові дії ─────────────────────────── */
 
-/**
- * Ідентифікатори їдуть у рядку запиту (`id=in.(…)`), а довжина адреси має межу.
- * Сто UUID — близько 3,7 КБ, з великим запасом до обмежень проксі.
+/*
+ * Кожна масова дія — один виклик RPC, тіло якого — одна транзакція в базі
+ * (ROADMAP 8.26): обрив мережі посередині не лишає ні половини списку, ні
+ * половини видалених позицій. Раніше це були серії запитів PostgREST із
+ * ручним відкотом, який сам міг не дійти. Функції — SECURITY INVOKER: RLS,
+ * `check`-обмеження й тригери діють так само, як для одиночних запитів
+ * (docs/API.md, «Масові дії»).
  */
-const BULK_CHUNK = 100;
 
-function chunks<T>(xs: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < xs.length; i += size) out.push(xs.slice(i, i + size));
-  return out;
-}
-
-/** Видаляє позиції за id. Чужі RLS мовчки відсіює — власник видаляє лише своє. */
-export async function deleteItems(ids: string[]): Promise<void> {
-  for (const part of chunks(ids, BULK_CHUNK)) {
-    const { error } = await supabase.from('items').delete().in('id', part);
-    if (error) throw error;
-  }
-}
-
-export async function setItemsStatus(ids: string[], status: ItemStatus): Promise<void> {
-  for (const part of chunks(ids, BULK_CHUNK)) {
-    const { error } = await supabase.from('items').update({ status }).in('id', part);
-    if (error) throw error;
-  }
-}
+/*
+ * Id нового списку задає клієнт — один на дію (`newId()` з `lib/outboxOps.ts`)
+ * і той самий у кожному повторі цієї дії. Відповідь загубилась після того, як
+ * список уже ліг у базу, — повторне натискання повертає той самий список, а не
+ * створює другий. Список із цим id уже є в іншого власника — `list_id_taken`
+ * без подробиць (docs/API.md, «Масові дії»).
+ */
 
 /**
- * Створює список і наповнює його позиціями (імпорт, ROADMAP 6.3).
- *
- * PostgREST не дає транзакції на кілька запитів, тож цілісність доводиться
- * тримати руками: якщо частина позицій не вставилась, щойно створений список
- * видаляємо. Краще жодного списку, ніж половина списку, про яку людина
- * дізнається лише згодом.
+ * Позиція в тілі RPC. Розділ — міткою `section_key` з `p_sections` (новий
+ * список ще не має id розділів); `section_id` база з payload не бере.
  */
-export async function createListWithItems(
-  input: ListInput,
-  items: ItemInput[],
-  ownerId: string,
-): Promise<List> {
-  const list = await createList(input, ownerId);
-  try {
-    for (const part of chunks(ownCurrency(items, list.currency), BULK_CHUNK)) {
-      const { error } = await supabase
-        .from('items')
-        .insert(part.map((i) => ({ ...i, list_id: list.id })));
-      if (error) throw error;
-    }
-  } catch (e) {
-    await deleteList(list.id).catch(() => {});
-    throw e;
-  }
-  return list;
+type ItemPayload = Omit<ItemInput, 'section_id'> & { section_key: string | null };
+
+type SectionPayload = { key: string; title: string; position: number };
+
+function payload(item: ItemInput, sectionKey: string | null): ItemPayload {
+  const { section_id: _sectionId, ...rest } = item;
+  return { ...rest, section_key: sectionKey };
+}
+
+/**
+ * Видаляє позиції списку. Позиції, яких у списку вже немає, база пропускає
+ * мовчки — так повтор із черги змін лишається ідемпотентним (ADR-029).
+ * Позначки гостей зникають лише каскадом і тригерами, відповідь від них не
+ * залежить (CLAUDE.md §3.2).
+ */
+export async function deleteItems(listId: string, ids: string[]): Promise<void> {
+  const { error } = await supabase.rpc('delete_items', { p_list_id: listId, p_item_ids: ids });
+  if (error) throw error;
+}
+
+export async function setItemsStatus(listId: string, ids: string[], status: ItemStatus): Promise<void> {
+  const { error } = await supabase.rpc('set_items_status', { p_list_id: listId, p_item_ids: ids, p_status: status });
+  if (error) throw error;
+}
+
+/**
+ * Новий список із копіями позицій — «Ще хочу» в новий список (M4, ADR-045).
+ * Список і позиції лягають однією транзакцією (`copy_items`); `listId` — id
+ * нового списку, один на дію.
+ */
+export async function createListWithItems(input: ListInput, items: ItemInput[], listId: string): Promise<List> {
+  const currency = input.currency ?? 'PLN';
+  const { data, error } = await supabase.rpc('copy_items', {
+    p_list_id: listId,
+    p_items: ownCurrency(items, currency).map((i) => payload(i, null)),
+    p_new_list: { ...input, title: input.title.trim(), currency },
+  });
+  if (error) throw error;
+  return data as List;
 }
 
 /**
@@ -253,45 +260,30 @@ export async function createListWithItems(
  * пише позиції в порядку гостя (`exportItems`), тож місця 1…n у кожному
  * розділі відтворюють ручний порядок; чужий файл — порядок своїх рядків.
  *
- * Як і `createListWithItems`, без транзакції: не вдалося — список видаляється
- * разом із розділами й позиціями, що встигли лягти.
+ * Одним викликом `import_list`: не вдалося — у базі немає нічого. `listId` —
+ * id нового списку, той самий у кожному повторі тієї самої дії.
  */
-export async function importList(
-  file: { list: TransferList; items: TransferItem[] },
-  ownerId: string,
-): Promise<List> {
+export async function importList(file: { list: TransferList; items: TransferItem[] }, listId: string): Promise<List> {
   const { sections: titles, ...input } = file.list;
-  const list = await createList(input, ownerId);
-  try {
-    const ids = new Map<string, string>();
-    if (titles.length > 0) {
-      // owner_id проставляє тригер sections_sync_owner; порядок — position.
-      const { data, error } = await supabase
-        .from('sections')
-        .insert(titles.map((title, at) => ({ list_id: list.id, title, position: at + 1 })))
-        .select('id, title');
-      if (error) throw error;
-      for (const row of (data ?? []) as { id: string; title: string }[]) ids.set(row.title, row.id);
-    }
-    const next = new Map<string, number>();
-    const rows: ItemInput[] = file.items.map(({ section, ...item }) => {
-      const sectionId = section ? (ids.get(section) ?? null) : null;
-      // Місця — і в пласкому списку: без них позиції, вставлені одним запитом
-      // з однаковим created_at, стали б у випадковому порядку, а не як у файлі.
-      const key = sectionId ?? '';
-      const position = (next.get(key) ?? 0) + 1;
-      next.set(key, position);
-      return { ...item, section_id: sectionId, position };
-    });
-    for (const part of chunks(ownCurrency(rows, list.currency), BULK_CHUNK)) {
-      const { error } = await supabase.from('items').insert(part.map((i) => ({ ...i, list_id: list.id })));
-      if (error) throw error;
-    }
-  } catch (e) {
-    await deleteList(list.id).catch(() => {});
-    throw e;
-  }
-  return list;
+  const sections: SectionPayload[] = titles.map((title, at) => ({ key: title, title, position: at + 1 }));
+  const known = new Set(titles);
+  const next = new Map<string, number>();
+  const items: ItemPayload[] = file.items.map(({ section, ...item }) => {
+    const key = section && known.has(section) ? section : null;
+    // Місця — і в пласкому списку: без них позиції, вставлені однією
+    // транзакцією з однаковим created_at, стали б у випадковому порядку.
+    const position = (next.get(key ?? '') ?? 0) + 1;
+    next.set(key ?? '', position);
+    return { ...item, position, section_key: key };
+  });
+  const { data, error } = await supabase.rpc('import_list', {
+    p_list_id: listId,
+    p_list: input,
+    p_sections: sections,
+    p_items: ownCurrency(items, input.currency),
+  });
+  if (error) throw error;
+  return data as List;
 }
 
 /**
@@ -306,13 +298,15 @@ export function ownCurrency<T extends { currency?: Currency | null }>(items: T[]
 /**
  * Копії позицій в інший список — «Ще хочу» після свята (M4, ADR-045).
  * Оригінали не чіпаємо: архів лишається правдивим знімком свята, а позначки
- * гостей не переїжджають — вони належать оригіналам.
+ * гостей не переїжджають — вони належать оригіналам. Копії стають в «Інше»:
+ * розділи цілі — інші. Одним викликом `copy_items`.
  */
 export async function copyItems(listId: string, items: ItemInput[], listCurrency?: Currency): Promise<void> {
-  for (const part of chunks(listCurrency ? ownCurrency(items, listCurrency) : items, BULK_CHUNK)) {
-    const { error } = await supabase.from('items').insert(part.map((i) => ({ ...i, list_id: listId })));
-    if (error) throw error;
-  }
+  const { error } = await supabase.rpc('copy_items', {
+    p_list_id: listId,
+    p_items: (listCurrency ? ownCurrency(items, listCurrency) : items).map((i) => payload(i, null)),
+  });
+  if (error) throw error;
 }
 
 /**
@@ -321,66 +315,43 @@ export async function copyItems(listId: string, items: ItemInput[], listCurrency
  * порядку — і копіями вибраних позицій на тих самих місцях. Позначки й
  * посилання не переносяться ніколи.
  *
- * Як і в імпорті, транзакції на кілька запитів немає: не вдалося — щойно
- * створений список видаляємо, щоб не лишити половину.
+ * Одним викликом `repeat_list`: список, розділи, позиції й перенесення
+ * щорічної позначки (ADR-047) — у одній транзакції. Раніше позначка
+ * знімалась окремим запитом після створення і могла не дійти. `listId` — id
+ * нового списку, той самий у кожному повторі тієї самої дії.
  */
 export async function repeatList(
   source: { list: List; sections: { id: string; title: string; position: number }[]; items: Item[] },
   next: { title: string; event_date: string | null; repeats_yearly: boolean },
-  ownerId: string,
+  listId: string,
 ): Promise<List> {
-  const { data, error } = await supabase
-    .from('lists')
-    .insert({
-      owner_id: ownerId,
+  const sections: SectionPayload[] = source.sections.map((s) => ({ key: s.id, title: s.title, position: s.position }));
+  const known = new Set(source.sections.map((s) => s.id));
+  // Позиція з розділу, якого вже немає, стає в «Інше» без місця — як і в самому списку.
+  const items = source.items.map((i) => {
+    const key = i.section_id && known.has(i.section_id) ? i.section_id : null;
+    const lost = Boolean(i.section_id) && key === null;
+    return payload(
+      copyInput(i, { section_id: null, position: lost ? null : (i.position ?? null) }, source.list.currency),
+      key,
+    );
+  });
+  const { data, error } = await supabase.rpc('repeat_list', {
+    p_source_list_id: source.list.id,
+    p_list_id: listId,
+    p_list: {
       title: next.title,
       event_date: next.event_date,
       description: source.list.description,
       currency: source.list.currency,
       appearance_id: source.list.appearance_id ?? null,
       repeats_yearly: next.repeats_yearly,
-    })
-    .select()
-    .single();
+    },
+    p_sections: sections,
+    p_items: ownCurrency(items, source.list.currency),
+  });
   if (error) throw error;
-  const list = data as List;
-  try {
-    // Розділи — по одному: так id нового точно відповідає старому.
-    const sectionIds = new Map<string, string>();
-    for (const s of source.sections) {
-      const { data: row, error: sErr } = await supabase
-        .from('sections')
-        .insert({ list_id: list.id, title: s.title, position: s.position })
-        .select('id')
-        .single();
-      if (sErr) throw sErr;
-      sectionIds.set(s.id, (row as { id: string }).id);
-    }
-    // Позиція з розділу, якого вже немає, стає в «Інше» без місця — як і в самому списку.
-    const inputs = source.items.map((i) => {
-      const section = i.section_id ? (sectionIds.get(i.section_id) ?? null) : null;
-      const lost = Boolean(i.section_id) && section === null;
-      return copyInput(i, { section_id: section, position: lost ? null : (i.position ?? null) }, source.list.currency);
-    });
-    await copyItems(list.id, inputs, list.currency);
-  } catch (e) {
-    await deleteList(list.id).catch(() => {});
-    throw e;
-  }
-  // Щорічна позначка переходить до нового списку «ряду» (ADR-047): інакше
-  // старий нагадав би про ту саму дату ще раз. Не вдалося — не біда, новий
-  // список уже є, а зайве нагадування закривається «Не цього разу».
-  if (source.list.repeats_yearly) {
-    await supabase
-      .from('lists')
-      .update({ repeats_yearly: false })
-      .eq('id', source.list.id)
-      .then(
-        () => undefined,
-        () => undefined,
-      );
-  }
-  return list;
+  return data as List;
 }
 
 /* ── Сторінка позицій (keyset) ──────────── */

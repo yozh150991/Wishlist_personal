@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Archive, ArchiveRestore, Check, CopyPlus, Gift, Heart, Repeat } from 'lucide-react';
 import { copyItems, createListWithItems, fetchListsOverview, repeatList, setListThanks } from '../../../lib/db';
 import { copyInput, eventYear, repeatTarget, repeatTitle } from '../../../lib/afterEvent';
+import { newId } from '../../../lib/outboxOps';
 import { itemCurrency } from '../../../lib/itemsView';
 import { useI18n } from '../../../lib/i18n';
 import { errorText } from '../../../lib/errors';
@@ -524,7 +525,6 @@ export function CarrySheetV2({
   open,
   list,
   items,
-  userId,
   onClose,
   onDone,
 }: {
@@ -532,7 +532,6 @@ export function CarrySheetV2({
   list: List;
   /** Ще не отримане — статус «актуальна». */
   items: Item[];
-  userId: string;
   onClose: () => void;
   onDone: (target: { id: string; title: string }, n: number) => void;
 }) {
@@ -546,9 +545,13 @@ export function CarrySheetV2({
   const [busy, setBusy] = useState(false);
   const [server, setServer] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  // Id нового списку — один на відкриття аркуша: повтор після обриву
+  // повертає той самий список, а не створює другий (ROADMAP 8.26).
+  const newListId = useRef(newId());
 
   useEffect(() => {
     if (!open) return;
+    newListId.current = newId();
     setSelected(new Set(items.map((i) => i.id)));
     setTarget({ kind: 'new' });
     setName(t('v2after.carry.newDefault'));
@@ -574,7 +577,7 @@ export function CarrySheetV2({
     const inputs = items.filter((i) => selected.has(i.id)).map((i) => copyInput(i, undefined, list.currency));
     try {
       if (target.kind === 'new') {
-        const created = await createListWithItems({ title: name.trim(), currency: list.currency }, inputs, userId);
+        const created = await createListWithItems({ title: name.trim(), currency: list.currency }, inputs, newListId.current);
         onDone({ id: created.id, title: created.title }, inputs.length);
       } else {
         await copyItems(target.id, inputs, target.currency);
@@ -685,7 +688,6 @@ export function RepeatSheetV2({
   list,
   sections,
   items,
-  userId,
   onClose,
   onCreated,
 }: {
@@ -694,7 +696,6 @@ export function RepeatSheetV2({
   sections: Section[];
   /** Ще не отримане — статус «актуальна». */
   items: Item[];
-  userId: string;
   onClose: () => void;
   onCreated: (created: List) => void;
 }) {
@@ -708,6 +709,8 @@ export function RepeatSheetV2({
   const [busy, setBusy] = useState(false);
   const [server, setServer] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  // Id нового списку — один на відкриття аркуша (ROADMAP 8.26), як у «Ще хочу».
+  const newListId = useRef(newId());
   const from = eventYear(list);
   // Найближча річниця: наступного дня після свята — через рік, а давній
   // список — цьогорічна дата, а не минула (ADR-047).
@@ -715,6 +718,7 @@ export function RepeatSheetV2({
 
   useEffect(() => {
     if (!open) return;
+    newListId.current = newId();
     setName(repeatTitle(list.title, from, target.year));
     setDate(target.date ?? '');
     setCarry(items.length > 0);
@@ -735,7 +739,7 @@ export function RepeatSheetV2({
       const created = await repeatList(
         { list, sections, items: carry ? items : [] },
         { title: name.trim(), event_date: date || null, repeats_yearly: Boolean(date) && yearly },
-        userId,
+        newListId.current,
       );
       onCreated(created);
     } catch (e) {
