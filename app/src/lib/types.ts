@@ -94,8 +94,29 @@ export type Item = {
    * `itemCurrency()` з `lib/itemsView.ts`, а не напряму.
    */
   currency?: Currency | null;
+  /**
+   * «Повідомити, коли ціна ≤ X» (8.16) — у валюті позиції; null — без цілі.
+   * Старий офлайн-знімок поля не має — теж без цілі.
+   */
+  price_target?: number | string | null;
+  /** Коли ціль задано і з якого моменту ціна не вища за неї — веде лише тригер бази. */
+  price_target_set_at?: string | null;
+  price_target_hit_at?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** Точка історії ціни в магазині (8.16): одна на позицію на день, пише лише wishlist-jobs. */
+export type ItemPrice = {
+  item_id: string;
+  /** День перевірки, `YYYY-MM-DD` (UTC). */
+  day: string;
+  price: number | string;
+  /** Як сказав магазин; null — не сказав, тоді це валюта позиції. */
+  currency: string | null;
+  /** Звідки ціна: поки лише `check` — щоденна перевірка посилання. */
+  source: 'check';
+  checked_at: string;
 };
 
 /**
@@ -118,6 +139,7 @@ export type ItemInput = Pick<Item, 'title'> &
       | 'position'
       | 'needs_title'
       | 'currency'
+      | 'price_target'
     >
   >;
 

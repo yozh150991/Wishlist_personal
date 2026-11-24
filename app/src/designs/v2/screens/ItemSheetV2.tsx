@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { ClipboardEvent } from 'react';
 import { ClipboardPaste, ImageUp, Plus, X } from 'lucide-react';
 import { useI18n } from '../../../lib/i18n';
@@ -34,6 +35,9 @@ import { DESKTOP } from '../ShellV2';
 import { androidOffer } from '../../../lib/androidApp';
 import { PHOTO_QUOTA, PhotoError, isOwnPhoto, uploadPhoto } from '../../../lib/photos';
 import type { PhotoErrorKey } from '../../../lib/photos';
+import { parseTarget, targetReached } from '../../../lib/priceHistory';
+import { anyOn, fetchNotifySettings } from '../../../lib/notifications';
+import { PriceHistoryV2 } from './PriceHistoryV2';
 
 const STROKE = 2.75;
 
@@ -53,6 +57,8 @@ type Form = {
   section_id: string;
   /** Валюта ціни (ADR-051) — завжди розгорнута; `null` у базу йде, коли вона = валюта списку. */
   currency: Currency;
+  /** «Повідомити, коли ціна ≤» (8.16) — у валюті позиції; лише з посиланням. */
+  price_target: string;
 };
 
 const EMPTY: Omit<Form, 'currency'> = {
@@ -64,6 +70,7 @@ const EMPTY: Omit<Form, 'currency'> = {
   note: '',
   image_url: '',
   section_id: '',
+  price_target: '',
 };
 
 function fromItem(item: Item, listCurrency: Currency): Form {
@@ -78,6 +85,7 @@ function fromItem(item: Item, listCurrency: Currency): Form {
     note: item.note ?? '',
     image_url: item.image_url ?? '',
     section_id: item.section_id ?? '',
+    price_target: item.price_target === null || item.price_target === undefined ? '' : String(item.price_target),
   };
 }
 
@@ -199,6 +207,7 @@ export function ItemSheetV2({
   const priceRef = useRef<HTMLInputElement>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
+  const targetRef = useRef<HTMLInputElement>(null);
   /** Адреса картинки, яка не відкрилась, — щоб не мигати битим значком. */
   const [brokenImage, setBrokenImage] = useState<string | null>(null);
   /** Свіжий стан форми для async-читання: що саме парсер дописав. */
@@ -243,6 +252,24 @@ export function ItemSheetV2({
    * `share_items`, а не з позначок: однакове, взяв хтось позицію чи ні, тож
    * попередження нічого не видає. Без мережі — просто без попередження.
    */
+  /**
+   * Сповіщення про ціль (8.16) приходять лише тоді, коли людина їх увімкнула
+   * (ADR-049). Вимкнено — кажемо про це під полем, а не мовчимо. Читаємо лише
+   * тоді, коли ціль у полі є; без мережі — без підказки.
+   */
+  const [targetNotify, setTargetNotify] = useState<boolean | null>(null);
+  const wantsTarget = open && form.price_target.trim() !== '';
+  useEffect(() => {
+    if (!wantsTarget) return;
+    let alive = true;
+    fetchNotifySettings()
+      .then((s) => alive && setTargetNotify(anyOn(s) && Boolean(s?.target_push || s?.target_email)))
+      .catch(() => alive && setTargetNotify(null));
+    return () => {
+      alive = false;
+    };
+  }, [wantsTarget]);
+
   const [liveShares, setLiveShares] = useState(0);
   useEffect(() => {
     setLiveShares(0);
@@ -443,6 +470,14 @@ export function ItemSheetV2({
         ? t('item.errors.priceTooBig')
         : null;
   const qtyError = checked && !qtyOk ? t('item.errors.badQuantity') : null;
+  // Ціль має сенс лише з посиланням: без нього перевірки немає, і поля теж.
+  const target = urlNormal ? parseTarget(form.price_target) : { value: null, error: null };
+  const targetError =
+    checked && (target.error === 'format' || target.error === 'zero')
+      ? t('v2item.target.bad')
+      : checked && target.error === 'tooBig'
+        ? t('item.errors.priceTooBig')
+        : null;
   const image = imageCheck(form.image_url);
   const imageError =
     checked && image === 'bad' ? t('v2item.photo.bad') : checked && image === 'tooLong' ? t('v2item.photo.tooLong') : null;
@@ -462,6 +497,10 @@ export function ItemSheetV2({
     }
     if (!qtyOk) {
       qtyRef.current?.focus();
+      return false;
+    }
+    if (target.error) {
+      targetRef.current?.focus();
       return false;
     }
     if (image === 'bad' || image === 'tooLong') {
@@ -507,6 +546,7 @@ export function ItemSheetV2({
       priority: form.priority,
       // Валюта списку — NULL: позиція йде за списком, як у v1 (ADR-051).
       currency: form.currency === currency ? null : form.currency,
+      price_target: target.value,
       note: form.note.trim() || null,
       variants: cleanVariants(filledVariants),
       image_url: form.image_url.trim() || null,
@@ -590,6 +630,12 @@ export function ItemSheetV2({
     inspected?.link_status === 'gone' || inspected?.link_status === 'out' ? inspected.link_status : null;
   const shopPrice = inspected && inspected.status === 'active' ? linkPriceChange(inspected, currency) : null;
   const checkedOn = formatDay(inspected?.link_checked_at ?? null, locale) ?? '';
+  // Ціна в магазині вже не вища за ціль з поля — для тієї ж валюти, що й у формі.
+  const reached =
+    inspected !== null &&
+    target.value !== null &&
+    form.currency === itemCurrency(inspected, currency) &&
+    targetReached({ ...inspected, price_target: target.value }, currency);
   const searchHref = `https://www.google.com/search?q=${encodeURIComponent(form.title.trim() || item?.title || '')}`;
 
   const imageSrc = image === 'ok' ? form.image_url.trim() : null;
@@ -907,6 +953,44 @@ export function ItemSheetV2({
                     onChange={(e) => set('quantity', e.target.value)}
                   />
                 </div>
+
+                {inspected && inspected.url && (
+                  <PriceHistoryV2 itemId={inspected.id} currency={itemCurrency(inspected, currency)} />
+                )}
+
+                {urlNormal && (
+                  <FieldV2
+                    ref={targetRef}
+                    label={t('v2item.target.label')}
+                    name="price_target"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder={currencySymbol(form.currency, locale)}
+                    value={form.price_target}
+                    error={targetError}
+                    onChange={(e) => set('price_target', e.target.value)}
+                    after={
+                      <>
+                        <p className="v2-hint v2-hint--start">{t('v2item.target.hint', { currency: form.currency })}</p>
+                        {reached && (
+                          <p className="v2-hint v2-hint--start" data-testid="target-reached">
+                            {t('v2item.target.reached', {
+                              price: moneyShort(inspected?.link_price ?? null, form.currency, locale) ?? '',
+                            })}
+                          </p>
+                        )}
+                        {target.value !== null && targetNotify === false && (
+                          <p className="v2-hint v2-hint--start">
+                            {t('v2item.target.notifyOff')}{' '}
+                            <Link className="v2-link" to="/settings#notifications" onClick={onClose}>
+                              {t('v2item.target.notifyOpen')}
+                            </Link>
+                          </p>
+                        )}
+                      </>
+                    }
+                  />
+                )}
 
                 <fieldset className="v2-seg">
                   <legend className="v2-field__label">{t('v2item.priority')}</legend>

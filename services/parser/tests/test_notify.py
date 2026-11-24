@@ -510,3 +510,56 @@ class TestApp:
             app_origin="https://wishlist-personal.vercel.app/",
         )
         assert cfg.notify_problems == [] and cfg.notify_ready
+
+
+class TestTarget:
+    """«Повідомити, коли ціна ≤ X» (8.16): раз на падіння, лише про ціну."""
+
+    SET = "2026-12-01T10:00:00+00:00"
+    HIT = "2026-12-03T03:15:00+00:00"
+
+    def item(self, **over):
+        base = {
+            "id": "T1", "list_id": "L1", "title": "Лампа", "url": "https://shop.ua/lampa", "price": "1240.00",
+            "currency": None, "link_status": "ok", "link_price": "990.00", "link_currency": "UAH",
+            "price_target": "1000.00", "price_target_set_at": self.SET, "price_target_hit_at": self.HIT,
+        }
+        return {**base, **over}
+
+    def events(self, item, logged=frozenset()):
+        return [
+            e for e in notify.find_events(owner(target=(True, False)), LISTS, [item], [], today=TODAY, logged=set(logged))
+            if e.kind == "target"
+        ]
+
+    def test_drop_to_target_is_one_event_keyed_by_the_drop(self):
+        [event] = self.events(self.item())
+        assert event.key == ("target", "T1", "2026-12-03T03:15:00+00:00")
+        title, body = notify.render(event, "uk")
+        assert title == "Ціна досягла твоєї цілі"
+        assert body.replace("\xa0", " ") == "«Лампа»: у магазині зараз 990 грн, твоя ціль — 1 000 грн."
+
+    def test_same_drop_is_not_sent_twice(self):
+        assert self.events(self.item(), logged={("target", "T1", "2026-12-03T03:15:00+00:00")}) == []
+
+    @pytest.mark.parametrize(
+        "over",
+        [
+            {"price_target_hit_at": None},  # ціна вища за ціль
+            {"price_target": None, "price_target_hit_at": None},  # цілі немає
+            {"price_target_hit_at": SET},  # досягнуто вже тоді, коли ціль задали
+            {"link_status": "out"},  # немає в наявності
+            {"link_currency": "EUR"},  # інша валюта не порівнюється (ADR-051)
+            {"link_price": "1000.01"},  # ціна вже знову вища, база ще не перерахувала
+        ],
+    )
+    def test_no_event(self, over):
+        assert self.events(self.item(**over)) == []
+
+    def test_off_by_choice(self):
+        found = notify.find_events(owner(link=(True, False)), LISTS, [self.item()], [], today=TODAY, logged=set())
+        assert [e for e in found if e.kind == "target"] == []
+
+    def test_texts_in_all_languages(self):
+        for locale in LOCALES:
+            assert "{target}" in TEXTS[locale]["target.body"] and "{price}" in TEXTS[locale]["target.body"]

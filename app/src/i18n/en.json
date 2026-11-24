@@ -179,7 +179,8 @@
       "variantsMany": "more than five details, the extra ones were dropped.",
       "variantsLong": "detail trimmed: label to 40 characters, value to 80.",
       "itemCurrency": "Unknown currency “{value}” — the price is taken in the list currency",
-      "sectionLong": "Section name is longer than {max} characters — shortened."
+      "sectionLong": "Section name is longer than {max} characters — shortened.",
+      "priceTarget": "couldn’t read the target “{value}”, the item has no target."
     }
   },
   "outbox": {
@@ -627,7 +628,8 @@
       "draft": "Needs a name",
       "linkGone": "Page gone",
       "linkOut": "Out of stock",
-      "priceChanged": "Price changed"
+      "priceChanged": "Price changed",
+      "targetReached": "Target reached"
     },
     "toast": {
       "added": "Added: {title}",
@@ -783,7 +785,25 @@
       "fx": "≈ {sum} at the NBP rate of {date}",
       "fromShop": "Price taken from the shop along with its currency: {currency}."
     },
-    "guestsWarn": "Guests see this item through links: {n}. If someone picked it, we'll let them know about the new name, link or price. We won't tell you whether anyone did."
+    "guestsWarn": "Guests see this item through links: {n}. If someone picked it, we'll let them know about the new name, link or price. We won't tell you whether anyone did.",
+    "target": {
+      "label": "Notify me when the price is ≤ · optional",
+      "hint": "In {currency}. The daily link check will notify you once when the shop price drops to this amount.",
+      "bad": "The target is a number above zero: 1000 or 999.50.",
+      "reached": "The shop already says {price} — not above your target.",
+      "notifyOff": "Price target notifications are off.",
+      "notifyOpen": "Notification settings"
+    },
+    "history": {
+      "title": "Shop price · {n} days",
+      "current": "Latest: {price} — checked {date}",
+      "min": "Lowest in {n} days: {price} — checked {date}",
+      "minIsNow": "That is also the lowest in {n} days.",
+      "chart": "Price chart: from {min} to {max}",
+      "empty": "No price history yet: the link is checked once a day.",
+      "otherCurrency": "Prices in another currency ({currencies}) are not shown: we don’t compare them.",
+      "failed": "Couldn’t load the price history."
+    }
   },
   "v2share": {
     "title": "Share",
@@ -1007,7 +1027,9 @@
       "price": "Price changed",
       "priceHint": "By more than 15%",
       "share": "Link expiring",
-      "shareHint": "3 days before it expires"
+      "shareHint": "3 days before it expires",
+      "target": "Price target",
+      "targetHint": "The price dropped to your target"
     },
     "device": {
       "label": "Push on this device",

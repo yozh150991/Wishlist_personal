@@ -179,7 +179,8 @@
       "variantsMany": "więcej niż pięć cech, nadmiar pominięto.",
       "variantsLong": "cecha skrócona: nazwa do 40 znaków, wartość do 80.",
       "itemCurrency": "Nieznana waluta „{value}” — cena w walucie listy",
-      "sectionLong": "Nazwa działu dłuższa niż {max} znaków — skrócono."
+      "sectionLong": "Nazwa działu dłuższa niż {max} znaków — skrócono.",
+      "priceTarget": "celu „{value}” nie udało się odczytać, pozycja bez celu."
     }
   },
   "outbox": {
@@ -627,7 +628,8 @@
       "draft": "Potrzebna nazwa",
       "linkGone": "Strony nie ma",
       "linkOut": "Niedostępny",
-      "priceChanged": "Cena się zmieniła"
+      "priceChanged": "Cena się zmieniła",
+      "targetReached": "Cel osiągnięty"
     },
     "toast": {
       "added": "Dodano: {title}",
@@ -783,7 +785,25 @@
       "fx": "≈ {sum} po kursie NBP z {date}",
       "fromShop": "Cenę pobrano ze sklepu razem z walutą: {currency}."
     },
-    "guestsWarn": "Tę pozycję widzą goście z linków: {n}. Jeśli ktoś ją zarezerwował, powiadomimy go o nowej nazwie, linku lub cenie. Tobie nie powiemy, czy ktoś taki jest."
+    "guestsWarn": "Tę pozycję widzą goście z linków: {n}. Jeśli ktoś ją zarezerwował, powiadomimy go o nowej nazwie, linku lub cenie. Tobie nie powiemy, czy ktoś taki jest.",
+    "target": {
+      "label": "Powiadom, gdy cena ≤ · opcjonalnie",
+      "hint": "W {currency}. Codzienne sprawdzanie linku powiadomi raz, gdy cena w sklepie spadnie do tej kwoty.",
+      "bad": "Cel to liczba większa od zera: 1000 lub 999,50.",
+      "reached": "W sklepie już {price} — nie drożej niż cel.",
+      "notifyOff": "Powiadomienia o celu są wyłączone.",
+      "notifyOpen": "Ustawienia powiadomień"
+    },
+    "history": {
+      "title": "Cena w sklepie · {n} dni",
+      "current": "Ostatnia: {price} — sprawdzono {date}",
+      "min": "Najniższa z {n} dni: {price} — sprawdzono {date}",
+      "minIsNow": "To też najniższa z {n} dni.",
+      "chart": "Wykres ceny: od {min} do {max}",
+      "empty": "Historii ceny jeszcze nie ma: link jest sprawdzany raz na dobę.",
+      "otherCurrency": "Cen w innej walucie ({currencies}) nie pokazano: ich nie porównujemy.",
+      "failed": "Nie udało się wczytać historii ceny."
+    }
   },
   "v2share": {
     "title": "Udostępnij",
@@ -1007,7 +1027,9 @@
       "price": "Cena się zmieniła",
       "priceHint": "O więcej niż 15%",
       "share": "Link wygasa",
-      "shareHint": "3 dni przed końcem ważności"
+      "shareHint": "3 dni przed końcem ważności",
+      "target": "Cel ceny",
+      "targetHint": "Cena spadła do Twojego celu"
     },
     "device": {
       "label": "Push na tym urządzeniu",

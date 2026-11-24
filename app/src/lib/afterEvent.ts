@@ -223,6 +223,9 @@ export function copyInput(
     // Чернетка лишається чернеткою й у копії: гості її так само не бачать (ADR-046).
     needs_title: Boolean(item.needs_title),
     currency: sourceCurrency ? itemCurrency(item, sourceCurrency) : (item.currency ?? null),
+    // Ціль — частина бажання (8.16): у копії вона та сама; історія ціни — ні,
+    // вона належить оригіналу.
+    price_target: item.price_target ?? null,
   };
 }
 

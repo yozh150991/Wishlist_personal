@@ -4,7 +4,7 @@
  * Дані й push на пристрої — у `notifications.ts`.
  */
 
-export const NOTIFY_KINDS = ['after_event', 'yearly', 'link', 'price', 'share'] as const;
+export const NOTIFY_KINDS = ['after_event', 'yearly', 'link', 'price', 'share', 'target'] as const;
 export type NotifyKind = (typeof NOTIFY_KINDS)[number];
 export type NotifyChannel = 'push' | 'email';
 export type NotifyFlag = `${NotifyKind}_${NotifyChannel}`;
@@ -38,8 +38,9 @@ export type NotifySettings = NotifyFlags &
  * Події, заради яких пошта вмикається сама, коли push на пристрої неможливий
  * (P, гілка «push заборонено»): щоб важливе не загубилось. Ціна — ні: вона
  * цікава не всім і легко стає шумом, тож усталено вимкнена й для push.
+ * Ціль ціни (8.16) — так: її людина ставить сама на конкретну позицію.
  */
-export const IMPORTANT_KINDS: readonly NotifyKind[] = ['after_event', 'yearly', 'link', 'share'];
+export const IMPORTANT_KINDS: readonly NotifyKind[] = ['after_event', 'yearly', 'link', 'share', 'target'];
 
 export function flag(kind: NotifyKind, channel: NotifyChannel): NotifyFlag {
   return `${kind}_${channel}`;

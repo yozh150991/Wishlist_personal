@@ -8,6 +8,7 @@
 """
 
 import logging
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, status
@@ -23,6 +24,9 @@ from .jobs_push import Pusher
 from .jobs_store import NotifyStore, Store
 
 log = logging.getLogger("jobs")
+
+# Скільки днів зберігати історію ціни (8.16). На екрані — 30.
+PRICE_HISTORY_DAYS = 180
 
 
 def _log_counts_at_info() -> None:
@@ -106,7 +110,15 @@ async def check_links(request: Request) -> dict[str, int]:
             host_delay=cfg.jobs_host_delay_seconds,
             concurrency=cfg.jobs_concurrency,
         )
-        return {**summary, "fx_rates": fx, "photos_removed": removed}
+        # Історія ціни (8.16) — не довше за PRICE_HISTORY_DAYS. Збій прибирання
+        # нічого не ламає: точки зачекають завтрашнього запуску.
+        try:
+            await store.prune_prices((datetime.now(timezone.utc) - timedelta(days=PRICE_HISTORY_DAYS)).date())
+            pruned = 1
+        except Exception as e:  # noqa: BLE001
+            log.warning("стару історію ціни не прибрано: %s", type(e).__name__)
+            pruned = 0
+        return {**summary, "fx_rates": fx, "photos_removed": removed, "prices_pruned": pruned}
 
 
 @app.post("/jobs/notify")

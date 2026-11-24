@@ -615,3 +615,52 @@ test.describe('сторінка списку v2: зміна позиції, як
     await guestCtx.close();
   });
 });
+
+test.describe('сторінка списку v2: історія ціни й своя ціль (8.16)', () => {
+  test.skip(!hasAccount, 'Потрібні E2E_EMAIL і E2E_PASSWORD');
+
+  test('ціль зберігається й переживає F5; історія — з датою й джерелом кожної ціни', async ({ page }) => {
+    await signInV2(page);
+    await newList(page, unique('V2 target'));
+    const title = unique('Лампа');
+
+    await addButton(page).click();
+    const sheet = itemSheet(page);
+    await sheet.getByRole('button', { name: /вписати вручну|wpisz ręcznie|type it in/i }).click();
+    await sheet.locator('input[name="title"]').fill(title);
+    // Без посилання цілі немає: перевіряти нічого.
+    await expect(sheet.locator('input[name="price_target"]')).toHaveCount(0);
+    await sheet.locator('input[name="url"]').fill('https://example.com/wishlist-e2e/lamp');
+    await sheet.locator('input[name="price"]').fill('1240');
+    // Обмеження бази (> 0) — і у формі, до відправки.
+    await sheet.locator('input[name="price_target"]').fill('0');
+    await sheet.getByRole('button', { name: /^(додати|dodaj|add)$/i }).click();
+    await expect(sheet.locator('input[name="price_target"]')).toHaveAttribute('aria-invalid', 'true');
+    await expect(sheet.locator('input[name="price_target"]')).toBeFocused();
+    await sheet.locator('input[name="price_target"]').fill('999,50');
+    await sheet.getByRole('button', { name: /^(додати|dodaj|add)$/i }).click();
+    await expect(sheet).toHaveCount(0);
+
+    // Точки пише лише сервіс (service_role): тут їх підкладаємо відповіддю.
+    const day = (ago: number) => new Date(Date.now() - ago * 86_400_000).toISOString().slice(0, 10);
+    const row = (ago: number, price: number, currency: string) => ({
+      item_id: 'x', day: day(ago), price, currency, source: 'check', checked_at: `${day(ago)}T03:15:00Z`,
+    });
+    await page.route('**/rest/v1/item_prices*', (r) =>
+      r.fulfill({ json: [row(10, 1290, 'PLN'), row(3, 25, 'EUR'), row(0, 1390, 'PLN')] }),
+    );
+
+    await page.reload();
+    await card(page, title).getByRole('button', { name: new RegExp(escape(title)) }).first().click();
+    const edit = page.getByRole('dialog', { name: /^(позиція|pozycja|item)$/i });
+    await expect(edit.locator('input[name="price_target"]')).toHaveValue(/^999[.,]5/);
+    const history = edit.getByTestId('price-history');
+    await expect(history.getByTestId('price-current')).toContainText(/перевірено|sprawdzono|checked/i);
+    await expect(history.getByTestId('price-current')).toContainText(/1[\s  .,]?390/);
+    await expect(history.getByTestId('price-min')).toContainText(/1[\s  .,]?290/);
+    await expect(history.getByTestId('price-min')).toContainText(/перевірено|sprawdzono|checked/i);
+    // Євро до злотих не підмішується (ADR-051).
+    await expect(history).toContainText('EUR');
+    await expect(history.getByRole('img')).toBeVisible();
+  });
+});

@@ -503,7 +503,7 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 **Хто викликає.** Лише Cloud Scheduler з ID-токеном (OIDC) облікового запису `wishlist-scheduler`; аудиторія токена — адреса сервісу. Запит без токена чи з токеном без ролі `roles/run.invoker` Cloud Run відхиляє сам — `403` ще до контейнера. Друга лінія в застосунку: без `Authorization: Bearer` — `401 missing_token`.
 
 **Як ходить у базу.** PostgREST із secret-ключем (`sb_secret_…`) лише в заголовку `apikey`, без `Authorization`: нові ключі Supabase — не JWT. Роль — `service_role`, тож RLS не діє; тому сервіс пише вузько:
-- перевірка посилань — лише поля `link_*` позиції за її `id`;
+- перевірка посилань — лише поля `link_*` позиції за її `id` і точка історії ціни в `item_prices` (8.16);
 - сповіщення — `notification_log`, `notification_settings.last_sent_at`, `push_subscriptions.last_ok_at` і видалення мертвих підписок.
 
 Пошту й мову власника сервіс читає з Supabase Auth (`GET /auth/v1/admin/users/{id}` тим самим ключем). З `shares` бере лише назву й термін — без токена. Таблиць позначок гостей (`claims`, `guest_*`) він не торкається.
@@ -533,6 +533,8 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 
 Тим самим викликом (ADR-073) — прибирання своїх фото без посилань: у відповіді `photos_removed` — скільки файлів стерто. Збій сховища перевірку посилань не зупиняє: `photos_removed: 0`, рядки лишаються до завтра.
 
+**Історія ціни (8.16).** Для кожного висновку `ok` з додатною ціною — точка в `item_prices`: `POST /rest/v1/item_prices?on_conflict=item_id,day` з `Prefer: resolution=merge-duplicates`, тіло `{item_id, day (UTC), price, currency, source: "check", checked_at}` — одна на позицію на день. `out`, `gone`, «нічого певного» й ціна без числа точки не дають. Збій запису точки висновок перевірки не скасовує (у лог — лише назва винятку). Наприкінці виклику — `DELETE /rest/v1/item_prices?day=lt.<сьогодні − 180 днів>`; у відповіді `prices_pruned: 1` (`0` — не вдалося, спробує завтра). Ціни в списку (`items.price`) сервіс, як і раніше, не міняє; стан цілі (`price_target_hit_at`) рахує тригер бази, а не сервіс.
+
 ### `POST /jobs/notify`
 Тіла немає. Сповіщення власникам (ADR-049; ARCHITECTURE, «Сповіщення власника»). Cloud Scheduler кличе щогодини. Відповідь — лічильники:
 ```json
@@ -559,6 +561,8 @@ Allegro, Amazon, OLX та інші великі майданчики відмо�
 | `401 missing_token` | немає `Authorization: Bearer` |
 | `503 notify_not_configured` | бракує `SUPABASE_*`, `BREVO_API_KEY`, `VAPID_PRIVATE_KEY`, `MAIL_FROM` чи `APP_ORIGIN` — які саме, показує `/health` |
 | `500` | Supabase відхилив ключ чи недоступний |
+
+Подія `target` (8.16) — «Ціна досягла твоєї цілі»: позиція актуальна, сторінка `ok`, `price_target_hit_at` пізніше за `price_target_set_at`, ціна з магазину не вища за ціль у валюті позиції. Привід (`occurrence`) — момент `price_target_hit_at`: те саме падіння вдруге не надсилається; ціна вище цілі й знову вниз — нове. Канали — `target_push` / `target_email`; тиша, об'єднання й журнал — як для решти подій. Про гостей у події нічого немає.
 
 Посилання в push і листах — адреси застосунку: `/lists/…`, `/settings#notifications` (без `?design=` з ADR-065).
 

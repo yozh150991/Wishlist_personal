@@ -63,6 +63,8 @@ function useKindText() {
         return { name: t('v2notify.kind.link'), hint: t('v2notify.kind.linkHint') };
       case 'price':
         return { name: t('v2notify.kind.price'), hint: t('v2notify.kind.priceHint') };
+      case 'target':
+        return { name: t('v2notify.kind.target'), hint: t('v2notify.kind.targetHint') };
       default:
         return { name: t('v2notify.kind.share'), hint: t('v2notify.kind.shareHint') };
     }
