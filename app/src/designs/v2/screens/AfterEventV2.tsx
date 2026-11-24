@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Archive, ArchiveRestore, Check, CopyPlus, Gift, Heart, Repeat } from 'lucide-react';
 import { copyItems, createListWithItems, fetchListsOverview, repeatList, setListThanks } from '../../../lib/db';
 import { copyInput, eventYear, repeatTarget, repeatTitle } from '../../../lib/afterEvent';
@@ -8,7 +9,7 @@ import { errorText } from '../../../lib/errors';
 import { formatDay, localToday, moneyShort } from '../../../lib/format';
 import type { Currency, Item, List, Section } from '../../../lib/types';
 import { DateFieldV2, FieldV2, NoteV2, SubmitV2 } from './AuthPartsV2';
-import { SheetV2, SwitchV2, YearlySwitchV2 } from './CommonV2';
+import { SheetV2, SwitchV2, YearlySwitchV2, useCounts } from './CommonV2';
 
 const STROKE = 2.75;
 /** Межа з БД (`lists.title`) — і тут, до відправки. */
@@ -120,6 +121,99 @@ export function AfterEventCardV2({
           замість мовчання (ADR-040, «Наслідки»). */}
       <p className="v2-hint v2-hint--start">{t('v2after.card.noHints')}</p>
       <button type="button" className="v2-btn v2-btn--ghost v2-btn--start" onClick={onLater}>
+        {t('v2after.card.later')}
+      </button>
+    </section>
+  );
+}
+
+/**
+ * «Як минуло свято?» на головній (ROADMAP 8.13) — одна картка на всі минулі
+ * свята, де ще є актуальні позиції (`afterEventHome`), а не стіна карток.
+ * Кілька свят — пігулки згори картки: найсвіжіше вибрано наперед, кроки
+ * стосуються вибраного. «Пізніше» — для вибраного, той самий стан, що й на
+ * сторінці списку (`snoozeLater`); наступне свято стає на його місце.
+ *
+ * Кроки ведуть на сторінку списку з уже відкритим вікном (`state.after`):
+ * «Позначити отримане» й «Ще хочу» вибирають із позицій, а «Повторити» —
+ * переносить розділи, тож аркуші живуть там, де позиції вже завантажено.
+ * Подяка й архів — на картці сторінки списку, куди веде назва.
+ *
+ * Тут лише статуси самого власника — «N не розібрано». Про позначки гостей
+ * ні слова, як і на сторінці списку (ADR-040).
+ */
+export function AfterEventHomeV2({
+  lists,
+  onLater,
+}: {
+  /** Уже відібрані й упорядковані `afterEventHome`; порожньо — картки немає. */
+  lists: List[];
+  onLater: (list: List) => void;
+}) {
+  const { t, locale } = useI18n();
+  const counts = useCounts();
+  const headingId = useId();
+  const lineId = useId();
+  const [picked, setPicked] = useState<string | null>(null);
+  const list = lists.find((l) => l.id === picked) ?? lists[0];
+  if (!list) return null;
+  const year = repeatTarget(list, localToday()).year ?? new Date().getFullYear() + 1;
+  const to = `/lists/${list.id}`;
+  const open = list.active_count ?? 0;
+
+  return (
+    <section className="v2-after v2-afterhome" aria-labelledby={headingId}>
+      <p className="v2-kicker">
+        {lists.length > 1
+          ? t('v2afterHome.kickerMany', { n: lists.length })
+          : t('v2after.card.kicker', { date: formatDay(list.event_date, locale) ?? '' })}
+      </p>
+      <h2 className="v2-after__title" id={headingId}>
+        {t('v2after.card.title')}
+      </h2>
+      {lists.length > 1 && (
+        <div className="v2-chips v2-afterhome__pick" role="group" aria-label={t('v2afterHome.pick')}>
+          {lists.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              className="v2-chip v2-chip--toggle v2-afterhome__chip"
+              aria-pressed={l.id === list.id}
+              title={l.title}
+              onClick={() => setPicked(l.id)}
+            >
+              {l.title}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="v2-afterhome__line" id={lineId}>
+        <Link to={to} className="v2-link v2-afterhome__title">
+          {list.title}
+        </Link>
+        {lists.length > 1 && <> · {formatDay(list.event_date, locale)}</>} · {counts.open(open)}
+      </p>
+      <p className="v2-hint v2-hint--start">{t('v2afterHome.body')}</p>
+      <div className="v2-menu v2-after__steps">
+        <Link to={to} state={{ after: 'received' satisfies AfterStep }} className="v2-menu__item">
+          <Gift size={20} strokeWidth={STROKE} aria-hidden="true" />
+          <span className="v2-after__label">{t('v2after.card.received')}</span>
+        </Link>
+        <Link to={to} state={{ after: 'carry' satisfies AfterStep }} className="v2-menu__item">
+          <CopyPlus size={20} strokeWidth={STROKE} aria-hidden="true" />
+          <span className="v2-after__label">{t('v2after.card.carry')}</span>
+        </Link>
+        <Link to={to} state={{ after: 'repeat' satisfies AfterStep }} className="v2-menu__item">
+          <Repeat size={20} strokeWidth={STROKE} aria-hidden="true" />
+          <span className="v2-after__label">{t('v2after.card.repeat', { year })}</span>
+        </Link>
+      </div>
+      <button
+        type="button"
+        className="v2-btn v2-btn--ghost v2-btn--start"
+        aria-describedby={lists.length > 1 ? lineId : undefined}
+        onClick={() => onLater(list)}
+      >
         {t('v2after.card.later')}
       </button>
     </section>
