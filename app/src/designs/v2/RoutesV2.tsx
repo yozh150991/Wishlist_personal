@@ -9,11 +9,27 @@ import NewPasswordV2 from './screens/NewPasswordV2';
 import PrivacyV2 from './screens/PrivacyV2';
 import { RequireAuthV2, ShellV2 } from './ShellV2';
 import { ChunkBoundary } from './ChunkBoundary';
+import { isGuestPath } from '../../lib/guestPath';
 // Стилі — у головному пакеті: їх ділять усі екрани (ADR-065).
 import './v2.css';
 
 /** Гостьова — лінива: свій чанк, який власнику, що відкрив застосунок, не потрібен. */
-const GuestV2 = lazy(() => import('./screens/GuestV2'));
+const guestChunk = () => import('./screens/GuestV2');
+const GuestV2 = lazy(guestChunk);
+
+/**
+ * Попросити чанк гостьової ще до першого рендера — паралельно зі словником
+ * мови, на який чекає `main.tsx` (ROADMAP 8.24). Інакше гість чекав би на них
+ * поспіль: спершу словник, потім рендер, і лише тоді — чанк. Модуль браузер
+ * завантажує раз, тож `lazy` нижче отримає той самий. Помилку тут ковтаємо:
+ * якщо чанк не приїде, `lazy` спробує знову й покаже `ChunkBoundary`.
+ *
+ * Екрани власника наперед не просимо: без сесії адреса веде на `/login`, і
+ * чанк був би марним, а в установленому застосунку він і так у кеші.
+ */
+export function preloadScreens(pathname: string): void {
+  if (isGuestPath(pathname)) void guestChunk().catch(() => undefined);
+}
 
 /** Екрани власника — один лінивий чанк на всіх (див. `OwnerScreens.ts`). */
 const owner = () => import('./OwnerScreens');

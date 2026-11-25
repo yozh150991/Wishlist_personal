@@ -11,12 +11,21 @@ import './styles.css';
 import './lib/install';
 import './lib/androidApp';
 import App from './App';
+import { prepareI18n } from './lib/i18n';
+import { preloadScreens } from './designs/v2/RoutesV2';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Немає #root у index.html');
 
-createRoot(root).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+// Словник активної мови — окремий чанк (ROADMAP 8.24): перший рендер чекає на
+// нього, щоб не показати ні ключів, ні тексту чужою мовою. До того на екрані
+// фон теми — так само, як і під час будь-якого завантаження. Чанк гостьової
+// просимо паралельно, щоб гість не чекав на два запити поспіль.
+preloadScreens(window.location.pathname);
+void prepareI18n().then(() => {
+  createRoot(root).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});

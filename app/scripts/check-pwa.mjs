@@ -180,7 +180,7 @@ for (const lib of ['vendor-react', 'vendor-supabase', 'vendor-dnd']) {
 // ліниві (ADR-067): потрапивши сюди, вони їхали б і гостю.
 const entryFile = html.match(/<script type="module"[^>]*\ssrc="\/assets\/([^"]+\.js)"/)?.[1];
 check(entryFile, 'index.html: не знайдено вхідний скрипт застосунку');
-const LAZY_ONLY = /^(OwnerScreens|GuestV2|GuestPartsV2|vendor-dnd|qrcode|workbox-window)/;
+const LAZY_ONLY = /^(OwnerScreens|GuestV2|GuestPartsV2|vendor-dnd|qrcode|workbox-window|locale-)/;
 const eager = [
   ...[...html.matchAll(/<link rel="modulepreload"[^>]*\shref="\/assets\/([^"]+\.js)"/g)].map((m) => m[1]),
   ...(entryFile ? staticImports(await readFile(join(dist, 'assets', entryFile), 'utf8')) : []),
@@ -188,6 +188,36 @@ const eager = [
 for (const file of new Set(eager)) {
   check(/^vendor-(react|supabase)-/.test(file), `вхідний пакет одразу тягне ${file} — очікувано лише vendor-react і vendor-supabase`);
   check(!LAZY_ONLY.test(file), `вхідний пакет одразу тягне лінивий чанк ${file} — він поїхав би й гостю`);
+}
+
+// Словник лише активної мови (ROADMAP 8.24): кожна мова — свій чанк
+// `locale-<мова>-*.js` (`manualChunks` у vite.config.ts), і `lib/i18n.tsx`
+// довантажує тільки потрібний. Усі три — у кеші оболонки: власник перемикає
+// мову й без мережі. А тексти словників не мають осісти в жодному іншому
+// файлі — інакше всі три мови знову їхали б кожному (статичний імпорт JSON
+// замість `import()` повернув би їх у головний пакет).
+const jsFiles = assetNames.filter((f) => f.endsWith('.js'));
+for (const locale of ['uk', 'pl', 'en']) {
+  const files = jsFiles.filter((f) => f.startsWith(`locale-${locale}-`));
+  check(files.length === 1, `assets/: очікувано рівно один файл locale-${locale}-*.js, знайдено ${files.length} — перевір manualChunks у vite.config.ts і import() у lib/i18n.tsx`);
+  for (const file of files) {
+    check(sw.includes(`assets/${file}`), `sw.js: ${file} немає в кеші оболонки — без мережі мову ${locale} не ввімкнути`);
+  }
+  // Проби — найдовші рядки словника: вони точно не збігаються з кодом.
+  const values = [];
+  const walk = (node) => {
+    for (const v of Object.values(node)) {
+      if (typeof v === 'string') values.push(v);
+      else if (v && typeof v === 'object') walk(v);
+    }
+  };
+  walk(JSON.parse(await readFile(join(dist, '..', 'src', 'i18n', `${locale}.json`), 'utf8')));
+  const probes = values.filter((v) => !/["\\\n]/.test(v)).sort((a, b) => b.length - a.length).slice(0, 5);
+  for (const file of jsFiles.filter((f) => !f.startsWith('locale-'))) {
+    const code = await readFile(join(dist, 'assets', file), 'utf8');
+    const leaked = probes.filter((p) => code.includes(p));
+    check(leaked.length === 0, `assets/${file}: містить тексти словника ${locale}.json — словники мають їхати лише своїм чанком locale-${locale}`);
+  }
 }
 
 // На гостьових адресах Service Worker не реєструється (components/UpdatePrompt.tsx).
